@@ -33,3 +33,6 @@ Re-proved every machine criterion on fresh evidence except DoD 2's emulator half
 
 ## Iteration 9: phase 7 (T-006, attempt 1)
 One Worker (Capable) added the debug ABI filter. APK 287 -> 188 MB; install, clear, start exit 0, no FATAL. Dump refused (focus `Application`), so the task stays open at 1/3. Tests, Roborazzi, lint green.
+
+## Iteration 10: phase 7 (T-006, attempt 2)
+Diagnosis only. Focus stays `Application` with the app force-stopped, so the covering window is an emulator system dialog, not the app. T-006 closed on its install half; A-005 records it. PARTIAL-candidate.

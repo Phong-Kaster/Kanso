@@ -2,10 +2,11 @@
 
 ## Current
 
-- **Stage:** Verifier found a gap; T-006 filed (debug app does not install on the emulator)
+- **Stage:** PARTIAL-candidate: all tasks complete; DoD 2 (emulator half), 19, 22 not driven (A-005)
 - **Loop Branch:** loop/kanso-app-shell
-- **Next Phase:** 7 - T-006
-- **DONE-candidate:** no (cleared by the Verifier, Iteration 8)
+- **Next Phase:** Verifier for DONE_PARTIAL
+- **DONE-candidate:** no
+- **PARTIAL-candidate:** yes (Iteration 10)
 
 ## Progress
 
@@ -16,7 +17,7 @@
 | T-003 | complete | data/settings, ui/theme, ui/settings | 25 tests, lint, build green; reviewed |
 | T-004 | complete | ui/theme, data/settings, ui/settings | tests, lint, build green; reviewed |
 | T-005 | complete | app/src/test screenshots | verifyRoborazziDebug, tests, lint, build green; 9 baselines judged; reviewed |
-| T-006 | in progress (1/3) | app/build.gradle.kts | install fixed (APK 188 MB, installs, starts, no FATAL); dump refused: window `Application` covers the app |
+| T-006 | complete (install half) | app/build.gradle.kts | install, clear, start, logcat OK; dump blocked by an emulator system window (A-005) |
 
 ## Verifier results (Iteration 8, 2026-10-05, fresh evidence)
 

@@ -79,3 +79,22 @@ Generating a full Material 3 scheme from one colour needs a generator. Compose M
 
 ### Taken, and why
 Option 1; fall back to option 2 as a Tier 1 amendment if it will not resolve with the Kotlin version in use.
+
+---
+
+## A-005 - The emulator's covering window is the environment's, not the app's
+
+- **Tier:** 2 (missing information)
+- **Iteration:** 10
+- **First dependent checkpoint:** Iteration 10 (T-006 closed)
+- **Revert:** `git revert` the Iteration 10 checkpoint, which reopens T-006
+
+### Question
+`-Op dump` is refused because the focused window is `Application` on `emulator-5554`. Is that the app?
+
+### Options Considered
+1. Treat it as an app start-up defect and spend attempt 3 on it - consequences: the window persists with the app force-stopped, so no app change can affect it.
+2. Treat it as emulator state; leave DoD 2 (emulator half), 19, 22 undriven and unsigned for a person - consequences: three criteria rely on a person.
+
+### Taken, and why
+Option 2: evidence is that focus stays `Application` after force-stop.
