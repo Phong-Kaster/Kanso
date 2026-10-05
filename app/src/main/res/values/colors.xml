@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher icon colours: a calm off-white background with a dark mark. -->
+    <color name="ic_launcher_background">#FFF5F3EF</color>
+    <color name="ic_launcher_foreground">#FF2B2B2B</color>
+    <!-- Window background before Compose draws, matching Material 3's baseline surfaces. -->
+    <color name="window_background">#FFFEF7FF</color>
+</resources>

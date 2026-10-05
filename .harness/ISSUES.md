@@ -1,6 +1,6 @@
 # LOOP ISSUES REPORT
 
-_Last updated: 2026-10-05 - branch `loop/kanso-app-shell` - iteration 1_
+_Last updated: 2026-10-05 - branch `loop/kanso-app-shell` - iteration 2_
 
 ## Abandoned tasks
 
@@ -10,7 +10,6 @@ none
 
 | # | Question | Blocks |
 |---|---|---|
-| D-001 | Approve the Definition of Done | T-001 to T-005 |
 
 ## Awaiting a person
 

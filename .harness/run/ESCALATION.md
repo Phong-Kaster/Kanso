@@ -6,7 +6,7 @@
 
 ## D-001 - Approve the Definition of Done
 
-- **Status:** pending
+- **Status:** answered (D-001 in DECISIONS.md, 2026-10-05: approved as written)
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-05

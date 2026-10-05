@@ -8,4 +8,10 @@
 
 ## Archived Decisions
 
-none yet
+- D-001 (DoD approval): approved as written, 2026-10-05; assumptions A-001 to A-004 not overturned.
+
+### Iteration 2 - 2026-10-05
+- **Phase:** T-001
+- Recovered: found uncommitted T-001 work from the previous invocation; build, tests and lint verified green before salvaging.
+- Reviewer (Capable) found READ_PHONE_STATE merged in, undocumented Firebase infrastructure and version pins, and a grep scope trap. Fixed all; tried nav3 1.2.0 / lifecycle 2.11 / BOM 2026.09, all need AGP 9.1, reverted.
+- Learned: AGP 8.13 caps versions; recorded in PROJECT.md.
