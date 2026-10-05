@@ -20,3 +20,8 @@
 - Run DoD greps with `--exclude-dir=build`: `app/build` holds merged manifests that mention ML Kit's firebase components.
 - Build / test / lint commands (verified 2026-10-05): `./gradlew :app:assembleDebug`, `./gradlew :app:testDebugUnitTest`, `./gradlew :app:lintDebug`.
 - Constraint: Robolectric tests that launch `MainActivity` share Koin's JVM-global state; `KansoApplication` calls `stopKoin()` before `startKoin`. Never remove it. The app has no Material icons dependency: draw icons with `ImageVector.Builder`. Banned-word grep matches substrings (e.g. "introduce") in `app/src/main`.
+- **Never** build a DataStore with the default file storage (`PreferenceDataStoreFactory`) if JVM tests on this Windows host write it twice: it uses `File.renameTo`, which fails once the file exists (`Unable to rename ...preferences_pb.tmp`). Use `DataStoreFactory.create(OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {...})` as `createSettingsDataStore` does (T-003, attempt 1 failure).
+- Only one DataStore may be open on a file; release it by cancelling and joining its scope (Koin `SETTINGS_SCOPE`) before opening the same file again.
+- **Never** read pixels in Robolectric tests with `captureToImage()` on this setup: it times out in `forceRedraw`. Draw the content view into a Bitmap instead (`app/src/test/.../settings/ScreenPixels.kt`).
+- `enableEdgeToEdge()` sets system-bar icon contrast from the phone's night setting only; `KansoTheme` overrides it when the app forces Light or Dark.
+- Verified 2026-10-05 (T-003): 24 unit tests, lint and assembleDebug green.

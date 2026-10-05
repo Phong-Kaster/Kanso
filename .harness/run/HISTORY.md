@@ -18,3 +18,6 @@
 
 ## Iteration: phase 3 (T-002)
 One Worker (Capable) wrote the Nav3 shell. Iteration wired Application/Activity, fixed Koin restart across Robolectric tests (stopKoin before startKoin), moved Home-exit into goBack, DoD 7 test checks isFinishing. Review fixes: double-tap guard.
+
+## Iteration: phase 4 (T-003)
+One Worker (Capable). Round 1 failed: DataStore rename on Windows (fixed with OkioStorage) and captureToImage timeout (fixed by drawing the view into a Bitmap). Reviewer found a weak DoD 13 proof, no corruption handler and a nav-bar scrim problem below API 29; all fixed. Wiring (strings, appModule, MainActivity) done by the Iteration.

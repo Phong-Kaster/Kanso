@@ -13,6 +13,13 @@
     <!-- Settings entry on Home and the Settings screen title. -->
     <string name="settings">Settings</string>
 
+    <!-- Appearance section of Settings and its theme mode choice. -->
+    <string name="appearance">Appearance</string>
+    <string name="theme_mode">Theme mode</string>
+    <string name="theme_mode_system">System default</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+
     <!-- Spoken description of the back arrow in top bars. -->
     <string name="back">Back</string>
 

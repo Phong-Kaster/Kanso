@@ -1,8 +1,17 @@
 package com.phongkaster.kanso.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
+import com.phongkaster.kanso.data.settings.SettingsRepository
+import com.phongkaster.kanso.data.settings.createSettingsDataStore
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -25,5 +34,19 @@ val appModule = module {
     // `params` are the values the screen passes with parametersOf(...): here, the tool shown.
     viewModel { params -> PlaceholderViewModel(tool = params.get(), probe = get()) }
 
-    viewModel { SettingsViewModel() }
+    // The scope the settings file is read and written in. It is a named singleton so a test can
+    // cancel it, which releases the file, and then open the same file again like a restart.
+    single(SETTINGS_SCOPE) { CoroutineScope(SupervisorJob() + Dispatchers.IO) }
+
+    // The settings live in one small file in the app's private storage (Preferences DataStore).
+    single<DataStore<Preferences>> {
+        createSettingsDataStore(
+            file = androidContext().filesDir.resolve("datastore/settings.preferences_pb"),
+            scope = get<CoroutineScope>(SETTINGS_SCOPE),
+        )
+    }
+
+    single { SettingsRepository(dataStore = get()) }
+
+    viewModel { SettingsViewModel(repository = get()) }
 }

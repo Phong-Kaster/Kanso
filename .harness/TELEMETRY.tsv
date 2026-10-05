@@ -1,3 +1,4 @@
 when	iteration	status	seconds	tier	model	turns	cache_read_tokens	cost_usd
 2026-10-05T17:36:55.1502691+07:00	1	ESCALATE	702	fast	sonnet	69	4296569	2.5963
 2026-10-05T20:46:50.0463733+07:00	3	CONTINUE	726	fast	sonnet	18	1379482	1.0892
+2026-10-05T21:07:05.7902288+07:00	4	CONTINUE	1214	fast	sonnet	30	2495990	2.3183
