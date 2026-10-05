@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kanso</string>
+
+    <!-- The six tools listed on Home. -->
+    <string name="tool_edit">Edit</string>
+    <string name="tool_remove_background">Remove background</string>
+    <string name="tool_enhance">Enhance</string>
+    <string name="tool_retouch">Retouch</string>
+    <string name="tool_artistic">Artistic</string>
+    <string name="tool_camera">Camera</string>
+
+    <!-- Settings entry on Home and the Settings screen title. -->
+    <string name="settings">Settings</string>
+
+    <!-- Spoken description of the back arrow in top bars. -->
+    <string name="back">Back</string>
+
+    <!-- Body of a tool screen that is not built yet. %1$s is the tool name. -->
+    <string name="placeholder_message">%1$s is coming soon.</string>
 </resources>

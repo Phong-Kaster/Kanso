@@ -4,15 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.phongkaster.kanso.navigation.KansoNavHost
 
 /**
  * The app's one and only activity: the window every Kanso screen is drawn in.
@@ -38,24 +32,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             // MaterialTheme gives every Material 3 component below it its colours, type and shapes.
             MaterialTheme {
-                KansoPlaceholder()
+                KansoNavHost()
             }
-        }
-    }
-}
-
-/**
- * A temporary screen that shows the app's name in the middle of the window.
- *
- * It stands in for the real Home screen until navigation is added.
- */
-@Composable
-private fun KansoPlaceholder() {
-    // Surface paints the theme's background colour and makes text on it use the matching
-    // "on background" colour, so the text stays readable in light and dark mode.
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = "Kanso", style = MaterialTheme.typography.headlineMedium)
         }
     }
 }

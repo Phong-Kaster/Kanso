@@ -2,8 +2,8 @@
 
 > A derived cache, never a source of truth. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** executing; T-001 done (app builds, engine wired).
-- **Next Phase:** T-002 only - scope: under `app/src/main/java/com/phongkaster/kanso/`: `navigation/**`, `ui/home/**`, `ui/placeholder/**`, `ui/settings/SettingsScreen.kt`, `SettingsViewModel.kt`, `di/**`; `res/values/strings.xml`, `values/themes.xml`, `values-night/themes.xml`; `app/src/test/.../navigation/**`. Then T-003, T-004, T-005 one per Phase.
+- **Stage:** executing; T-002 done (Nav3 shell, Koin, Home, placeholders, Settings stub).
+- **Next Phase:** T-003 only (see TASKS/T-003.md for scope). Then T-004, T-005 one per Phase. Existing: `KansoNavHost` (navigation/), `appModule` (di/), Koin started in KansoApplication, SettingsScreen/SettingsViewModel stubs.
 - **Queued decisions:** 0
 - **Abandoned:** none
 - **Unreachable:** none

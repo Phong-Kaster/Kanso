@@ -15,3 +15,6 @@
 - Recovered: found uncommitted T-001 work from the previous invocation; build, tests and lint verified green before salvaging.
 - Reviewer (Capable) found READ_PHONE_STATE merged in, undocumented Firebase infrastructure and version pins, and a grep scope trap. Fixed all; tried nav3 1.2.0 / lifecycle 2.11 / BOM 2026.09, all need AGP 9.1, reverted.
 - Learned: AGP 8.13 caps versions; recorded in PROJECT.md.
+
+## Iteration: phase 3 (T-002)
+One Worker (Capable) wrote the Nav3 shell. Iteration wired Application/Activity, fixed Koin restart across Robolectric tests (stopKoin before startKoin), moved Home-exit into goBack, DoD 7 test checks isFinishing. Review fixes: double-tap guard.
