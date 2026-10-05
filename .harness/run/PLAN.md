@@ -26,6 +26,7 @@ added in T-001.
 - T-003 - Theme mode: Settings choice, applied app-wide immediately, persisted (depends on: T-002) - scope: `data/settings/**`, `ui/theme/**`, `ui/settings/**`, `app/src/test/**/settings/**`, `app/src/test/**/theme/**` - tier: Capable
 - T-004 - Theme colour: wallpaper or picked colour via `core/colorpicker`, generated M3 scheme, persisted (depends on: T-003) - scope: `ui/theme/**`, `data/settings/**`, `ui/settings/**`, `app/src/test/**/theme/**`, `app/src/test/**/settings/**` - tier: Capable
 - T-005 - Roborazzi checks: nine baselines of Home, Settings, placeholder in light, dark, custom colour (depends on: T-004) - scope: `app/src/test/java/**/screenshots/**`, `app/src/test/screenshots/**` - tier: Capable
+- T-006 - The debug app installs and starts on the emulator (filed by the Verifier; debug-only ABI filter) (depends on: T-005) - scope: `app/build.gradle.kts` - tier: Capable
 
 ## Phase Grouping
 
@@ -36,6 +37,7 @@ added in T-001.
 | 3 | T-003 | `MainActivity.kt` theme hookup, Koin module |
 | 4 | T-004 | Koin module |
 | 5 | T-005 | - |
+| 7 | T-006 | - (Phase 6 was T-005 by commit numbering) |
 
 No two tasks share a Phase: each one extends the app wiring the previous task created.
 

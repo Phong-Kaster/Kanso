@@ -2,10 +2,11 @@
 
 > A derived cache, never a source of truth. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** DONE-candidate; T-001 to T-005 complete. Next invocation is the Verifier (Capable): re-prove every machine criterion, drive machine-then-human ones.
-- **Next Phase:** none. Baselines in `app/src/test/screenshots/` (nine, never re-record).
+- **Stage:** Verifier (Iteration 8) cleared DONE-candidate: the 287 MB debug APK fails to install on `emulator-5554`, so DoD 2 (emulator half), 19, 22 cannot be driven. Every other machine criterion re-proved fresh.
+- **Next Phase:** 7 - T-006 (Capable), scope `app/build.gradle.kts`. The Iteration itself drives the emulator via `foreman-device.ps1` after the build.
 - **Queued decisions:** 0
 - **Abandoned:** none
 - **Unreachable:** none
-- **Verified commands:** build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` plus `:app:verifyRoborazziDebug` | lint: `./gradlew :app:lintDebug`. Verified 2026-10-05. AGP 8.13 pins nav3 1.1.7 / lifecycle 2.10 (see PROJECT.md).
+- **Verified commands:** build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` plus `:app:verifyRoborazziDebug` | lint: `./gradlew :app:lintDebug`. Verified 2026-10-05 (clean build 28 min). Baselines in `app/src/test/screenshots/` (nine, never re-record).
+- **Device:** `powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <op>`; `emulator-5554` is `sdk_gphone64_x86_64`.
 - **Model tiers (resolved from `.harness/loop/models.json`):** fast: `sonnet` | capable: `opus`

@@ -10,3 +10,6 @@
 
 ### 2026-10-05 - T-001 version pins
 - Tier 1 (knowledge): Navigation 3 stays 1.1.7, lifecycle 2.10.0, Compose BOM 2026.05.00 because the latest need AGP 9.1; DoD 10 allows a forced lower pin explained in PROJECT.md. Moving to AGP 9 would be a Tier-2 change for a later run.
+
+### 2026-10-05 - Verifier gap (Iteration 8)
+- Tier 1: added T-006 (debug APK must install on the emulator so DoD 2's emulator half, 19 and 22 can be driven); DONE-candidate cleared. PRD, DoD and architecture unchanged.

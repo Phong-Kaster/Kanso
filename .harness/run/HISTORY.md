@@ -27,3 +27,6 @@ One Worker (Capable) wrote the theme colour model, MaterialKolor generator, Kans
 
 ## Iteration: phase 6 (T-005)
 One Worker (Capable) wrote ScreenshotTest (nine tests). One fix by the Iteration: wrong Roborazzi import package. Nine baselines recorded by the wrapper, each opened and judged. verify, tests, lint, build green. Review: no blocking findings. All tasks complete: DONE-candidate.
+
+## Iteration 8: Verifier (Capable)
+Re-proved every machine criterion on fresh evidence except DoD 2's emulator half: clean debug+release build and lint green, 64 unit tests and 9 Roborazzi references pass, manifests, dependency reports, greps and catalog loop hold. `foreman-device.ps1 -Op install` failed twice on emulator-5554 with an empty adb reason; the debug APK is 287 MB (four ABIs). Filed T-006, cleared DONE-candidate. Filled A-001 to A-004 checkpoint SHAs.

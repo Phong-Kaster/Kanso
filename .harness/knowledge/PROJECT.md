@@ -26,3 +26,5 @@
 - `enableEdgeToEdge()` sets system-bar icon contrast from the phone's night setting only; `KansoTheme` overrides it when the app forces Light or Dark.
 - Verified 2026-10-05 (T-003): 24 unit tests, lint and assembleDebug green.
 - T-004: DataStore writes run off Compose's test clock: poll the store in real time (`awaitSavedThemeColour`), never `waitUntil` on it. Tests read the applied scheme via the `kanso-theme` node tag. Verified 2026-10-05: 55+ tests, lint, assembleDebug green.
+- Device (2026-10-05): `emulator-5554` (`sdk_gphone64_x86_64`) is reachable through `foreman-device.ps1`, but the all-ABI debug APK (287 MB; OpenCV, MediaPipe, xeno_native for x86, x86_64, arm64-v8a, armeabi-v7a) fails `-Op install` with an empty adb reason. Every other device op refuses (exit 3) until the package is installed. T-006.
+- A full clean `assembleDebug assembleRelease lintDebug` takes about 28 minutes on this host (release R8 is most of it); run long Gradle commands in the background and wait inside the turn.

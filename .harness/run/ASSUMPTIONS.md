@@ -8,8 +8,8 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** filled in by the Iteration after T-001's checkpoint
-- **Revert:** `git revert <sha>` (filled in later)
+- **First dependent checkpoint:** f141583 (T-001)
+- **Revert:** `git revert f141583`
 
 ### Question
 The PRD says "no Firebase" and "reuse the engine as it is; adapt build scripts only as far as the build requires", but `core/common` imports Firebase analytics in one source file (`AnalyticsUtil.kt`), so removing the dependency needs a source change.
@@ -28,8 +28,8 @@ Option 2: it honours the PRD's constraint and keeps the engine's public signatur
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** filled in later
-- **Revert:** `git revert <sha>` (filled in later)
+- **First dependent checkpoint:** def99b1 (T-004)
+- **Revert:** `git revert def99b1`
 
 ### Question
 The PRD offers "wallpaper or a colour I pick" but not which one is on before the person chooses.
@@ -47,8 +47,8 @@ Option 1: it is the Android convention for Material You apps, and the PRD lists 
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** filled in later
-- **Revert:** `git revert <sha>` (filled in later)
+- **First dependent checkpoint:** f141583 (T-001)
+- **Revert:** `git revert f141583`
 
 ### Question
 `core/localml` needs ML Kit, which pulls in `firebase-components` and `firebase-encoders` and may merge INTERNET and ACCESS_NETWORK_STATE; some of its models load through Play services. That conflicts with a literal reading of "no Firebase, no network".
@@ -66,8 +66,8 @@ Option 2: the PRD says to remove a merged network permission unless that breaks 
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** filled in later
-- **Revert:** `git revert <sha>` (filled in later)
+- **First dependent checkpoint:** f141583 (T-001; used by def99b1, T-004)
+- **Revert:** `git revert def99b1 f141583`
 
 ### Question
 Generating a full Material 3 scheme from one colour needs a generator. Compose Material 3 does not ship one, and Material's own `color.utilities` classes are `@RestrictTo`, which fails lint.
