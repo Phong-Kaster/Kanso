@@ -2,7 +2,7 @@
 
 > A derived cache, never a source of truth. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** PARTIAL-candidate (Iteration 10). Next invocation is the Verifier: re-prove machine criteria, retry `-Op focus`/driving 19 and 22 once, then report DONE_PARTIAL.
+- **Stage:** DONE_PARTIAL (Iteration 11). Nothing left to run.
 - **Next Phase:** none (all tasks complete)
 - **Queued decisions:** 0
 - **Abandoned:** none

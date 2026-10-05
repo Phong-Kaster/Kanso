@@ -2,7 +2,7 @@
 
 ## Current
 
-- **Stage:** PARTIAL-candidate: all tasks complete; DoD 2 (emulator half), 19, 22 not driven (A-005)
+- **Stage:** DONE_PARTIAL (Iteration 11): machine criteria re-proved; 2 (emulator half), 19, 22 not driven (A-005); 12, 19, 21, 22, 26 unsigned
 - **Loop Branch:** loop/kanso-app-shell
 - **Next Phase:** Verifier for DONE_PARTIAL
 - **DONE-candidate:** no

@@ -36,3 +36,6 @@ One Worker (Capable) added the debug ABI filter. APK 287 -> 188 MB; install, cle
 
 ## Iteration 10: phase 7 (T-006, attempt 2)
 Diagnosis only. Focus stays `Application` with the app force-stopped, so the covering window is an emulator system dialog, not the app. T-006 closed on its install half; A-005 records it. PARTIAL-candidate.
+
+## Iteration 11: Verifier (Capable), PARTIAL
+Fresh `assembleDebug assembleRelease lintDebug testDebugUnitTest verifyRoborazziDebug` all green (64 tests, 0 failures; 9 references match). Greps for 9, 11, 27, R1, Material 2 and layouts clean; `reference/` unchanged. Retried `-Op focus`: still `Application`, so 2 (emulator half), 19, 22 stay undriven (A-005). No gap a task could close. DONE_PARTIAL.
