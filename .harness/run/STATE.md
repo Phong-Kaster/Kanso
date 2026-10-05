@@ -2,9 +2,9 @@
 
 ## Current
 
-- **Stage:** executing; T-001, T-002, T-003 complete, next T-004
+- **Stage:** executing; T-001 to T-004 complete, next T-005
 - **Loop Branch:** loop/kanso-app-shell
-- **Next Phase:** T-004
+- **Next Phase:** T-005
 - **DONE-candidate:** no
 
 ## Progress
@@ -14,8 +14,8 @@
 | T-001 | complete | build files, app shell, core/common AnalyticsUtil | build, tests, lint green; reviewed |
 | T-002 | complete | navigation, home, placeholder, di | 10 tests, lint, build green; reviewed |
 | T-003 | complete | data/settings, ui/theme, ui/settings | 25 tests, lint, build green; reviewed |
-| T-004 | pending (next) | ui/theme, data/settings, ui/settings | - |
-| T-005 | pending | app/src/test screenshots | - |
+| T-004 | complete | ui/theme, data/settings, ui/settings | tests, lint, build green; reviewed |
+| T-005 | pending (next) | app/src/test screenshots | - |
 
 ## Assumptions
 

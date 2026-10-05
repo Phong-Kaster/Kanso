@@ -2,8 +2,8 @@
 
 > A derived cache, never a source of truth. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** executing; T-003 done (ThemeMode via DataStore, KansoTheme, Settings Appearance, wired in MainActivity/appModule).
-- **Next Phase:** T-004 only (TASKS/T-004.md). Then T-005. Existing: `SettingsRepository` (data/settings), `createSettingsDataStore` (OkioStorage), `KansoTheme(themeMode)` (ui/theme, `colorSchemeFor(dark)`), `SettingsViewModel(repository)`, pixel helper `app/src/test/.../settings/ScreenPixels.kt`.
+- **Stage:** executing; T-004 done (ThemeColour Wallpaper/Baseline/Custom, seedColorScheme, picker in Settings, MainActivity passes themeColour).
+- **Next Phase:** T-005 only (TASKS/T-005.md). Existing: `SettingsRepository` (data/settings), `createSettingsDataStore` (OkioStorage), `KansoTheme(themeMode)` (ui/theme, `colorSchemeFor(dark)`), `SettingsViewModel(repository)`, pixel helper `app/src/test/.../settings/ScreenPixels.kt`.
 - **Queued decisions:** 0
 - **Abandoned:** none
 - **Unreachable:** none

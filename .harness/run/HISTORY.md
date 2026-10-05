@@ -21,3 +21,6 @@ One Worker (Capable) wrote the Nav3 shell. Iteration wired Application/Activity,
 
 ## Iteration: phase 4 (T-003)
 One Worker (Capable). Round 1 failed: DataStore rename on Windows (fixed with OkioStorage) and captureToImage timeout (fixed by drawing the view into a Bitmap). Reviewer found a weak DoD 13 proof, no corruption handler and a nav-bar scrim problem below API 29; all fixed. Wiring (strings, appModule, MainActivity) done by the Iteration.
+
+## Iteration: phase 5 (T-004)
+One Worker (Capable) wrote the theme colour model, MaterialKolor generator, KansoTheme mapping, Settings section with picker, and 5 test classes. Iteration wired MainActivity (saved colour before first frame) and fixed one test: the DataStore write runs off the test clock, so it polls in real time. 55+ tests, lint, build green. Review: no blocking findings.

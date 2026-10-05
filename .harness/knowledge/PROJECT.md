@@ -25,3 +25,4 @@
 - **Never** read pixels in Robolectric tests with `captureToImage()` on this setup: it times out in `forceRedraw`. Draw the content view into a Bitmap instead (`app/src/test/.../settings/ScreenPixels.kt`).
 - `enableEdgeToEdge()` sets system-bar icon contrast from the phone's night setting only; `KansoTheme` overrides it when the app forces Light or Dark.
 - Verified 2026-10-05 (T-003): 24 unit tests, lint and assembleDebug green.
+- T-004: DataStore writes run off Compose's test clock: poll the store in real time (`awaitSavedThemeColour`), never `waitUntil` on it. Tests read the applied scheme via the `kanso-theme` node tag. Verified 2026-10-05: 55+ tests, lint, assembleDebug green.

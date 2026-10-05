@@ -39,14 +39,17 @@ class MainActivity : ComponentActivity() {
         // Read the saved theme mode once, before the first frame, so a person who chose Dark never
         // sees one light frame. It is a tiny local file, so blocking for it is brief.
         val savedMode = runBlocking { settings.themeMode.first() }
+        // The same for the theme colour, so the first frame already has the chosen colours.
+        val savedColour = runBlocking { settings.themeColour.first() }
         // setContent hands the window to Compose: everything inside the braces is a composable,
         // a function that describes the UI and is re-run whenever the state it reads changes.
         setContent {
             // A Flow is a stream of values over time; collectAsState turns it into Compose state,
             // so picking a new mode in Settings re-draws the whole app at once.
             val themeMode by settings.themeMode.collectAsState(initial = savedMode)
+            val themeColour by settings.themeColour.collectAsState(initial = savedColour)
             // KansoTheme gives every Material 3 component below it its colours, type and shapes.
-            KansoTheme(themeMode) {
+            KansoTheme(themeMode, themeColour) {
                 KansoNavHost()
             }
         }

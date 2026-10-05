@@ -8,27 +8,61 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
+import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
+
+/** The test tag on the layout node KansoTheme wraps its content in. */
+const val KANSO_THEME_TAG = "kanso-theme"
+
+/**
+ * A semantics property holding the colour scheme KansoTheme handed to its content.
+ *
+ * Semantics are the description of the screen that accessibility services and tests read.
+ * Publishing the scheme there lets a test check the exact colours every screen is drawn with
+ * (for example Home's `primary`), which no pixel of the screen shows exactly.
+ */
+val KansoColorSchemeKey = SemanticsPropertyKey<ColorScheme>("KansoColorScheme")
+
+/** Writes the scheme into [KansoColorSchemeKey] of the semantics node it is set on. */
+private var SemanticsPropertyReceiver.kansoColorScheme by KansoColorSchemeKey
 
 /**
  * Kanso's Material 3 theme: wraps [content] so every Material component inside it takes its
- * colours from the light or dark scheme that [themeMode] selects.
+ * colours from the light or dark scheme that [themeMode] selects, in the colours that
+ * [themeColour] selects.
  *
  * [ThemeMode.System] follows the phone's dark-theme setting, [ThemeMode.Light] and
- * [ThemeMode.Dark] force one scheme. Because the mode is a parameter, passing a new value
- * re-draws everything below with the new colours at once, with no restart.
+ * [ThemeMode.Dark] force one scheme. [ThemeColour.Wallpaper] uses the phone's wallpaper colours
+ * (Android 12 and later, the baseline scheme below), [ThemeColour.Baseline] the Material 3
+ * baseline purple, and [ThemeColour.Custom] a scheme generated from the picked seed colour.
+ * Because both are parameters, passing a new value re-draws everything below with the new
+ * colours at once, with no restart.
  */
 @Composable
-fun KansoTheme(themeMode: ThemeMode, content: @Composable () -> Unit) {
+fun KansoTheme(
+    themeMode: ThemeMode,
+    themeColour: ThemeColour = ThemeColour.Baseline,
+    content: @Composable () -> Unit,
+) {
     val dark = isDarkTheme(themeMode)
-    val colorScheme = colorSchemeFor(dark)
+    val colorScheme = colorSchemeFor(themeColour, dark)
 
     // The status and navigation bars sit on top of the app's own background (the app draws edge
     // to edge), so their icons, and the navigation bar's scrim on older Android versions, must
@@ -46,7 +80,19 @@ fun KansoTheme(themeMode: ThemeMode, content: @Composable () -> Unit) {
 
     // MaterialTheme hands the colour scheme down the tree; any composable below reads it with
     // MaterialTheme.colorScheme.
-    MaterialTheme(colorScheme = colorScheme, content = content)
+    MaterialTheme(colorScheme = colorScheme) {
+        // A Box that only passes its size on (propagateMinConstraints) and publishes the scheme
+        // the content sees, read back from MaterialTheme, so tests can check it.
+        val applied = MaterialTheme.colorScheme
+        Box(
+            modifier = Modifier
+                .testTag(KANSO_THEME_TAG)
+                .semantics { kansoColorScheme = applied },
+            propagateMinConstraints = true,
+        ) {
+            content()
+        }
+    }
 }
 
 /** Tells whether [themeMode] means the dark scheme right now, asking the phone for System. */
@@ -59,11 +105,32 @@ private fun isDarkTheme(themeMode: ThemeMode): Boolean = when (themeMode) {
 }
 
 /**
- * Returns the colour scheme for the dark or light look. These are plain Material 3 defaults
- * for now; a colour choice can later build them from a seed colour here.
+ * Returns the colour scheme for [themeColour] in the dark or light look.
+ *
+ * The wallpaper schemes come from the system (`dynamicLightColorScheme` and
+ * `dynamicDarkColorScheme`, Android 12 and later only); everywhere else, and for the baseline
+ * choice, the Material 3 baseline scheme is used; a custom colour is turned into a full scheme
+ * by [seedColorScheme].
  */
-private fun colorSchemeFor(dark: Boolean): ColorScheme =
-    if (dark) darkColorScheme() else lightColorScheme()
+@Composable
+private fun colorSchemeFor(themeColour: ThemeColour, dark: Boolean): ColorScheme {
+    val context = LocalContext.current
+    return when (themeColour) {
+        ThemeColour.Wallpaper ->
+            if (isWallpaperColourAvailable()) {
+                if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else {
+                baselineColorScheme(dark)
+            }
+        ThemeColour.Baseline -> baselineColorScheme(dark)
+        // remember keeps a value across re-draws (recompositions) of this composable, and works
+        // it out again only when one of its keys changes. Generating a scheme takes real work,
+        // so it is done once per seed and light/dark look, not on every frame.
+        is ThemeColour.Custom -> remember(themeColour.seedArgb, dark) {
+            seedColorScheme(Color(themeColour.seedArgb), dark)
+        }
+    }
+}
 
 /**
  * Re-applies edge-to-edge drawing with bars styled for the app's [dark] choice: transparent
