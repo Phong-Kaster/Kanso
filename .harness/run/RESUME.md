@@ -3,7 +3,7 @@
 > A derived cache, never a source of truth. On any disagreement with task files or git, this file is wrong.
 
 - **Stage:** Verifier (Iteration 8) cleared DONE-candidate: the 287 MB debug APK fails to install on `emulator-5554`, so DoD 2 (emulator half), 19, 22 cannot be driven. Every other machine criterion re-proved fresh.
-- **Next Phase:** 7 - T-006 (Capable), scope `app/build.gradle.kts`. The Iteration itself drives the emulator via `foreman-device.ps1` after the build.
+- **Next Phase:** 7 (again) - T-006 attempt 2 (Capable). Attempt 1 fixed the install (debug ABIs x86_64+arm64-v8a); `-Op dump` is refused because the focused window is `Application` (likely an ANR dialog, ~3 s first frame). Diagnose, then fix start-up work; widen scope as a Tier-1 amendment if needed. The Iteration itself drives the emulator via `foreman-device.ps1` after the build.
 - **Queued decisions:** 0
 - **Abandoned:** none
 - **Unreachable:** none

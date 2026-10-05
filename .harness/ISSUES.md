@@ -2,7 +2,7 @@
 
 ## Open task
 
-- **T-006** (pending, filed by the Verifier 2026-10-05): the debug app does not install on the emulator. `foreman-device.ps1 -Op install -Apk app/build/outputs/apk/debug/app-debug.apk` → `adb: failed to install ...: ` (empty reason), exit 1, twice. APK is 287 MB with four ABIs. Until fixed, DoD 2's emulator half, 19 and 22 cannot be driven.
+- **T-006** (in progress, 1/3): the install is fixed (debug ABIs x86_64 + arm64-v8a, APK 188 MB; install, clear, start exit 0, no FATAL EXCEPTION). `-Op dump` is still refused (exit 3): the focused window is `Application`, probably a system dialog (ANR?) over the app after a ~3 s first frame. DoD 2's emulator half, 19 and 22 are not driven until this is understood.
 
 ## Awaiting a person (unsigned)
 

@@ -30,3 +30,6 @@ One Worker (Capable) wrote ScreenshotTest (nine tests). One fix by the Iteration
 
 ## Iteration 8: Verifier (Capable)
 Re-proved every machine criterion on fresh evidence except DoD 2's emulator half: clean debug+release build and lint green, 64 unit tests and 9 Roborazzi references pass, manifests, dependency reports, greps and catalog loop hold. `foreman-device.ps1 -Op install` failed twice on emulator-5554 with an empty adb reason; the debug APK is 287 MB (four ABIs). Filed T-006, cleared DONE-candidate. Filled A-001 to A-004 checkpoint SHAs.
+
+## Iteration 9: phase 7 (T-006, attempt 1)
+One Worker (Capable) added the debug ABI filter. APK 287 -> 188 MB; install, clear, start exit 0, no FATAL. Dump refused (focus `Application`), so the task stays open at 1/3. Tests, Roborazzi, lint green.

@@ -26,6 +26,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Only the ABIs a person runs the app on: with every ABI the debug APK is ~287 MB and
+            // will not install on the emulator. Release keeps all ABIs.
+            ndk {
+                abiFilters += listOf("x86_64", "arm64-v8a")
+            }
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

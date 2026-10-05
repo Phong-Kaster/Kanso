@@ -16,7 +16,7 @@
 | T-003 | complete | data/settings, ui/theme, ui/settings | 25 tests, lint, build green; reviewed |
 | T-004 | complete | ui/theme, data/settings, ui/settings | tests, lint, build green; reviewed |
 | T-005 | complete | app/src/test screenshots | verifyRoborazziDebug, tests, lint, build green; 9 baselines judged; reviewed |
-| T-006 | pending | app/build.gradle.kts | - |
+| T-006 | in progress (1/3) | app/build.gradle.kts | install fixed (APK 188 MB, installs, starts, no FATAL); dump refused: window `Application` covers the app |
 
 ## Verifier results (Iteration 8, 2026-10-05, fresh evidence)
 
