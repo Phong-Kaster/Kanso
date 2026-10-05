@@ -1,0 +1,21 @@
+{
+  "_comment": "Capability entries for driving an Android app on an emulator or device, so that DoD criteria needing a running app can be classed `machine-then-human` instead of `human-only` (ADR-030). Paste the entry below into the repository's STANDING ledger (knowledge/capabilities.json) after reviewing it.",
+
+  "_why_there_is_no_adb_here": "adb itself is denied in both Run Modes by run.ps1 (ADR-033), in every form the permission matcher was measured to catch, and deny always wins over allow - an adb rule pasted here would be dead on arrival. Every direct device action goes through .harness/loop/bin/foreman-device.ps1, which baseline.json already grants in every repository. It acts only on the debug build this repository produced, confirmed DEBUGGABLE on the device, and has no operation for another app, a device setting, the clock or the notification shade. The earlier tiers here scoped destructive adb commands by serial (emulator-* allowed, a phone withheld); ADR-033 replaced that with a scope by package, which holds on any device.",
+
+  "entries": [
+    {
+      "_tier": "STANDING. A managed emulator the build creates, drives and destroys, or instrumented tests on an attached device. Gradle installs and runs only this repository's app and its test APK.",
+      "intent": "Run instrumented tests on an emulator Gradle stands up and tears down itself, so that `machine-then-human` criteria can be driven at the DONE-candidate gate without a person plugging anything in",
+      "command": "./gradlew :app:<device>DebugAndroidTest (Gradle managed devices) or :app:connectedDebugAndroidTest",
+      "scope": "the instrumentation test source set and the emulator image the build owns",
+      "lifetime": "permanent",
+      "_note": "Prefer the managed-device task over connectedDebugAndroidTest. Managed devices start from a known image every time, which is exactly what a criterion that names its starting state needs, and share it with nobody; a connected device carries whatever the last run left behind, and may be in use by another run at the same time. Instrumented test code can run shell commands on the device with the shell's reach, and nothing mechanical confines it to this app - the one open route around ADR-033's rule (see its Not solved).",
+      "allow": [
+        "Bash(*DebugAndroidTest*)",
+        "Bash(*connectedDebugAndroidTest*)",
+        "Bash(*managedDevice*)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# Gradle and Android build output
+.gradle/
+build/
+**/build/
+.cxx/
+**/.cxx/
+.externalNativeBuild/
+captures/
+local.properties
+
+# IDE and OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Signing material never belongs in git
+*.jks
+*.keystore

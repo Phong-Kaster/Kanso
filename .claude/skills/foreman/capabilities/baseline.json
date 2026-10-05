@@ -1,0 +1,149 @@
+{
+  "description": "Baseline Capability Ledger - permanent, low-risk capabilities that ship with Foreman. Identical in every consumer repository. Higher-risk capabilities live in .harness/knowledge/capabilities.json (standing, per-repo) or .harness/run/capabilities.json (goal-scoped). One entry reaches the network by the human's decision: the Context7 documentation lookup (ADR-032), which a repository can switch off with a 'deny' rule in its own ledger. Note: git push is NOT here - it is network access, a High-risk class under POLICIES.md, granted per repository and scoped to the Loop Branch (ADR-011). Worker subagents are restricted further still, by the tools array in .harness/loop/agents.json.",
+  "entries": [
+    {
+      "intent": "Read repository files and search the codebase",
+      "command": "Read / Glob / Grep tools",
+      "scope": "consumer repository",
+      "lifetime": "permanent",
+      "allow": [
+        "Read(**)",
+        "Glob(**)",
+        "Grep(**)"
+      ]
+    },
+    {
+      "intent": "Create and edit files inside the repository (protected paths are covered by deny rules)",
+      "command": "Edit / Write tools",
+      "scope": "consumer repository",
+      "lifetime": "permanent",
+      "allow": [
+        "Edit(**)",
+        "Write(**)"
+      ]
+    },
+    {
+      "intent": "Inspect and locally persist git state (checkpoints on the Loop Branch); no push, no merge, no history rewriting",
+      "command": "git (local, non-destructive)",
+      "scope": "consumer repository",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(git status*)",
+        "Bash(git diff*)",
+        "Bash(git log*)",
+        "Bash(set -o pipefail)",
+        "Bash(git show*)",
+        "Bash(git add*)",
+        "Bash(git commit*)",
+        "Bash(git branch*)",
+        "Bash(git checkout*)",
+        "Bash(git rm --cached*)",
+        "Bash(git rm -r .harness/run*)",
+        "Bash(git clean -f .harness/run*)"
+      ]
+    },
+    {
+      "intent": "Look up a third-party library's current documentation through Context7 when a build, test, lint or review failure names that library's API, so a retry is based on new information (ADR-032). The one baseline entry that reaches the network: a query carries only a library's public name and a concept, never repository code. A repository opts out with a matching 'deny' rule in its own ledger.",
+      "command": "npx -y ctx7 library <name> <concept> --json / npx -y ctx7 docs <library-id> <concept> --json (telemetry off)",
+      "scope": "read-only queries to Context7's public index; setup, login and remove are not granted",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(CTX7_TELEMETRY_DISABLED=1 npx -y ctx7 library *)",
+        "Bash(CTX7_TELEMETRY_DISABLED=1 npx -y ctx7 docs *)"
+      ]
+    },
+    {
+      "intent": "Drive the app this repository is building on an attached device or emulator - install it, clear its data, grant or revoke its permissions, start it, read its screen, tap its controls, read its own notifications and logs - so criteria that need a running app are driven before a person looks (ADR-030, ADR-033). adb itself is denied in both Run Modes; this wrapper is the only route, and it refuses any other package and has no operation that changes a device setting.",
+      "command": "powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <operation> [...]",
+      "scope": "the debug build of this repository, identified by the build's own output metadata and confirmed DEBUGGABLE on the device; never another app, the device's settings, its clock or its notification shade",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 *)",
+        "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-device.ps1 *)"
+      ]
+    },
+    {
+      "intent": "Check an Android app's real screens against their approved screenshots on the JVM, with no device, in every iteration - Roborazzi is Foreman's default UI check for Android (ADR-036, packs/android/roborazzi.md). Verify fails on any change and writes a reference/diff/new comparison image; compare writes the comparison without failing. New baselines are added only through the wrapper, which puts every existing one back.",
+      "command": "gradlew :<module>:verifyRoborazzi<Variant> / compareRoborazzi<Variant>; powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module <module>",
+      "scope": "the repository's own screenshot tests and the baselines under <module>/src/test/screenshots/; recording over an existing baseline is denied in every form, and the Runtime stops the run if one changes without the human's approval",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(*gradlew*verifyRoborazzi*)",
+        "Bash(*gradlew*compareRoborazzi*)",
+        "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1*)",
+        "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-record-baselines.ps1*)"
+      ]
+    }
+  ],
+  "autonomous": {
+    "description": "Autonomous mode only (ADR-027, ENGINE.md 14.3). Replaces every ledger's allow rules with 'every tool', and denies the list below on top of run.ps1's immutable deny rules. Two kinds of entry: raw forms of actions that are allowed only through a Recovery Wrapper in .harness/loop/bin/ (push, rm outside the repo), and actions no wrapper can make undoable (publishing, deploying, merging, messaging). Add repository-specific denials as 'deny' arrays in .harness/knowledge/capabilities.json entries. This list is prefix matching over command strings - it stops an engine that slips, not one that routes around it.",
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "NotebookEdit",
+      "Bash",
+      "Task",
+      "Agent",
+      "TodoWrite",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "deny": [
+      "Bash(git push*)",
+      "Bash(git reset --hard origin*)",
+      "Bash(git branch -D main*)",
+      "Bash(git branch -D master*)",
+      "Bash(git checkout main*)",
+      "Bash(git checkout master*)",
+      "Bash(git switch main*)",
+      "Bash(git switch master*)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf ..*)",
+      "Bash(rm -rf C:*)",
+      "Bash(rm -rf D:*)",
+      "Bash(rm -r /*)",
+      "Bash(rm -r ~*)",
+      "Bash(rm -r ..*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh release*)",
+      "Bash(gh repo*)",
+      "Bash(gh api*)",
+      "Bash(npm publish*)",
+      "Bash(yarn publish*)",
+      "Bash(pnpm publish*)",
+      "Bash(twine upload*)",
+      "Bash(cargo publish*)",
+      "Bash(docker push*)",
+      "Bash(./gradlew publish*)",
+      "Bash(gradlew publish*)",
+      "Bash(firebase deploy*)",
+      "Bash(vercel*)",
+      "Bash(netlify deploy*)",
+      "Bash(kubectl*)",
+      "Bash(helm*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(aws*)",
+      "Bash(gcloud*)",
+      "Bash(az *)",
+      "Bash(dropdb*)",
+      "Bash(mysqladmin drop*)",
+      "Bash(ssh*)",
+      "Bash(scp*)",
+      "Bash(sendmail*)",
+      "Bash(mail *)",
+      "Bash(shutdown*)",
+      "Bash(reboot*)",
+      "Bash(format *)",
+      "Bash(reg *)",
+      "Bash(Remove-Item*)",
+      "Bash(powershell -Command Remove-Item*)",
+      "Bash(powershell Remove-Item*)"
+    ]
+  }
+}
