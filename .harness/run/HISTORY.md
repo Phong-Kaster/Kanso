@@ -24,3 +24,6 @@ One Worker (Capable). Round 1 failed: DataStore rename on Windows (fixed with Ok
 
 ## Iteration: phase 5 (T-004)
 One Worker (Capable) wrote the theme colour model, MaterialKolor generator, KansoTheme mapping, Settings section with picker, and 5 test classes. Iteration wired MainActivity (saved colour before first frame) and fixed one test: the DataStore write runs off the test clock, so it polls in real time. 55+ tests, lint, build green. Review: no blocking findings.
+
+## Iteration: phase 6 (T-005)
+One Worker (Capable) wrote ScreenshotTest (nine tests). One fix by the Iteration: wrong Roborazzi import package. Nine baselines recorded by the wrapper, each opened and judged. verify, tests, lint, build green. Review: no blocking findings. All tasks complete: DONE-candidate.

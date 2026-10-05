@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** executing; T-001 to T-004 complete, next T-005
+- **Stage:** all tasks complete; DONE-candidate recorded
 - **Loop Branch:** loop/kanso-app-shell
-- **Next Phase:** T-005
-- **DONE-candidate:** no
+- **Next Phase:** none (Verifier)
+- **DONE-candidate:** yes
 
 ## Progress
 
@@ -15,7 +15,7 @@
 | T-002 | complete | navigation, home, placeholder, di | 10 tests, lint, build green; reviewed |
 | T-003 | complete | data/settings, ui/theme, ui/settings | 25 tests, lint, build green; reviewed |
 | T-004 | complete | ui/theme, data/settings, ui/settings | tests, lint, build green; reviewed |
-| T-005 | pending (next) | app/src/test screenshots | - |
+| T-005 | complete | app/src/test screenshots | verifyRoborazziDebug, tests, lint, build green; 9 baselines judged; reviewed |
 
 ## Assumptions
 
