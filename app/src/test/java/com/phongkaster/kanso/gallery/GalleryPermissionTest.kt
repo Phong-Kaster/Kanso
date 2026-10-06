@@ -85,7 +85,7 @@ class GalleryPermissionTest {
         /** Shows the gallery, with the recording registry, in the newly created activity. */
         override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
             // Built outside the composable: lint forbids constructing a ViewModel while drawing.
-            val viewModel = GalleryViewModel(Tool.EDIT, ViewModelClearedProbe())
+            val viewModel = GalleryViewModel(Tool.EDIT, ViewModelClearedProbe(), FakePhotoSource(emptyList(), emptyList()))
             (activity as? ComponentActivity)?.setContent {
                 val owner = object : ActivityResultRegistryOwner {
                     override val activityResultRegistry: ActivityResultRegistry = registry
@@ -95,6 +95,7 @@ class GalleryPermissionTest {
                         GalleryScreen(
                             viewModel = viewModel,
                             onBack = {},
+                            onPhotoChosen = { _, _ -> },
                         )
                     }
                 }

@@ -34,6 +34,15 @@
     <string name="gallery_partial_notice">You have shared only some of your photos with Kanso.</string>
     <string name="gallery_share_more">Share more photos</string>
     <string name="gallery_body_placeholder">Your photos will appear here.</string>
+    <string name="gallery_all_photos">All photos</string>
+    <string name="gallery_album_label">Album: %1$s</string>
+    <string name="gallery_empty">No photos to show yet. Take one with the camera or add some to your phone.</string>
+    <string name="gallery_photo_description">Photo %1$s</string>
+
+    <!-- Tool screen: one photo opened in a tool. %1$s is the tool name where present. -->
+    <string name="tool_save">Save</string>
+    <string name="tool_photo_description">Your photo</string>
+    <string name="tool_photo_unreadable">This photo cannot be opened. Go back and pick another one.</string>
 
     <!-- Spoken description of the back arrow in top bars. -->
     <string name="back">Back</string>

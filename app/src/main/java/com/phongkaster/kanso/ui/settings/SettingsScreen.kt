@@ -203,11 +203,13 @@ private fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
             .testTag(CUSTOM_COLOUR_PICKER_TAG),
     ) {
         // The picker remembers its own colour once it is shown, so [seedArgb] only sets where it
-        // starts; it does not jump back while the person drags.
+        // starts; it does not jump back while the person drags. showAlpha = false hides the
+        // transparency bar and its percentage box: a theme colour is always fully opaque.
         HSVColorPicker(
             color = Color(seedArgb),
             onColorChanged = onColorChanged,
             modifier = Modifier.padding(16.dp),
+            showAlpha = false,
         )
     }
 }

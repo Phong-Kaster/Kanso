@@ -97,6 +97,11 @@ dependencies {
     implementation(libs.compose.material3)
     debugImplementation(libs.compose.ui.tooling)
 
+    // Photo thumbnails in the gallery grid (Coil loads and caches images off the main thread)
+    implementation(libs.coil.compose)
+    // Reads a photo's EXIF orientation so it is shown upright
+    implementation(libs.androidx.exifinterface)
+
     // Seed colour -> full Material 3 colour scheme
     implementation(libs.material.kolor)
 

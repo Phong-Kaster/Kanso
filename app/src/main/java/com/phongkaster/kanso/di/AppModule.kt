@@ -2,6 +2,9 @@ package com.phongkaster.kanso.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.phongkaster.kanso.data.media.MediaStorePhotoSource
+import com.phongkaster.kanso.data.media.PhotoSource
+import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
@@ -9,6 +12,7 @@ import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import com.phongkaster.kanso.ui.tool.ToolViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,8 +39,19 @@ val appModule = module {
     // `params` are the values the screen passes with parametersOf(...): here, the tool shown.
     viewModel { params -> PlaceholderViewModel(tool = params.get(), probe = get()) }
 
+    // The photo library behind one small interface, so tests can swap in a fake list of photos.
+    single<PhotoSource> { MediaStorePhotoSource(androidContext()) }
+
+    // Decodes one photo for the tool screen: upright and no bigger than the screen needs.
+    single { PhotoLoader(androidContext()) }
+
     // The gallery ViewModel also receives the tool the user came from.
-    viewModel { params -> GalleryViewModel(tool = params.get(), probe = get()) }
+    viewModel { params -> GalleryViewModel(tool = params.get(), probe = get(), photoSource = get()) }
+
+    // The tool screen's ViewModel receives the tool and the photo (as text) from the navigation key.
+    viewModel { params ->
+        ToolViewModel(tool = params.get(), photoUri = params.get(), loader = get(), probe = get())
+    }
 
     // The scope the settings file is read and written in. It is a named singleton so a test can
     // cancel it, which releases the file, and then open the same file again like a restart.

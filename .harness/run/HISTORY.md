@@ -15,3 +15,9 @@
 - Attempted: consumed D-001; moved BackArrowIcon to ui/common; strings, manifest read permissions, Gallery key, nav wiring, Koin binding; removed placeholder screenshot tests + pictures 7-9; 3 Workers (T-001 Fast, T-002/T-003 Capable); reviewer; recorded 12_/13_.
 - Learned: backgroundScope is skipped by advanceUntilIdle; lint forbids constructing a ViewModel inside a composable; ThemeColourSettingsTest wallpaper test flakes once with AccessDeniedException on the DataStore rename (Windows file lock), passes on rerun.
 - Reconciled: all fixed in-iteration; flake recorded in PROJECT.md.
+
+### Iteration 3 - 2026-10-06
+- **Phase:** 2 (T-004, T-005, T-010)
+- Attempted: wired Coil 2.7.0 + ExifInterface (already in catalog), `ToolPhoto` key, strings, Koin (`PhotoSource`, `PhotoLoader`, ToolViewModel), nav entry; 3 Capable Workers; fixed old gallery tests' signatures; recorded 10_/11_/16_/17_ and (approved, D-001) re-recorded 6_; reviewer; added `PhotoToToolNavigationTest`.
+- Learned: Compose `waitUntil` does not run what a background read posts to the main looper under Robolectric: idle the main looper inside the condition. Workers' first-try code compiled.
+- Reconciled: reviewer criterion-3 gap closed by a nav-host test; EXIF-read failure and stale-thumbnail cache key fixed; recreate test on a copy of the host and rotation re-decode noted in ISSUES.

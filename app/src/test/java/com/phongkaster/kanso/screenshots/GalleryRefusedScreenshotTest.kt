@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
+import com.phongkaster.kanso.gallery.FakePhotoSource
 import com.phongkaster.kanso.gallery.RecordingRegistry
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.gallery.GALLERY_REFUSED_TAG
@@ -79,13 +80,14 @@ class GalleryRefusedScreenshotTest {
             override val activityResultRegistry: ActivityResultRegistry = registry
         }
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
-        val viewModel = GalleryViewModel(Tool.EDIT, ViewModelClearedProbe())
+        val viewModel = GalleryViewModel(Tool.EDIT, ViewModelClearedProbe(), FakePhotoSource(emptyList(), emptyList()))
         compose.setContent {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
                 KansoTheme(themeMode = mode) {
                     GalleryScreen(
                         viewModel = viewModel,
                         onBack = {},
+                        onPhotoChosen = { _, _ -> },
                     )
                 }
             }

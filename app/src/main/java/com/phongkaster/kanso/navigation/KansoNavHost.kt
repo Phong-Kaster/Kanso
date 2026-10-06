@@ -16,6 +16,8 @@ import com.phongkaster.kanso.ui.placeholder.PlaceholderScreen
 import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import com.phongkaster.kanso.ui.tool.ToolScreen
+import com.phongkaster.kanso.ui.tool.ToolViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -96,6 +98,21 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     parameters = { parametersOf(key.tool) },
                 )
                 GalleryScreen(
+                    viewModel = viewModel,
+                    onBack = goBack,
+                    // Choosing a photo opens the tool on it. The photo goes inside the key (as
+                    // text), so it is saved with the back stack. Only act while the gallery is
+                    // still on top, so a double tap cannot open two tool screens.
+                    onPhotoChosen = { tool, photoUri ->
+                        if (backStack.last() == key) backStack.add(ToolPhoto(tool, photoUri))
+                    },
+                )
+            }
+            entry<ToolPhoto> { key ->
+                val viewModel = koinViewModel<ToolViewModel>(
+                    parameters = { parametersOf(key.tool, key.photoUri) },
+                )
+                ToolScreen(
                     viewModel = viewModel,
                     onBack = goBack,
                 )

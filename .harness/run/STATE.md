@@ -2,9 +2,9 @@
 
 ## Current
 
-- **Stage:** Phase 1 complete; DoD approved
+- **Stage:** Phase 2 complete (T-004, T-005, T-010); DoD approved
 - **Loop Branch:** loop/kanso-pick-shoot-save
-- **Next Phase:** 2 = T-004, T-005, T-010
+- **Next Phase:** 3 = T-006, T-007
 - **DONE-candidate:** no
 
 ## Progress
@@ -14,12 +14,12 @@
 | T-001 | complete | settings screen labels, test | - |
 | T-002 | complete | settings viewmodel, debounce test | - |
 | T-003 | complete | ui/gallery shell, ui/permission, tests | - |
-| T-004 | pending | ui/gallery, data/media, tests | - |
-| T-005 | pending | ui/tool, data/photo/PhotoLoader, tests | - |
+| T-004 | complete | ui/gallery, data/media, tests | Phase 2 checkpoint, see task file |
+| T-005 | complete | ui/tool, data/photo/PhotoLoader, tests | Phase 2 checkpoint, see task file |
 | T-006 | pending | ui/camera, tests | - |
 | T-007 | pending | data/photo saver, ui/tool Save, tests | - |
 | T-008 | pending | ui/camera, gallery top bar | - |
-| T-010 | pending | colorpicker, settings screen call site, test | - |
+| T-010 | complete | colorpicker, settings screen call site, test | Phase 2 checkpoint, see task file |
 | T-009 | pending | ui/saved, tests | - |
 
 ## Assumptions
