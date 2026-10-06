@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
+import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -33,6 +34,9 @@ val appModule = module {
 
     // `params` are the values the screen passes with parametersOf(...): here, the tool shown.
     viewModel { params -> PlaceholderViewModel(tool = params.get(), probe = get()) }
+
+    // The gallery ViewModel also receives the tool the user came from.
+    viewModel { params -> GalleryViewModel(tool = params.get(), probe = get()) }
 
     // The scope the settings file is read and written in. It is a named singleton so a test can
     // cancel it, which releases the file, and then open the same file again like a restart.

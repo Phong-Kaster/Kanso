@@ -11,6 +11,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -23,12 +24,14 @@ import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.ui.home.HomeViewModel
+import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
+import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.placeholder.PLACEHOLDER_SCREEN_TAG
-import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -40,7 +43,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Drives the real app (MainActivity, started on the JVM by Robolectric) through its navigation:
- * Home lists the tools, each tool opens its placeholder, Back returns to Home, Back on Home
+ * Home lists the tools, each tool opens its gallery (the camera its stand-in), Back returns to Home, Back on Home
  * closes the app, rotation keeps the current screen, and each screen's ViewModel lives exactly
  * as long as its back stack entry.
  */
@@ -82,21 +85,60 @@ class NavigationTest {
         }
     }
 
-    /** DoD 5: every tool opens a placeholder naming it, and Back returns to Home. */
+    /**
+     * DoD 1: every tool but the camera opens the photo gallery, the camera still opens its
+     * stand-in screen, and Back returns to Home each time.
+     */
     @Test
-    fun each_tool_opens_its_placeholder_and_back_returns_home() {
+    fun each_tool_opens_its_screen_and_back_returns_home() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             waitForHome()
             Tool.entries.forEach { tool ->
                 val name = label(tool)
                 compose.onNodeWithText(name).performScrollTo().performClick()
-                waitForPlaceholderTitle(name)
-                compose.onNode(placeholderTitle(name)).assertIsDisplayed()
+                if (tool == Tool.CAMERA) {
+                    waitForPlaceholderTitle(name)
+                    compose.onNode(placeholderTitle(name)).assertIsDisplayed()
+                } else {
+                    waitForGallery()
+                    compose.onNodeWithTag(GALLERY_SCREEN_TAG).assertIsDisplayed()
+                    // The gallery's title names the tool, so a tile opening another tool's
+                    // gallery would fail here.
+                    compose.onNode(
+                        hasText(name, substring = true) and hasAnyAncestor(hasTestTag(GALLERY_SCREEN_TAG)),
+                    ).assertIsDisplayed()
+                }
 
                 Espresso.pressBack()
                 waitForHomeOnly()
                 assertEquals(Lifecycle.State.RESUMED, scenario.state)
                 scenario.onActivity { activity -> assertFalse(activity.isFinishing) }
+            }
+        }
+    }
+
+    /**
+     * DoD 17: launching the app asks for no permission; the first tap on Edit asks for the two
+     * photo permissions Android 15 uses.
+     */
+    @Test
+    fun launch_asks_for_nothing_and_the_gallery_asks_for_photo_access() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            waitForHome()
+            scenario.onActivity { assertNull(shadowOf(it).lastRequestedPermission) }
+
+            compose.onNodeWithText(label(Tool.EDIT)).performScrollTo().performClick()
+            waitForGallery()
+
+            scenario.onActivity { activity ->
+                val request = shadowOf(activity).lastRequestedPermission
+                assertEquals(
+                    listOf(
+                        android.Manifest.permission.READ_MEDIA_IMAGES,
+                        android.Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
+                    ),
+                    request?.requestedPermissions?.toList(),
+                )
             }
         }
     }
@@ -137,18 +179,18 @@ class NavigationTest {
         }
     }
 
-    /** DoD 8: rotating (recreating the activity) on the Edit placeholder keeps it on screen. */
+    /** DoD 8: rotating (recreating the activity) on the Edit gallery keeps it on screen. */
     @Test
-    fun placeholder_survives_recreation_and_one_back_returns_home() {
+    fun gallery_survives_recreation_and_one_back_returns_home() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             waitForHome()
             val name = label(Tool.EDIT)
             compose.onNodeWithText(name).performScrollTo().performClick()
-            waitForPlaceholderTitle(name)
+            waitForGallery()
 
             scenario.recreate()
-            waitForPlaceholderTitle(name)
-            compose.onNode(placeholderTitle(name)).assertIsDisplayed()
+            waitForGallery()
+            compose.onNodeWithTag(GALLERY_SCREEN_TAG).assertIsDisplayed()
 
             Espresso.pressBack()
             waitForHomeOnly()
@@ -157,26 +199,26 @@ class NavigationTest {
     }
 
     /**
-     * DoD 10: a placeholder's ViewModel is cleared when the placeholder is popped, while Home's
+     * DoD 10: a gallery's ViewModel is cleared when the gallery is popped, while Home's
      * ViewModel, whose entry stays on the back stack, is kept.
      */
     @Test
-    fun popping_a_placeholder_clears_its_view_model_but_not_homes() {
+    fun popping_a_gallery_clears_its_view_model_but_not_homes() {
         ActivityScenario.launch(MainActivity::class.java).use {
             waitForHome()
             val probe = KoinPlatform.getKoin().get<ViewModelClearedProbe>()
 
             val name = label(Tool.EDIT)
             compose.onNodeWithText(name).performScrollTo().performClick()
-            waitForPlaceholderTitle(name)
-            assertFalse(probe.wasCleared(PlaceholderViewModel::class))
+            waitForGallery()
+            assertFalse(probe.wasCleared(GalleryViewModel::class))
 
             Espresso.pressBack()
             waitForHomeOnly()
             compose.waitUntil(timeoutMillis = 10_000) {
-                probe.wasCleared(PlaceholderViewModel::class)
+                probe.wasCleared(GalleryViewModel::class)
             }
-            assertTrue(probe.wasCleared(PlaceholderViewModel::class))
+            assertTrue(probe.wasCleared(GalleryViewModel::class))
             assertFalse(probe.wasCleared(HomeViewModel::class))
         }
     }
@@ -195,6 +237,13 @@ class NavigationTest {
         }
     }
 
+    /** Waits until the gallery screen is on screen. */
+    private fun waitForGallery() {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(GALLERY_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     /** Waits until Home's title is on screen. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
@@ -207,6 +256,7 @@ class NavigationTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty() &&
                 compose.onAllNodesWithTag(PLACEHOLDER_SCREEN_TAG).fetchSemanticsNodes().isEmpty() &&
+                compose.onAllNodesWithTag(GALLERY_SCREEN_TAG).fetchSemanticsNodes().isEmpty() &&
                 compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isEmpty()
         }
         compose.onNodeWithText("Kanso").assertIsDisplayed()

@@ -5,9 +5,6 @@ import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -24,8 +21,6 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
-import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.placeholder.PLACEHOLDER_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -51,7 +46,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the nine reference pictures of the app: Home, Settings and the Edit placeholder, each in
+ * Takes the six reference pictures of the app: Home and Settings, each in
  * light, in dark, and in the custom colour #2E7D32.
  *
  * Roborazzi is a library that draws a screen on the computer, with no phone or emulator, and
@@ -161,41 +156,6 @@ class ScreenshotTest {
         capture("6_settings_custom_colour.png")
     }
 
-    /** Picture 7: the Edit placeholder in light mode with the baseline colours. */
-    @Test
-    fun placeholder_light() {
-        waitForHome()
-        openSettings()
-        chooseThemeMode(ThemeMode.Light)
-        backToHome()
-        openEditPlaceholder()
-        capture("7_placeholder_light.png")
-    }
-
-    /** Picture 8: the Edit placeholder in dark mode with the baseline colours. */
-    @Test
-    fun placeholder_dark() {
-        waitForHome()
-        openSettings()
-        chooseThemeMode(ThemeMode.Dark)
-        backToHome()
-        openEditPlaceholder()
-        capture("8_placeholder_dark.png")
-    }
-
-    /** Picture 9: the Edit placeholder in light mode with the custom colour #2E7D32. */
-    @Test
-    @Config(sdk = [35], qualifiers = PHONE)
-    fun placeholder_custom_colour() {
-        waitForHome()
-        openSettings()
-        chooseThemeMode(ThemeMode.Light)
-        chooseCustomColour()
-        backToHome()
-        openEditPlaceholder()
-        capture("9_placeholder_custom_colour.png")
-    }
-
     /**
      * Saves a picture of the whole window as `src/test/screenshots/[name]`. When baselines are
      * checked, Roborazzi compares the drawing with that file instead of saving it.
@@ -283,17 +243,6 @@ class ScreenshotTest {
         Espresso.pressBack()
         waitForHomeOnly()
         assertEquals(scheme.primary, appliedScheme().primary)
-    }
-
-    /** Taps the Edit tool on Home and waits until its placeholder shows the tool's name. */
-    private fun openEditPlaceholder() {
-        val name = context.getString(Tool.EDIT.labelRes)
-        compose.onNodeWithText(name).performScrollTo().performClick()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodes(
-                hasText(name) and hasAnyAncestor(hasTestTag(PLACEHOLDER_SCREEN_TAG)),
-            ).fetchSemanticsNodes().isNotEmpty()
-        }
     }
 
     /** Waits until Home's title is on screen. */

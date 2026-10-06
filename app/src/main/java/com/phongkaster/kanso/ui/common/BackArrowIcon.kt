@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.placeholder
+package com.phongkaster.kanso.ui.common
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor

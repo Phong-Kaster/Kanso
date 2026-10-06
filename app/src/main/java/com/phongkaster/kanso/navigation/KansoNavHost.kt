@@ -8,6 +8,8 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.phongkaster.kanso.ui.gallery.GalleryScreen
+import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeScreen
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.placeholder.PlaceholderScreen
@@ -69,7 +71,13 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    onToolClick = { tool -> if (backStack.last() == Home) backStack.add(Placeholder(tool)) },
+                    // Every tool opens the photo gallery to pick a photo from; the camera is not a
+                    // tool that edits a picked photo, so it keeps its own stand-in screen for now.
+                    onToolClick = { tool ->
+                        if (backStack.last() == Home) {
+                            backStack.add(if (tool == Tool.CAMERA) Placeholder(tool) else Gallery(tool))
+                        }
+                    },
                     onSettingsClick = { if (backStack.last() == Home) backStack.add(Settings) },
                 )
             }
@@ -79,6 +87,15 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     parameters = { parametersOf(key.tool) },
                 )
                 PlaceholderScreen(
+                    viewModel = viewModel,
+                    onBack = goBack,
+                )
+            }
+            entry<Gallery> { key ->
+                val viewModel = koinViewModel<GalleryViewModel>(
+                    parameters = { parametersOf(key.tool) },
+                )
+                GalleryScreen(
                     viewModel = viewModel,
                     onBack = goBack,
                 )

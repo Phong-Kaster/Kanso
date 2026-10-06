@@ -10,12 +10,18 @@
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:node="remove" />
 
-    <!-- Engine libraries (WorkManager, old TensorFlow Lite) merge these in; Kanso needs none yet. -->
-    <uses-permission
-        android:name="android.permission.RECEIVE_BOOT_COMPLETED"
-        tools:node="remove" />
+    <!-- Photo access for the gallery: Android 14+ asks for the first two (the second lets the user
+         share only some photos), Android 13 for READ_MEDIA_IMAGES, Android 12 and older for
+         READ_EXTERNAL_STORAGE, which stops mattering from Android 13 (maxSdkVersion 32). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Engine libraries (WorkManager, old TensorFlow Lite) merge these in; Kanso does not use them. -->
+    <uses-permission
+        android:name="android.permission.RECEIVE_BOOT_COMPLETED"
         tools:node="remove" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"

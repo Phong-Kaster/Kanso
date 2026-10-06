@@ -38,7 +38,7 @@ import com.library.colorpicker.HSVColorPicker
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
-import com.phongkaster.kanso.ui.placeholder.BackArrowIcon
+import com.phongkaster.kanso.ui.common.BackArrowIcon
 
 /** The test tag on the root of the Settings screen, so tests can tell it apart from Home. */
 const val SETTINGS_SCREEN_TAG = "settings-screen"
@@ -52,35 +52,17 @@ const val THEME_MODE_LIGHT_TAG = "theme-mode-light"
 /** The test tag on the "Dark" theme mode row. */
 const val THEME_MODE_DARK_TAG = "theme-mode-dark"
 
-/** The test tag on the "From wallpaper" theme colour row (Android 12 and later only). */
+/** The test tag on the wallpaper theme colour row (Android 12 and later only). */
 const val THEME_COLOUR_WALLPAPER_TAG = "theme-colour-wallpaper"
 
-/** The test tag on the "Default purple" theme colour row (below Android 12 only). */
+/** The test tag on the default-purple theme colour row (below Android 12 only). */
 const val THEME_COLOUR_BASELINE_TAG = "theme-colour-baseline"
 
-/** The test tag on the "Custom colour" theme colour row. */
+/** The test tag on the custom theme colour row. */
 const val THEME_COLOUR_CUSTOM_TAG = "theme-colour-custom"
 
 /** The test tag on the node holding the colour picker, shown while Custom is selected. */
 const val CUSTOM_COLOUR_PICKER_TAG = "custom-colour-picker"
-
-/**
- * The labels of the theme colour setting. They are kept here until they move to
- * `res/values/strings.xml` beside the other Settings labels.
- */
-private object ThemeColourLabels {
-    /** The setting's own label. */
-    const val TITLE = "Theme colour"
-
-    /** The wallpaper option. */
-    const val WALLPAPER = "From wallpaper"
-
-    /** The baseline option shown instead of the wallpaper one on older phones. */
-    const val BASELINE = "Default purple"
-
-    /** The option that opens the colour picker. */
-    const val CUSTOM = "Custom colour"
-}
 
 /**
  * The colour of the surface the picker sits on. The picker draws its text in fixed black, so
@@ -150,8 +132,8 @@ fun SettingsScreen(
 }
 
 /**
- * The "Theme colour" setting: a label, a "From wallpaper" row when [wallpaperAvailable] (or a
- * "Default purple" row when it is not), and a "Custom colour" row, with [selected] marked.
+ * The theme colour setting: a label, a wallpaper row when [wallpaperAvailable] (or a
+ * default-purple row when it is not), and a custom colour row, with [selected] marked.
  * While Custom is selected, the colour picker is shown below it, and every colour picked there
  * goes to [onCustomColourChanged]. Tapping a row calls [onWallpaper], [onBaseline] or [onCustom].
  */
@@ -165,7 +147,8 @@ private fun ThemeColourChoice(
     onCustomColourChanged: (Color) -> Unit,
 ) {
     Text(
-        text = ThemeColourLabels.TITLE,
+        // stringResource looks the text up in res/values/strings.xml (and its translations).
+        text = stringResource(R.string.theme_colour_title),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
@@ -173,21 +156,21 @@ private fun ThemeColourChoice(
     Column(modifier = Modifier.selectableGroup()) {
         if (wallpaperAvailable) {
             RadioRow(
-                label = ThemeColourLabels.WALLPAPER,
+                label = stringResource(R.string.theme_colour_wallpaper),
                 selected = selected == ThemeColour.Wallpaper,
                 onClick = onWallpaper,
                 testTag = THEME_COLOUR_WALLPAPER_TAG,
             )
         } else {
             RadioRow(
-                label = ThemeColourLabels.BASELINE,
+                label = stringResource(R.string.theme_colour_default),
                 selected = selected == ThemeColour.Baseline,
                 onClick = onBaseline,
                 testTag = THEME_COLOUR_BASELINE_TAG,
             )
         }
         RadioRow(
-            label = ThemeColourLabels.CUSTOM,
+            label = stringResource(R.string.theme_colour_custom),
             selected = selected is ThemeColour.Custom,
             onClick = onCustom,
             testTag = THEME_COLOUR_CUSTOM_TAG,

@@ -20,6 +20,21 @@
     <string name="theme_mode_light">Light</string>
     <string name="theme_mode_dark">Dark</string>
 
+    <!-- Theme colour setting: its label and its three options. -->
+    <string name="theme_colour_title">Theme colour</string>
+    <string name="theme_colour_wallpaper">From wallpaper</string>
+    <string name="theme_colour_default">Default purple</string>
+    <string name="theme_colour_custom">Custom colour</string>
+
+    <!-- Photo gallery shown by every tool except the camera. %1$s is the tool name. -->
+    <string name="gallery_title">%1$s: choose a photo</string>
+    <string name="gallery_refused_title">Photo access is off</string>
+    <string name="gallery_refused_message">Kanso needs to read your photos so you can pick one to work on. Photos stay on your phone. Turn on photo access in your phone&#8217;s settings for Kanso to continue.</string>
+    <string name="gallery_open_settings">Open settings</string>
+    <string name="gallery_partial_notice">You have shared only some of your photos with Kanso.</string>
+    <string name="gallery_share_more">Share more photos</string>
+    <string name="gallery_body_placeholder">Your photos will appear here.</string>
+
     <!-- Spoken description of the back arrow in top bars. -->
     <string name="back">Back</string>
 

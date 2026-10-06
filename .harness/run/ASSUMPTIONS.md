@@ -119,13 +119,13 @@ Option 2, the same rule Run 1 applied; the PRD keeps AGP at 8.
 
 ---
 
-## A-006 - Baselines the engine cannot move
+## A-006 - Baselines the engine cannot move (RESOLVED by D-001)
 
 - **Tier:** 3 (intent) - touches DoD criteria 30, R1, R3
 - **Iteration:** 1 (bootstrap)
 - **First dependent checkpoint:** T-001 / T-003 checkpoints
 - **Revert:** `git revert <sha>`
-- **Assumed DoD criteria:** 30, R3 (until the human lists the four pictures under `## Baselines`)
+- **Assumed DoD criteria:** none. Resolved Iteration 2: the human listed the four baselines (D-001); 7-9 removed with the placeholder tests, 6 is re-recorded in T-010 if the picture changes.
 
 ### Question
 

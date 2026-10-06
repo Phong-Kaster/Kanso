@@ -9,3 +9,9 @@
 - Reconciled: baseline dependency recorded as A-006.
 
 ## Archived Decisions
+
+### Iteration 2 - 2026-10-06
+- **Phase:** 1 (T-001, T-002, T-003)
+- Attempted: consumed D-001; moved BackArrowIcon to ui/common; strings, manifest read permissions, Gallery key, nav wiring, Koin binding; removed placeholder screenshot tests + pictures 7-9; 3 Workers (T-001 Fast, T-002/T-003 Capable); reviewer; recorded 12_/13_.
+- Learned: backgroundScope is skipped by advanceUntilIdle; lint forbids constructing a ViewModel inside a composable; ThemeColourSettingsTest wallpaper test flakes once with AccessDeniedException on the DataStore rename (Windows file lock), passes on rerun.
+- Reconciled: all fixed in-iteration; flake recorded in PROJECT.md.

@@ -6,7 +6,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 2
 
-- **Status:** pending
+- **Status:** answered
 - **Type:** DoD approval
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-10-06
@@ -40,4 +40,4 @@ None; the run uses the Deny List (Autonomous mode).
 
 ### Decision
 
-<!-- Answered in `.harness/run/DECISIONS.md` under `## D-001`. -->
+Approved as written, 4 baselines listed (DECISIONS.md D-001).
