@@ -21,3 +21,9 @@
 - Attempted: wired Coil 2.7.0 + ExifInterface (already in catalog), `ToolPhoto` key, strings, Koin (`PhotoSource`, `PhotoLoader`, ToolViewModel), nav entry; 3 Capable Workers; fixed old gallery tests' signatures; recorded 10_/11_/16_/17_ and (approved, D-001) re-recorded 6_; reviewer; added `PhotoToToolNavigationTest`.
 - Learned: Compose `waitUntil` does not run what a background read posts to the main looper under Robolectric: idle the main looper inside the condition. Workers' first-try code compiled.
 - Reconciled: reviewer criterion-3 gap closed by a nav-host test; EXIF-read failure and stale-thumbnail cache key fixed; recreate test on a copy of the host and rotation re-decode noted in ISSUES.
+
+### Iteration 4 - 2026-10-06
+- **Phase:** 3 (T-006, T-007)
+- Attempted: CameraX 1.6.2 in catalog/build, manifest (CAMERA, WRITE<=28, uses-feature), `Camera` key + Home route, deleted Placeholder (R1, R2), `PhotoSaver` contract, strings, Koin; 2 Capable Workers; updated old tool tests for `saver`/`onSaved` and Save enabled; recorded 14_/15_, re-recorded 16_/17_ (A-007); reviewer.
+- Learned: the whole unit-test JVM ran out of heap once camera/save tests joined (exit 1 / apparent hang): test heap now 3g with a fork every 40 classes. `RecordingRegistry` casts to Array, so single-permission requests need `SinglePermissionRegistry` (T/save).
+- Reconciled: kept-shot cleanup and publish-row check fixed from review; file:// Uri on API 27-28 passed to T-009 as a note.

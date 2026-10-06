@@ -3,7 +3,7 @@ package com.phongkaster.kanso.screenshots
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -15,6 +15,7 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
+import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
@@ -80,17 +81,18 @@ class ToolScreenshotTest {
             photoUri = "content://media/external/images/media/42",
             loader = loader,
             probe = ViewModelClearedProbe(),
+            saver = NoSavePhotoSaver(),
         )
         compose.setContent {
             KansoTheme(themeMode = mode) {
-                ToolScreen(viewModel = viewModel, onBack = {})
+                ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
             }
         }
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(hasTestTag(TOOL_IMAGE_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
     }
 
     /** Saves a picture of the whole window as `src/test/screenshots/[name]`. */

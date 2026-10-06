@@ -62,6 +62,12 @@ android {
         unitTests {
             // Robolectric needs the app's merged resources and manifest to start MainActivity.
             isIncludeAndroidResources = true
+            // Many Robolectric screens (camera, gallery, photos) run in one test JVM; the default
+            // heap runs out and the JVM exits. Give it room and start a fresh JVM every 40 classes.
+            all {
+                it.maxHeapSize = "3g"
+                it.setForkEvery(40)
+            }
         }
     }
 }
@@ -101,6 +107,12 @@ dependencies {
     implementation(libs.coil.compose)
     // Reads a photo's EXIF orientation so it is shown upright
     implementation(libs.androidx.exifinterface)
+
+    // Camera: live preview and taking a shot (CameraX)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 
     // Seed colour -> full Material 3 colour scheme
     implementation(libs.material.kolor)

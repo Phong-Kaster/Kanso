@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 /**
  * The six tools Kanso offers on its Home screen, each with the string resource for its label.
  *
- * It is @Serializable because a tool travels inside the [Placeholder] navigation key, and every
+ * It is @Serializable because a tool travels inside navigation keys such as [Gallery], and every
  * key on the back stack must be saveable so it survives rotation and process death.
  */
 @Serializable

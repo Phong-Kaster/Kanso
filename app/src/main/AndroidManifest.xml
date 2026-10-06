@@ -19,12 +19,20 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
+    <!-- The camera screen takes photos; Save writes into Pictures/Kanso, which needs the old
+         storage-write permission only up to Android 9 (API 28). The camera is not required, so
+         the app still installs on a phone without one (the camera tile then just cannot shoot). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <!-- Engine libraries (WorkManager, old TensorFlow Lite) merge these in; Kanso does not use them. -->
     <uses-permission
         android:name="android.permission.RECEIVE_BOOT_COMPLETED"
-        tools:node="remove" />
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         tools:node="remove" />
     <uses-permission
         android:name="android.permission.READ_PHONE_STATE"

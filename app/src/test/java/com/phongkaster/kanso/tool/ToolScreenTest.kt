@@ -6,7 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -90,7 +90,7 @@ class ToolScreenTest {
             ExifInterface.ORIENTATION_ROTATE_90,
         )
         val uri = ToolFixtures.serve(context, file, "turned.jpg")
-        show(ToolViewModel(Tool.EDIT, uri, PhotoLoader(context), ViewModelClearedProbe()))
+        show(ToolViewModel(Tool.EDIT, uri, PhotoLoader(context), ViewModelClearedProbe(), NoSavePhotoSaver()))
         waitForImage()
 
         val image = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot
@@ -117,15 +117,15 @@ class ToolScreenTest {
 
     /** The top bar shows the tool's name, and Save is visible but cannot be tapped yet. */
     @Test
-    fun the_top_bar_names_the_tool_and_save_is_visible_but_disabled() {
+    fun the_top_bar_names_the_tool_and_save_is_visible_and_enabled() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
-        show(ToolViewModel(Tool.RETOUCH, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
+        show(ToolViewModel(Tool.RETOUCH, "content://media/external/images/media/7", loader, ViewModelClearedProbe(), NoSavePhotoSaver()))
         waitForImage()
 
         compose.onNode(
             hasText(context.getString(R.string.tool_retouch)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
         ).assertIsDisplayed()
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
     }
 
     /**
@@ -135,7 +135,7 @@ class ToolScreenTest {
     @Test
     fun the_photo_is_asked_for_at_twice_the_screen_s_longest_edge() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
-        show(ToolViewModel(Tool.EDIT, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
+        show(ToolViewModel(Tool.EDIT, "content://media/external/images/media/7", loader, ViewModelClearedProbe(), NoSavePhotoSaver()))
         waitForImage()
 
         assertEquals(listOf(2 * 891 * 3), loader.requestedEdges.toList())
@@ -144,7 +144,7 @@ class ToolScreenTest {
     /** A photo that cannot be opened gives the plain message, and no image. */
     @Test
     fun an_unreadable_photo_shows_a_plain_message() {
-        show(ToolViewModel(Tool.EDIT, ToolFixtures.MISSING_URI, PhotoLoader(context), ViewModelClearedProbe()))
+        show(ToolViewModel(Tool.EDIT, ToolFixtures.MISSING_URI, PhotoLoader(context), ViewModelClearedProbe(), NoSavePhotoSaver()))
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(hasTestTag(TOOL_UNREADABLE_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
@@ -160,7 +160,7 @@ class ToolScreenTest {
     fun the_back_arrow_calls_on_back() {
         var backCalls = 0
         val loader = FakePhotoLoader(context, null)
-        show(ToolViewModel(Tool.EDIT, "content://x/1", loader, ViewModelClearedProbe()), onBack = { backCalls++ })
+        show(ToolViewModel(Tool.EDIT, "content://x/1", loader, ViewModelClearedProbe(), NoSavePhotoSaver()), onBack = { backCalls++ })
 
         compose.onNodeWithContentDescription(context.getString(R.string.back)).performClick()
         compose.waitForIdle()
@@ -172,7 +172,7 @@ class ToolScreenTest {
     fun loading_is_done_once_per_size_and_clearing_is_reported() {
         val loader = FakePhotoLoader(context, null)
         val probe = ViewModelClearedProbe()
-        val viewModel = ToolViewModel(Tool.EDIT, "content://x/1", loader, probe)
+        val viewModel = ToolViewModel(Tool.EDIT, "content://x/1", loader, probe, NoSavePhotoSaver())
         // A ViewModelStore is what a navigation entry keeps its ViewModels in; clearing it is
         // what happens when the entry leaves the back stack.
         val store = ViewModelStore()
@@ -204,7 +204,7 @@ class ToolScreenTest {
     private fun show(viewModel: ToolViewModel, onBack: () -> Unit = {}) {
         compose.setContent {
             MaterialTheme {
-                ToolScreen(viewModel = viewModel, onBack = onBack)
+                ToolScreen(viewModel = viewModel, onBack = onBack, onSaved = {})
             }
         }
         compose.waitForIdle()

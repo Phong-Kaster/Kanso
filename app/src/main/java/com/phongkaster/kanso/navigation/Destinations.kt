@@ -14,10 +14,11 @@ import kotlinx.serialization.Serializable
 data object Home : NavKey
 
 /**
- * The stand-in screen for a tool that is not built yet. It names the [tool] it stands for.
+ * The camera screen. The shot the person keeps opens [tool], so Home passes the Edit tool and a
+ * gallery passes its own. The tool is the key's only argument so it is saved with the back stack.
  */
 @Serializable
-data class Placeholder(val tool: Tool) : NavKey
+data class Camera(val tool: Tool) : NavKey
 
 /**
  * The photo gallery opened by a tool: the user picks a photo here to work on with [tool].

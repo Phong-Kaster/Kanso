@@ -139,3 +139,25 @@ Re-recording `6_settings_custom_colour.png` and deleting `7_`-`9_placeholder_*` 
 ### Taken, and why
 
 Option 2. Nothing the engine does can move an approved baseline; the run reports the leftover instead of working around the lock.
+
+---
+
+## A-007 - Pictures 16/17 re-recorded because Save became enabled
+
+- **Tier:** missing information
+- **Iteration:** 4
+- **First dependent checkpoint:** Phase 3 checkpoint
+- **Revert:** `git revert <sha>`
+
+### Question
+
+Making Save work changes `16_tool_photo_light.png` / `17_tool_photo_dark.png` (the Save label is no longer greyed). Are they baselines the engine may move?
+
+### Options Considered
+
+1. Leave the old pictures and fail verifyRoborazzi - consequences: the build stays red.
+2. Delete and record again, since DoD 10-19 are this run's own new pictures (only 6-9 are the human's) and no person has signed them; the engine opened both new pictures before committing.
+
+### Taken, and why
+
+Option 2. The DoD names 16/17 as the Save-visible tool screen, and the old pictures showed Save disabled, which DoD 25 no longer describes.

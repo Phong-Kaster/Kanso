@@ -8,12 +8,12 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.phongkaster.kanso.ui.camera.CameraScreen
+import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeScreen
 import com.phongkaster.kanso.ui.home.HomeViewModel
-import com.phongkaster.kanso.ui.placeholder.PlaceholderScreen
-import com.phongkaster.kanso.ui.placeholder.PlaceholderViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolScreen
@@ -73,24 +73,30 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    // Every tool opens the photo gallery to pick a photo from; the camera is not a
-                    // tool that edits a picked photo, so it keeps its own stand-in screen for now.
+                    // Every tool opens the photo gallery to pick a photo from. The Camera tile
+                    // opens the camera instead; a shot that is kept opens the Edit tool.
                     onToolClick = { tool ->
                         if (backStack.last() == Home) {
-                            backStack.add(if (tool == Tool.CAMERA) Placeholder(tool) else Gallery(tool))
+                            backStack.add(if (tool == Tool.CAMERA) Camera(Tool.EDIT) else Gallery(tool))
                         }
                     },
                     onSettingsClick = { if (backStack.last() == Home) backStack.add(Settings) },
                 )
             }
-            entry<Placeholder> { key ->
-                // parametersOf hands the tool to the Koin recipe that builds this ViewModel.
-                val viewModel = koinViewModel<PlaceholderViewModel>(
-                    parameters = { parametersOf(key.tool) },
-                )
-                PlaceholderScreen(
+            entry<Camera> { key ->
+                val viewModel = koinViewModel<CameraViewModel>()
+                CameraScreen(
                     viewModel = viewModel,
                     onBack = goBack,
+                    // Keep replaces the camera with the tool screen: the shot is finished, so
+                    // Back from the tool goes to where the camera was opened from. Only act
+                    // while the camera is still on top, so a double tap cannot open two screens.
+                    onKept = { photoUri ->
+                        if (backStack.last() == key) {
+                            backStack.removeLastOrNull()
+                            backStack.add(ToolPhoto(key.tool, photoUri))
+                        }
+                    },
                 )
             }
             entry<Gallery> { key ->
@@ -115,6 +121,9 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 ToolScreen(
                     viewModel = viewModel,
                     onBack = goBack,
+                    // The Saved screen arrives in a later step; until then a saved photo just
+                    // stays on the tool screen.
+                    onSaved = {},
                 )
             }
             entry<Settings> {

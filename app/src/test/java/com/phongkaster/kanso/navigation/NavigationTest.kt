@@ -26,7 +26,6 @@ import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
-import com.phongkaster.kanso.ui.placeholder.PLACEHOLDER_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -86,28 +85,24 @@ class NavigationTest {
     }
 
     /**
-     * DoD 1: every tool but the camera opens the photo gallery, the camera still opens its
-     * stand-in screen, and Back returns to Home each time.
+     * DoD 1: each of the five photo tools opens the photo gallery, and Back returns to Home each
+     * time. The Camera tile opens the camera instead; that route is tested with a fake camera in
+     * the camera tests.
      */
     @Test
     fun each_tool_opens_its_screen_and_back_returns_home() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             waitForHome()
-            Tool.entries.forEach { tool ->
+            Tool.entries.filter { it != Tool.CAMERA }.forEach { tool ->
                 val name = label(tool)
                 compose.onNodeWithText(name).performScrollTo().performClick()
-                if (tool == Tool.CAMERA) {
-                    waitForPlaceholderTitle(name)
-                    compose.onNode(placeholderTitle(name)).assertIsDisplayed()
-                } else {
-                    waitForGallery()
-                    compose.onNodeWithTag(GALLERY_SCREEN_TAG).assertIsDisplayed()
-                    // The gallery's title names the tool, so a tile opening another tool's
-                    // gallery would fail here.
-                    compose.onNode(
-                        hasText(name, substring = true) and hasAnyAncestor(hasTestTag(GALLERY_SCREEN_TAG)),
-                    ).assertIsDisplayed()
-                }
+                waitForGallery()
+                compose.onNodeWithTag(GALLERY_SCREEN_TAG).assertIsDisplayed()
+                // The gallery's title names the tool, so a tile opening another tool's
+                // gallery would fail here.
+                compose.onNode(
+                    hasText(name, substring = true) and hasAnyAncestor(hasTestTag(GALLERY_SCREEN_TAG)),
+                ).assertIsDisplayed()
 
                 Espresso.pressBack()
                 waitForHomeOnly()
@@ -223,19 +218,8 @@ class NavigationTest {
         }
     }
 
-    /** Returns the label Home and the placeholder show for [tool]. */
+    /** Returns the label Home shows for [tool]. */
     private fun label(tool: Tool): String = context.getString(tool.labelRes)
-
-    /** Matches a node with exactly the text [name] inside the placeholder screen. */
-    private fun placeholderTitle(name: String) =
-        hasText(name) and hasAnyAncestor(hasTestTag(PLACEHOLDER_SCREEN_TAG))
-
-    /** Waits until the placeholder screen shows [name]. */
-    private fun waitForPlaceholderTitle(name: String) {
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodes(placeholderTitle(name)).fetchSemanticsNodes().isNotEmpty()
-        }
-    }
 
     /** Waits until the gallery screen is on screen. */
     private fun waitForGallery() {
@@ -251,11 +235,10 @@ class NavigationTest {
         }
     }
 
-    /** Waits until Home is shown and no placeholder or Settings screen is left on screen. */
+    /** Waits until Home is shown and no gallery or Settings screen is left on screen. */
     private fun waitForHomeOnly() {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty() &&
-                compose.onAllNodesWithTag(PLACEHOLDER_SCREEN_TAG).fetchSemanticsNodes().isEmpty() &&
                 compose.onAllNodesWithTag(GALLERY_SCREEN_TAG).fetchSemanticsNodes().isEmpty() &&
                 compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isEmpty()
         }

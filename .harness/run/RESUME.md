@@ -2,7 +2,7 @@
 
 > Derived cache. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** Phase 2 done (T-001..T-005, T-010 complete); DoD approved
+- **Stage:** Phase 3 done (T-001..T-007, T-010 complete); DoD approved
 - **Next Phase:** 3
   - T-006 - scope: `K/ui/camera/`, `T/camera/`, `T/screenshots/CameraRefusedScreenshotTest.kt`
   - T-007 - scope: `K/data/photo/PhotoSaver.kt`, `K/data/photo/UprightJpeg.kt`, `K/ui/tool/` (Save action only), `T/save/`
