@@ -25,3 +25,8 @@ A-001 to A-005 (Tier 2 / missing information), see `.harness/run/ASSUMPTIONS.md`
 ## Proof deviation noted by the Verifier
 
 - DoD 7's test presses Back through `OnBackPressedDispatcher` and checks `isFinishing`, not `Espresso.pressBackUnconditionally()`; the Proof allows `isFinishing`, and DoD 22's emulator drive will check it with the real back key.
+
+## Run 2 bootstrap notes
+
+- Awaiting you: D-001 (approve the Run 2 DoD) and, under `## Baselines` in `DECISIONS.md`, the four pictures `6_settings_custom_colour.png`, `7_placeholder_*.png`, `8_placeholder_*.png`, `9_placeholder_*.png` (A-006).
+- The Run 1 review notes about the picker (write on every drag, alpha bar, label constants) are Run 2 tasks T-001, T-002, T-010. The test-hygiene notes (T-005 screenshots via a throwaway ViewModel, duplicated helpers) and `ViewModelClearedProbe` in main are not fixed this run.
