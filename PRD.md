@@ -1,69 +1,43 @@
-# Kanso — Run 2: pick, shoot, save
+# Kanso — Run 3: a preview for every composable
 
-Run 1 built the shell: Home, Settings, the theme, and a placeholder screen for each tool. This run
-builds the path every tool will share: **get a photo in, show it, and save it back out.** The editing
-and AI tools themselves come in later runs; here each tool screen only shows the chosen photo.
+After Run 2 the app has 36 composables in 10 files and not one `@Preview`. I learn Compose by opening
+a file and seeing what it draws; without previews I have to build, install and click through the app
+on a slow phone to see any of it. This run adds the previews, and the small restructuring that some
+screens need before they can have one. **It changes nothing the person using the app can see.**
+
+The rule itself now lives in `CLAUDE.md` ("Every composable has a preview"); this run brings the
+existing code up to it.
 
 ## What this run delivers
 
-1. **Gallery.** Edit, Remove background, Enhance, Retouch and Artistic each open an in-app gallery
-   first: a grid of the phone's photos, newest first, with a way to switch between albums. Reuse
-   `core/gallery` (`MediaRepository`) for reading them. Tapping a photo opens that tool's screen with
-   the photo on it. The grid stays smooth with thousands of photos.
-2. **Permission to read photos**, asked the first time the gallery opens, never at launch:
-   - Android 13 and later: `READ_MEDIA_IMAGES`; Android 14 and later also handles the "selected
-     photos only" choice, showing what was shared and a way to share more;
-   - Android 12 and earlier: `READ_EXTERNAL_STORAGE`;
-   - refused: the gallery says plainly why it needs access and offers a button to the app's system
-     settings. Nothing crashes, nothing loops asking again.
-3. **Camera.** The Camera tile on Home, and a camera button in the gallery's top bar, open an in-app
-   camera (CameraX): live preview, shutter, switch between back and front lens, flash (auto, on, off),
-   pinch to zoom. After a shot: keep it or retake. A kept shot opens the Edit tool screen (from Home)
-   or the tool the gallery was opened for. Camera permission is asked when the camera first opens;
-   refused is handled like the gallery's.
-4. **The tool screen shows the photo** fitted to the screen, the right way up — a photo whose EXIF
-   says it is rotated is displayed upright — and without loading a full-resolution 50-megapixel image
-   just to display it. The chosen photo survives rotation and the process being killed in the
-   background; carry it in the screen's Navigation 3 key.
-5. **Save.** Each tool screen has a Save action. It writes the photo as a new JPEG in the phone's
-   gallery, in a `Kanso` album (`Pictures/Kanso`, named `Kanso_<time>.jpg`), at full resolution and
-   upright. The original is never changed or overwritten. Android 10 and later need no storage
-   permission for this; the minimum Android version (8.1) may need `WRITE_EXTERNAL_STORAGE` up to
-   Android 9 only.
-6. **Saved screen**, after Save: the saved photo, and three actions — **Share** (the system share
-   sheet, no hard-coded apps), **Edit another** (back to the gallery for the same tool), **Home**.
-
-## Carry-over from Run 1
-
-Run 1 recorded three review notes it did not fix (`.harness/ISSUES.md`). Fix them:
-
-- the custom colour picker writes the theme to storage on every drag movement — write once the drag
-  settles;
-- the picker's transparency bar does nothing — make it work or hide it (`core/colorpicker` may be
-  changed only as far as hiding it needs);
-- the four theme-colour labels are constants — move them to `strings.xml`.
-
-Run 1's five unsigned checks in `.harness/ISSUES.md` (12, 19, 21, 22, 26) are mine to sign. Leave
-them there; this run does not need to re-verify them.
+1. **Every composable in `app/` has a preview** in light and in dark, in the same file, built from
+   sample data that looks like the real thing: a gallery with a few albums and a grid of photos, a
+   tool screen with a photo on it, the access-refused panels, the camera's controls, the Saved
+   screen, Settings with each theme choice, Home.
+2. **Screens are split where a preview needs it.** A composable that reaches for Koin, a ViewModel,
+   `MediaStore`, the camera or a permission launcher is split into a stateful part that gathers the
+   state and a stateless `…Content` part that takes the state and callbacks. The preview shows the
+   stateless part. Explain this split — state hoisting — where it is first used, for a reader who has
+   never met it.
+3. **Previews that matter show their interesting states**, not only the default: for example the
+   gallery with photo access refused and with only some photos shared, the camera after a shot
+   (Keep and Retake), Settings with a custom colour picked.
+4. **Every preview renders.** A preview that throws when drawn is a defect, so prove on the host that
+   all of them draw without an exception.
+5. **Previews open in Android Studio**: the preview annotations are available to the main code and
+   the tooling to debug builds only.
 
 ## Constraints
 
-Everything from Run 1 still holds:
-
-- **No ads, no analytics, no accounts, no network.** No network permission; nothing from Apero, no
-  Firebase beyond what Run 1's A-003 allowed for ML Kit, no private Maven repository.
-- **The code teaches.** Every class, function and composable gets a KDoc comment in plain English
-  saying what it does and why. A concept is explained where it is first used: runtime permissions in
-  Compose, `LazyVerticalGrid` and keys, CameraX's preview and capture use cases, `MediaStore` and
-  scoped storage, passing data in a Navigation 3 key. Write for a reader who has never used them.
-- **Roborazzi** checks the new screens in light and dark: the gallery grid (with fake photos), the
-  gallery's "access refused" state, the camera's "access refused" state, a tool screen showing a
-  photo, and the saved screen. A camera preview cannot render on the host; prove the camera on a
-  device or emulator instead.
-- Ask for no permission this run does not use. The debug build may keep only the ABIs Run 1 chose.
-- `reference/` stays byte-for-byte unchanged.
+- `CLAUDE.md` applies: KDoc in plain English on every class, function and composable, previews
+  included; no ads, analytics, accounts or network; `reference/` unchanged.
+- **Behaviour and pixels stay the same.** The app's tests pass unchanged, and every existing Roborazzi
+  baseline stays byte-for-byte as it is: this run restructures, so a baseline that moves means
+  something the person sees has changed, which is a defect here, not an approval to ask for.
+- Preview-only sample data never ships in a code path the app runs.
+- Keep Navigation 3 at 1.1.7, AGP 8.x and the three debug ABIs.
 
 ## Out of scope for this run
 
-Any editing or AI effect, camera filters, video, choosing several photos at once, and moving to
-Android Gradle Plugin 9 (Run 1 pinned Navigation 3 1.1.7 for that reason; keep it).
+The speed problems found on my Galaxy A13 (`.harness/ISSUES.md`, "Driven on a Galaxy A13"), the white
+colour-picker card in dark mode, new features, and the human checks still waiting in `ISSUES.md`.
