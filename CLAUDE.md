@@ -13,6 +13,25 @@ Standing rules for anyone writing code here, human or agent. Each one is the own
   stateless one.
 - A new composable arrives with its preview in the same change. A composable without one is unfinished.
 
+## One class per file, one UiState per screen
+
+- Every top-level class, interface, object and enum lives in its own file, named after it — never two
+  in one file. Types nested inside one (the cases of a sealed interface) stay with it. Top-level
+  functions, composables included, are not classes: a screen's composables share its `…Screen.kt`.
+- A screen's package holds at least three files, for example `ui/home/`: `HomeScreen.kt` (the
+  composables), `HomeViewModel.kt` and `HomeUiState.kt`.
+- Every screen has a ViewModel and a UiState, even one whose content is fixed, so every screen reads
+  the same way. The ViewModel exposes exactly one `StateFlow<…UiState>`; the stateless `…Content`
+  composable takes that UiState and its callbacks.
+- The rule covers `app/src/test` too: a fake, a helper or a test's own data class gets its own file.
+
+## Motion uses the Compose Animation APIs
+
+Transitions, loading indicators and press feedback are built with Jetpack Compose's own animation APIs
+first — `AnimatedVisibility`, `AnimatedContent`, `animate*AsState`, `updateTransition`,
+`rememberInfiniteTransition`, `Animatable` — and Navigation 3's `NavDisplay` transition specs for moving
+between screens. A third-party animation library needs the owner's approval in the DoD.
+
 ## The code teaches
 
 The owner is learning Navigation 3 and full-Compose apps from this code. Every class, function and
