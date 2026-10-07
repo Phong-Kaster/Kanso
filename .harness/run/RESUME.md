@@ -2,9 +2,9 @@
 
 > Derived cache; on any disagreement with the task files or git, this file is wrong.
 
-- **Stage:** execute; D-001 approved; Phases 1-2 (T-001, T-002, T-003, T-008) complete
-- **Next Phase (3):** T-005 `ui/tool/ToolScreen.kt` (Fast); T-006 `ui/saved/SavedScreen.kt` (Fast); T-007 `ui/gallery/GalleryScreen.kt` (scopes under `app/src/main/java/com/phongkaster/kanso/`). Copy `SettingsContent`/`PermissionGateContent`/`CameraContent` pattern. Preview names: ToolPhotoPreview, ToolUnreadablePreview, SavedPreview, GalleryPhotosPreview, GalleryPartialAccessPreview, GalleryRefusedPreview, GalleryEmptyPreview.
-- **Later phases:** 4 = T-004 (nav host); 5 = T-009 (coverage test; exemptions per A-003 in its task file).
+- **Stage:** execute; Phases 1-3 (T-001, T-002, T-003, T-008, T-005, T-006, T-007) complete
+- **Next Phase (4):** T-004 `navigation/KansoNavHost.kt` (Capable; split into stateful host + stateless `KansoNavDisplay`, A-001). Previews must not use indeterminate progress indicators (they hang the render test).
+- **Later phases:** 5 = T-009 (coverage test; exemptions per A-003, A-004 in its task file).
 - **Queued decisions:** 0 (D-001 answered)
 - **Abandoned:** none
 - **Unreachable:** none

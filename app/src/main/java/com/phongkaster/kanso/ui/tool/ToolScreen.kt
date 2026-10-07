@@ -3,6 +3,11 @@ package com.phongkaster.kanso.ui.tool
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Shader
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -40,10 +45,14 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.common.BackArrowIcon
+import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /** The test tag on the root of the tool screen. */
 const val TOOL_SCREEN_TAG = "tool-screen"
@@ -99,10 +108,14 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * ask for nothing. A failed save, or a photo too large to turn upright, is also explained by a
  * message under the photo.
  *
+ * Like Home, this screen is split in two (state hoisting; see `HomeScreen` for the full story).
+ * This function is the *stateful* part: it gathers the screen size, the load, the saved events and
+ * the write-permission launcher, and hands the state and callbacks to the stateless [ToolContent],
+ * which does all the drawing.
+ *
  * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
  * [onSaved] is called once per successful save, with the new picture's Uri as text.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolScreen(
     viewModel: ToolViewModel,
@@ -148,11 +161,49 @@ fun ToolScreen(
         if (granted) viewModel.save() else viewModel.onWritePermissionDenied()
     }
 
+    ToolContent(
+        tool = viewModel.tool,
+        photoUri = viewModel.photoUri,
+        state = state,
+        saveState = saveState,
+        onBack = onBack,
+        onSave = {
+            if (viewModel.needsWritePermission()) {
+                writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else {
+                viewModel.save()
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+/**
+ * The stateless part of the tool screen (see [ToolScreen] for why there are two): draws the top
+ * bar with the back arrow, the name of [tool] and the Save action, and below it whatever [state]
+ * says (nothing while loading, the photo when ready, a plain message when unreadable), plus the
+ * message about the last save when [saveState] has one.
+ *
+ * [photoUri] only marks the image node for tests. Taps are reported through callbacks and nothing
+ * is saved here: [onBack] for the back arrow and [onSave] for Save (the caller decides whether
+ * the storage permission must be asked for first).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ToolContent(
+    tool: Tool,
+    photoUri: String,
+    state: ToolUiState,
+    saveState: SaveUiState,
+    onBack: () -> Unit,
+    onSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
         modifier = modifier.testTag(TOOL_SCREEN_TAG),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(viewModel.tool.labelRes)) },
+                title = { Text(stringResource(tool.labelRes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -166,13 +217,7 @@ fun ToolScreen(
                     // Always visible, so the bar does not jump; tappable once the photo is shown
                     // and no save is running.
                     TextButton(
-                        onClick = {
-                            if (viewModel.needsWritePermission()) {
-                                writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                            } else {
-                                viewModel.save()
-                            }
-                        },
+                        onClick = onSave,
                         enabled = state is ToolUiState.Ready && !saving,
                         modifier = Modifier.testTag(TOOL_SAVE_TAG),
                     ) {
@@ -206,7 +251,7 @@ fun ToolScreen(
                 ToolUiState.Loading -> Unit
                 is ToolUiState.Ready -> PhotoView(
                     current = current,
-                    photoUri = viewModel.photoUri,
+                    photoUri = photoUri,
                 )
                 ToolUiState.Unreadable -> Text(
                     text = stringResource(R.string.tool_photo_unreadable),
@@ -286,4 +331,86 @@ private fun PhotoView(current: ToolUiState.Ready, photoUri: String) {
             .testTag(TOOL_IMAGE_TAG)
             .semantics { this[TOOL_PHOTO_URI_KEY] = photoUri },
     )
+}
+
+/** The Uri text the previews pretend their photo came from; only the image node's semantics use it. */
+private const val SAMPLE_PHOTO_URI = "content://media/external/images/media/42"
+
+/**
+ * A photo for the previews, drawn in code: a 4:3 landscape picture with a sky-to-sea gradient
+ * and a round "sun". No file, no MediaStore and no decoder is involved, so a preview can build it.
+ */
+private fun samplePhoto(): Bitmap {
+    val bitmap = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    // A vertical gradient from warm sky to deep blue.
+    paint.shader = LinearGradient(
+        0f, 0f, 0f, 480f,
+        0xFFFFB74D.toInt(), 0xFF1565C0.toInt(),
+        Shader.TileMode.CLAMP,
+    )
+    canvas.drawRect(0f, 0f, 640f, 480f, paint)
+    paint.shader = null
+    paint.color = 0xFFFFF59D.toInt()
+    canvas.drawCircle(460f, 150f, 60f, paint)
+    return bitmap
+}
+
+/**
+ * The tool screen with a photo shown and nothing said about saving: the everyday look, drawn once
+ * in light and once in dark. `ThemeMode.System` makes KansoTheme follow the preview's day or
+ * night; the taps do nothing, a preview only draws.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolPhotoPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            tool = Tool.EDIT,
+            photoUri = SAMPLE_PHOTO_URI,
+            state = ToolUiState.Ready(samplePhoto()),
+            saveState = SaveUiState.Idle,
+            onBack = {},
+            onSave = {},
+        )
+    }
+}
+
+/**
+ * The tool screen when the photo cannot be opened: the plain message in the middle and Save
+ * switched off.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolUnreadablePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            tool = Tool.EDIT,
+            photoUri = SAMPLE_PHOTO_URI,
+            state = ToolUiState.Unreadable,
+            saveState = SaveUiState.Idle,
+            onBack = {},
+            onSave = {},
+        )
+    }
+}
+
+/**
+ * The tool screen after a failed save: the photo with the explaining message on its card at the
+ * bottom, which is how [SaveMessage] is drawn.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolSaveFailedPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            tool = Tool.EDIT,
+            photoUri = SAMPLE_PHOTO_URI,
+            state = ToolUiState.Ready(samplePhoto()),
+            saveState = SaveUiState.Failed,
+            onBack = {},
+            onSave = {},
+        )
+    }
 }

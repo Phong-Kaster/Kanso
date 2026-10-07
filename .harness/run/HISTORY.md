@@ -19,3 +19,7 @@
 ## Archived Decisions
 
 - D-001 (DoD approval): approved as written, 2026-10-07.
+
+## Iteration 4
+
+- Recovered Phase 3 debris (Tool, Saved, Gallery previews + watchdog): render test hung on `ToolSavingPreview` (indeterminate spinner); removed it, tests/Roborazzi/lint green. Gradle transforms cache corrupted by the killed JVM, moved aside via trash wrapper. Reviewer: watchdog scope (amended), PhotoThumbnail exemption (A-004), eager sample data (fixed). Flakes (ThemeColourSettingsTest, CameraScreenTest) passed on rerun alone.

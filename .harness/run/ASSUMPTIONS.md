@@ -63,3 +63,21 @@ Option 2: DoD 4 (previews never touch the camera) outranks full coverage of the 
 
 - **First dependent checkpoint:** Iteration 3
 - **Revert:** `git revert <sha of the loop(phase-2) checkpoint>`
+
+## A-004 (Tier 2) - Gallery's PhotoThumbnail has no preview
+
+### Question
+
+`PhotoThumbnail` (the Coil-loading cell picture in `GalleryScreen.kt`) is never drawn by a preview. Does the coverage test accept it?
+
+### Options Considered
+
+1. Fail the coverage test - consequences: forces a Coil load of a real MediaStore photo into a preview, which DoD 4 forbids.
+2. Exempt `PhotoThumbnail` in `PreviewCoverageTest`, like A-003 - consequences: DoD 1's proof is narrowed by one named function; the gallery previews pass a `SampleThumbnail` into the same slot.
+
+### Taken, and why
+
+Option 2: same reasoning as A-003 (DoD 4 outranks full coverage of a slot filler). T-009 names it in its exemptions.
+
+- **First dependent checkpoint:** Iteration 3
+- **Revert:** `git revert <sha of the loop(phase-3) checkpoint>`

@@ -140,6 +140,10 @@ class PreviewsRenderTest {
         // "+" keeps the other qualifiers (the phone size) as they are.
         RuntimeEnvironment.setQualifiers(if (dark) "+night" else "+notnight")
         val controller = Robolectric.buildActivity(ComponentActivity::class.java)
+        // A preview that keeps invalidating its own composition never lets the test clock reach
+        // the end of the half second, and nothing else would stop it. The watchdog names the
+        // preview and ends the test process, so a hang fails fast instead of running for hours.
+        val watchdog = startWatchdog("$name (${if (dark) "dark" else "light"})")
         try {
             val activity = controller.setup().get()
             activity.setContent { content() }
@@ -149,11 +153,32 @@ class PreviewsRenderTest {
         } catch (error: Throwable) {
             throw AssertionError("Preview $name (${if (dark) "dark" else "light"}) failed to draw: $error", error)
         } finally {
+            watchdog.interrupt()
             runCatching { controller.pause().stop().destroy() }
         }
 
         assertNull("Koin is running after drawing $name", GlobalContext.getOrNull())
     }
+
+    /**
+     * Starts a background timer that, if it is not interrupted within [WATCHDOG_SECONDS], prints
+     * which preview is stuck and halts the test process. The returned thread is interrupted when
+     * the drawing finishes in time.
+     */
+    private fun startWatchdog(label: String): Thread =
+        Thread {
+            try {
+                Thread.sleep(WATCHDOG_SECONDS * 1000)
+                System.err.println("PREVIEW HANG: $label did not finish drawing in $WATCHDOG_SECONDS s")
+                System.err.flush()
+                Runtime.getRuntime().halt(1)
+            } catch (_: InterruptedException) {
+                // Drawn in time: nothing to report.
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
 
     /** Scans the app's compiled code for every preview, private ones included. */
     private fun scanPreviews(): List<ComposablePreview<AndroidPreviewInfo>> =
@@ -220,6 +245,9 @@ class PreviewsRenderTest {
         )
     }
 }
+
+/** How long one preview may take to draw before the watchdog ends the test process. */
+private const val WATCHDOG_SECONDS = 60L
 
 /** The message [ThrowingComposable] fails with, so the self-check can find it again. */
 private const val THROWING_MESSAGE = "This composable throws on purpose"

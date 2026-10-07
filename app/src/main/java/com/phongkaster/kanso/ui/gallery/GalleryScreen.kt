@@ -36,12 +36,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import coil.compose.AsyncImage
@@ -49,15 +51,19 @@ import coil.request.ImageRequest
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
+import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.camera.CameraIcon
 import com.phongkaster.kanso.ui.common.BackArrowIcon
 import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
+import com.phongkaster.kanso.ui.permission.PermissionAccess
 import com.phongkaster.kanso.ui.permission.PermissionGate
+import com.phongkaster.kanso.ui.permission.PermissionGateContent
 import com.phongkaster.kanso.ui.permission.fullPhotoPermissionFor
 import com.phongkaster.kanso.ui.permission.openAppDetailsSettings
 import com.phongkaster.kanso.ui.permission.partialPhotoPermissionsFor
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.max
 
 /** The test tag on the root of the gallery screen, present in every permission state. */
@@ -115,6 +121,19 @@ private const val PHOTO_CELL_CONTENT_TYPE = "photo"
  * shows them under a notice with a "share more" button; after a refusal it explains why access
  * is needed and offers a button to the app's system settings.
  *
+ * Why the gallery is two composables. Like Home, it is split in two (state hoisting; see
+ * `HomeScreen` for the full story). This function is the *stateful* part: it runs the permission
+ * gate, reads the photos from [viewModel], asks it to read the library again each time the
+ * screen comes back to the front, and hands all of that, as plain values and callbacks, to the
+ * stateless [GalleryContent], which does all the drawing. A preview cannot show the system's
+ * permission dialog, keep a ViewModel alive or read the phone's photos, but it can call
+ * [GalleryContent] with made-up albums and photos, and that is what the previews at the bottom
+ * of this file do.
+ *
+ * What is specific here: the gate itself stays in this part, because it needs the system's
+ * permission dialog. For each answer the gate gives (full, partial, refused, still waiting) this
+ * part draws [GalleryContent] with that answer, so a preview can pick any answer without asking.
+ *
  * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
  * [onPhotoChosen] is called with the tool and the photo's content URI (as text) when the user
  * taps a photo; the caller opens the tool's screen. [onOpenCamera] is called with the tool when
@@ -122,7 +141,6 @@ private const val PHOTO_CELL_CONTENT_TYPE = "photo"
  * picking one; the caller opens the camera. The [viewModel] is passed in by the
  * navigation entry, which owns it.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
     viewModel: GalleryViewModel,
@@ -134,7 +152,96 @@ fun GalleryScreen(
     val toolName = stringResource(viewModel.tool.labelRes)
     val context = LocalContext.current
     val sdkInt = Build.VERSION.SDK_INT
+    // collectAsState turns the ViewModel's StateFlow into Compose state: when it changes, the
+    // gallery is drawn again with the new value.
+    val state by viewModel.state.collectAsState()
 
+    // The whole screen for one answer of the gate: [access] and [answered] say which answer,
+    // [shareMore] asks for photo access again (only the partial answer has one). It is a
+    // composable lambda, a piece of UI kept in a value, so the four answers below share it.
+    val gallery: @Composable (PermissionAccess, Boolean, () -> Unit) -> Unit =
+        { access, answered, shareMore ->
+            if (access != PermissionAccess.None) {
+                // LifecycleResumeEffect runs its block when the screen is resumed (in front and
+                // active): right away if it already is, and again each time the person comes back
+                // to it. It is only set up once photo access is granted, so this reads the
+                // library as soon as access arrives, and again after a trip to the system
+                // settings, the camera or another app.
+                LifecycleResumeEffect(viewModel) {
+                    viewModel.refresh()
+                    onPauseOrDispose { }
+                }
+            }
+            GalleryContent(
+                toolName = toolName,
+                access = access,
+                answered = answered,
+                albums = state.albums,
+                selectedAlbumId = state.selectedAlbumId,
+                photos = state.photos,
+                loading = state.loading,
+                onBack = onBack,
+                onOpenCamera = { onOpenCamera(viewModel.tool) },
+                onSelectAlbum = viewModel::selectAlbum,
+                onPhotoClick = { photo -> onPhotoChosen(viewModel.tool, photo.uri) },
+                onShareMore = shareMore,
+                onOpenSettings = { context.openAppDetailsSettings() },
+                modifier = modifier,
+            )
+        }
+
+    PermissionGate(
+        permissions = photoPermissionsFor(sdkInt),
+        fullAccess = listOf(fullPhotoPermissionFor(sdkInt)),
+        partialAccess = partialPhotoPermissionsFor(sdkInt),
+        granted = { gallery(PermissionAccess.Full, true) {} },
+        partial = { shareMore -> gallery(PermissionAccess.Partial, true, shareMore) },
+        refused = { gallery(PermissionAccess.None, true) {} },
+        waiting = { gallery(PermissionAccess.None, false) {} },
+    )
+}
+
+/**
+ * The stateless part of the gallery (see [GalleryScreen] for why there are two): the top bar
+ * titled with [toolName], with its back arrow and camera button, and below it what fits the
+ * photo access the person gave.
+ *
+ * The top bar stays on screen whatever the access. Below it, [access] and [answered] choose the
+ * rest, the same way the permission gate does (see `PermissionGateContent`): with full access
+ * the album switcher and the photos; with partial access the same under a notice whose button
+ * calls [onShareMore]; after a refusal ([PermissionAccess.None] and [answered]) the explanation
+ * with a button that calls [onOpenSettings]; and nothing while the question is still open.
+ *
+ * [albums], [selectedAlbumId] (null means "All photos") and [photos] are what the gallery shows;
+ * [loading] is true while the library is being read. Taps are reported, never acted on here:
+ * [onBack] for the back arrow, [onOpenCamera] for the camera button, [onSelectAlbum] for an
+ * album chip and [onPhotoClick] for a photo.
+ *
+ * [thumbnail] draws one photo cell's picture, given the photo, the cell's size in pixels and the
+ * cell's modifier (size, background, tap and test tag, which it must use). The app keeps the
+ * default, which loads the picture with Coil; a preview cannot read the phone's photos, so it
+ * passes a coloured square instead and the grid still looks like a grid.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GalleryContent(
+    toolName: String,
+    access: PermissionAccess,
+    answered: Boolean,
+    albums: List<Album>,
+    selectedAlbumId: Long?,
+    photos: List<Photo>,
+    loading: Boolean,
+    onBack: () -> Unit,
+    onOpenCamera: () -> Unit,
+    onSelectAlbum: (Long?) -> Unit,
+    onPhotoClick: (Photo) -> Unit,
+    onShareMore: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnail: @Composable (photo: Photo, sizePx: Int, modifier: Modifier) -> Unit =
+        { photo, sizePx, cellModifier -> PhotoThumbnail(photo, sizePx, cellModifier) },
+) {
     Scaffold(
         modifier = modifier.testTag(GALLERY_SCREEN_TAG),
         topBar = {
@@ -152,7 +259,7 @@ fun GalleryScreen(
                 // them its onSurface-style content colour, so the icon shows in every theme.
                 actions = {
                     IconButton(
-                        onClick = { onOpenCamera(viewModel.tool) },
+                        onClick = onOpenCamera,
                         modifier = Modifier.testTag(GALLERY_CAMERA_TAG),
                     ) {
                         Icon(
@@ -170,14 +277,18 @@ fun GalleryScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            PermissionGate(
-                permissions = photoPermissionsFor(sdkInt),
-                fullAccess = listOf(fullPhotoPermissionFor(sdkInt)),
-                partialAccess = partialPhotoPermissionsFor(sdkInt),
+            PermissionGateContent(
+                access = access,
+                answered = answered,
                 granted = {
                     GalleryBody(
-                        viewModel = viewModel,
-                        onPhotoChosen = onPhotoChosen,
+                        albums = albums,
+                        selectedAlbumId = selectedAlbumId,
+                        photos = photos,
+                        loading = loading,
+                        onSelectAlbum = onSelectAlbum,
+                        onPhotoClick = onPhotoClick,
+                        thumbnail = thumbnail,
                         modifier = Modifier.fillMaxSize(),
                     )
                 },
@@ -185,8 +296,13 @@ fun GalleryScreen(
                     Column(modifier = Modifier.fillMaxSize()) {
                         PartialAccessNotice(onShareMore = shareMore)
                         GalleryBody(
-                            viewModel = viewModel,
-                            onPhotoChosen = onPhotoChosen,
+                            albums = albums,
+                            selectedAlbumId = selectedAlbumId,
+                            photos = photos,
+                            loading = loading,
+                            onSelectAlbum = onSelectAlbum,
+                            onPhotoClick = onPhotoClick,
+                            thumbnail = thumbnail,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
                     }
@@ -196,60 +312,60 @@ fun GalleryScreen(
                         title = stringResource(R.string.gallery_refused_title),
                         message = stringResource(R.string.gallery_refused_message),
                         buttonLabel = stringResource(R.string.gallery_open_settings),
-                        onOpenSettings = { context.openAppDetailsSettings() },
+                        onOpenSettings = onOpenSettings,
                         modifier = Modifier.testTag(GALLERY_REFUSED_TAG),
                         buttonModifier = Modifier.testTag(GALLERY_SETTINGS_BUTTON_TAG),
                     )
                 },
+                // While the system's question is still open the area below the top bar is empty.
+                waiting = {},
+                requestAgain = onShareMore,
             )
         }
     }
 }
 
 /**
- * The area that shows the photos: the album switcher on top and the photo grid below it, or a
- * short message when the chosen album has no photos.
+ * The area that shows the photos: the album switcher on top (when there are [albums]) and the
+ * grid of [photos] below it, or a short message when the chosen album has no photos. While the
+ * library is [loading] and no photo is known yet, the area stays empty.
  *
- * Tapping a photo calls [onPhotoChosen] with the gallery's tool and the photo's content URI.
+ * Tapping an album chip calls [onSelectAlbum] with its id ([selectedAlbumId] is the chosen one,
+ * null for "All photos"); tapping a photo calls [onPhotoClick] with it. [thumbnail] draws each
+ * cell's picture (see [GalleryContent]).
  */
 @Composable
 private fun GalleryBody(
-    viewModel: GalleryViewModel,
-    onPhotoChosen: (Tool, String) -> Unit,
+    albums: List<Album>,
+    selectedAlbumId: Long?,
+    photos: List<Photo>,
+    loading: Boolean,
+    onSelectAlbum: (Long?) -> Unit,
+    onPhotoClick: (Photo) -> Unit,
+    thumbnail: @Composable (photo: Photo, sizePx: Int, modifier: Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // LifecycleResumeEffect runs its block when the screen is resumed (in front and active):
-    // right away if it already is, and again each time the person comes back to it. This body
-    // only appears once photo access is granted, so this reads the library as soon as access
-    // arrives, and again after a trip to the system settings, the camera or another app.
-    LifecycleResumeEffect(viewModel) {
-        viewModel.refresh()
-        onPauseOrDispose { }
-    }
-    // collectAsState turns the ViewModel's StateFlow into Compose state: when it changes, this
-    // body is drawn again with the new value.
-    val state by viewModel.state.collectAsState()
-
     Column(modifier = modifier.testTag(GALLERY_BODY_TAG)) {
-        if (state.albums.isNotEmpty()) {
+        if (albums.isNotEmpty()) {
             AlbumSwitcher(
-                albums = state.albums,
-                selectedAlbumId = state.selectedAlbumId,
-                onSelect = viewModel::selectAlbum,
+                albums = albums,
+                selectedAlbumId = selectedAlbumId,
+                onSelect = onSelectAlbum,
             )
         }
         val rest = Modifier
             .weight(1f)
             .fillMaxWidth()
         when {
-            state.photos.isNotEmpty() -> PhotoGrid(
-                photos = state.photos,
-                onPhotoClick = { photo -> onPhotoChosen(viewModel.tool, photo.uri) },
+            photos.isNotEmpty() -> PhotoGrid(
+                photos = photos,
+                onPhotoClick = onPhotoClick,
+                thumbnail = thumbnail,
                 modifier = rest,
             )
             // While the first read is running nothing is shown yet, so the empty message never
             // flashes up before the photos arrive.
-            state.loading -> Spacer(rest)
+            loading -> Spacer(rest)
             else -> EmptyGallery(rest)
         }
     }
@@ -309,11 +425,14 @@ private fun AlbumSwitcher(
  * photo in view at the same place, and only the cells whose photo really changed are rebuilt.
  * `contentType` tells the grid that all cells are built the same way, so any dropped cell can be
  * reused for any photo.
+ *
+ * [thumbnail] draws each cell's picture (see [GalleryContent]).
  */
 @Composable
 private fun PhotoGrid(
     photos: List<Photo>,
     onPhotoClick: (Photo) -> Unit,
+    thumbnail: @Composable (photo: Photo, sizePx: Int, modifier: Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // The grid's scroll position. It lives here, outside the grid, so it outlasts each reload.
@@ -349,6 +468,7 @@ private fun PhotoGrid(
                     photo = photo,
                     sizePx = cellSizePx,
                     onClick = { onPhotoClick(photo) },
+                    thumbnail = thumbnail,
                 )
             }
         }
@@ -359,15 +479,44 @@ private fun PhotoGrid(
  * One square cell of the grid: the thumbnail of [photo], decoded at [sizePx] pixels and cropped
  * to fill the square. Tapping it calls [onClick].
  *
- * The thumbnail is loaded by Coil's AsyncImage: it reads and decodes the photo on a background
- * thread, keeps recent thumbnails in memory so scrolling back is instant, and draws the cell's
- * background colour until the picture is ready. Coil reads the photo through its content URI.
+ * The cell decides its size, background, tap and test tag, and hands that modifier to
+ * [thumbnail], which draws the picture: [PhotoThumbnail] in the app, a coloured square in a
+ * preview.
  */
 @Composable
 private fun PhotoCell(
     photo: Photo,
     sizePx: Int,
     onClick: () -> Unit,
+    thumbnail: @Composable (photo: Photo, sizePx: Int, modifier: Modifier) -> Unit,
+) {
+    thumbnail(
+        photo,
+        sizePx,
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .testTag(galleryPhotoTag(photo.id)),
+    )
+}
+
+/**
+ * The picture of one grid cell in the app: the thumbnail of [photo], decoded at [sizePx] pixels
+ * and cropped to fill the cell, drawn with the cell's [modifier].
+ *
+ * The thumbnail is loaded by Coil's AsyncImage: it reads and decodes the photo on a background
+ * thread, keeps recent thumbnails in memory so scrolling back is instant, and draws the cell's
+ * background colour until the picture is ready. Coil reads the photo through its content URI.
+ * It has no preview of its own: a preview cannot read the phone's photos, so the gallery's
+ * previews draw a coloured square in its place (see [GalleryContent]).
+ */
+@Composable
+private fun PhotoThumbnail(
+    photo: Photo,
+    sizePx: Int,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     // The request is remembered so it is not rebuilt each time the cell is drawn again.
@@ -386,12 +535,7 @@ private fun PhotoCell(
         model = request,
         contentDescription = stringResource(R.string.gallery_photo_description, photo.name),
         contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
-            .testTag(galleryPhotoTag(photo.id)),
+        modifier = modifier,
     )
 }
 
@@ -446,5 +590,137 @@ private fun PartialAccessNotice(onShareMore: () -> Unit) {
                 Text(stringResource(R.string.gallery_share_more))
             }
         }
+    }
+}
+
+/** Albums for the previews, named like the folders a phone usually has. Built on first use so the app itself never pays for them. */
+private val sampleAlbums by lazy {
+    listOf(
+        Album(id = 1L, name = "Camera"),
+        Album(id = 2L, name = "Screenshots"),
+        Album(id = 3L, name = "Travel"),
+        Album(id = 4L, name = "WhatsApp Images"),
+    )
+}
+
+/**
+ * Twenty-four photos for the previews, newest first, spread over [sampleAlbums], one hour and a
+ * half apart. Their URIs look like the phone's real ones, but nothing reads them: the previews
+ * draw [SampleThumbnail] instead of loading the pictures.
+ */
+private val samplePhotos by lazy {
+    (1..24).map { i ->
+        Photo(
+            id = i.toLong(),
+            uri = "content://media/external/images/media/${1_000 + i}",
+            name = "IMG_20261004_%04d.jpg".format(i),
+            albumId = sampleAlbums[i % sampleAlbums.size].id,
+            modifiedSeconds = 1_790_000_000L - i * 5_400L,
+        )
+    }
+}
+
+/**
+ * The colour of a photo's square in the previews: the hue moves round the colour wheel with the
+ * photo's [Photo.id], so neighbouring cells are easy to tell apart, at a soft saturation and
+ * brightness that reads well on light and dark backgrounds alike.
+ */
+private fun sampleThumbnailColour(photo: Photo): Color =
+    Color.hsv(hue = (photo.id * 23 % 360).toFloat(), saturation = 0.45f, value = 0.85f)
+
+/**
+ * The stand-in for a photo's thumbnail in the previews: a square of [photo]'s sample colour
+ * drawn with the cell's [modifier], so the grid looks like a grid of pictures without reading
+ * any photo from the phone.
+ */
+@Composable
+private fun SampleThumbnail(photo: Photo, modifier: Modifier = Modifier) {
+    Spacer(modifier = modifier.background(sampleThumbnailColour(photo)))
+}
+
+/**
+ * The gallery of the Edit tool for the previews below: [GalleryContent] with the given [access]
+ * and [answered], showing [albums] and [photos] ("All photos" chosen, the read finished), and
+ * [SampleThumbnail] in every cell. Every tap does nothing: a preview only draws.
+ */
+@Composable
+private fun SampleGallery(
+    access: PermissionAccess,
+    answered: Boolean = true,
+    albums: List<Album> = sampleAlbums,
+    photos: List<Photo> = samplePhotos,
+) {
+    GalleryContent(
+        toolName = stringResource(Tool.EDIT.labelRes),
+        access = access,
+        answered = answered,
+        albums = albums,
+        selectedAlbumId = null,
+        photos = photos,
+        loading = false,
+        onBack = {},
+        onOpenCamera = {},
+        onSelectAlbum = {},
+        onPhotoClick = {},
+        onShareMore = {},
+        onOpenSettings = {},
+        thumbnail = { photo, _, cellModifier -> SampleThumbnail(photo, cellModifier) },
+    )
+}
+
+/**
+ * The gallery with full photo access: the top bar, the album chips ("All photos" chosen) and a
+ * grid of coloured squares standing in for the photos. Drawn in light and dark; `ThemeMode.System`
+ * makes KansoTheme follow the preview's mode (see `HomePreview`).
+ */
+@PreviewLightDark
+@Composable
+private fun GalleryPhotosPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleGallery(access = PermissionAccess.Full)
+    }
+}
+
+/**
+ * The gallery after the person shared only some photos (Android 14+ "Select photos"): the notice
+ * with its "Share more photos" button above the few photos that were shared.
+ */
+@PreviewLightDark
+@Composable
+private fun GalleryPartialAccessPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleGallery(
+            access = PermissionAccess.Partial,
+            albums = sampleAlbums.take(1),
+            photos = samplePhotos.filter { it.albumId == sampleAlbums.first().id },
+        )
+    }
+}
+
+/**
+ * The gallery after the person refused photo access: the top bar stays, and below it the panel
+ * explains why access is needed, with its button to the app's system settings.
+ */
+@PreviewLightDark
+@Composable
+private fun GalleryRefusedPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleGallery(access = PermissionAccess.None, answered = true)
+    }
+}
+
+/**
+ * The gallery with full access on a phone with no photos at all: no album chips, only the
+ * message saying there is nothing to show.
+ */
+@PreviewLightDark
+@Composable
+private fun GalleryEmptyPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleGallery(
+            access = PermissionAccess.Full,
+            albums = emptyList(),
+            photos = emptyList(),
+        )
     }
 }

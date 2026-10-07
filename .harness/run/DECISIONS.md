@@ -27,6 +27,26 @@ overturned.
 
 Rationale: the human read the DoD and approved it verbatim. The run continues in Autonomous mode.
 
+## Note from the operator, 2026-10-07: a preview never finishes drawing
+
+Not an answer to a queued decision; information the run did not have. The operator stopped the run
+at 14:22 and restarted it after writing this.
+
+- With the uncommitted Phase 3 work in the tree (Tool, Saved and Gallery previews), the test JVM of
+  `testDebugUnitTest` ran for 35 minutes at 100% of one core and 3.5 GB, and wrote no test result.
+  The build the iteration was waiting on never finished; the operator killed that JVM at 14:20, and
+  the next iteration's full rebuild (`build2.log`) would have hung the same way.
+- A thread dump (`%TEMP%\kanso-backups\run3-hung-test.jstack.txt`) shows where:
+  `PreviewsRenderTest.every_preview_draws_without_an_error` → `drawPreview` (line 148) →
+  `ShadowPausedLooper.idleFor(500 ms)` → `Choreographer.doFrame` → `Recomposer` →
+  `deriveStateLocked` / `advanceGlobalSnapshot`, over and over inside one frame. One preview keeps
+  invalidating its own composition, which is what a state write during composition looks like, so
+  half a second of the test clock never ends.
+- Which preview it is was not established. The tests passed at 5253164, so it is one of the Phase 3
+  files.
+- Nothing bounds a test that hangs: the iteration polled the log for 35 minutes. A hung test should
+  fail with the preview's name instead of waiting.
+
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty
 checklist under the entry's id; you change `[ ]` to `[x]` for each item you have confirmed, and add a
