@@ -2,11 +2,11 @@
 
 ## Current
 
-- **Stage:** Phase 4 complete (T-008, T-009); every task complete; DoD approved
+- **Stage:** Verifier done; DONE_PARTIAL reported (human criteria unsigned, not driven)
 - **Loop Branch:** loop/kanso-pick-shoot-save
 - **Next Phase:** none; Verifier next
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes (criteria awaiting a person's signature remain; Autonomous mode, section 14.4). Next invocation is the Verifier.
+- **PARTIAL-candidate:** yes; Verifier ran in Iteration 6, machine criteria re-proved. Awaiting a person: see ISSUES.md.
 
 ## Progress
 

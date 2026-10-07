@@ -33,3 +33,7 @@
 - Attempted: Saved key, strings and nav wiring (Saved replaces the stack above Home; Edit another -> [Home, Gallery]); 2 Capable Workers in parallel (camera controls + gallery button; Saved screen + share); gallery camera button wired; recorded 10-13 (approved in D-001 baselines) and new 18/19 after viewing them; SavedNavigationTest added after review.
 - Learned: `CameraViewModel.retake` raced its own test (state update before file delete): file now deleted first. Reviewer found criteria 6 (gallery path) and 15 (back stack) unproven through the real nav host: added SavedNavigationTest (4 tests).
 - Reconciled: black viewfinder (`Color.Black`, Phase 3) and `onShare = {}` / default `onOpenCamera` recorded in ISSUES, not fixed.
+
+## Iteration 6 - Verifier
+
+Re-ran assemble, unit tests, Roborazzi verify, lint (all exit 0); checked reference/, manifest, dependencies, removals. No emulator attached (only a real phone), so machine-then-human criteria were not driven. Reported DONE_PARTIAL.

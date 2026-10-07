@@ -2,8 +2,8 @@
 
 > Derived cache. On any disagreement with task files or git, this file is wrong.
 
-- **Stage:** Phase 4 done: all tasks T-001..T-010 complete; PARTIAL-candidate recorded; DoD approved
-- **Next:** no executable task. Next invocation is the VERIFIER (section 11 / 14.4): re-prove every `machine` criterion fresh, drive `machine-then-human` ones (device wrapper, else report not driven), write Awaiting-a-person checklist in ISSUES.md, then DONE_PARTIAL or DONE.
+- **Stage:** Verifier done; DONE_PARTIAL
+- **Next:** nothing executable. Human signs the checklist in .harness/ISSUES.md.
 - **Created in Phase 2:** `data/media/{Photo,Album,PhotoSource,MediaStorePhotoSource}`; `GalleryViewModel(tool, probe, photoSource)`, `GalleryScreen(viewModel,onBack,onPhotoChosen,modifier)`; `data/photo/PhotoLoader` (open class, `load(uri,maxEdgePx)`), `ToolViewModel(tool,photoUri,loader,probe)`, `ToolScreen(viewModel,onBack)` with disabled Save (`TOOL_SAVE_TAG`), `TOOL_IMAGE_TAG` + `TOOL_PHOTO_URI_KEY`; nav key `ToolPhoto` wired; Koin bindings for PhotoSource/PhotoLoader/ToolViewModel; Coil + ExifInterface in build; test fakes `FakePhotoSource`, `FakePhotoLoader`. Camera tile still opens Placeholder.
 - **Queued decisions:** 0
 - **Abandoned:** none
