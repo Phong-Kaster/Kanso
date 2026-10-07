@@ -180,5 +180,15 @@ android {
 
 }
 
+// Kanso: keep Kotlin's bytecode target in step with the Java target above (22), as the core
+// modules do, so the Kotlin and Java compile tasks agree.
+plugins.withId('org.jetbrains.kotlin.android') {
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_22)
+        }
+    }
+}
+
 dependencies {
 }

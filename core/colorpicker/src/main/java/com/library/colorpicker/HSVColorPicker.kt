@@ -42,6 +42,7 @@ fun HSVColorPicker(
     textStyle: TextStyle = TextStyle(fontSize = 14.sp),
     refreshKey: Any? = null,
     aspectRatio: Float = 2f,
+    showAlpha: Boolean = true,
 ) {
     var colorPickerValue by rememberSaveable(refreshKey, stateSaver = HSVColor.Saver) {
         mutableStateOf(HSVColor.from(color))
@@ -95,6 +96,7 @@ fun HSVColorPicker(
                 },
             )
 
+            if (showAlpha) {
             Box(
                 modifier = Modifier
                     .circle()
@@ -104,6 +106,7 @@ fun HSVColorPicker(
             ) {
                 Text(text = "100%", style = textStyle, color = Color.Transparent)
                 Text(text = "${(colorPickerValue.alpha * 100).toInt()}%", style = textStyle, color = Color.Black)
+            }
             }
         }
 
@@ -135,6 +138,7 @@ fun HSVColorPicker(
             }
         )
 
+        if (showAlpha) {
         AlphaBar(
             currentColor = colorPickerValue,
             refreshKey = refreshKey,
@@ -148,6 +152,7 @@ fun HSVColorPicker(
                 inputColorCode = colorPickerValue.toHex()
             }
         )
+        }
     }
 }
 

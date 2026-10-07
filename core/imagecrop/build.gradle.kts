@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinAndroid)
@@ -22,15 +23,17 @@ android {
         targetCompatibility = JavaVersion.VERSION_22
     }
 
-    kotlinOptions {
-        jvmTarget = "22"
-    }
-
     publishing {
         singleVariant("release") {
             withSourcesJar()
             withJavadocJar()
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_22)
     }
 }
 
@@ -46,7 +49,7 @@ dependencies {
     // Compose
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
-    implementation(libs.compose.ui.tooling.preview)
+    implementation("androidx.compose.ui:ui-tooling-preview:${libs.versions.composeUi.get()}")
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.animation)
@@ -65,5 +68,6 @@ composeCompiler {
     )
 
     reportsDestination = layout.buildDirectory.dir("compose_compiler")
-    stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
+    // Retica's stability_config.conf was not part of the engine import, so no stability
+    // configuration file is passed here (a missing file would fail the Compose compiler).
 }

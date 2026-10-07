@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
@@ -25,13 +27,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_22
         targetCompatibility = JavaVersion.VERSION_22
     }
+}
 
-    kotlinOptions {
-        jvmTarget = "22"
-        freeCompilerArgs += "-opt-in=androidx.constraintlayout.compose.ExperimentalMotionApi"
-        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
-        freeCompilerArgs += "-opt-in=kotlinx.coroutines.DelicateCoroutinesApi"
-        freeCompilerArgs += "-opt-in=kotlinx.coroutines.FlowPreview"
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_22)
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.constraintlayout.compose.ExperimentalMotionApi",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=kotlinx.coroutines.DelicateCoroutinesApi",
+            "-opt-in=kotlinx.coroutines.FlowPreview",
+        )
     }
 }
 
@@ -45,7 +51,7 @@ dependencies {
     // Compose
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)
-    implementation(libs.compose.ui.tooling.preview)
+    implementation("androidx.compose.ui:ui-tooling-preview:${libs.versions.composeUi.get()}")
     implementation(libs.compose.runtime)
     implementation(libs.compose.foundation)
     implementation(libs.compose.animation)
@@ -57,10 +63,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.graphics.shapes)
     debugImplementation(libs.compose.ui.tooling)
-
-    // Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

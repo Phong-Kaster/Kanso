@@ -1,0 +1,113 @@
+package com.phongkaster.kanso.screenshots
+
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.takahirom.roborazzi.captureRoboImage
+import com.phongkaster.kanso.camera.FakeCameraController
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.di.ViewModelClearedProbe
+import com.phongkaster.kanso.gallery.RecordingRegistry
+import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
+import com.phongkaster.kanso.ui.camera.CameraScreen
+import com.phongkaster.kanso.ui.camera.CameraViewModel
+import com.phongkaster.kanso.ui.theme.KansoTheme
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.koin.core.context.stopKoin
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * Takes the reference pictures of the camera's "camera access is off" state, in light and in
+ * dark (pictures 14 and 15).
+ *
+ * The camera screen is hosted directly in KansoTheme with the mode forced, with the baseline
+ * colours, on Android 11 and the same phone screen as [ScreenshotTest]. Camera access is refused
+ * by answering the screen's one permission request "denied" through a [RecordingRegistry], so no
+ * system dialog is involved, and the live picture (which cannot be drawn on a computer) never
+ * appears. The camera itself is a [FakeCameraController].
+ */
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [30], qualifiers = CAMERA_PHONE)
+class CameraRefusedScreenshotTest {
+
+    /** Starts an empty activity to host the camera screen. */
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    /**
+     * Stops Koin after each test: KansoApplication starts it for every Robolectric test, and its
+     * state outlives the test inside the same JVM.
+     */
+    @After
+    fun stopKoinAfterTest() {
+        stopKoin()
+    }
+
+    /** Picture 14: the refused state in light mode. */
+    @Test
+    fun camera_refused_light() {
+        showRefusedCamera(ThemeMode.Light)
+        capture("14_camera_refused_light.png")
+    }
+
+    /** Picture 15: the refused state in dark mode. */
+    @Test
+    fun camera_refused_dark() {
+        showRefusedCamera(ThemeMode.Dark)
+        capture("15_camera_refused_dark.png")
+    }
+
+    /**
+     * Shows the camera screen in [mode], refuses the camera permission it asks for, and waits
+     * until the refused panel is on screen.
+     */
+    private fun showRefusedCamera(mode: ThemeMode) {
+        val registry = RecordingRegistry()
+        val owner = object : ActivityResultRegistryOwner {
+            override val activityResultRegistry: ActivityResultRegistry = registry
+        }
+        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
+        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
+        compose.setContent {
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
+                KansoTheme(themeMode = mode) {
+                    CameraScreen(
+                        viewModel = viewModel,
+                        onBack = {},
+                        onKept = {},
+                    )
+                }
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(1, registry.requests.size)
+        registry.answerLatest(registry.requests.single().associateWith { false })
+        compose.waitForIdle()
+        compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
+    }
+
+    /** Saves a picture of the whole window as `src/test/screenshots/[name]`. */
+    private fun capture(name: String) {
+        compose.waitForIdle()
+        compose.onRoot().captureRoboImage("src/test/screenshots/$name")
+    }
+}
+
+/**
+ * The Robolectric screen the pictures are drawn on, the same as [ScreenshotTest]'s: 411 dp wide,
+ * 891 dp tall, at xxhdpi, the size of a typical modern phone.
+ */
+private const val CAMERA_PHONE = "w411dp-h891dp-xxhdpi"

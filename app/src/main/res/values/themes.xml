@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's window theme. Compose draws everything, so this only sets the window itself;
+         the Material 3 look comes from the Compose theme. -->
+    <style name="Theme.Kanso" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+
+    <!-- The launch theme: the system splash screen (app icon on a plain background), which hands
+         over to Theme.Kanso when MainActivity calls installSplashScreen(). -->
+    <style name="Theme.Kanso.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/window_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.Kanso</item>
+    </style>
+</resources>

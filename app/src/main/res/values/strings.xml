@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kanso</string>
+
+    <!-- The six tools listed on Home. -->
+    <string name="tool_edit">Edit</string>
+    <string name="tool_remove_background">Remove background</string>
+    <string name="tool_enhance">Enhance</string>
+    <string name="tool_retouch">Retouch</string>
+    <string name="tool_artistic">Artistic</string>
+    <string name="tool_camera">Camera</string>
+
+    <!-- Settings entry on Home and the Settings screen title. -->
+    <string name="settings">Settings</string>
+
+    <!-- Appearance section of Settings and its theme mode choice. -->
+    <string name="appearance">Appearance</string>
+    <string name="theme_mode">Theme mode</string>
+    <string name="theme_mode_system">System default</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+
+    <!-- Theme colour setting: its label and its three options. -->
+    <string name="theme_colour_title">Theme colour</string>
+    <string name="theme_colour_wallpaper">From wallpaper</string>
+    <string name="theme_colour_default">Default purple</string>
+    <string name="theme_colour_custom">Custom colour</string>
+
+    <!-- Photo gallery shown by every tool except the camera. %1$s is the tool name. -->
+    <string name="gallery_title">%1$s: choose a photo</string>
+    <string name="gallery_refused_title">Photo access is off</string>
+    <string name="gallery_refused_message">Kanso needs to read your photos so you can pick one to work on. Photos stay on your phone. Turn on photo access in your phone&#8217;s settings for Kanso to continue.</string>
+    <string name="gallery_open_settings">Open settings</string>
+    <string name="gallery_partial_notice">You have shared only some of your photos with Kanso.</string>
+    <string name="gallery_share_more">Share more photos</string>
+    <string name="gallery_body_placeholder">Your photos will appear here.</string>
+    <string name="gallery_all_photos">All photos</string>
+    <string name="gallery_album_label">Album: %1$s</string>
+    <string name="gallery_empty">No photos to show yet. Take one with the camera or add some to your phone.</string>
+    <string name="gallery_photo_description">Photo %1$s</string>
+
+    <!-- Tool screen: one photo opened in a tool. %1$s is the tool name where present. -->
+    <string name="tool_save">Save</string>
+    <string name="tool_photo_description">Your photo</string>
+    <string name="tool_photo_unreadable">This photo cannot be opened. Go back and pick another one.</string>
+
+    <string name="tool_saving">Saving…</string>
+    <string name="save_failed">The photo could not be saved. Try again.</string>
+    <string name="save_permission_denied">Kanso needs permission to write to your storage to save the photo. Nothing was saved.</string>
+    <string name="save_kept_orientation">Saved. This photo is very large, so it was copied as it is and some apps may show it sideways.</string>
+
+    <!-- Saved screen: shown after a photo is saved. -->
+    <string name="saved_title">Saved</string>
+    <string name="saved_photo_description">The photo you saved</string>
+    <string name="saved_message">Your photo is saved in Pictures/Kanso.</string>
+    <string name="saved_share">Share</string>
+    <string name="saved_edit_another">Edit another</string>
+    <string name="saved_home">Home</string>
+    <string name="saved_share_chooser">Share photo</string>
+
+    <!-- Camera controls: lens switch, flash and the gallery's camera button. -->
+    <string name="camera_switch_lens">Switch camera</string>
+    <string name="camera_flash_auto">Flash: auto</string>
+    <string name="camera_flash_on">Flash: on</string>
+    <string name="camera_flash_off">Flash: off</string>
+    <string name="gallery_open_camera">Take a photo</string>
+
+    <!-- Camera screen. -->
+    <string name="camera_preview_description">Camera preview</string>
+    <string name="camera_shutter">Take photo</string>
+    <string name="camera_keep">Keep</string>
+    <string name="camera_retake">Retake</string>
+    <string name="camera_shot_description">The photo you just took</string>
+    <string name="camera_unavailable">The camera could not be started.</string>
+    <string name="camera_shot_failed">The photo could not be taken. Try again.</string>
+    <string name="camera_refused_title">Camera access is off</string>
+    <string name="camera_refused_message">Kanso needs the camera to take a photo. Photos stay on your phone. Turn on camera access in your phone&#8217;s settings for Kanso to continue.</string>
+    <string name="camera_open_settings">Open settings</string>
+
+    <!-- Spoken description of the back arrow in top bars. -->
+    <string name="back">Back</string>
+
+</resources>
