@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** execute (Verifier gap: T-011)
+- **Stage:** verify (T-001..T-011 complete)
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** 7 (T-011)
-- **DONE-candidate:** no (cleared Iteration 10: a fresh full unit run failed CameraScreenTest retake)
+- **Next Phase:** none; Verifier pass
+- **DONE-candidate:** yes (recorded Iteration 11; all tasks complete)
 
 ## Progress
 
@@ -23,7 +23,7 @@
 | T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
 | T-009 | complete | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt, previews/PreviewHygieneTest.kt | build, tests, verifyRoborazzi, lint green (Iteration 6) |
 | T-010 | complete | data/settings/SettingsStore.kt | 5/5 unit runs and 3/3 Roborazzi runs green, no rerun (Iteration 9) |
-| T-011 | pending | ui/camera/CameraViewModel.kt, ui/camera/CameraScreen.kt | - |
+| T-011 | complete | ui/camera/CameraViewModel.kt, ui/camera/CameraScreen.kt | CameraScreenTest 10/10, full unit 3/3, Roborazzi 3/3, lint green (Iteration 11) |
 
 ## Assumptions
 

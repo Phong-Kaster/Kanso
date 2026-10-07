@@ -2,12 +2,12 @@
 
 > Derived cache; on any disagreement with the task files or git, this file is wrong.
 
-- **Stage:** execute; T-001..T-010 complete. Verifier (Iteration 10) filed T-011; DONE-candidate cleared.
-- **Next Phase:** 7 - T-011 (Capable): `app/src/main/java/com/phongkaster/kanso/ui/camera/CameraViewModel.kt`, `app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt`
+- **Stage:** verify; T-001..T-011 complete. DONE-candidate recorded in Iteration 11. Next invocation is the Verifier (§11).
+- **Next Phase:** none
 - **Queued decisions:** 0 (D-001 answered)
 - **Abandoned:** none
 - **Unreachable:** none
-- **Verified commands:** build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` and `./gradlew :app:verifyRoborazziDebug` | lint: `./gradlew :app:lintDebug` (from `.harness/knowledge/PROJECT.md`; heap 3g; each full test run takes ~2 min)
+- **Verified commands:** build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` and `./gradlew :app:verifyRoborazziDebug` | lint: `./gradlew :app:lintDebug` (heap 3g; each full test run ~2 min). Never run Gradle batches in background past 10 min: a killed batch leaves Gradle running and fails the next run.
 - **Base commit for "unchanged" checks:** `9a61275`
 - **Model tiers (resolved from `.harness/loop/models.json`):** fast: `sonnet` | capable: `opus`
-- **Flakes:** Windows DataStore move flake fixed by RetryingMoveFileSystem (T-010). Open: CameraScreenTest retake leaves the shot file (T-011).
+- **Flakes:** none open (T-010 DataStore move, T-011 retake delete both fixed).

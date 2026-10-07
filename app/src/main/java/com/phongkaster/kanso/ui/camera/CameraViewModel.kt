@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -148,14 +149,28 @@ class CameraViewModel(
     /**
      * Throws the waiting photo away and goes back to the live picture.
      *
-     * The file is deleted right here, on the calling thread: removing one file is a single quick
-     * call, and doing it at once means the photo is surely gone by the time the live picture is
-     * back.
+     * The photo is dropped from the state at once, so the screen stops showing it and the live
+     * picture comes back. The file is then deleted on a background thread, trying again a few
+     * times (about two seconds at most): the picture loader may still have the file open for a
+     * moment, and Windows (where the tests run) refuses to delete an open file. Until the file is
+     * gone [CameraUiState.taking] stays true, so the shutter cannot be pressed while the old
+     * photo is still on disk.
      */
     fun retake() {
         val shot = mutableState.value.shot ?: return
-        shot.delete()
-        mutableState.update { it.copy(shot = null, shotFailed = false) }
+        mutableState.update { it.copy(shot = null, taking = true, shotFailed = false) }
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    var tries = 0
+                    while (shot.exists() && !shot.delete() && tries++ < 40) delay(50)
+                }
+            } finally {
+                // Leaving the screen mid-delete cancels this coroutine; make one last plain attempt.
+                if (shot.exists()) shot.delete()
+                mutableState.update { it.copy(taking = false) }
+            }
+        }
     }
 
     /**

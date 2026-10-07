@@ -47,3 +47,7 @@ Looped `testDebugUnitTest --rerun`: 5 of 5 green; `verifyRoborazziDebug --rerun`
 ## Iteration 10 - Verifier
 
 Fresh runs on 0b46878: `assembleDebug` 0; `testDebugUnitTest --rerun-tasks` 1 (198 tests, 1 failed: `CameraScreenTest.retake_deletes_the_shot_and_shows_the_shutter_again`, "Retake left the shot's file behind", CameraScreenTest.kt:119); `verifyRoborazziDebug` 0 (the same test passed there); `lintDebug` 0. Static checks held: DoD 6 (release has ui-tooling-preview and no ui-tooling, debug has ui-tooling), DoD 8 diff only A, DoD 9 screenshots identical to 9a61275, DoD 14 (nav3 1.1.7, agp 8.13.0, three ABIs, reference/ unchanged, no INTERNET/ACCESS_NETWORK_STATE in the merged debug manifest, no new firebase/ads/analytics lines). DoD 8/13 not proved → T-011 filed, DONE-candidate cleared. Devices not driven (criteria 7, 10): another Verifier pass follows T-011.
+
+## Iteration 11 - Phase 7 (T-011, attempt 1)
+
+`CameraViewModel.retake()` now clears the shot from state first, then deletes the file on IO with a bounded retry while `taking` holds the shutter. CameraScreenTest 10/10, full unit 3/3, Roborazzi 3/3, lint 0, tests dir diff only A. T-011 complete; DONE-candidate recorded. Self-reviewed only (one-function change).
