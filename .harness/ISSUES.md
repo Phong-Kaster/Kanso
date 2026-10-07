@@ -24,3 +24,13 @@ Not driven: the only device attached is a real phone (SM_A135F), not an emulator
 - [ ] 27 Walk every new screen in light and dark: readable text, visible controls, shutter/keep/retake/Save clear of the gesture bar. Also judge the camera's hard-coded black picture area.
 - [ ] 28 Read the gallery, permission, camera, save and navigation files: each concept is explained where first used.
 - [ ] 32 Settings, Custom colour: drag the picker; smooth, and no transparency bar.
+
+Run 1 (app shell; its DoD is at 57c9de7). These five were dropped from this file by 0670172 while
+still unsigned, and restored from 288b590. Run 1's own numbers, so "Run 1 21" is not Run 2's 21.
+19 and 22 were never driven: the emulator's focused window stayed `Application` (Run 1 A-005).
+
+- [ ] Run 1 12 - Kill the app, open it from the launcher with theme mode on System → system splash (app icon on a plain background), then Home, with no extra screen, logo animation or flash of another colour.
+- [ ] Run 1 19 - Android 12+ phone: Settings → theme colour → From wallpaper; change the phone's wallpaper → the app's accent colour follows.
+- [ ] Run 1 21 - Open Home, each of the six tools, and Settings in light, dark and with a picked colour; in Settings open the custom colour picker, drag, read its hex field in dark mode → plain surfaces, readable text, every control visible, picker text readable, no ornament.
+- [ ] Run 1 22 - Open a tool, back gesture → Home; back gesture again → app closes to the launcher.
+- [ ] Run 1 26 - Read `app/src/main/java/com/phongkaster/kanso/navigation/` and the Home and Settings screen files → back stack, `NavDisplay`, `entryProvider`, per-entry ViewModels, `remember`/state and the theme are each explained in plain English where first used.
