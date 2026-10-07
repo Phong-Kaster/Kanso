@@ -10,3 +10,7 @@
 - Tier 1: `ToolSavingPreview` removed. Cause of the hang is probably the indeterminate `CircularProgressIndicator` (infinite animation); removing it made the render test pass in 3 min. Not proven against the thread dump (which shows re-composition in one frame). The Saving state has no preview; T-009/future previews must not use indeterminate indicators.
 - Tier 1: preview sample data in Saved and Gallery made lazy/function so the shipping app does not build it (reviewer finding).
 - Environment: Gradle `transforms` cache was corrupt after the killed JVM; moved aside with the trash wrapper (RECOVERY R-265).
+
+## Iteration 7 - Tier 1: T-010 added (Verifier gap)
+
+The full unit-test suite fails in fresh runs on Windows. ThemeColourSettingsTest hit a DataStore rename AccessDenied twice, including on the one rerun DoD 8 allows. CameraScreenTest retake failed once. Added T-010 (Phase 6, Capable) to make full runs reliable without changing existing tests. PRD, DoD and architecture are unchanged.

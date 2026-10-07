@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** execute (all phases done)
+- **Stage:** execute (Verifier found a gap: T-010)
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** none (Verifier next)
-- **DONE-candidate:** yes (Iteration 6 wrote the last code; the next invocation is the Verifier, section 11)
+- **Next Phase:** 6 = T-010
+- **DONE-candidate:** no (cleared by the Verifier, Iteration 7: the full unit-test suite failed in 3 of 3 fresh runs; T-010 filed)
 
 ## Progress
 
@@ -22,6 +22,7 @@
 | T-007 | complete | ui/gallery/GalleryScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
 | T-009 | complete | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt, previews/PreviewHygieneTest.kt | build, tests, verifyRoborazzi, lint green (Iteration 6) |
+| T-010 | pending | data/settings/SettingsStore.kt; app/build.gradle.kts test block (orchestrator) | filed by the Verifier (Iteration 7) |
 
 ## Assumptions
 
