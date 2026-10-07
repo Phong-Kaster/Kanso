@@ -11,6 +11,11 @@
 - Recovered: found uncommitted Phase 1 work from a crashed invocation (build files, HomeScreen, KansoTheme, two new tests); coherent, so salvaged and verified instead of reverted.
 - Verified: assembleDebug, testDebugUnitTest, verifyRoborazziDebug, lintDebug green on the third full run; the first two each failed one unrelated flaky Robolectric test. Reviewer: no blocking findings; T-009 widened (AMENDMENTS), A-002 recorded.
 
+### Iteration 3 - 2026-10-07
+- **Phase:** 2 (T-002, T-003, T-008), three Capable Workers, scopes disjoint and contained.
+- Verified: assembleDebug, testDebugUnitTest, verifyRoborazziDebug, lintDebug green (two full runs each hit the known CameraScreenTest retake flake once); baselines identical to 9a61275.
+- Reviewer: no blocking findings. Duplicate Settings preview fixed (System mode now shows the default-purple colour). Camera slot fillers uncoverable by previews: A-003, noted for T-009.
+
 ## Archived Decisions
 
 - D-001 (DoD approval): approved as written, 2026-10-07.

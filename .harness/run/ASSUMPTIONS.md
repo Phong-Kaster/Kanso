@@ -45,3 +45,21 @@ DoD 5 says every top-level `sample...` declaration is private. `data/photo/Photo
 ### Taken, and why
 
 Option 2: DoD 8 is the hard rule of the PRD ("do not change a test"); the function is not sample data for previews, so the intent of DoD 5 is kept.
+
+## A-003 (Tier 2) - Camera leaves that cannot be drawn on the host
+
+### Question
+
+`LivePreview` (needs the camera surface) and `ShotView` (loads a photo file through Coil) have no preview of their own, and `CameraScreen`/`CameraBody` are stateful wrappers that call `CameraFrame`/`CameraContent`. DoD 1 allows "a thin stateful wrapper whose `...Content` part is" previewed. Does the coverage test accept them?
+
+### Options Considered
+
+1. Fail the coverage test on them - consequences: forces a fake camera into a preview, which DoD 4 forbids.
+2. Accept, in `PreviewCoverageTest`, the composables that only fill the slots of a previewed `...Content` (`LivePreview`, `ShotView`) and the stateful wrappers `CameraScreen`, `CameraBody` - consequences: DoD 1's proof is narrowed by four named functions.
+
+### Taken, and why
+
+Option 2: DoD 4 (previews never touch the camera) outranks full coverage of the two slot fillers; the stand-ins in the previews draw their place. T-009 names the exemptions in its test.
+
+- **First dependent checkpoint:** Iteration 3
+- **Revert:** `git revert <sha of the loop(phase-2) checkpoint>`
