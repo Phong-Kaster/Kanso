@@ -196,7 +196,7 @@ class PreviewHygieneTest {
         // The same lines with comments blanked out, so a name mentioned in a comment is not
         // counted as a use. Blanking keeps every line where it was.
         val codeLines = blankComments(source).lines()
-        val previews = findPreviewFunctions(lines)
+        val previews = findPreviewFunctions(lines).map { it.copy(scannedText = blankComments(it.scannedText)) }
         val samples = findSampleDeclarations(lines)
             .filterNot { "$fileName:${it.name}" in NOT_PREVIEW_SAMPLES }
         val allowedRanges = previews.map { it.range } + samples.map { it.range }

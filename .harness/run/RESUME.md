@@ -2,8 +2,8 @@
 
 > Derived cache; on any disagreement with the task files or git, this file is wrong.
 
-- **Stage:** execute; Phases 1-4 (T-001..T-008) complete
-- **Next Phase (5):** T-009 (coverage test; exemptions per A-003, A-004 in its task file).
+- **Stage:** verify; Phases 1-5 (T-001..T-009) complete, DONE-candidate recorded
+- **Next Phase:** none. The next invocation is the Verifier (section 11): re-prove every machine criterion fresh, then Autonomous end (14.4).
 - **Queued decisions:** 0 (D-001 answered)
 - **Abandoned:** none
 - **Unreachable:** none

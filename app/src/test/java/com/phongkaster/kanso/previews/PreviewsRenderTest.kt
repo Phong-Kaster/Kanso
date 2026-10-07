@@ -74,7 +74,7 @@ class PreviewsRenderTest {
         }
     }
 
-    /** The previews this task's files promise exist, each with a light and a dark variant. */
+    /** The previews the Definition of Done names exist, each with a light and a dark variant. */
     @Test
     fun the_required_previews_exist_in_light_and_dark() {
         val previews = scanPreviews()
@@ -89,18 +89,23 @@ class PreviewsRenderTest {
         }
     }
 
-    /** Every source file expected to hold previews has at least one the scanner found. */
+    /** Every source file that holds a composable has at least one preview the scanner found. */
     @Test
-    fun every_expected_file_has_a_preview() {
+    fun every_file_with_a_composable_has_a_preview() {
         val root = findAppSourceRoot()
         val previews = scanPreviews()
-        val missing = filesExpectedToHavePreviews.filter { path ->
-            assertTrue("Expected source file $path does not exist", File(root, path).isFile)
+        val filesWithComposables = root.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.readText().contains("@Composable") }
+            .map { it.relativeTo(root).invariantSeparatorsPath }
+            .toList()
+        assertTrue("The scan found no file holding a composable", filesWithComposables.isNotEmpty())
+
+        val missing = filesWithComposables.filter { path ->
             val fileClass = fileClassOf(path)
             previews.none { belongsTo(it.declaringClass, fileClass) }
         }
         assertEquals(
-            "These files have no preview the scanner can find",
+            "These files hold a composable but no preview the scanner can find",
             emptyList<String>(),
             missing,
         )
@@ -227,21 +232,29 @@ class PreviewsRenderTest {
         error("unreachable")
     }
 
-    /** The preview names and files this test expects. */
+    /** The preview names this test expects. */
     private companion object {
-        /** Previews that must exist by name (DoD 3); T-009 adds the rest of the list. */
+        /** Previews that must exist by name, each in light and dark (DoD 3). */
         val requiredPreviewNames = setOf(
+            "GalleryPhotosPreview",
+            "GalleryPartialAccessPreview",
+            "GalleryRefusedPreview",
+            "GalleryEmptyPreview",
+            "CameraLivePreview",
+            "CameraAfterShotPreview",
+            "CameraRefusedPreview",
+            "ToolPhotoPreview",
+            "ToolUnreadablePreview",
+            "SavedPreview",
+            "SettingsSystemModePreview",
+            "SettingsLightModePreview",
+            "SettingsDarkModePreview",
+            "SettingsWallpaperColourPreview",
+            "SettingsCustomColourPreview",
             "HomePreview",
+            "AccessRefusedPanelPreview",
+            "KansoNavHostPreview",
             "KansoThemePreview",
-        )
-
-        /**
-         * Source files (relative to `app/src/main/java`) that must each hold at least one
-         * preview; T-009 widens this to every file with a composable.
-         */
-        val filesExpectedToHavePreviews = setOf(
-            "com/phongkaster/kanso/ui/home/HomeScreen.kt",
-            "com/phongkaster/kanso/ui/theme/KansoTheme.kt",
         )
     }
 }

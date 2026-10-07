@@ -27,3 +27,7 @@
 ## Iteration 5 - Phase 4 (T-004)
 
 Split KansoNavHost into stateful host + stateless KansoNavDisplay with KansoNavHostPreview. Build, tests, Roborazzi, lint green. No debris found at recovery; the earlier hang did not recur.
+
+## Iteration 6 - Phase 5 (T-009)
+
+Added `PreviewCoverageTest` (source scan with self-checks, named exemptions A-003/A-004), widened `PreviewsRenderTest` (all DoD 3 names, every file with a composable has a preview), comment-blanked preview bodies in `PreviewHygieneTest`. Reviewer found 3 majors: slot-default mentions count as drawn (accepted: it is a real use), wrapper not checked thin (fixed), comment blanking ignored strings (fixed, self-check added). Build, tests, Roborazzi, lint green. DONE-candidate recorded.

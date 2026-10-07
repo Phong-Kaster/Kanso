@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** execute (D-001 approved; Phases 1-4 done)
+- **Stage:** execute (all phases done)
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** 5 - T-009
-- **DONE-candidate:** no
+- **Next Phase:** none (Verifier next)
+- **DONE-candidate:** yes (Iteration 6 wrote the last code; the next invocation is the Verifier, section 11)
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | T-006 | complete | ui/saved/SavedScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-007 | complete | ui/gallery/GalleryScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
-| T-009 | pending | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt | - |
+| T-009 | complete | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt, previews/PreviewHygieneTest.kt | build, tests, verifyRoborazzi, lint green (Iteration 6) |
 
 ## Assumptions
 
