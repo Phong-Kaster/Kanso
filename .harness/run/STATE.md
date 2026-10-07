@@ -4,9 +4,9 @@
 
 ## Current
 
-- **Stage:** execute (D-001 approved; Phases 1-3 done)
+- **Stage:** execute (D-001 approved; Phases 1-4 done)
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** 4 - T-004
+- **Next Phase:** 5 - T-009
 - **DONE-candidate:** no
 
 ## Progress
@@ -20,7 +20,7 @@
 | T-005 | complete | ui/tool/ToolScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-006 | complete | ui/saved/SavedScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-007 | complete | ui/gallery/GalleryScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
-| T-004 | pending | navigation/KansoNavHost.kt | - |
+| T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
 | T-009 | pending | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt | - |
 
 ## Assumptions

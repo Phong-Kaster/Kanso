@@ -2,9 +2,8 @@
 
 > Derived cache; on any disagreement with the task files or git, this file is wrong.
 
-- **Stage:** execute; Phases 1-3 (T-001, T-002, T-003, T-008, T-005, T-006, T-007) complete
-- **Next Phase (4):** T-004 `navigation/KansoNavHost.kt` (Capable; split into stateful host + stateless `KansoNavDisplay`, A-001). Previews must not use indeterminate progress indicators (they hang the render test).
-- **Later phases:** 5 = T-009 (coverage test; exemptions per A-003, A-004 in its task file).
+- **Stage:** execute; Phases 1-4 (T-001..T-008) complete
+- **Next Phase (5):** T-009 (coverage test; exemptions per A-003, A-004 in its task file).
 - **Queued decisions:** 0 (D-001 answered)
 - **Abandoned:** none
 - **Unreachable:** none

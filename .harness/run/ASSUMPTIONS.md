@@ -8,7 +8,7 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (bootstrap); the commit that first depends on it is T-004's
+- **First dependent checkpoint:** Iteration 1 (bootstrap); Iteration 5 (T-004)
 - **Revert:** `git revert <sha of T-004's checkpoint>`
 
 ### Question
