@@ -103,6 +103,9 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
+    // @Preview and @PreviewLightDark: the annotations that make a composable show up in Android
+    // Studio's preview pane. Light enough to ship, because the annotations are not used at run time.
+    implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 
     // Photo thumbnails in the gallery grid (Coil loads and caches images off the main thread)
@@ -142,6 +145,8 @@ dependencies {
     testImplementation(libs.espresso.core)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.ui.test.junit4)
+    // Finds every @Preview in the app so a test can draw each one (PreviewsRenderTest).
+    testImplementation(libs.composable.preview.scanner)
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)
     testImplementation(libs.roborazzi.junit.rule)

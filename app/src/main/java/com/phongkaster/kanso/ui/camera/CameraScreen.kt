@@ -2,6 +2,7 @@ package com.phongkaster.kanso.ui.camera
 
 import android.Manifest
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -38,7 +39,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,15 +54,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.common.BackArrowIcon
 import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
 import com.phongkaster.kanso.ui.permission.PermissionGate
 import com.phongkaster.kanso.ui.permission.openAppDetailsSettings
+import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.awaitCancellation
 import java.io.File
 
@@ -115,8 +127,15 @@ private val MIN_TOUCH = 48.dp
  * Retake deletes the photo and shows the live picture again. [onBack] is called when the user
  * taps the back arrow; the caller pops the back stack. The [viewModel] is passed in by the
  * navigation entry, which owns it.
+ *
+ * Like Home, the camera is cut into a stateful part and a stateless part (the "state hoisting"
+ * explained on `HomeScreen`). What is specific here: the stateful side is this function, which
+ * asks for the permission, plus [CameraBody], which reads the camera's state from the
+ * [viewModel]; the stateless side is [CameraFrame] (the top bar) and [CameraContent] (the picture
+ * area and the bottom bar). The live camera picture and the photo just taken are handed to
+ * [CameraContent] as small composable "slots" (a piece of UI passed in as a parameter), so a
+ * preview can pass a drawn stand-in where the real screen passes the camera.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(
     viewModel: CameraViewModel,
@@ -126,6 +145,37 @@ fun CameraScreen(
 ) {
     val context = LocalContext.current
 
+    CameraFrame(onBack = onBack, modifier = modifier) {
+        PermissionGate(
+            permissions = listOf(Manifest.permission.CAMERA),
+            granted = {
+                CameraBody(
+                    viewModel = viewModel,
+                    onKept = onKept,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            },
+            refused = {
+                CameraRefusedPanel(onOpenSettings = { context.openAppDetailsSettings() })
+            },
+        )
+    }
+}
+
+/**
+ * The frame around everything the camera screen shows: a top bar with a back arrow (which calls
+ * [onBack]) and the title "Camera", and below it the [content], which fills the rest.
+ *
+ * It holds no state, so both the real screen (with the permission gate as its [content]) and the
+ * previews (with a sample picture, or the refused panel) use it.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CameraFrame(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Scaffold(
         modifier = modifier.testTag(CAMERA_SCREEN_TAG),
         topBar = {
@@ -151,39 +201,36 @@ fun CameraScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
         ) {
-            PermissionGate(
-                permissions = listOf(Manifest.permission.CAMERA),
-                granted = {
-                    CameraBody(
-                        viewModel = viewModel,
-                        onKept = onKept,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                },
-                refused = {
-                    AccessRefusedPanel(
-                        title = stringResource(R.string.camera_refused_title),
-                        message = stringResource(R.string.camera_refused_message),
-                        buttonLabel = stringResource(R.string.camera_open_settings),
-                        onOpenSettings = { context.openAppDetailsSettings() },
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .testTag(CAMERA_REFUSED_TAG),
-                        buttonModifier = Modifier.testTag(CAMERA_SETTINGS_BUTTON_TAG),
-                    )
-                },
-            )
+            content()
         }
     }
 }
 
 /**
- * The screen once camera access is granted: a black picture area (the live picture, or the
- * photo just taken) above the [CameraBottomBar].
+ * What the camera screen shows once access was refused: why the camera is needed, and a button
+ * that calls [onOpenSettings] to open the app's page in the system settings.
+ */
+@Composable
+private fun CameraRefusedPanel(onOpenSettings: () -> Unit) {
+    AccessRefusedPanel(
+        title = stringResource(R.string.camera_refused_title),
+        message = stringResource(R.string.camera_refused_message),
+        buttonLabel = stringResource(R.string.camera_open_settings),
+        onOpenSettings = onOpenSettings,
+        modifier = Modifier
+            .navigationBarsPadding()
+            .testTag(CAMERA_REFUSED_TAG),
+        buttonModifier = Modifier.testTag(CAMERA_SETTINGS_BUTTON_TAG),
+    )
+}
+
+/**
+ * The stateful part of the screen once camera access is granted: it reads the camera's state and
+ * the photo just taken from [viewModel] and hands them, as plain values, to [CameraContent].
  *
- * The picture area is black because a camera picture rarely fills the space exactly, and black
- * edges look like a viewfinder in light and dark themes alike. Nothing readable is drawn on the
- * black; every label and message sits in the bottom bar, on the theme's surface colour.
+ * It also decides which picture goes in the picture area: the live camera picture, connected
+ * through the [viewModel], while no photo waits; the photo file once one does. Keep calls
+ * [onKept] with the photo's `file://` Uri as text.
  */
 @Composable
 private fun CameraBody(
@@ -198,6 +245,78 @@ private fun CameraBody(
     val context = LocalContext.current
     val shot = ui.shot
 
+    val message = when {
+        ui.shotFailed -> stringResource(R.string.camera_shot_failed)
+        shot == null && camera.status == CameraStatus.Unavailable ->
+            stringResource(R.string.camera_unavailable)
+        else -> null
+    }
+
+    // A slot only while a photo waits; null means "show the live picture". The declared type
+    // tells Kotlin that the lambda below is a composable taking the picture's modifier.
+    val shotPicture: (@Composable (Modifier) -> Unit)? = if (shot == null) {
+        null
+    } else {
+        { pictureModifier -> ShotView(shot = shot, modifier = pictureModifier) }
+    }
+
+    CameraContent(
+        status = camera.status,
+        taking = ui.taking,
+        flashMode = camera.flashMode,
+        hasFlash = camera.hasFlash,
+        canSwitchLens = camera.canSwitchLens,
+        message = message,
+        onShutter = { viewModel.takePicture(shotsDirectory(context)) },
+        onKeep = { viewModel.keep()?.let(onKept) },
+        onRetake = viewModel::retake,
+        onFlash = viewModel::cycleFlash,
+        onSwitchLens = viewModel::switchLens,
+        onZoom = viewModel::zoomBy,
+        livePicture = { pictureModifier ->
+            LivePreview(viewModel = viewModel, modifier = pictureModifier)
+        },
+        shotPicture = shotPicture,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The stateless part of the screen once camera access is granted: a black picture area above the
+ * [CameraBottomBar].
+ *
+ * While [shotPicture] is null the area shows [livePicture] with the pinch-to-zoom layer on top
+ * (a pinch calls [onZoom]); once a photo waits, [shotPicture] is shown instead and the bar
+ * offers Keep ([onKeep]) and Retake ([onRetake]). Both pictures are slots: each is called with
+ * the modifier that sizes it, and draws whatever its caller chose.
+ *
+ * The shutter and the lens switch work only when [status] is ready and no photo is being taken
+ * ([taking]). The flash button shows [flashMode], and only when the lens [hasFlash]; the lens
+ * switch shows only when the phone [canSwitchLens]. [message], when there is one, is shown in the
+ * bar. [onShutter], [onFlash] and [onSwitchLens] are called by their buttons.
+ *
+ * The picture area is black because a camera picture rarely fills the space exactly, and black
+ * edges look like a viewfinder in light and dark themes alike. Nothing readable is drawn on the
+ * black; every label and message sits in the bottom bar, on the theme's surface colour.
+ */
+@Composable
+fun CameraContent(
+    status: CameraStatus,
+    taking: Boolean,
+    flashMode: FlashMode,
+    hasFlash: Boolean,
+    canSwitchLens: Boolean,
+    message: String?,
+    onShutter: () -> Unit,
+    onKeep: () -> Unit,
+    onRetake: () -> Unit,
+    onFlash: () -> Unit,
+    onSwitchLens: () -> Unit,
+    onZoom: (Float) -> Unit,
+    livePicture: @Composable (Modifier) -> Unit,
+    shotPicture: (@Composable (Modifier) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier) {
         Box(
             modifier = Modifier
@@ -208,33 +327,27 @@ private fun CameraBody(
         ) {
             // While a photo waits for Keep or Retake the live picture leaves the screen, which
             // also disconnects the camera (see LivePreview); Retake brings it back.
-            if (shot == null) {
-                LivePreview(viewModel = viewModel, modifier = Modifier.fillMaxSize())
-                PinchToZoomArea(onZoom = viewModel::zoomBy, modifier = Modifier.matchParentSize())
+            if (shotPicture == null) {
+                livePicture(Modifier.fillMaxSize())
+                PinchToZoomArea(onZoom = onZoom, modifier = Modifier.matchParentSize())
             } else {
-                ShotView(shot = shot, modifier = Modifier.fillMaxSize())
+                shotPicture(Modifier.fillMaxSize())
             }
         }
 
-        val message = when {
-            ui.shotFailed -> stringResource(R.string.camera_shot_failed)
-            shot == null && camera.status == CameraStatus.Unavailable ->
-                stringResource(R.string.camera_unavailable)
-            else -> null
-        }
-        val ready = camera.status == CameraStatus.Ready && !ui.taking
+        val ready = status == CameraStatus.Ready && !taking
         CameraBottomBar(
-            hasShot = shot != null,
+            hasShot = shotPicture != null,
             shutterEnabled = ready,
             message = message,
-            onShutter = { viewModel.takePicture(shotsDirectory(context)) },
-            onKeep = { viewModel.keep()?.let(onKept) },
-            onRetake = viewModel::retake,
-            flashMode = camera.flashMode.takeIf { camera.hasFlash },
-            onFlash = viewModel::cycleFlash,
-            canSwitchLens = camera.canSwitchLens,
+            onShutter = onShutter,
+            onKeep = onKeep,
+            onRetake = onRetake,
+            flashMode = flashMode.takeIf { hasFlash },
+            onFlash = onFlash,
+            canSwitchLens = canSwitchLens,
             switchEnabled = ready,
-            onSwitchLens = viewModel::switchLens,
+            onSwitchLens = onSwitchLens,
         )
     }
 }
@@ -500,5 +613,175 @@ private fun ShutterButton(enabled: Boolean, onClick: () -> Unit) {
                 .size(SHUTTER_SIZE - 16.dp)
                 .border(width = 3.dp, color = ringColour, shape = CircleShape),
         )
+    }
+}
+
+/**
+ * A drawn stand-in for the live camera picture, used by the previews: a soft evening sky fading
+ * into a green field, with a low sun. The previews cannot open a real camera, so this fills the
+ * picture area the way a view through the lens would.
+ */
+@Composable
+private fun SampleLivePicture(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                listOf(Color(0xFF7FB3D5), Color(0xFFF5CBA7), Color(0xFF58804A)),
+            ),
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        // The sun, a little above the middle.
+        Box(
+            modifier = Modifier
+                .padding(bottom = 80.dp)
+                .size(56.dp)
+                .background(Color(0xFFFFE08A), CircleShape),
+        )
+    }
+}
+
+/**
+ * Paints a small landscape photo (400 by 300 pixels) into a new [ImageBitmap], standing in for
+ * the photo just taken in the after-shot preview: a blue sky, a sun and a green hill.
+ *
+ * CanvasDrawScope lets ordinary drawing commands (drawRect, drawCircle) paint into a bitmap
+ * outside of any screen, so the picture is made in code and needs no file.
+ */
+private fun sampleShotBitmap(): ImageBitmap {
+    val width = 400
+    val height = 300
+    val bitmap = ImageBitmap(width, height)
+    CanvasDrawScope().draw(
+        density = Density(1f),
+        layoutDirection = LayoutDirection.Ltr,
+        canvas = Canvas(bitmap),
+        size = Size(width.toFloat(), height.toFloat()),
+    ) {
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF5DADE2), Color(0xFFD6EAF8))))
+        drawCircle(color = Color(0xFFF7DC6F), radius = 36f, center = Offset(300f, 80f))
+        drawCircle(color = Color(0xFF52BE80), radius = 260f, center = Offset(140f, 470f))
+        drawCircle(color = Color(0xFF27AE60), radius = 220f, center = Offset(380f, 500f))
+    }
+    return bitmap
+}
+
+/**
+ * The camera as the person sees it before a shot, in light and in dark: the live picture (a
+ * drawn stand-in here) with the pinch-to-zoom layer on top, and below it the flash button set to
+ * auto, the shutter ready to press and the lens switch.
+ *
+ * `@PreviewLightDark` draws it twice, in day and in night mode, and `ThemeMode.System` makes
+ * KansoTheme follow that. The taps do nothing in a preview.
+ */
+@PreviewLightDark
+@Composable
+private fun CameraLivePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        CameraFrame(onBack = {}) {
+            CameraContent(
+                status = CameraStatus.Ready,
+                taking = false,
+                flashMode = FlashMode.Auto,
+                hasFlash = true,
+                canSwitchLens = true,
+                message = null,
+                onShutter = {},
+                onKeep = {},
+                onRetake = {},
+                onFlash = {},
+                onSwitchLens = {},
+                onZoom = {},
+                livePicture = { pictureModifier -> SampleLivePicture(pictureModifier) },
+                shotPicture = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * The camera right after a shot, in light and in dark: the photo just taken (a picture painted
+ * by [sampleShotBitmap]) fitted into the black area, and the Retake and Keep buttons below it.
+ *
+ * `remember` paints the sample photo once, not on every re-draw of the preview.
+ */
+@PreviewLightDark
+@Composable
+private fun CameraAfterShotPreview() {
+    val photo = remember { sampleShotBitmap() }
+    KansoTheme(themeMode = ThemeMode.System) {
+        CameraFrame(onBack = {}) {
+            CameraContent(
+                status = CameraStatus.Ready,
+                taking = false,
+                flashMode = FlashMode.Auto,
+                hasFlash = true,
+                canSwitchLens = true,
+                message = null,
+                onShutter = {},
+                onKeep = {},
+                onRetake = {},
+                onFlash = {},
+                onSwitchLens = {},
+                onZoom = {},
+                livePicture = { pictureModifier -> SampleLivePicture(pictureModifier) },
+                shotPicture = { pictureModifier ->
+                    Image(
+                        bitmap = photo,
+                        contentDescription = stringResource(R.string.camera_shot_description),
+                        contentScale = ContentScale.Fit,
+                        modifier = pictureModifier,
+                    )
+                },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * The camera when it cannot be opened, in light and in dark: the picture area stays black, the
+ * bar says the camera is unavailable, the shutter is greyed out, and the flash and lens buttons
+ * are left out (their empty places keep the shutter centred).
+ */
+@PreviewLightDark
+@Composable
+private fun CameraUnavailablePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        CameraFrame(onBack = {}) {
+            CameraContent(
+                status = CameraStatus.Unavailable,
+                taking = false,
+                flashMode = FlashMode.Off,
+                hasFlash = false,
+                canSwitchLens = false,
+                message = stringResource(R.string.camera_unavailable),
+                onShutter = {},
+                onKeep = {},
+                onRetake = {},
+                onFlash = {},
+                onSwitchLens = {},
+                onZoom = {},
+                // Nothing to show: a camera that cannot be opened sends no picture.
+                livePicture = {},
+                shotPicture = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/**
+ * The camera after camera access was refused, in light and in dark: the explanation and the
+ * button to the app's settings, under the same top bar. The button does nothing in a preview.
+ */
+@PreviewLightDark
+@Composable
+private fun CameraRefusedPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        CameraFrame(onBack = {}) {
+            CameraRefusedPanel(onOpenSettings = {})
+        }
     }
 }

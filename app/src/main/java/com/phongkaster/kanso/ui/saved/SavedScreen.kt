@@ -41,11 +41,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
+import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -84,6 +87,10 @@ private val MIN_TOUCH = 48.dp
  * upright, and no larger than twice the screen's longest edge. Tests swap the loader in Koin for
  * one that hands back a fixed picture.
  *
+ * Like Home, this screen is split in two (state hoisting; see `HomeScreen`). This function is the
+ * stateful part: it loads the photo, runs the share logic and hands the results to the stateless
+ * [SavedContent], which does the drawing and is what the preview shows.
+ *
  * Share opens Android's share sheet for the photo (see [shareChooserIntent]) and then calls
  * [onShare]. On Android 8.1 and 9 the save gives a `file://` Uri, which must never leave the
  * app, so the photo's `content://` Uri is looked up first (see [shareableUri]); that lookup runs
@@ -95,7 +102,6 @@ private val MIN_TOUCH = 48.dp
  * navigation entry reads it from the same key to open that tool's gallery, so the screen itself
  * only receives it to keep the key's facts together.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedScreen(
     tool: Tool,
@@ -153,6 +159,36 @@ fun SavedScreen(
         }
     }
 
+    SavedContent(
+        photo = photo,
+        photoUri = photoUri,
+        sharing = sharing,
+        onShare = share,
+        onEditAnother = onEditAnother,
+        onHome = onHome,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The stateless part of the Saved screen (see [SavedScreen] for why there are two): draws the top
+ * bar, the [photo] area and the bottom actions, and reports every tap through a callback.
+ *
+ * [photoUri] is only carried onto the photo's semantics so tests can tell which photo is shown.
+ * [sharing] is true while a share is being prepared, which turns the Share button off. Nothing
+ * here loads a picture or opens the share sheet, so a preview can draw it from sample data.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SavedContent(
+    photo: SavedPhoto,
+    photoUri: String,
+    sharing: Boolean,
+    onShare: () -> Unit,
+    onEditAnother: () -> Unit,
+    onHome: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
         modifier = modifier.testTag(SAVED_SCREEN_TAG),
         topBar = {
@@ -161,7 +197,7 @@ fun SavedScreen(
         bottomBar = {
             SavedActions(
                 shareEnabled = !sharing,
-                onShare = share,
+                onShare = onShare,
                 onEditAnother = onEditAnother,
                 onHome = onHome,
             )
@@ -186,7 +222,7 @@ fun SavedScreen(
 }
 
 /** What the photo area shows: nothing yet, the decoded photo, or nothing because it cannot be read. */
-private sealed interface SavedPhoto {
+internal sealed interface SavedPhoto {
 
     /** The photo is still being decoded. */
     data object Loading : SavedPhoto
@@ -284,5 +320,49 @@ private fun SavedActions(
                 }
             }
         }
+    }
+}
+
+/**
+ * A made-up photo for the preview: a warm sky-to-sand gradient with a sun, 600 by 800 pixels
+ * (portrait), drawn with Android's Canvas so no file, camera or MediaStore is needed.
+ */
+private fun sampleBitmap(): Bitmap {
+    val bitmap = Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    paint.shader = android.graphics.LinearGradient(
+        0f, 0f, 0f, 800f,
+        0xFF5B8DEF.toInt(), 0xFFF2D6A2.toInt(),
+        android.graphics.Shader.TileMode.CLAMP,
+    )
+    canvas.drawRect(0f, 0f, 600f, 800f, paint)
+    paint.shader = null
+    paint.color = 0xFFFFE08A.toInt()
+    canvas.drawCircle(420f, 260f, 90f, paint)
+    return bitmap
+}
+
+/** The sample photo the preview shows, wrapped the way the loader's result is. */
+private fun samplePhoto(): SavedPhoto = SavedPhoto.Ready(sampleBitmap())
+
+/**
+ * The Saved screen with a photo on show and every button ready, drawn once in light and once in
+ * dark. [SavedContent] draws the photo ([PhotoView]) and the bottom buttons ([SavedActions]), so
+ * this one picture covers them all. `ThemeMode.System` makes KansoTheme follow the preview's own
+ * light or dark picture; the taps do nothing.
+ */
+@PreviewLightDark
+@Composable
+private fun SavedPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SavedContent(
+            photo = samplePhoto(),
+            photoUri = "content://media/external/images/media/42",
+            sharing = false,
+            onShare = {},
+            onEditAnother = {},
+            onHome = {},
+        )
     }
 }

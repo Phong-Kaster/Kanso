@@ -15,12 +15,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /**
  * Builds the intent that opens this app's page in the system settings ("App info"), where the
@@ -85,6 +91,29 @@ fun AccessRefusedPanel(
             Button(onClick = onOpenSettings, modifier = buttonModifier) {
                 Text(buttonLabel)
             }
+        }
+    }
+}
+
+/**
+ * The refused panel as the gallery shows it, drawn once in light and once in dark.
+ *
+ * The panel already takes plain values (text and a callback), so unlike a screen it needs no
+ * split: the preview calls it directly with the gallery's real wording. `ThemeMode.System` makes
+ * KansoTheme follow the preview's light or dark mode, and the Surface gives it the screen's
+ * background. The button does nothing here, because a preview cannot open the system settings.
+ */
+@PreviewLightDark
+@Composable
+private fun AccessRefusedPanelPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            AccessRefusedPanel(
+                title = stringResource(R.string.gallery_refused_title),
+                message = stringResource(R.string.gallery_refused_message),
+                buttonLabel = stringResource(R.string.gallery_open_settings),
+                onOpenSettings = {},
+            )
         }
     }
 }

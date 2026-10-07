@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.library.colorpicker.HSVColorPicker
@@ -39,6 +40,7 @@ import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
 import com.phongkaster.kanso.ui.common.BackArrowIcon
+import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /** The test tag on the root of the Settings screen, so tests can tell it apart from Home. */
 const val SETTINGS_SCREEN_TAG = "settings-screen"
@@ -74,10 +76,17 @@ private val PickerSurfaceColor = Color.White
  * The Settings screen: a top bar titled "Settings" with a back arrow, and below it the
  * "Appearance" section, where the user picks the theme mode and the theme colour.
  *
+ * Like Home, this screen is split in two (state hoisting; see `HomeScreen` for the full story).
+ * This function is the *stateful* part: it reads the saved theme mode and theme colour from
+ * [viewModel], asks the phone whether wallpaper colours exist (Android 12 and later), and hands
+ * all of that, with the ViewModel's functions as callbacks, to the stateless [SettingsContent],
+ * which does all the drawing. What is specific here: the wallpaper check is also gathered here,
+ * so a preview can choose either answer and show both the wallpaper row and the default-purple
+ * row whatever Android version it is drawn on.
+ *
  * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
  * The [viewModel] is passed in by the navigation entry, which owns it.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -89,6 +98,47 @@ fun SettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val themeColour by viewModel.themeColour.collectAsState()
 
+    SettingsContent(
+        themeMode = themeMode,
+        themeColour = themeColour,
+        // The wallpaper colours exist only from Android 12 (API 31); older phones get
+        // the baseline option in its place.
+        wallpaperAvailable = isWallpaperColourAvailable(),
+        onBack = onBack,
+        onThemeModeSelected = viewModel::setThemeMode,
+        onWallpaperChosen = viewModel::onWallpaperChosen,
+        onBaselineChosen = viewModel::onBaselineChosen,
+        onCustomChosen = viewModel::onCustomChosen,
+        onCustomColourChosen = viewModel::onCustomColourChosen,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The stateless part of Settings (see [SettingsScreen] for why there are two): draws the top bar
+ * with its back arrow and the "Appearance" section, with [themeMode] and [themeColour] marked as
+ * chosen. When [wallpaperAvailable] is true the colour list offers the wallpaper row, otherwise
+ * the default-purple row.
+ *
+ * Every tap is reported through a callback and nothing is saved here: [onBack] for the back
+ * arrow, [onThemeModeSelected] for a mode row, [onWallpaperChosen], [onBaselineChosen] and
+ * [onCustomChosen] for the colour rows, and [onCustomColourChosen] for each colour picked in the
+ * colour picker.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    themeMode: ThemeMode,
+    themeColour: ThemeColour,
+    wallpaperAvailable: Boolean,
+    onBack: () -> Unit,
+    onThemeModeSelected: (ThemeMode) -> Unit,
+    onWallpaperChosen: () -> Unit,
+    onBaselineChosen: () -> Unit,
+    onCustomChosen: () -> Unit,
+    onCustomColourChosen: (Color) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Scaffold(
         modifier = modifier.testTag(SETTINGS_SCREEN_TAG),
         topBar = {
@@ -115,17 +165,15 @@ fun SettingsScreen(
             SectionHeader(text = stringResource(R.string.appearance))
             ThemeModeChoice(
                 selected = themeMode,
-                onSelect = viewModel::setThemeMode,
+                onSelect = onThemeModeSelected,
             )
             ThemeColourChoice(
                 selected = themeColour,
-                // The wallpaper colours exist only from Android 12 (API 31); older phones get
-                // the baseline option in its place.
-                wallpaperAvailable = isWallpaperColourAvailable(),
-                onWallpaper = viewModel::onWallpaperChosen,
-                onBaseline = viewModel::onBaselineChosen,
-                onCustom = viewModel::onCustomChosen,
-                onCustomColourChanged = viewModel::onCustomColourChosen,
+                wallpaperAvailable = wallpaperAvailable,
+                onWallpaper = onWallpaperChosen,
+                onBaseline = onBaselineChosen,
+                onCustom = onCustomChosen,
+                onCustomColourChanged = onCustomColourChosen,
             )
         }
     }
@@ -294,4 +342,128 @@ private fun ThemeMode.testTag(): String = when (this) {
     ThemeMode.System -> THEME_MODE_SYSTEM_TAG
     ThemeMode.Light -> THEME_MODE_LIGHT_TAG
     ThemeMode.Dark -> THEME_MODE_DARK_TAG
+}
+
+/**
+ * A custom theme colour for the previews: a deep green, `#2E7D32`, written as an ARGB integer
+ * (the leading `FF` means fully opaque, as every theme colour is).
+ */
+private val sampleCustomColour = ThemeColour.Custom(seedArgb = 0xFF2E7D32.toInt())
+
+/**
+ * Settings with "System default" chosen as the theme mode and the default-purple colour chosen on
+ * a phone running Android 12 or later (where the wallpaper row is offered but not picked), drawn once in light and once in dark.
+ *
+ * `@PreviewLightDark` gives two pictures, day and night; `ThemeMode.System` makes KansoTheme
+ * follow them (see `HomePreview`). The taps do nothing: a preview only draws.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsSystemModePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            themeMode = ThemeMode.System,
+            themeColour = ThemeColour.Baseline,
+            wallpaperAvailable = true,
+            onBack = {},
+            onThemeModeSelected = {},
+            onWallpaperChosen = {},
+            onBaselineChosen = {},
+            onCustomChosen = {},
+            onCustomColourChosen = {},
+        )
+    }
+}
+
+/**
+ * Settings with "Light" chosen as the theme mode, on an older phone (below Android 12) where the
+ * default-purple colour row takes the wallpaper row's place, and is the one chosen.
+ *
+ * Only the radio button moves: the preview itself still follows its own light or dark picture,
+ * so both pictures show the "Light" row marked.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsLightModePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            themeMode = ThemeMode.Light,
+            themeColour = ThemeColour.Baseline,
+            wallpaperAvailable = false,
+            onBack = {},
+            onThemeModeSelected = {},
+            onWallpaperChosen = {},
+            onBaselineChosen = {},
+            onCustomChosen = {},
+            onCustomColourChosen = {},
+        )
+    }
+}
+
+/**
+ * Settings with "Dark" chosen as the theme mode and the wallpaper colour chosen, drawn once in
+ * light and once in dark so the marked "Dark" row can be checked against both backgrounds.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsDarkModePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            themeMode = ThemeMode.Dark,
+            themeColour = ThemeColour.Wallpaper,
+            wallpaperAvailable = true,
+            onBack = {},
+            onThemeModeSelected = {},
+            onWallpaperChosen = {},
+            onBaselineChosen = {},
+            onCustomChosen = {},
+            onCustomColourChosen = {},
+        )
+    }
+}
+
+/**
+ * Settings with the wallpaper colour chosen (Android 12 and later), the colour choice this
+ * preview is about; the theme mode is left at "System default".
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsWallpaperColourPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            themeMode = ThemeMode.System,
+            themeColour = ThemeColour.Wallpaper,
+            wallpaperAvailable = true,
+            onBack = {},
+            onThemeModeSelected = {},
+            onWallpaperChosen = {},
+            onBaselineChosen = {},
+            onCustomChosen = {},
+            onCustomColourChosen = {},
+        )
+    }
+}
+
+/**
+ * Settings with the Custom colour row chosen, so the colour picker is shown below it, starting
+ * at the sample green [sampleCustomColour]. The theme is tinted with that same green, as the real
+ * app is once a custom colour is picked. The picker sits on its fixed white card in both
+ * pictures, which is how its black text stays readable in dark mode.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsCustomColourPreview() {
+    KansoTheme(themeMode = ThemeMode.System, themeColour = sampleCustomColour) {
+        SettingsContent(
+            themeMode = ThemeMode.System,
+            themeColour = sampleCustomColour,
+            wallpaperAvailable = true,
+            onBack = {},
+            onThemeModeSelected = {},
+            onWallpaperChosen = {},
+            onBaselineChosen = {},
+            onCustomChosen = {},
+            onCustomColourChosen = {},
+        )
+    }
 }

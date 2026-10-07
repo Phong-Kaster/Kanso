@@ -8,9 +8,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -24,6 +34,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
@@ -160,4 +172,44 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/**
+ * A sample of Kanso's colours: a few common Material 3 components (a title, a card with text, a
+ * filled and an outlined button, a switch on and off) drawn on the theme, once in light and once
+ * in dark.
+ *
+ * `@PreviewLightDark` asks Android Studio for two pictures, one with the phone in day mode and
+ * one in night mode, and `ThemeMode.System` makes KansoTheme follow that setting. In the preview
+ * pane the view is in "edit mode", so KansoTheme skips styling the system bars (there is no real
+ * window there to style). The Surface gives the components the theme's background to sit on, as
+ * a real screen's Scaffold does.
+ */
+@PreviewLightDark
+@Composable
+private fun KansoThemePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Kanso", style = MaterialTheme.typography.headlineSmall)
+                Card {
+                    Text(
+                        "Cards sit on the surface colours of the scheme.",
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {}) { Text("Save") }
+                    OutlinedButton(onClick = {}) { Text("Retake") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Switch(checked = true, onCheckedChange = {})
+                    Switch(checked = false, onCheckedChange = {})
+                }
+            }
+        }
+    }
 }
