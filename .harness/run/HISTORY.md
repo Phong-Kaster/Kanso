@@ -35,3 +35,7 @@ Added `PreviewCoverageTest` (source scan with self-checks, named exemptions A-00
 ## Iteration 7 - Verifier
 
 Fresh runs: `assembleDebug` 0, `lintDebug` 0, `:app:dependencies` release (ui-tooling-preview, no ui-tooling) and debug (ui-tooling) as DoD 6 says. `testDebugUnitTest` 1 (ThemeColourSettingsTest AccessDenied on DataStore rename), `verifyRoborazziDebug` 1 (CameraScreenTest retake), full rerun 1 (ThemeColourSettingsTest again). Both pass alone, and the previews + ThemeColour combination passed twice. Static checks held: no M/D/R in app/src/test since 9a61275, screenshots identical, nav3 1.1.7, agp 8.13.0, three ABIs, reference/ unchanged, no new firebase/ads/analytics entries, all 18 DoD 3 preview names exist and are asserted. DoD 8/13 not proved → T-010 filed, DONE-candidate cleared. Devices not driven (criteria 7, 10): another Verifier pass follows T-010.
+
+## Iteration 8 - Phase 6 (T-010, attempt 1)
+
+Added a retrying atomic move to the settings DataStore storage. Unit tests 6/7 real runs green, Roborazzi 3/3, lint and assemble green. One unit failure not captured; T-010 stays pending for attempt 2.

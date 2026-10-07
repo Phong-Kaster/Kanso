@@ -3,7 +3,7 @@
 > Derived cache; on any disagreement with the task files or git, this file is wrong.
 
 - **Stage:** execute; Phases 1-5 (T-001..T-009) complete. The Verifier (Iteration 7) cleared the DONE-candidate: the full unit-test suite fails in fresh runs (ThemeColourSettingsTest DataStore rename AccessDenied twice, CameraScreenTest retake once). All other machine criteria (1-6, 9 baselines diff, 11, 14, lint, assemble) held.
-- **Next Phase:** 6 = T-010 (Capable). Scope: `app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt`; the orchestrator edits the test block of `app/build.gradle.kts` itself if needed.
+- **Next Phase:** 6 = T-010 (Capable), attempt 2 of 3: attempt 1 added `RetryingMoveFileSystem` (committed); 6 of 7 unit runs and 3 of 3 roborazzi runs passed; capture the remaining unit failure (see the task file) before changing more. Scope: `app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt`; the orchestrator edits the test block of `app/build.gradle.kts` itself if needed.
 - **Queued decisions:** 0 (D-001 answered)
 - **Abandoned:** none
 - **Unreachable:** none

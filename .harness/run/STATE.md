@@ -22,7 +22,7 @@
 | T-007 | complete | ui/gallery/GalleryScreen.kt | build, tests, verifyRoborazzi, lint green (Iteration 4) |
 | T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
 | T-009 | complete | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt, previews/PreviewHygieneTest.kt | build, tests, verifyRoborazzi, lint green (Iteration 6) |
-| T-010 | pending | data/settings/SettingsStore.kt; app/build.gradle.kts test block (orchestrator) | filed by the Verifier (Iteration 7) |
+| T-010 | pending, attempt 1/3 (retrying DataStore move added; 1 unit failure in 7 runs, uncaptured) | data/settings/SettingsStore.kt; app/build.gradle.kts test block (orchestrator) | filed by the Verifier (Iteration 7) |
 
 ## Assumptions
 
