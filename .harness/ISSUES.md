@@ -1,7 +1,23 @@
 # ISSUES
 
-- Run 3 (previews): the Verifier (Iteration 7) found a gap. The full unit-test suite failed in 3 of 3 fresh runs: `ThemeColourSettingsTest` wallpaper test, Windows DataStore rename `AccessDeniedException`, twice, including the one rerun DoD 8 allows; `CameraScreenTest` retake once. DoD 8 and 13 are not proved. T-010 is filed to fix it, and the DONE-candidate is cleared. Every other machine criterion held. Unsigned: DoD 7 (Android Studio preview pane) and 10 (phone walk), both not yet driven; DoD 12 (read HomeScreen.kt and GalleryScreen.kt). Reviewer notes on T-009, not fixed: a composable that only appears as a slot default argument counts as drawn; two same-named functions in one file collapse in the coverage scan; a preview pair of two night-only `@Preview`s would pass. `ToolSavingPreview` dropped (indeterminate spinner hung the render test; Saving state has no preview). Watchdog halts the test JVM on a hang (no report, stderr only). Assumptions A-001 (stateless `KansoNavDisplay`), A-002 (`sampleSizeFor` exempt from DoD 5), A-003/A-004 (camera `LivePreview`, `ShotView` and gallery `PhotoThumbnail` exempt from DoD 1). No abandoned or unreachable tasks.
-- Run 3, Verifier Iteration 10: CameraScreenTest retake flake; fixed by T-011 (Iteration 11), 10/10 + 3/3 full + 3/3 Roborazzi green. Verifier pass follows.
+## Run 3 (previews): ended DONE_PARTIAL, Verifier Iteration 12
+
+Every machine criterion re-proved on 177b1f8 by fresh runs: `assembleDebug`, `testDebugUnitTest` (198 tests, 0 failed), `verifyRoborazziDebug`, `lintDebug` all exit 0. No abandoned or unreachable tasks. The run is not `DONE` only because three criteria need a person.
+
+### Awaiting a person, Run 3
+
+Not driven on a device: the only device attached is the owner's Galaxy A13, and another app had focus (in use); no emulator was attached. Each item is unsigned. Tick it in `DECISIONS.md` or here when done.
+
+- [ ] Run 3 7: **not looked at by anyone.** Driven only as far as criterion 2: every preview draws on the host, in light and dark, without an error. Open each of `GalleryScreen.kt`, `CameraScreen.kt`, `SavedScreen.kt`, `ToolScreen.kt`, `SettingsScreen.kt`, `HomeScreen.kt`, `PermissionGate.kt`, `AccessRefusedPanel.kt`, `KansoNavHost.kt`, `KansoTheme.kt` in Android Studio and switch to Split view. Expect each preview once in light and once in dark, readable, with sample content that looks real, and the dark one actually dark.
+- [ ] Run 3 10: **not driven.** Install the debug build fresh on the phone with no permissions granted. Open Home, the gallery (allow photos), a tool with a photo, Save, the Saved screen, and Settings with the colour picker. Expect each to look and behave as after Run 2. Then open Camera from Home. Expect a live picture. Take a shot and expect Keep and Retake.
+- [ ] Run 3 12: **reading only.** Read `HomeScreen.kt`, then `GalleryScreen.kt`. Expect a paragraph a beginner can follow that says why the screen is two composables (stateful and `…Content`), what each one does, and why the split makes a preview possible. Also expect the sample data to be explained where it is made.
+
+### Run 3, recorded but not fixed
+
+- Reviewer notes on T-009: a composable that appears only as a slot default argument counts as drawn. Two same-named functions in one file collapse in the coverage scan. A preview pair made of two night-only `@Preview`s would pass.
+- `ToolSavingPreview` was dropped because its indeterminate spinner hung the render test, so the Saving state has no preview. A watchdog halts the test JVM on a hang and prints to stderr only, with no report.
+- Assumptions: A-001 (stateless `KansoNavDisplay`), A-002 (`sampleSizeFor` exempt from DoD 5), A-003/A-004 (camera `LivePreview`, `ShotView` and gallery `PhotoThumbnail` exempt from DoD 1).
+- Fixed during the run: the Windows DataStore rename flake (T-010) and the camera retake flake (T-011).
 
 - Run 2 left no abandoned or unreachable tasks.
 - Fixed (T-010): the Windows DataStore file-rename flake; 5/5 unit and 3/3 Roborazzi fresh runs green.

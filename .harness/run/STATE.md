@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** verify (T-001..T-011 complete)
+- **Stage:** verified, ended DONE_PARTIAL (Iteration 12): every machine criterion re-proved; 7, 10, 12 await a person
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** none; Verifier pass
-- **DONE-candidate:** yes (recorded Iteration 11; all tasks complete)
+- **Next Phase:** none
+- **DONE-candidate:** no (Verifier Iteration 12 held every machine criterion; signatures outstanding, so DONE_PARTIAL, no Cleanup Commit)
 
 ## Progress
 
@@ -35,6 +35,11 @@
 
 - A-004 (Tier 2): gallery `PhotoThumbnail` exempt from the coverage rule.
 
+## Verifier (Iteration 12, on 177b1f8)
+
+Fresh runs: `assembleDebug` 0; `testDebugUnitTest` 0 (198 tests, 0 failed, incl. PreviewCoverageTest, PreviewsRenderTest, PreviewHygieneTest, KdocCoverageTest); `verifyRoborazziDebug` 0; `lintDebug` 0. Machine criteria 1-6, 8, 9, 11, 13, 14 hold.
+Driven: 7 by criterion 2 only (every preview draws on the host, light and dark); the Android Studio pane is not drivable. 10 not driven: the only device is the owner's Galaxy A13 (R58W1120QVA), focused on another app (in use); no emulator attached.
+
 ## Signed off
 
-- none yet
+- none yet (7, 10, 12 await a person; see `.harness/ISSUES.md` "Awaiting a person, Run 3")

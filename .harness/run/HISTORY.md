@@ -51,3 +51,7 @@ Fresh runs on 0b46878: `assembleDebug` 0; `testDebugUnitTest --rerun-tasks` 1 (1
 ## Iteration 11 - Phase 7 (T-011, attempt 1)
 
 `CameraViewModel.retake()` now clears the shot from state first, then deletes the file on IO with a bounded retry while `taking` holds the shutter. CameraScreenTest 10/10, full unit 3/3, Roborazzi 3/3, lint 0, tests dir diff only A. T-011 complete; DONE-candidate recorded. Self-reviewed only (one-function change).
+
+## Iteration 12 - Verifier
+
+Fresh runs on 177b1f8: `assembleDebug` 0; `testDebugUnitTest` 0 (198 tests, 0 failed); `verifyRoborazziDebug` 0; `lintDebug` 0. Static checks held: DoD 6 (release runtime has ui-tooling-preview and no ui-tooling; debug has ui-tooling), DoD 8 (app/src/test diff since 9a61275 only A), DoD 9 (screenshots identical), DoD 14 (nav3 1.1.7, agp 8.13.0, three ABIs, reference/ unchanged vs a0d9a79, no INTERNET/ACCESS_NETWORK_STATE in either merged debug manifest, no new firebase/ads/analytics lines). Criterion 7 was driven only through criterion 2. Criterion 10 was not driven: the only device was the owner's A13 (R58W1120QVA) with `com.calculator.hideu` in focus, so it was in use, and no emulator was attached. Criteria 7, 10 and 12 are listed under "Awaiting a person" in ISSUES.md. Autonomous mode: DONE_PARTIAL, no Cleanup Commit.
