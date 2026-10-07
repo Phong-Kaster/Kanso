@@ -43,3 +43,7 @@ Added a retrying atomic move to the settings DataStore storage. Unit tests 6/7 r
 ## Iteration 9 - Phase 6 (T-010, attempt 2)
 
 Looped `testDebugUnitTest --rerun`: 5 of 5 green; `verifyRoborazziDebug --rerun` 3 of 3 green; no code change beyond attempt 1's retrying move. `app/src/test` diff lists only A. T-010 complete; DONE-candidate recorded.
+
+## Iteration 10 - Verifier
+
+Fresh runs on 0b46878: `assembleDebug` 0; `testDebugUnitTest --rerun-tasks` 1 (198 tests, 1 failed: `CameraScreenTest.retake_deletes_the_shot_and_shows_the_shutter_again`, "Retake left the shot's file behind", CameraScreenTest.kt:119); `verifyRoborazziDebug` 0 (the same test passed there); `lintDebug` 0. Static checks held: DoD 6 (release has ui-tooling-preview and no ui-tooling, debug has ui-tooling), DoD 8 diff only A, DoD 9 screenshots identical to 9a61275, DoD 14 (nav3 1.1.7, agp 8.13.0, three ABIs, reference/ unchanged, no INTERNET/ACCESS_NETWORK_STATE in the merged debug manifest, no new firebase/ads/analytics lines). DoD 8/13 not proved → T-011 filed, DONE-candidate cleared. Devices not driven (criteria 7, 10): another Verifier pass follows T-011.

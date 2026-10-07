@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** execute (all tasks complete; DONE-candidate)
+- **Stage:** execute (Verifier gap: T-011)
 - **Loop Branch:** loop/kanso-composable-previews
-- **Next Phase:** none (Verifier next)
-- **DONE-candidate:** yes (Iteration 9: T-010 fixed the Windows DataStore flake)
+- **Next Phase:** 7 (T-011)
+- **DONE-candidate:** no (cleared Iteration 10: a fresh full unit run failed CameraScreenTest retake)
 
 ## Progress
 
@@ -23,6 +23,7 @@
 | T-004 | complete | navigation/KansoNavHost.kt | build, tests, verifyRoborazzi, lint green (Iteration 5) |
 | T-009 | complete | new previews/PreviewCoverageTest.kt, previews/PreviewsRenderTest.kt, previews/PreviewHygieneTest.kt | build, tests, verifyRoborazzi, lint green (Iteration 6) |
 | T-010 | complete | data/settings/SettingsStore.kt | 5/5 unit runs and 3/3 Roborazzi runs green, no rerun (Iteration 9) |
+| T-011 | pending | ui/camera/CameraViewModel.kt, ui/camera/CameraScreen.kt | - |
 
 ## Assumptions
 

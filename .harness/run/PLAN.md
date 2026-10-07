@@ -37,6 +37,7 @@ Every Phase is verified on the combined tree by the Iteration (`testDebugUnitTes
 - T-004 - Navigation host previews (depends on: T-001) - scope: `navigation/KansoNavHost.kt` - tier: Capable
 - T-009 - Preview coverage test and final checks (depends on: T-001..T-008) - scope: new `PreviewCoverageTest.kt`, and `PreviewsRenderTest.kt` (named-preview assertions) - tier: Capable
 - T-010 - Full unit-test run passes reliably on Windows (depends on: T-009; Verifier gap, Iteration 7) - scope: `data/settings/SettingsStore.kt` (+ orchestrator: `app/build.gradle.kts` test block) - tier: Capable
+- T-011 - Retake reliably deletes the shot on Windows (depends on: T-010; Verifier gap, Iteration 10) - scope: `ui/camera/CameraViewModel.kt`, `ui/camera/CameraScreen.kt` - tier: Capable
 
 (`ui/...` and `navigation/...` are under `app/src/main/java/com/phongkaster/kanso/`; the test files under `app/src/test/java/com/phongkaster/kanso/previews/`.)
 
@@ -50,6 +51,7 @@ Every Phase is verified on the combined tree by the Iteration (`testDebugUnitTes
 | 4 | T-004 | - |
 | 5 | T-009 | - |
 | 6 | T-010 | `app/build.gradle.kts` test block, if the fix is there |
+| 7 | T-011 | - |
 
 ## Known Risks
 

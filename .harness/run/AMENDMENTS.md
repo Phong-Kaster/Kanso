@@ -14,3 +14,7 @@
 ## Iteration 7 - Tier 1: T-010 added (Verifier gap)
 
 The full unit-test suite fails in fresh runs on Windows. ThemeColourSettingsTest hit a DataStore rename AccessDenied twice, including on the one rerun DoD 8 allows. CameraScreenTest retake failed once. Added T-010 (Phase 6, Capable) to make full runs reliable without changing existing tests. PRD, DoD and architecture are unchanged.
+
+## Iteration 10 - Tier 1: T-011 added (Verifier gap)
+
+The first fresh full `testDebugUnitTest` failed on `CameraScreenTest.retake_deletes_the_shot_and_shows_the_shutter_again` ("Retake left the shot's file behind"). DoD 8's one rerun covers only the ThemeColourSettingsTest flake, so DoD 8 and 13 are not proved. Added T-011 (Phase 7, Capable): make retake surely delete the file without changing an existing test. PRD, DoD and architecture are unchanged.
