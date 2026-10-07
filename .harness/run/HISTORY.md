@@ -39,3 +39,7 @@ Fresh runs: `assembleDebug` 0, `lintDebug` 0, `:app:dependencies` release (ui-to
 ## Iteration 8 - Phase 6 (T-010, attempt 1)
 
 Added a retrying atomic move to the settings DataStore storage. Unit tests 6/7 real runs green, Roborazzi 3/3, lint and assemble green. One unit failure not captured; T-010 stays pending for attempt 2.
+
+## Iteration 9 - Phase 6 (T-010, attempt 2)
+
+Looped `testDebugUnitTest --rerun`: 5 of 5 green; `verifyRoborazziDebug --rerun` 3 of 3 green; no code change beyond attempt 1's retrying move. `app/src/test` diff lists only A. T-010 complete; DONE-candidate recorded.
