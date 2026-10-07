@@ -4,11 +4,13 @@ import android.Manifest
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -83,6 +86,15 @@ const val CAMERA_SETTINGS_BUTTON_TAG = "camera-settings-button"
 /** The test tag on the message shown when the camera cannot be started or a shot failed. */
 const val CAMERA_MESSAGE_TAG = "camera-message"
 
+/** The test tag on the button that swaps between the back and front lens. */
+const val CAMERA_SWITCH_LENS_TAG = "camera-switch-lens"
+
+/** The test tag on the flash button, shown only when the lens in use has a flash. */
+const val CAMERA_FLASH_TAG = "camera-flash"
+
+/** The test tag on the area over the live picture that reacts to a two-finger pinch (zoom). */
+const val CAMERA_ZOOM_AREA_TAG = "camera-zoom-area"
+
 /** The size of the round shutter button; well above the 48 dp smallest touch target. */
 private val SHUTTER_SIZE = 72.dp
 
@@ -91,8 +103,9 @@ private val MIN_TOUCH = 48.dp
 
 /**
  * The camera screen: a top bar with a back arrow and the title "Camera", a live picture from the
- * camera, and a bar at the bottom with the shutter. After a photo is taken the live picture is
- * replaced by the photo, and the bar offers Keep and Retake.
+ * camera (pinch it to zoom), and a bar at the bottom with the flash button, the shutter and the
+ * lens switch. After a photo is taken the live picture is replaced by the photo, and the bar
+ * offers Keep and Retake.
  *
  * The first time it is shown it asks for camera access through [PermissionGate] (the app never
  * asks at launch). After a refusal it explains why the camera is needed and offers a button to
@@ -197,6 +210,7 @@ private fun CameraBody(
             // also disconnects the camera (see LivePreview); Retake brings it back.
             if (shot == null) {
                 LivePreview(viewModel = viewModel, modifier = Modifier.fillMaxSize())
+                PinchToZoomArea(onZoom = viewModel::zoomBy, modifier = Modifier.matchParentSize())
             } else {
                 ShotView(shot = shot, modifier = Modifier.fillMaxSize())
             }
@@ -208,13 +222,19 @@ private fun CameraBody(
                 stringResource(R.string.camera_unavailable)
             else -> null
         }
+        val ready = camera.status == CameraStatus.Ready && !ui.taking
         CameraBottomBar(
             hasShot = shot != null,
-            shutterEnabled = camera.status == CameraStatus.Ready && !ui.taking,
+            shutterEnabled = ready,
             message = message,
             onShutter = { viewModel.takePicture(shotsDirectory(context)) },
             onKeep = { viewModel.keep()?.let(onKept) },
             onRetake = viewModel::retake,
+            flashMode = camera.flashMode.takeIf { camera.hasFlash },
+            onFlash = viewModel::cycleFlash,
+            canSwitchLens = camera.canSwitchLens,
+            switchEnabled = ready,
+            onSwitchLens = viewModel::switchLens,
         )
     }
 }
@@ -266,6 +286,33 @@ private fun LivePreview(viewModel: CameraViewModel, modifier: Modifier = Modifie
 }
 
 /**
+ * A see-through layer over the live picture that turns a two-finger pinch into zoom: spreading
+ * the fingers zooms in, closing them zooms out. It calls [onZoom] with how much the fingers
+ * spread since the last call (1.1 means ten percent wider), many times per pinch.
+ *
+ * How the gesture is read: `pointerInput` gives raw access to the fingers touching this area,
+ * and `detectTransformGestures` watches them and works out, for each small movement, how far
+ * they slid, turned and spread. Only the spread (the "zoom" value) is used here; the slide and
+ * turn are ignored. The layer sits on top of the camera picture rather than on it, because the
+ * picture is a classic Android View that could otherwise take the touches for itself.
+ *
+ * Nothing is drawn, so the picture shows through. The layer covers only the picture area, not
+ * the bottom bar, so the buttons there keep their taps.
+ */
+@Composable
+private fun PinchToZoomArea(onZoom: (Float) -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .testTag(CAMERA_ZOOM_AREA_TAG)
+            .pointerInput(onZoom) {
+                detectTransformGestures { _, _, zoom, _ ->
+                    if (zoom != 1f) onZoom(zoom)
+                }
+            },
+    )
+}
+
+/**
  * The photo just taken, from [shot], fitted whole into the area.
  *
  * Coil's AsyncImage reads and decodes the file on a background thread. A camera often stores a
@@ -287,12 +334,16 @@ private fun ShotView(shot: File, modifier: Modifier = Modifier) {
  * Retake and Keep once a photo is waiting. A [message], when there is one, is shown above the
  * buttons.
  *
+ * Beside the shutter sit the flash button (left) and the lens switch (right). The flash button
+ * shows the current [flashMode] and is left out when [flashMode] is null (the lens has no
+ * flash); the lens switch is left out when [canSwitchLens] is false (the phone has one camera).
+ * An empty space of the same size takes a missing button's place, so the shutter stays centred.
+ *
  * It sits on the theme's surface colour, with the theme's text and button colours, so it reads
  * well in light and dark. navigationBarsPadding keeps the buttons clear of the gesture bar.
- * Kept apart from the rest of the screen so that more camera controls (lens switch, flash) can
- * be added here later.
  *
- * [shutterEnabled] is false until the camera is ready and while a photo is being taken.
+ * [shutterEnabled] is false until the camera is ready and while a photo is being taken;
+ * [switchEnabled] likewise for the lens switch.
  */
 @Composable
 private fun CameraBottomBar(
@@ -302,6 +353,11 @@ private fun CameraBottomBar(
     onShutter: () -> Unit,
     onKeep: () -> Unit,
     onRetake: () -> Unit,
+    flashMode: FlashMode?,
+    onFlash: () -> Unit,
+    canSwitchLens: Boolean,
+    switchEnabled: Boolean,
+    onSwitchLens: () -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -349,9 +405,70 @@ private fun CameraBottomBar(
                     }
                 }
             } else {
-                ShutterButton(enabled = shutterEnabled, onClick = onShutter)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (flashMode != null) {
+                        FlashButton(mode = flashMode, onClick = onFlash)
+                    } else {
+                        Spacer(Modifier.size(MIN_TOUCH))
+                    }
+                    ShutterButton(enabled = shutterEnabled, onClick = onShutter)
+                    if (canSwitchLens) {
+                        SwitchLensButton(enabled = switchEnabled, onClick = onSwitchLens)
+                    } else {
+                        Spacer(Modifier.size(MIN_TOUCH))
+                    }
+                }
             }
         }
+    }
+}
+
+/**
+ * The flash button: its icon shows the current [mode] (a bolt with an "A" for auto, a bolt for
+ * on, a crossed-out bolt for off), and a tap calls [onClick] to move to the next mode.
+ *
+ * The screen reader hears the current mode ("Flash: auto" and so on) as its content description.
+ * IconButton draws the icon in the bar's onSurface content colour, which stands out on the
+ * surface colour in every theme.
+ */
+@Composable
+private fun FlashButton(mode: FlashMode, onClick: () -> Unit) {
+    val (icon, label) = when (mode) {
+        FlashMode.Auto -> FlashAutoIcon to stringResource(R.string.camera_flash_auto)
+        FlashMode.On -> FlashOnIcon to stringResource(R.string.camera_flash_on)
+        FlashMode.Off -> FlashOffIcon to stringResource(R.string.camera_flash_off)
+    }
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(MIN_TOUCH)
+            .testTag(CAMERA_FLASH_TAG),
+    ) {
+        Icon(imageVector = icon, contentDescription = label)
+    }
+}
+
+/**
+ * The button that swaps between the back and front lens; a tap calls [onClick] when [enabled].
+ * Drawn in the bar's onSurface content colour, like the flash button.
+ */
+@Composable
+private fun SwitchLensButton(enabled: Boolean, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .size(MIN_TOUCH)
+            .testTag(CAMERA_SWITCH_LENS_TAG),
+    ) {
+        Icon(
+            imageVector = SwitchLensIcon,
+            contentDescription = stringResource(R.string.camera_switch_lens),
+        )
     }
 }
 

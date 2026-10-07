@@ -50,6 +50,7 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.camera.CameraIcon
 import com.phongkaster.kanso.ui.common.BackArrowIcon
 import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
 import com.phongkaster.kanso.ui.permission.PermissionGate
@@ -73,6 +74,9 @@ const val GALLERY_SHARE_MORE_TAG = "gallery-share-more"
 
 /** The test tag on the button that opens the app's page in the system settings. */
 const val GALLERY_SETTINGS_BUTTON_TAG = "gallery-settings-button"
+
+/** The test tag on the top bar's camera button, which takes a new photo for the tool. */
+const val GALLERY_CAMERA_TAG = "gallery-camera"
 
 /** The test tag on the area that shows the photos once access is granted. */
 const val GALLERY_BODY_TAG = "gallery-body"
@@ -113,7 +117,9 @@ private const val PHOTO_CELL_CONTENT_TYPE = "photo"
  *
  * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
  * [onPhotoChosen] is called with the tool and the photo's content URI (as text) when the user
- * taps a photo; the caller opens the tool's screen. The [viewModel] is passed in by the
+ * taps a photo; the caller opens the tool's screen. [onOpenCamera] is called with the tool when
+ * the user taps the camera button in the top bar, to take a new photo for the tool instead of
+ * picking one; the caller opens the camera. The [viewModel] is passed in by the
  * navigation entry, which owns it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,6 +129,7 @@ fun GalleryScreen(
     onBack: () -> Unit,
     onPhotoChosen: (Tool, String) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenCamera: (Tool) -> Unit = {},
 ) {
     val toolName = stringResource(viewModel.tool.labelRes)
     val context = LocalContext.current
@@ -138,6 +145,19 @@ fun GalleryScreen(
                         Icon(
                             imageVector = BackArrowIcon,
                             contentDescription = stringResource(R.string.back),
+                        )
+                    }
+                },
+                // actions are the buttons at the right end of the top bar. The top bar gives
+                // them its onSurface-style content colour, so the icon shows in every theme.
+                actions = {
+                    IconButton(
+                        onClick = { onOpenCamera(viewModel.tool) },
+                        modifier = Modifier.testTag(GALLERY_CAMERA_TAG),
+                    ) {
+                        Icon(
+                            imageVector = CameraIcon,
+                            contentDescription = stringResource(R.string.gallery_open_camera),
                         )
                     }
                 },

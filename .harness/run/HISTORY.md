@@ -27,3 +27,9 @@
 - Attempted: CameraX 1.6.2 in catalog/build, manifest (CAMERA, WRITE<=28, uses-feature), `Camera` key + Home route, deleted Placeholder (R1, R2), `PhotoSaver` contract, strings, Koin; 2 Capable Workers; updated old tool tests for `saver`/`onSaved` and Save enabled; recorded 14_/15_, re-recorded 16_/17_ (A-007); reviewer.
 - Learned: the whole unit-test JVM ran out of heap once camera/save tests joined (exit 1 / apparent hang): test heap now 3g with a fork every 40 classes. `RecordingRegistry` casts to Array, so single-permission requests need `SinglePermissionRegistry` (T/save).
 - Reconciled: kept-shot cleanup and publish-row check fixed from review; file:// Uri on API 27-28 passed to T-009 as a note.
+
+### Iteration 5 - 2026-10-07
+- **Phase:** 4 (T-008, T-009)
+- Attempted: Saved key, strings and nav wiring (Saved replaces the stack above Home; Edit another -> [Home, Gallery]); 2 Capable Workers in parallel (camera controls + gallery button; Saved screen + share); gallery camera button wired; recorded 10-13 (approved in D-001 baselines) and new 18/19 after viewing them; SavedNavigationTest added after review.
+- Learned: `CameraViewModel.retake` raced its own test (state update before file delete): file now deleted first. Reviewer found criteria 6 (gallery path) and 15 (back stack) unproven through the real nav host: added SavedNavigationTest (4 tests).
+- Reconciled: black viewfinder (`Color.Black`, Phase 3) and `onShare = {}` / default `onOpenCamera` recorded in ISSUES, not fixed.

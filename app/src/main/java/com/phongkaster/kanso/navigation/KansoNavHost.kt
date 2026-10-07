@@ -14,6 +14,7 @@ import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeScreen
 import com.phongkaster.kanso.ui.home.HomeViewModel
+import com.phongkaster.kanso.ui.saved.SavedScreen
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolScreen
@@ -112,6 +113,11 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     onPhotoChosen = { tool, photoUri ->
                         if (backStack.last() == key) backStack.add(ToolPhoto(tool, photoUri))
                     },
+                    // The camera button opens the camera; a kept shot opens this gallery's own
+                    // tool. Only act while the gallery is on top.
+                    onOpenCamera = { tool ->
+                        if (backStack.last() == key) backStack.add(Camera(tool))
+                    },
                 )
             }
             entry<ToolPhoto> { key ->
@@ -121,9 +127,30 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 ToolScreen(
                     viewModel = viewModel,
                     onBack = goBack,
-                    // The Saved screen arrives in a later step; until then a saved photo just
-                    // stays on the tool screen.
-                    onSaved = {},
+                    // A saved photo replaces everything above Home with the Saved screen, so
+                    // Back from Saved goes to Home, not to the tool screen. Only act while the
+                    // tool screen is on top.
+                    onSaved = { photoUri ->
+                        if (backStack.last() == key) {
+                            while (backStack.size > 1) backStack.removeLastOrNull()
+                            backStack.add(Saved(key.tool, photoUri))
+                        }
+                    },
+                )
+            }
+            entry<Saved> { key ->
+                SavedScreen(
+                    tool = key.tool,
+                    photoUri = key.photoUri,
+                    onShare = {},
+                    // Edit another: back to [Home, Gallery(tool)]. Home: back to [Home].
+                    onEditAnother = {
+                        if (backStack.last() == key) {
+                            backStack.removeLastOrNull()
+                            backStack.add(Gallery(key.tool))
+                        }
+                    },
+                    onHome = { if (backStack.last() == key) backStack.removeLastOrNull() },
                 )
             }
             entry<Settings> {

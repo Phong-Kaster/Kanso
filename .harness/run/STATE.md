@@ -2,10 +2,11 @@
 
 ## Current
 
-- **Stage:** Phase 3 complete (T-006, T-007); DoD approved
+- **Stage:** Phase 4 complete (T-008, T-009); every task complete; DoD approved
 - **Loop Branch:** loop/kanso-pick-shoot-save
-- **Next Phase:** 4 = T-008, T-009
+- **Next Phase:** none; Verifier next
 - **DONE-candidate:** no
+- **PARTIAL-candidate:** yes (criteria awaiting a person's signature remain; Autonomous mode, section 14.4). Next invocation is the Verifier.
 
 ## Progress
 
@@ -18,9 +19,9 @@
 | T-005 | complete | ui/tool, data/photo/PhotoLoader, tests | Phase 2 checkpoint, see task file |
 | T-006 | complete | ui/camera, tests | - |
 | T-007 | complete | data/photo saver, ui/tool Save, tests | - |
-| T-008 | pending | ui/camera, gallery top bar | - |
+| T-008 | complete | ui/camera, gallery top bar | - |
 | T-010 | complete | colorpicker, settings screen call site, test | Phase 2 checkpoint, see task file |
-| T-009 | pending | ui/saved, tests | - |
+| T-009 | complete | ui/saved, tests | - |
 
 ## Assumptions
 

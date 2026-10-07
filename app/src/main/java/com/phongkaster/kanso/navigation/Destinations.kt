@@ -39,6 +39,15 @@ data class Gallery(val tool: Tool) : NavKey
 @Serializable
 data class ToolPhoto(val tool: Tool, val photoUri: String) : NavKey
 
+/**
+ * The screen shown after a photo is saved: the saved picture and what to do next.
+ *
+ * [photoUri] is the text of the saved picture's content Uri and [tool] is the tool that saved it,
+ * so Edit another can open that tool's gallery again. Both are saved with the back stack.
+ */
+@Serializable
+data class Saved(val tool: Tool, val photoUri: String) : NavKey
+
 /** The Settings screen. */
 @Serializable
 data object Settings : NavKey

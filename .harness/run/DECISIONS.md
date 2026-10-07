@@ -35,6 +35,18 @@ Rationale: the human read the DoD and approved it verbatim. The run continues in
 - app/src/test/screenshots/8_placeholder_dark.png
 - app/src/test/screenshots/9_placeholder_custom_colour.png
 
+Added 2026-10-07, after the baseline guard stopped the run at 97a77c8. 16 and 17 are approved as
+re-recorded: the human saw both, and the only change is Save turning from disabled grey to enabled.
+10 to 13 are approved in advance for T-008, whose camera button in the gallery's top bar changes the
+gallery and its refused state; the human reviews them at the end of the run.
+
+- app/src/test/screenshots/16_tool_photo_light.png
+- app/src/test/screenshots/17_tool_photo_dark.png
+- app/src/test/screenshots/10_gallery_light.png
+- app/src/test/screenshots/11_gallery_dark.png
+- app/src/test/screenshots/12_gallery_refused_light.png
+- app/src/test/screenshots/13_gallery_refused_dark.png
+
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty
 checklist under the entry's id; you change `[ ]` to `[x]` for each item you have confirmed, and add a

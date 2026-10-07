@@ -80,6 +80,32 @@ class CameraViewModel(
     }
 
     /**
+     * Swaps between the back and front lens. Does nothing while a photo is being taken, since
+     * swapping disconnects the camera the photo is coming from.
+     */
+    fun switchLens() {
+        if (mutableState.value.taking) return
+        controller.switchLens()
+    }
+
+    /** Moves the flash to its next mode: auto, then on, then off, then auto again. */
+    fun cycleFlash() {
+        controller.setFlashMode(cameraState.value.flashMode.next())
+    }
+
+    /**
+     * Zooms by [factor] from the current zoom: 2 doubles it, 0.5 halves it. A pinch reports how
+     * much the fingers spread or closed since its last report as such a factor, so each report
+     * multiplies the zoom a little more. The controller keeps the result within the lens's limits.
+     */
+    fun zoomBy(factor: Float) {
+        if (factor <= 0f || factor.isNaN()) return
+        val current = cameraState.value
+        val target = (current.zoomRatio * factor).coerceIn(current.minZoomRatio, current.maxZoomRatio)
+        if (target != current.zoomRatio) controller.setZoomRatio(target)
+    }
+
+    /**
      * Takes a photo into a new file in [folder] (see [shotsDirectory]). Does nothing while a
      * photo is already being taken or one is waiting for Keep or Retake.
      *
@@ -128,8 +154,8 @@ class CameraViewModel(
      */
     fun retake() {
         val shot = mutableState.value.shot ?: return
-        mutableState.update { it.copy(shot = null, shotFailed = false) }
         shot.delete()
+        mutableState.update { it.copy(shot = null, shotFailed = false) }
     }
 
     /**
