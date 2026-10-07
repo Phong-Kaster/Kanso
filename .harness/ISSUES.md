@@ -34,3 +34,26 @@ still unsigned, and restored from 288b590. Run 1's own numbers, so "Run 1 21" is
 - [ ] Run 1 21 - Open Home, each of the six tools, and Settings in light, dark and with a picked colour; in Settings open the custom colour picker, drag, read its hex field in dark mode → plain surfaces, readable text, every control visible, picker text readable, no ornament.
 - [ ] Run 1 22 - Open a tool, back gesture → Home; back gesture again → app closes to the launcher.
 - [ ] Run 1 26 - Read `app/src/main/java/com/phongkaster/kanso/navigation/` and the Home and Settings screen files → back stack, `NavDisplay`, `entryProvider`, per-entry ViewModels, `remember`/state and the theme are each explained in plain English where first used.
+
+## Driven on a Galaxy A13, 2026-10-07
+
+The checklist above was driven over adb on the human's Galaxy A13 (SM-A135F: Android 14, 32-bit
+`armeabi-v7a`, 3-button navigation, 279 photos), debug build of addb7f5. Driven is not signed: the
+boxes stay for the human. What was seen:
+
+- Did not fail: Run 1 12, Run 1 21, Run 1 22; Run 2 11, 14, 21, 27. Run 2 7 except pinch to zoom
+  (adb cannot pinch); Run 2 16 up to the share sheet showing "1 image" (no target was chosen).
+- Not driven: Run 1 19 (changing the wallpaper is a phone setting), Run 1 26 and Run 2 28 (reading).
+- Install: the debug APK had no `armeabi-v7a` and the A13 refused it (INSTALL_FAILED_NO_MATCHING_ABIS);
+  fixed in addb7f5.
+
+Defects found, not fixed:
+
+- Cold start takes 5.5-6.2 s (`am start -W` TotalTime, three runs); the splash stays up the whole
+  time and `Choreographer` reports 133 skipped frames on the main thread.
+- The gallery stutters while flinging 279 photos: 70 of 95 frames janky (74%), 50th percentile 36 ms,
+  90th 200 ms (`dumpsys gfxinfo`). Criterion 5 asks for smooth with 2,000+.
+- Dragging the custom colour picker stutters: 28 of 30 frames janky (93%), 50th percentile 150 ms.
+- In dark mode the colour picker sits on a white card from `core/colorpicker` that clashes with the
+  dark screen.
+- All four figures are from a debug build; measure a release build before deciding what to fix.
