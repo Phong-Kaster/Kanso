@@ -28,9 +28,11 @@ android {
     buildTypes {
         debug {
             // Only the ABIs a person runs the app on: with every ABI the debug APK is ~287 MB and
-            // will not install on the emulator. Release keeps all ABIs.
+            // will not install on the emulator. x86_64 is the emulator; arm64-v8a is a 64-bit phone;
+            // armeabi-v7a is a phone with a 32-bit Android, such as the Galaxy A13 (SM-A135F), which
+            // refused the APK without it (INSTALL_FAILED_NO_MATCHING_ABIS). Release keeps all ABIs.
             ndk {
-                abiFilters += listOf("x86_64", "arm64-v8a")
+                abiFilters += listOf("x86_64", "arm64-v8a", "armeabi-v7a")
             }
         }
         release {
