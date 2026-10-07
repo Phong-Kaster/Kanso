@@ -15,20 +15,61 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /**
  * The Home screen: a top bar titled "Kanso" and one row per tool, then a Settings row.
  *
+ * Why Home is two composables. A screen in this app usually needs things that only exist while
+ * the real app runs: here, a [HomeViewModel] that the app's wiring (Koin) creates and keeps
+ * alive. Android Studio's preview pane, and a quick test, cannot make one of those. So the screen
+ * is cut in two, a technique called "state hoisting" (hoisting means lifting: the state is lifted
+ * out of the part that draws, up to its caller):
+ *
+ * - [HomeScreen], this function, is the *stateful* part. It knows where the state lives: it reads
+ *   the list of tools from [viewModel] and hands it on. It draws nothing itself.
+ * - [HomeContent] is the *stateless* part. It holds no state of its own and knows nothing about
+ *   ViewModels or Koin: it simply draws whatever list of tools it is given, and reports taps
+ *   through the callbacks it is given.
+ *
+ * Because [HomeContent] needs only plain values (a list, two lambdas), a preview can call it
+ * with made-up sample data and see exactly what the person sees, with none of the app's
+ * machinery running. That is what `HomePreview` at the bottom of this file does. The other
+ * screens of the app follow the same pattern.
+ *
  * Tapping a tool row calls [onToolClick] with that tool; tapping Settings calls
- * [onSettingsClick]. The screen itself does not navigate: the caller decides what happens,
- * which keeps this composable easy to preview and test.
+ * [onSettingsClick]. The screen itself does not navigate: the caller decides what happens.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    onToolClick: (Tool) -> Unit,
+    onSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HomeContent(
+        tools = viewModel.tools,
+        onToolClick = onToolClick,
+        onSettingsClick = onSettingsClick,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The stateless part of Home (see [HomeScreen] for why there are two): draws the top bar, one
+ * row for each of [tools] in the order given, a divider and the Settings row.
+ *
+ * Tapping a tool row calls [onToolClick] with that tool; tapping Settings calls
+ * [onSettingsClick].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeContent(
+    tools: List<Tool>,
     onToolClick: (Tool) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -46,7 +87,7 @@ fun HomeScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            viewModel.tools.forEach { tool ->
+            tools.forEach { tool ->
                 HomeRow(
                     label = stringResource(tool.labelRes),
                     onClick = { onToolClick(tool) },
@@ -69,4 +110,24 @@ private fun HomeRow(label: String, onClick: () -> Unit) {
         // clickable makes the whole row tappable and tells accessibility services it is a button.
         modifier = Modifier.clickable(onClick = onClick),
     )
+}
+
+/**
+ * Home as the person sees it, drawn once in light and once in dark.
+ *
+ * `@PreviewLightDark` asks Android Studio for two pictures of this function, one with the phone
+ * in day mode and one in night mode; `ThemeMode.System` makes KansoTheme follow that setting.
+ * The sample data is simply every tool the app has (`Tool.entries`, the same list the real Home
+ * shows), and the taps do nothing, because a preview cannot be tapped into another screen.
+ */
+@PreviewLightDark
+@Composable
+private fun HomePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        HomeContent(
+            tools = Tool.entries,
+            onToolClick = {},
+            onSettingsClick = {},
+        )
+    }
 }

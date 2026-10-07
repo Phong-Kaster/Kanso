@@ -6,7 +6,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 3 (previews for every composable)
 
-- **Status:** pending
+- **Status:** answered (Iteration 2, 2026-10-07): approved as written
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-07
@@ -35,4 +35,4 @@ None (Autonomous mode runs under the Deny List).
 
 ### Decision
 
-Answered in `.harness/run/DECISIONS.md`.
+Approved as written in `.harness/run/DECISIONS.md` (2026-10-07).

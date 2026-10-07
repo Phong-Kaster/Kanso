@@ -6,4 +6,11 @@
 - Learned: the build already has `debugImplementation(ui-tooling)` but no `ui-tooling-preview`; `@Preview` has binary retention, so finding previews in a test needs a bytecode scanner (ComposablePreviewScanner) or a hand-kept list.
 - Reconciled: the analysis fan-out of the spec was done by the engine itself (one small PRD, one author); no analyst subagents were dispatched. A-001 recorded for the navigation host.
 
+### Iteration 2 - 2026-10-07
+- **Phase:** 1 (T-001)
+- Recovered: found uncommitted Phase 1 work from a crashed invocation (build files, HomeScreen, KansoTheme, two new tests); coherent, so salvaged and verified instead of reverted.
+- Verified: assembleDebug, testDebugUnitTest, verifyRoborazziDebug, lintDebug green on the third full run; the first two each failed one unrelated flaky Robolectric test. Reviewer: no blocking findings; T-009 widened (AMENDMENTS), A-002 recorded.
+
 ## Archived Decisions
+
+- D-001 (DoD approval): approved as written, 2026-10-07.

@@ -1,6 +1,6 @@
 # ISSUES
 
-- Run 3 (previews): waiting for the DoD approval, D-001. No abandoned or unreachable tasks.
+- Run 3 (previews): D-001 approved; Phase 1 done. No abandoned or unreachable tasks. Assumption A-002 (`sampleSizeFor` exempt from DoD 5's private-sample rule). Review minors, not fixed (assigned to T-009): comments inside a preview body can trip the forbidden-word scan; Koin is checked before and after drawing, not during. Flaky Windows Robolectric tests: see PROJECT.md.
 
 - Run 2 left no abandoned or unreachable tasks.
 - Known flake: `ThemeColourSettingsTest` wallpaper test once failed with a Windows DataStore file-rename AccessDenied; passes on rerun.

@@ -24,3 +24,24 @@ CLAUDE.md says every composable has a preview, and a preview never touches Koin 
 ### Taken, and why
 
 Option 2: it follows the PRD's own rule for screens that need wiring (split into stateful and stateless) and keeps the rule free of exceptions.
+
+
+## A-002 - `sampleSizeFor` is exempt from "every top-level `sample...` is private"
+
+- **Tier:** 2 (plan/architecture)
+- **Iteration:** 2
+- **First dependent checkpoint:** Iteration 2
+- **Revert:** `git revert <sha of the loop(phase-1) checkpoint>`
+
+### Question
+
+DoD 5 says every top-level `sample...` declaration is private. `data/photo/PhotoLoader.kt` already has a public top-level `sampleSizeFor` (an image-decoding helper, not preview data) that an existing test calls. DoD 8 forbids changing existing tests. Which wins?
+
+### Options Considered
+
+1. Make or rename `sampleSizeFor` - consequences: breaks an existing test, which DoD 8 forbids.
+2. Exempt that one name in `PreviewHygieneTest` (`NOT_PREVIEW_SAMPLES`) - consequences: DoD 5's proof is narrowed by one named, non-preview function.
+
+### Taken, and why
+
+Option 2: DoD 8 is the hard rule of the PRD ("do not change a test"); the function is not sample data for previews, so the intent of DoD 5 is kept.

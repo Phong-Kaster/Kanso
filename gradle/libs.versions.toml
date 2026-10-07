@@ -46,6 +46,7 @@ mlkitSubjectSegmentation = "16.0.0-beta1"
 nav3 = "1.1.7"
 robolectric = "4.17"
 roborazzi = "1.76.0"
+composablePreviewScanner = "0.9.3"
 
 [libraries]
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
@@ -89,6 +90,7 @@ litert-metadata = { module = "com.google.ai.edge.litert:litert-metadata", versio
 # UI
 compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "composeUi" }
 compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "composeUi" }
+compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "composeUi" }
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "composeUi" }
 compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "composeUi" }
@@ -126,6 +128,7 @@ compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = 
 ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+composable-preview-scanner = { group = "io.github.sergio-sastre.ComposablePreviewScanner", name = "android", version.ref = "composablePreviewScanner" }
 roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
