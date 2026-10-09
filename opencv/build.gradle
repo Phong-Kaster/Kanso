@@ -89,12 +89,10 @@
 //
 
 apply plugin: 'com.android.library'
-try {
-    apply plugin: 'kotlin-android'
-    println "Configure OpenCV with Kotlin"
-} catch (Exception e) {
-    println "Configure OpenCV without Kotlin"
-}
+// Kanso: the Android Gradle Plugin 9 compiles Kotlin itself (built-in Kotlin), so the separate Kotlin
+// plugin OpenCV tried to apply here is gone; OpenCV's Kotlin sources (java/src/**/*.kt) are made
+// known to it in the sourceSets block below.
+println "Configure OpenCV with Kotlin"
 
 def openCVersionName = "4.12.0-dev"
 def openCVersionCode = ((4 * 100 + 12) * 100 + 0) * 10 + 0
@@ -102,15 +100,17 @@ def openCVersionCode = ((4 * 100 + 12) * 100 + 0) * 10 + 0
 println "OpenCV: " +openCVersionName + " " + project.buildscript.sourceFile
 
 android {
-    namespace 'org.opencv'
-    compileSdkVersion 35
+    namespace = 'org.opencv'
+    compileSdk = 35
+    // Kanso: the NDK that builds libcxx_helper and supplies libc++_shared.so, as before the Android
+    // Gradle Plugin 9 move; its own default is a newer NDK, which would change libc++_shared.so.
+    ndkVersion = '27.0.12077973'
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 35
-
-        versionCode openCVersionCode
-        versionName openCVersionName
+        minSdk = 21
+        // Kanso: a library module takes no targetSdk, versionCode or versionName in the Android
+        // Gradle Plugin 9 DSL (only an app has them); OpenCV's version stays in openCVersionName and
+        // openCVersionCode above.
 
         externalNativeBuild {
             cmake {
@@ -119,55 +119,56 @@ android {
             }
         }
     }
-    
-    android {
-        buildFeatures {
-            buildConfig true
-        }
-    }
+
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_22
-        targetCompatibility JavaVersion.VERSION_22
+        sourceCompatibility = JavaVersion.VERSION_22
+        targetCompatibility = JavaVersion.VERSION_22
     }
 
     buildTypes {
-        debug {
-            packagingOptions {
-                doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
-            }
-        }
         release {
-            packagingOptions {
-                doNotStrip '**/*.so'  // controlled by OpenCV CMake scripts
-            }
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            minifyEnabled = false
+            // Kanso: 'proguard-android.txt' is refused from the Android Gradle Plugin 9 on (it turns
+            // R8's optimisations off), and OpenCV ships no 'proguard-rules.txt' in this module.
+            // Minify is off, so neither file changes the output.
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+
+    // Kanso: OpenCV listed this under both build types, but it always set the module-wide option;
+    // the Android Gradle Plugin 9 DSL names it packaging.jniLibs.keepDebugSymbols.
+    packaging {
+        jniLibs {
+            keepDebugSymbols.add('**/*.so')  // controlled by OpenCV CMake scripts
         }
     }
 
     sourceSets {
         main {
-            jniLibs.srcDirs = ['native/libs']
-            java.srcDirs = ['java/src']
-            res.srcDirs = ['java/res']
+            jniLibs.setSrcDirs(['native/libs'])
+            java.setSrcDirs(['java/src'])
+            // Built-in Kotlin does not take .kt files from the java source set, so name the folder as
+            // a Kotlin source directory too (it holds MatMatMul.kt, which becomes org.opencv.core.MatMatMulKt).
+            kotlin.directories.add('java/src')
+            res.setSrcDirs(['java/res'])
             manifest.srcFile 'java/AndroidManifest.xml'
         }
     }
 
     externalNativeBuild {
         cmake {
-            path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
+            path = file(project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
-    
+
     buildFeatures {
-        prefabPublishing true
-        buildConfig true
+        prefabPublishing = true
+        buildConfig = true
     }
 
     prefab {
         opencv_jni_shared {
-            headers 'native/jni/include'
+            headers = 'native/jni/include'
         }
     }
 
@@ -181,12 +182,11 @@ android {
 }
 
 // Kanso: keep Kotlin's bytecode target in step with the Java target above (22), as the core
-// modules do, so the Kotlin and Java compile tasks agree.
-plugins.withId('org.jetbrains.kotlin.android') {
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_22)
-        }
+// modules do, so the Kotlin and Java compile tasks agree. The plugin's built-in Kotlin always
+// provides this kotlin block, so it no longer waits for a separate Kotlin plugin.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_22)
     }
 }
 

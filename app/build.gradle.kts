@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
     // Generates serializers for the @Serializable navigation keys.
     alias(libs.plugins.serialization)
@@ -12,8 +11,15 @@ plugins {
 
 android {
     namespace = "com.phongkaster.kanso"
-    // 36 because Navigation 3, lifecycle 2.10 and the current Compose libraries are built against it.
-    compileSdk = 36
+    // 37, the newest SDK: current AndroidX releases (for example Navigation 3 1.2 and Material3 1.5)
+    // are built against it, and the build refuses them at a lower compileSdk.
+    // targetSdk below stays 36: it decides which Android behaviour changes apply at run time.
+    compileSdk = 37
+    // The NDK that strips the prebuilt native libraries (OpenCV, MediaPipe, LiteRT) and supplies
+    // libc++_shared.so, as before the Android Gradle Plugin 9 move. Its own default is a newer NDK,
+    // which would change libc++_shared.so in the APK for all three ABIs, and so what runs on the
+    // 32-bit phone.
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.phongkaster.kanso"
@@ -102,7 +108,10 @@ dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
-    implementation(libs.compose.material3)
+    // The Compose BOM above would give Material3 1.4.0; the app asks for the newer one itself, so the
+    // Expressive components of 1.5.0-beta01 are available. Only the app does: the engine modules keep
+    // the older entry.
+    implementation(libs.compose.material3.app)
     // @Preview and @PreviewLightDark: the annotations that make a composable show up in Android
     // Studio's preview pane. Light enough to ship, because the annotations are not used at run time.
     implementation(libs.compose.ui.tooling.preview)

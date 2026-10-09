@@ -2,11 +2,12 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
 }
 
 android {
-    namespace = "com.photoeditor.opengl"
+    // Its own namespace: this module only wraps the prebuilt imageprocessor AAR, whose namespace is
+    // the original com.photoeditor.opengl, and AGP 9 refuses one namespace in two places.
+    namespace = "com.phongkaster.kanso.engine.imageprocessor"
     compileSdk = 35
 
     defaultConfig {
