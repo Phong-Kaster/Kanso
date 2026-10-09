@@ -14,7 +14,7 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** pending - the Iteration after 1 fills in the commit SHA
+- **First dependent checkpoint:** Iteration 3, the Phase 2 checkpoint (the next Iteration replaces this with its commit SHA)
 - **Revert:** `git revert <sha>`
 
 ### Question
@@ -36,7 +36,7 @@ Option 2. `CLAUDE.md` is the owner's standing rule and the PRD says it applies i
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** pending
+- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
 - **Revert:** `git revert <sha>`
 
 ### Question
@@ -58,7 +58,7 @@ Option 2: `CLAUDE.md` says "every top-level class", with no visibility exception
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** pending
+- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
 - **Revert:** `git revert <sha>`
 
 ### Question
@@ -80,8 +80,8 @@ Option 2: the PRD says "may", not "must"; it needs no edit outside the six files
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -102,8 +102,8 @@ Option 2: the only reading that satisfies "exactly one" and "UiStates move to th
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -124,8 +124,8 @@ Option 2: consistent with Gallery and Tool, and with the PRD's literal text.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -146,8 +146,8 @@ Option 2. Plain read-only values (`tool`, `photoUri`) may stay too where somethi
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -168,8 +168,8 @@ Option 2. Gallery's tool name, which the ViewModel does hold, moves into `Galler
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -190,8 +190,8 @@ Option 2. The ViewModel is `SavedViewModel(photoUri, loader, probe)`: no `tool` 
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -212,8 +212,8 @@ Option 2. Criterion 15 has a person read the three Home files.
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `adbdbe0` (loop(phase-1))
+- **Revert:** `git revert adbdbe0`
 
 ### Question
 
@@ -234,7 +234,7 @@ Option 2. `GalleryUiState` gets one extra field, `tool`, so `GalleryContent` tak
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** pending
+- **First dependent checkpoint:** Iteration 3, the Phase 2 checkpoint (the next Iteration replaces this with its commit SHA)
 - **Revert:** `git revert <sha>`
 
 ### Question
@@ -256,7 +256,7 @@ Option 2, following the repository's existing scanning tests. To prove it on the
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** pending
+- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
 - **Revert:** `git revert <sha>`
 
 ### Question

@@ -1,8 +1,11 @@
 # ISSUES
 
-## Run 4 (one class per file, one UiState per screen): Phase 1 done, Iteration 2
+## Run 4 (one class per file, one UiState per screen): Phase 2 done, Iteration 3
 
-Phase 1 (the six screens) is built and verified. Problems so far:
+Phase 1 (the six screens) and Phase 2 (the two guard tests) are built and verified. Problems so far:
+
+- **Review findings recorded, not fixed (Phase 2, Minor):** `ScreenStateTest` reads declared types only, so a ViewModel whose `val state: StateFlow<…UiState> = mutableState` (no `asStateFlow()`) passes, a `Flow<…>` property that holds a `MutableStateFlow` at run time passes, and a top-level extension property such as `val HomeViewModel.busy: StateFlow<Boolean>` in a ViewModel file is not a member of the class and is not seen. Its `var`/`Mutable…` check misses `ArrayList`, `HashMap` and arrays, and would report a local `var` inside a helper function in a `…UiState.kt` (loud, harmless). Neither test is a substitute for the Phase 1 review of how each state is built.
+- **Not a defect, recorded:** the first Phase 2 combined run failed on `cleanTestDebugUnitTest` only because the engine's shell stood inside `app/build/test-results`; rerun green (Constraint in `knowledge/PROJECT.md`, suggestion S-001).
 
 - **Review finding recorded, not fixed (Phase 1, Minor):** `CameraContent` (`CameraScreen.kt`) takes a `CameraUiState` but decides "a photo waits" from its `shotPicture` slot, not from `state.shot`, so a caller that passes a state holding a shot without the slot would get the live picture. The real screen passes the slot exactly when the state holds a shot, the output is identical, and the KDoc says so; `CameraAfterShotPreview` passes `shot = null` with a shot picture. Left as is.
 - **Assumptions recorded:** A-001 to A-012 in `.harness/run/ASSUMPTIONS.md` (the readings of the PRD this plan takes). None is Tier 3.

@@ -6,6 +6,15 @@
 
 <!-- Newest first. One entry per iteration. -->
 
+### Iteration 3 - 2026-10-09 (Phase 2)
+- **Phase:** 2 - T-004, T-005 (two Capable Workers in parallel, scopes disjoint; `git status` showed exactly the two new files)
+- Attempted: before dispatch, a rough scan of both source trees found exactly the 14 files `ALLOWED` lists, so Phase 1 left no stray offender. `OneTypePerFileTest` (rule, 14-entry allow-list, stale-entry check, self-checks) and `ScreenStateTest` (six ViewModels by Java reflection, `…Content` takes the UiState, no `var`/`Mutable…` in a UiState, self-checks) written; neither Worker could build or run, both desk-checked.
+- Verified: the two classes alone first (10 + 13 green), then a fresh review fix round and the full combined run `cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue` exit 0 (`evidence/p2-verify.log`): 231 tests, 0 failures, 0 skipped; no baseline changed. `every_allowed_file_still_breaks_the_rule` passing is the proof that the scanner reports each of the 14 real files. Three mutation checks (templates off, backticks off, `declaredMethods` instead of `methods`) each turned a self-check red and were restored byte for byte.
+- Failed run, not a defect: the first combined run failed only on `:app:cleanTestDebugUnitTest` (`Unable to delete directory …\test-results\testDebugUnitTest`) because the Iteration's own shell was standing in that directory; recorded as a Constraint and as suggestion S-001; the rerun from the repository root was green. No attempt was charged to any task.
+- Review (Capable, fresh context): nothing blocking, three should-fix, five nits. Fixed by the Iteration: a KDoc that claimed Unicode escapes the code does not use; two self-check traps that could not fail; `declaredMethods` missed an inherited StateFlow (and a self-check for it was added); the new `parentFile` warning; a lambda type with a qualified UiState name passed for the parameter; a character literal could run past its line. Recorded, not fixed: ISSUES.md.
+- Learned: `PROJECT.md` Constraints (no Gradle from inside `app/build`; nested block comments) and Reference (the two guards, test count 231).
+- Reconciled: assumptions A-004..A-010 now name `adbdbe0`; A-001 and A-011 depend on this checkpoint; T-006 and T-007 unblocked.
+
 ### Iteration 2 - 2026-10-09 (Phase 1)
 - **Phase:** 1 - T-001, T-002, T-003 (three Capable Workers in parallel, scopes disjoint; reported file sets matched `git status`)
 - Attempted: D-001 consumed (DoD approved as written); each of the six screens now has one `…UiState`, one `state` StateFlow and a `…Content` that takes it; Saved got a ViewModel; the Iteration wired `KansoNavHost.kt` (Home preview, `entry<Saved>`) and `AppModule.kt` (Saved recipe).
