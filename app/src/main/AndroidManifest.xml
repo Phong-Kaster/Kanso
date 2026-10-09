@@ -38,9 +38,16 @@
         android:name="android.permission.READ_PHONE_STATE"
         tools:node="remove" />
 
+    <!-- enableOnBackInvokedCallback switches on predictive back: the system lets the app handle the
+         back gesture itself, so on Android 14 and later Navigation 3 can show the screen
+         underneath while the finger is still moving and cancel if the finger lets go early.
+         Android 13 takes Back through the same callback but sends no progress, and older versions
+         ignore the attribute, which tools:targetApi tells the build. -->
     <application
         android:name=".KansoApplication"
         android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="33"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"

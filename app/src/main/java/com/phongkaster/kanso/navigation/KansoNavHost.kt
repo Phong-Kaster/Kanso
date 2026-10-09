@@ -1,6 +1,8 @@
 package com.phongkaster.kanso.navigation
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -202,6 +204,11 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
  * a screen gets its own saved state or its own ViewModelStore. System Back (including the
  * predictive back gesture) calls [onBack]; deciding what Back means is the caller's job.
  *
+ * How the screens move is set here too: the push, pop and back-gesture transitions come from
+ * KansoTransitions.kt, built from the theme's motion scheme, so a screen slides and fades with the
+ * Expressive spring. The manifest's `enableOnBackInvokedCallback` switches predictive back on, so
+ * the back gesture drives the last of the three.
+ *
  * Because this function takes only plain values and lambdas, a preview can call it with a
  * one-key back stack and a sample screen, without Koin or a ViewModel.
  */
@@ -213,11 +220,25 @@ fun KansoNavDisplay(
     entryProvider: (NavKey) -> NavEntry<NavKey>,
     modifier: Modifier = Modifier,
 ) {
+    // The theme's motion scheme (Expressive: springs) is read here, while Compose is drawing,
+    // because MaterialTheme.motionScheme only works inside a composable function and the spec
+    // lambdas NavDisplay calls later are not composable. The three functions below take the
+    // scheme and build the lambdas; see KansoTransitions.kt for what each one does.
+    val motionScheme = MaterialTheme.motionScheme
     NavDisplay(
         backStack = backStack,
-        modifier = modifier,
+        // While two screens slide past each other the old one fades out faster than the new one
+        // arrives, so for a moment part of the window shows through. Painting the theme's own
+        // background behind both keeps that strip in the app's light or dark colour; the window's
+        // own background follows the phone's night setting, which can differ from the app's choice.
+        modifier = modifier.background(MaterialTheme.colorScheme.background),
         onBack = onBack,
         entryDecorators = entryDecorators,
+        // How the screens move when a screen opens, when one closes, and while the back gesture
+        // is still under the finger (predictive back).
+        transitionSpec = kansoPushTransition(motionScheme),
+        popTransitionSpec = kansoPopTransition(motionScheme),
+        predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
         entryProvider = entryProvider,
     )
 }

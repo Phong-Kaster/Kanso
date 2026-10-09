@@ -73,8 +73,26 @@ class SettingsRepository(
         .distinctUntilChanged()
 
     /**
+     * The last picked custom seed colour, as an ARGB integer, emitted once at first and again
+     * every time it changes. With no colour ever picked it is Kanso blue's seed, which is also
+     * where [chooseCustomThemeColour] starts the picker.
+     *
+     * [themeColour] carries a seed only while Custom is the choice, but the file keeps the seed
+     * when Kanso blue or the wallpaper is chosen (see [setThemeColour]). This Flow reads that kept
+     * seed whatever the choice is, so Settings can show on its Custom row the very colour a tap
+     * on Custom brings back.
+     */
+    val customSeedArgb: Flow<Int> = dataStore.data
+        .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
+        // The settings file keeps colours as ARGB integers; toArgb() turns Kanso blue's seed, a
+        // Compose colour, into one for the case where nothing was ever picked.
+        .map { preferences -> preferences[THEME_COLOUR_SEED_KEY] ?: KANSO_BLUE_SEED.toArgb() }
+        .distinctUntilChanged()
+
+    /**
      * Saves [colour] as the theme colour. For [ThemeColour.Custom] the seed colour is saved too;
-     * for the other kinds the last picked seed is kept, so picking Custom again starts from it.
+     * for the other kinds the last picked seed is kept, so picking Custom again starts from it
+     * (and [customSeedArgb] still reads it).
      */
     suspend fun setThemeColour(colour: ThemeColour) {
         dataStore.edit { preferences ->

@@ -1,0 +1,2845 @@
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 169ae7a..793bed2 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -38,9 +38,15 @@
+         android:name="android.permission.READ_PHONE_STATE"
+         tools:node="remove" />
+ 
++    <!-- enableOnBackInvokedCallback switches on predictive back (Android 13 and later): the system
++         lets the app handle the back gesture itself, so Navigation 3 can show the screen
++         underneath while the finger is still moving and cancel if the finger lets go early.
++         Older Android versions ignore the attribute, which tools:targetApi tells the build. -->
+     <application
+         android:name=".KansoApplication"
+         android:allowBackup="false"
++        android:enableOnBackInvokedCallback="true"
++        tools:targetApi="33"
+         android:icon="@mipmap/ic_launcher"
+         android:label="@string/app_name"
+         android:roundIcon="@mipmap/ic_launcher"
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsRepository.kt b/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsRepository.kt
+index bc83e89..5d00317 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsRepository.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsRepository.kt
+@@ -72,9 +72,27 @@ class SettingsRepository(
+         }
+         .distinctUntilChanged()
+ 
++    /**
++     * The last picked custom seed colour, as an ARGB integer, emitted once at first and again
++     * every time it changes. With no colour ever picked it is Kanso blue's seed, which is also
++     * where [chooseCustomThemeColour] starts the picker.
++     *
++     * [themeColour] carries a seed only while Custom is the choice, but the file keeps the seed
++     * when Kanso blue or the wallpaper is chosen (see [setThemeColour]). This Flow reads that kept
++     * seed whatever the choice is, so Settings can show on its Custom row the very colour a tap
++     * on Custom brings back.
++     */
++    val customSeedArgb: Flow<Int> = dataStore.data
++        .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
++        // The settings file keeps colours as ARGB integers; toArgb() turns Kanso blue's seed, a
++        // Compose colour, into one for the case where nothing was ever picked.
++        .map { preferences -> preferences[THEME_COLOUR_SEED_KEY] ?: KANSO_BLUE_SEED.toArgb() }
++        .distinctUntilChanged()
++
+     /**
+      * Saves [colour] as the theme colour. For [ThemeColour.Custom] the seed colour is saved too;
+-     * for the other kinds the last picked seed is kept, so picking Custom again starts from it.
++     * for the other kinds the last picked seed is kept, so picking Custom again starts from it
++     * (and [customSeedArgb] still reads it).
+      */
+     suspend fun setThemeColour(colour: ThemeColour) {
+         dataStore.edit { preferences ->
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt b/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt
+index 9cbbc62..b51dfbe 100644
+--- a/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt
+@@ -1,6 +1,7 @@
+ package com.phongkaster.kanso.navigation
+ 
+ import androidx.activity.compose.LocalActivity
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+@@ -202,6 +203,11 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
+  * a screen gets its own saved state or its own ViewModelStore. System Back (including the
+  * predictive back gesture) calls [onBack]; deciding what Back means is the caller's job.
+  *
++ * How the screens move is set here too: the push, pop and back-gesture transitions come from
++ * KansoTransitions.kt, built from the theme's motion scheme, so a screen slides and fades with the
++ * Expressive spring. The manifest's `enableOnBackInvokedCallback` switches predictive back on, so
++ * the back gesture drives the last of the three.
++ *
+  * Because this function takes only plain values and lambdas, a preview can call it with a
+  * one-key back stack and a sample screen, without Koin or a ViewModel.
+  */
+@@ -213,11 +219,21 @@ fun KansoNavDisplay(
+     entryProvider: (NavKey) -> NavEntry<NavKey>,
+     modifier: Modifier = Modifier,
+ ) {
++    // The theme's motion scheme (Expressive: springs) is read here, while Compose is drawing,
++    // because MaterialTheme.motionScheme only works inside a composable function and the spec
++    // lambdas NavDisplay calls later are not composable. The three functions below take the
++    // scheme and build the lambdas; see KansoTransitions.kt for what each one does.
++    val motionScheme = MaterialTheme.motionScheme
+     NavDisplay(
+         backStack = backStack,
+         modifier = modifier,
+         onBack = onBack,
+         entryDecorators = entryDecorators,
++        // How the screens move when a screen opens, when one closes, and while the back gesture
++        // is still under the finger (predictive back).
++        transitionSpec = kansoPushTransition(motionScheme),
++        popTransitionSpec = kansoPopTransition(motionScheme),
++        predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
+         entryProvider = entryProvider,
+     )
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+new file mode 100644
+index 0000000..496c962
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+@@ -0,0 +1,150 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.compose.animation.AnimatedContentTransitionScope
++import androidx.compose.animation.ContentTransform
++import androidx.compose.animation.core.FiniteAnimationSpec
++import androidx.compose.animation.fadeIn
++import androidx.compose.animation.fadeOut
++import androidx.compose.animation.slideInHorizontally
++import androidx.compose.animation.slideOutHorizontally
++import androidx.compose.animation.togetherWith
++import androidx.compose.material3.MotionScheme
++import androidx.compose.ui.unit.IntOffset
++import androidx.navigation3.runtime.NavKey
++import androidx.navigation3.scene.Scene
++
++// How Kanso moves from one screen to the next.
++//
++// NavDisplay (called in KansoNavHost.kt) draws the screen of the last key on the back stack. When
++// the back stack changes it does not simply swap the old screen for the new one: it animates from
++// one to the other, and it asks the app how, through three parameters. The three functions in
++// this file build what Kanso passes to them:
++// - kansoPushTransition for `transitionSpec`: a screen opens (a key is added);
++// - kansoPopTransition for `popTransitionSpec`: a screen closes (the top key is removed);
++// - kansoPredictivePopTransition for `predictivePopTransitionSpec`: the person is in the middle
++//   of the back gesture, before they have let go.
++// Each function's KDoc explains its part, the first one the ideas the three share.
++
++/**
++ * Returns the `transitionSpec` Kanso gives NavDisplay: how the screens move on a push, when a key
++ * is added to the back stack and a new screen opens. The new screen slides in from the right edge,
++ * across one full screen width, while it fades in; the screen it covers slides a quarter of the
++ * width to the left and fades out, so the eye follows the new screen while the old one steps back.
++ *
++ * What a transition spec is: NavDisplay shows its screens through Compose's `AnimatedContent`, the
++ * container that animates from one piece of content to the next. Each time the back stack
++ * changes, NavDisplay calls a spec lambda to ask how to make the change, and the lambda returns a
++ * `ContentTransform`: an enter transition for the screen that arrives, joined by `togetherWith`
++ * to an exit transition for the screen that leaves. Transitions add up with `+`, so a slide plus a
++ * fade runs both at once. The lambda runs with an `AnimatedContentTransitionScope<Scene<NavKey>>`
++ * as its receiver (its `this`), which says which scene is leaving and which is arriving; a Scene
++ * is what NavDisplay draws for the top of the back stack, in Kanso always one single screen.
++ * Kanso's lambdas never need to look at it, because every screen moves the same way.
++ *
++ * Why springs: the slides and the fades take their timing from [motionScheme], which in the app is
++ * the motion scheme of Kanso's theme, `MotionScheme.expressive()` (see KansoTheme). Its
++ * animations are springs rather than timed curves: a spring pulls the screen towards its place
++ * with a given stiffness and damping, so the move starts quickly, slows down as it arrives and,
++ * for the spatial springs, overshoots by a hair before it rests. That is the Material 3 Expressive
++ * feel, and because every Material component reads the same scheme, a screen change moves like
++ * the buttons and the toolbar inside the screens. `defaultSpatialSpec` is the spring for things
++ * that move (the slides); `defaultEffectsSpec` is the spring for things that only change how they
++ * look (the fades), and it never overshoots, so a fade never goes past fully visible. Both settle
++ * in under a second. That matters beyond looks: a transition that never settled would keep every
++ * test that waits for the app to be idle waiting for ever.
++ *
++ * Why the motion scheme is a parameter: the theme's scheme is read with `MaterialTheme.motionScheme`,
++ * which only works while Compose is drawing, inside a composable function. The spec lambda is not
++ * a composable function: NavDisplay calls it later, from inside the animation. So the caller (the
++ * navigation display in KansoNavHost.kt) reads the scheme while it draws and passes it in; this
++ * function takes the two springs out of it straight away, and the lambda it returns keeps only
++ * those springs. That also lets a test hand it any scheme. Calling it again on every redraw is
++ * cheap: it reads two springs and builds one small lambda.
++ */
++fun kansoPushTransition(
++    motionScheme: MotionScheme,
++): AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform {
++    // Read the springs now, while the caller is drawing; the lambda below only captures them.
++    // Slides animate an IntOffset (a position in whole pixels), fades a Float (the alpha).
++    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
++    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
++    return {
++        // The arriving screen starts one full width to the right (off screen) and slides to 0.
++        val enter = slideInHorizontally(animationSpec = slide, initialOffsetX = { fullWidth -> fullWidth }) +
++            fadeIn(animationSpec = fade)
++        // The leaving screen moves a quarter of its width to the left as it fades away.
++        val exit = slideOutHorizontally(animationSpec = slide, targetOffsetX = { fullWidth -> -fullWidth / 4 }) +
++            fadeOut(animationSpec = fade)
++        enter togetherWith exit
++    }
++}
++
++/**
++ * Returns the `popTransitionSpec` Kanso gives NavDisplay: how the screens move on a pop, when the
++ * top key is removed (Back, or a screen that closes itself) and the screen underneath comes back.
++ * It is the push played backwards: the leaving screen slides out to the right, a full width, and
++ * fades; the screen underneath comes back from a quarter of the width on the left and fades in.
++ * During a pop NavDisplay draws the leaving screen above the returning one, so it looks as if the
++ * top card were pulled off a pile.
++ *
++ * Push or pop: NavDisplay chooses between this spec and [kansoPushTransition] by comparing the
++ * back stack before and after the change. It is a pop only when the bottom key is the same, the
++ * new back stack is shorter, and it is exactly the start of the old one: `[Home, Settings]`
++ * becoming `[Home]`, or Saved's Home button turning `[Home, Saved]` into `[Home]`. Every other
++ * change is a push, including a change that removes keys and adds others: saving a photo turns
++ * `[Home, Gallery, ToolPhoto]` into `[Home, Saved]`, so the Saved screen slides in like a new
++ * screen, which is what a person expects of a step forward.
++ *
++ * Like [kansoPushTransition], it takes the motion scheme as a parameter and reads its two springs
++ * at once, because the spec lambda is not a composable function and cannot read the theme itself.
++ */
++fun kansoPopTransition(
++    motionScheme: MotionScheme,
++): AnimatedContentTransitionScope<Scene<NavKey>>.() -> ContentTransform {
++    // The same two springs as the push, read once here and captured by the lambda.
++    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
++    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
++    return {
++        // The returning screen starts a quarter of its width to the left, where the push left it.
++        val enter = slideInHorizontally(animationSpec = slide, initialOffsetX = { fullWidth -> -fullWidth / 4 }) +
++            fadeIn(animationSpec = fade)
++        // The leaving screen slides out of the right edge, the way it came in.
++        val exit = slideOutHorizontally(animationSpec = slide, targetOffsetX = { fullWidth -> fullWidth }) +
++            fadeOut(animationSpec = fade)
++        enter togetherWith exit
++    }
++}
++
++/**
++ * Returns the `predictivePopTransitionSpec` Kanso gives NavDisplay: how the screens move while a
++ * person is making the back gesture, before they have let go.
++ *
++ * What predictive back is: with gesture navigation, a person goes back by swiping in from the left
++ * or the right edge of the screen. With predictive back the app shows where Back leads while the
++ * finger is still moving: the top screen follows the finger and the screen underneath appears
++ * behind it. Letting go once the gesture has gone far enough completes the Back (the top key is
++ * popped, exactly as with the Back button); sliding back towards the edge and letting go cancels
++ * it, and the top screen returns to its place. So a person can peek at the previous screen and
++ * change their mind. Android shows this inside apps from Android 14 on, for apps that switch it on
++ * with `android:enableOnBackInvokedCallback="true"` in their manifest, as Kanso does (the owner's
++ * phone runs Android 14). With three-button navigation there is no gesture: the Back button simply
++ * plays [kansoPopTransition].
++ *
++ * During the gesture NavDisplay does not play this transition against the clock: it seeks it,
++ * holding it at the point that matches how far the gesture has progressed, and moves it as the
++ * finger moves. Kanso uses its pop transition here, so the leaving screen slides to the right with
++ * the finger while the screen underneath comes in from the left, and letting go simply carries on
++ * the same movement to its end (or back to its start, when the gesture is cancelled).
++ *
++ * The lambda also receives the swipe edge, a number that says which edge of the screen the gesture
++ * started from. Kanso moves its screens the same way from either edge, so it ignores it (the `_`).
++ * Like the other two, this function takes the motion scheme as a parameter, because the spec
++ * lambda is not a composable function.
++ */
++fun kansoPredictivePopTransition(
++    motionScheme: MotionScheme,
++): AnimatedContentTransitionScope<Scene<NavKey>>.(Int) -> ContentTransform {
++    val pop = kansoPopTransition(motionScheme)
++    // `pop(this)` runs the pop lambda with this lambda's own receiver, the same transition scope.
++    return { _ -> pop(this) }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt
+index b892485..6c58796 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt
+@@ -294,6 +294,7 @@ fun SettingsContent(
+             )
+             ThemeColourChoice(
+                 selected = state.themeColour,
++                customSeedArgb = state.customSeedArgb,
+                 wallpaperColour = wallpaperColour,
+                 onKansoBlue = onKansoBlueChosen,
+                 onWallpaper = onWallpaperChosen,
+@@ -334,9 +335,11 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit)
+  * - Kanso blue: the light `primary` of the Kanso blue scheme, the blue the app's buttons show in
+  *   light mode;
+  * - From wallpaper: [wallpaperColour], the light `primary` the phone builds from its wallpaper;
+- * - Custom colour: the custom seed colour while Custom is selected. While another choice is
+- *   selected, [selected] carries no seed, so the swatch shows Kanso blue's seed, which is also
+- *   where the picker starts for a person who has never picked a colour.
++ * - Custom colour: the last custom colour picked, whatever is selected. While Custom is
++ *   selected that is its own seed; while another choice is selected it is [customSeedArgb], the
++ *   seed the settings file keeps meanwhile, which a tap on Custom brings back. So the swatch
++ *   always shows what Custom gives; for a person who has never picked a colour it is Kanso
++ *   blue's seed, where the picker starts.
+  *
+  * Each swatch shows the light version of its choice in both themes, so the same choice always
+  * shows the same circle. While Custom is selected, the colour picker is shown below the group,
+@@ -346,6 +349,7 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit)
+ @Composable
+ private fun ThemeColourChoice(
+     selected: ThemeColour,
++    customSeedArgb: Int,
+     wallpaperColour: Color?,
+     onKansoBlue: () -> Unit,
+     onWallpaper: () -> Unit,
+@@ -355,7 +359,9 @@ private fun ThemeColourChoice(
+     // remember keeps a value across re-draws: generating a scheme takes real work, and Kanso
+     // blue never changes, so its primary is worked out once.
+     val kansoBlue = remember { seedColorScheme(KANSO_BLUE_SEED, dark = false).primary }
+-    val customColour = if (selected is ThemeColour.Custom) Color(selected.seedArgb) else KANSO_BLUE_SEED
++    // The last picked custom colour: Custom's own seed while it is selected (the same stored seed
++    // customSeedArgb holds), else customSeedArgb, which the file keeps while another is selected.
++    val customColour = Color(if (selected is ThemeColour.Custom) selected.seedArgb else customSeedArgb)
+ 
+     GroupLabel(
+         // stringResource looks the text up in the app's string resources (res/values/strings.xml,
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsUiState.kt b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsUiState.kt
+index 09f281d..c45cc01 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsUiState.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsUiState.kt
+@@ -1,16 +1,30 @@
+ package com.phongkaster.kanso.ui.settings
+ 
++import androidx.compose.ui.graphics.toArgb
+ import com.phongkaster.kanso.data.settings.ThemeColour
+ import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
+ 
+ /**
+- * Everything the Settings screen shows at one moment: the saved [themeMode] and the saved
+- * [themeColour] (Kanso blue, the wallpaper or a custom seed colour). It is Settings' UiState:
+- * for what a UiState is and how the screen reads it, see HomeUiState. Before the settings file
+- * is read, SettingsViewModel starts it at System with the repository's default colour, which is
+- * Kanso blue.
++ * Everything the Settings screen shows at one moment: the saved [themeMode], the saved
++ * [themeColour] (Kanso blue, the wallpaper or a custom seed colour) and [customSeedArgb], the
++ * last custom colour picked. It is Settings' UiState: for what a UiState is and how the screen
++ * reads it, see HomeUiState. Before the settings file is read, SettingsViewModel starts it at
++ * System with the repository's default colour, which is Kanso blue, and Kanso blue's seed as the
++ * custom colour.
++ *
++ * [customSeedArgb] is a separate field because [themeColour] holds a seed only while Custom is
++ * the choice. The settings file keeps the last picked seed while Kanso blue or the wallpaper is
++ * chosen, and choosing Custom again brings it back, so the Custom row's swatch shows this field
++ * whatever is selected: the colour a tap on Custom will give. It is an ARGB integer, as the file
++ * keeps it, and Kanso blue's seed when no colour was ever picked. It has a default value so a
++ * snapshot can be written with just the two choices, as the previews do.
+  *
+  * Whether the phone offers wallpaper colours (Android 12 and later) is not in here: it is a fact
+  * about the phone, not a saved choice, so the drawing side asks for it itself.
+  */
+-data class SettingsUiState(val themeMode: ThemeMode, val themeColour: ThemeColour)
++data class SettingsUiState(
++    val themeMode: ThemeMode,
++    val themeColour: ThemeColour,
++    val customSeedArgb: Int = KANSO_BLUE_SEED.toArgb(),
++)
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsViewModel.kt b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsViewModel.kt
+index f2b0eb9..153a8ae 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsViewModel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsViewModel.kt
+@@ -49,26 +49,33 @@ class SettingsViewModel(
+     private var pendingColourJob: Job? = null
+ 
+     /**
+-     * What Settings shows: the saved theme mode and theme colour together, as one snapshot the
+-     * screen can read at any moment (see HomeUiState for what a UiState is).
++     * What Settings shows: the saved theme mode, the saved theme colour and the last picked
++     * custom colour together, as one snapshot the screen can read at any moment (see HomeUiState
++     * for what a UiState is).
+      *
+-     * The repository gives the two choices as two separate Flows. `combine` joins them into one:
+-     * once each Flow has given its first value, and again every time either of them gives a new
+-     * one, it calls the function it is given with the latest value of both. That function is
+-     * `::SettingsUiState`, a reference to SettingsUiState's constructor, so each call builds a
+-     * new snapshot holding the two choices side by side, and the screen has only one StateFlow
+-     * to read instead of one per setting.
++     * The repository gives the three values as three separate Flows. `combine` joins them into
++     * one: once each Flow has given its first value, and again every time any of them gives a
++     * new one, it calls the block it is given with the latest value of all three. The block
++     * builds a new SettingsUiState from them, so each snapshot holds the three side by side, and
++     * the screen has only one StateFlow to read instead of one per setting.
+      *
+      * A StateFlow is a Flow that always holds one current value. stateIn turns the combined Flow
+      * into one: it collects the Flow in viewModelScope (a scope cancelled when this ViewModel is
+      * cleared), starts at once (Eagerly), and shows System with this phone's default colour until
+-     * the file is read.
++     * the file is read; the custom colour starts at SettingsUiState's own default, Kanso blue's
++     * seed, which is also what the file gives when no colour was ever picked.
+      */
+     val state: StateFlow<SettingsUiState> = combine(
+         repository.themeMode,
+         repository.themeColour,
+-        ::SettingsUiState,
+-    ).stateIn(
++        repository.customSeedArgb,
++    ) { themeMode, themeColour, customSeedArgb ->
++        SettingsUiState(
++            themeMode = themeMode,
++            themeColour = themeColour,
++            customSeedArgb = customSeedArgb,
++        )
++    }.stateIn(
+         scope = viewModelScope,
+         started = SharingStarted.Eagerly,
+         initialValue = SettingsUiState(ThemeMode.System, repository.defaultThemeColour),
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+new file mode 100644
+index 0000000..c78d88a
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+@@ -0,0 +1,710 @@
++package com.phongkaster.kanso.a11y
++
++import android.app.Application
++import android.os.Looper
++import androidx.activity.ComponentActivity
++import androidx.compose.foundation.Image
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.Icon
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.CompositionLocalProvider
++import androidx.compose.runtime.remember
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.ImageBitmap
++import androidx.compose.ui.graphics.asImageBitmap
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.LocalViewConfiguration
++import androidx.compose.ui.platform.ViewConfiguration
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.SemanticsNode
++import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.unit.DpSize
++import androidx.compose.ui.unit.dp
++import androidx.test.core.app.ApplicationProvider
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import coil.Coil
++import coil.ImageLoader
++import com.phongkaster.kanso.R
++import com.phongkaster.kanso.data.media.Album
++import com.phongkaster.kanso.data.media.Photo
++import com.phongkaster.kanso.data.settings.ThemeColour
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.navigation.Tool
++import com.phongkaster.kanso.screenshots.FAKE_SCHEME
++import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
++import com.phongkaster.kanso.tool.ToolFixtures
++import com.phongkaster.kanso.ui.camera.CameraContent
++import com.phongkaster.kanso.ui.camera.CameraFrame
++import com.phongkaster.kanso.ui.camera.CameraState
++import com.phongkaster.kanso.ui.camera.CameraStatus
++import com.phongkaster.kanso.ui.camera.CameraUiState
++import com.phongkaster.kanso.ui.camera.FlashMode
++import com.phongkaster.kanso.ui.gallery.GalleryContent
++import com.phongkaster.kanso.ui.gallery.GalleryUiState
++import com.phongkaster.kanso.ui.home.HomeContent
++import com.phongkaster.kanso.ui.home.HomeUiState
++import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
++import com.phongkaster.kanso.ui.permission.PermissionAccess
++import com.phongkaster.kanso.ui.saved.SavedContent
++import com.phongkaster.kanso.ui.saved.SavedPhoto
++import com.phongkaster.kanso.ui.saved.SavedUiState
++import com.phongkaster.kanso.ui.settings.SettingsContent
++import com.phongkaster.kanso.ui.settings.SettingsUiState
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import com.phongkaster.kanso.ui.tool.ToolContent
++import com.phongkaster.kanso.ui.tool.ToolUiState
++import java.io.File
++import kotlin.math.abs
++import kotlinx.coroutines.Dispatchers
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.koin.core.context.stopKoin
++import org.robolectric.Shadows.shadowOf
++import org.robolectric.annotation.Config
++import org.robolectric.annotation.GraphicsMode
++
++/**
++ * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
++ * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
++ *
++ * How a state is checked. Each test draws one state in its own window: the screen's stateless
++ * part (the `...Content` composable, or the nearest public or internal part where that is
++ * private) inside KansoTheme in light mode, fed a UiState built here from sample values. No
++ * Koin, no ViewModel, no permission dialog and no camera is involved. Then the test reads the
++ * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
++ * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
++ * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
++ * nothing) or when any control fails; the failure names the state and, for each failing
++ * control, its test tag, role, text, description and measured size.
++ *
++ * The states: Home; the gallery full, partially shared, refused, empty and loading; the editor
++ * with each of the five tools selected, with the photo unreadable and while saving; Saved; the
++ * camera live, after a shot, refused and unavailable; Settings with Custom selected (the
++ * engine's colour picker is then on screen, and [TouchTargetCheck] leaves out what is inside
++ * it, DoD 18's named exception).
++ *
++ * Where a stand-in replaces something the computer cannot provide:
++ * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
++ *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
++ *   description) take their places. Neither is a control, so the check sees the same controls;
++ * - the camera's refused panel is private (`CameraRefusedPanel`), so its two public parts are
++ *   drawn instead: `CameraFrame` around `AccessRefusedPanel`, with the camera's own wording;
++ * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
++ *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
++ *   spoken name the app gives it.
++ *
++ * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
++ * anything is drawn) and moved on by hand: the loading states show Material's loading
++ * indicator, which never stops moving, and with the clock running by itself every wait for the
++ * screen to settle would wait for it forever. Nothing is pressed.
++ *
++ * Two more tests check the check itself on a sample 40 dp icon button with no description (the
++ * DoD's "its own control"): it must be reported.
++ */
++@RunWith(AndroidJUnit4::class)
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++@Config(sdk = [35], qualifiers = WALK_PHONE)
++class AccessibilityWalkTest {
++
++    /** Starts an empty activity to host each state. */
++    @get:Rule
++    val compose = createAndroidComposeRule<ComponentActivity>()
++
++    /** The application under test. */
++    private val app: Application
++        get() = ApplicationProvider.getApplicationContext()
++
++    /** Whether this test gave Coil its own image loader, which [tearDown] must then replace. */
++    private var coilReplaced = false
++
++    /**
++     * Gives Coil back a plain image loader if a test replaced it, and stops Koin: both are kept
++     * in JVM-wide singletons that outlive the test (KansoApplication starts Koin for every test).
++     */
++    @After
++    fun tearDown() {
++        if (coilReplaced) Coil.setImageLoader(ImageLoader.Builder(app).build())
++        stopKoin()
++    }
++
++    // --- Home ------------------------------------------------------------------------------
++
++    /** Home: "Open a photo", the Camera shortcut, the five tool cards and Settings. */
++    @Test
++    fun home() {
++        walk("home") {
++            HomeContent(
++                state = HOME_STATE,
++                onOpenPhoto = {},
++                onCameraClick = {},
++                onToolClick = {},
++                onSettingsClick = {},
++            )
++        }
++    }
++
++    // --- Gallery ---------------------------------------------------------------------------
++
++    /** The gallery with every photo shared: back, camera, the album chips and the photo cells. */
++    @Test
++    fun gallery_full() {
++        useSolidColourThumbnails()
++        walk(
++            "gallery full",
++            galleryScreen(
++                state = GalleryUiState(tool = Tool.EDIT, albums = ALBUMS, photos = photos(), loading = false),
++                access = PermissionAccess.Full,
++            ),
++        )
++    }
++
++    /**
++     * The gallery after "Select photos" (Android 14 and later): the notice with its "share more"
++     * button above the one album and the few photos that were shared.
++     */
++    @Test
++    fun gallery_partially_shared() {
++        useSolidColourThumbnails()
++        val album = ALBUMS.first()
++        walk(
++            "gallery partially shared",
++            galleryScreen(
++                state = GalleryUiState(
++                    tool = Tool.EDIT,
++                    albums = listOf(album),
++                    photos = photos().filter { it.albumId == album.id },
++                    loading = false,
++                ),
++                access = PermissionAccess.Partial,
++            ),
++        )
++    }
++
++    /** The gallery after photo access was refused: back, camera and the button to the settings. */
++    @Test
++    fun gallery_refused() {
++        walk(
++            "gallery refused",
++            galleryScreen(
++                state = GalleryUiState(tool = Tool.EDIT, loading = false),
++                access = PermissionAccess.None,
++            ),
++        )
++    }
++
++    /** The gallery with access but no photo on the phone: back, camera and the empty message. */
++    @Test
++    fun gallery_empty() {
++        walk(
++            "gallery empty",
++            galleryScreen(
++                state = GalleryUiState(tool = Tool.EDIT, loading = false),
++                access = PermissionAccess.Full,
++            ),
++        )
++    }
++
++    /** The gallery while the photos are read: back, camera and the loading indicator. */
++    @Test
++    fun gallery_loading() {
++        walk(
++            "gallery loading",
++            galleryScreen(
++                state = GalleryUiState(tool = Tool.EDIT, loading = true),
++                access = PermissionAccess.Full,
++            ),
++        )
++    }
++
++    // --- Editor ----------------------------------------------------------------------------
++
++    /**
++     * Each of the five editor tests below covers one tool; this one fails if a tool is ever added
++     * to [Tool] without a state of its own here.
++     */
++    @Test
++    fun every_tool_has_its_own_editor_state() {
++        assertEquals(
++            "Each tool needs an editor test of its own in this class",
++            Tool.entries.toSet(),
++            EDITOR_TOOLS_WALKED.toSet(),
++        )
++    }
++
++    /** The editor on Edit with a photo: back, Save and the five toolbar toggles. */
++    @Test
++    fun editor_with_edit_selected() {
++        walkEditorWith(Tool.EDIT)
++    }
++
++    /** The editor on Remove background with a photo. */
++    @Test
++    fun editor_with_remove_background_selected() {
++        walkEditorWith(Tool.REMOVE_BACKGROUND)
++    }
++
++    /** The editor on Enhance with a photo. */
++    @Test
++    fun editor_with_enhance_selected() {
++        walkEditorWith(Tool.ENHANCE)
++    }
++
++    /** The editor on Retouch with a photo. */
++    @Test
++    fun editor_with_retouch_selected() {
++        walkEditorWith(Tool.RETOUCH)
++    }
++
++    /** The editor on Artistic with a photo. */
++    @Test
++    fun editor_with_artistic_selected() {
++        walkEditorWith(Tool.ARTISTIC)
++    }
++
++    /** The editor when the photo cannot be opened: Save is switched off but still named. */
++    @Test
++    fun editor_with_the_photo_unreadable() {
++        walk(
++            "editor photo unreadable",
++            editorScreen(
++                ToolUiState(
++                    tool = Tool.EDIT,
++                    photoUri = PHOTO_URI,
++                    photo = ToolUiState.PhotoState.Unreadable,
++                    save = ToolUiState.SaveState.Idle,
++                ),
++            ),
++        )
++    }
++
++    /**
++     * The editor while a save runs: Save shows its small loading indicator and "Saving...", and
++     * the toolbar's toggles are switched off but still named.
++     */
++    @Test
++    fun editor_while_saving() {
++        walk(
++            "editor saving",
++            editorScreen(
++                ToolUiState(
++                    tool = Tool.EDIT,
++                    photoUri = PHOTO_URI,
++                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
++                    save = ToolUiState.SaveState.Saving,
++                ),
++            ),
++        )
++    }
++
++    // --- Saved -----------------------------------------------------------------------------
++
++    /** Saved with its photo: Share, Edit another and Home. */
++    @Test
++    fun saved() {
++        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
++        walk("saved") {
++            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onHome = {})
++        }
++    }
++
++    // --- Camera ----------------------------------------------------------------------------
++
++    /** The camera before a shot: back, the flash button, the shutter and the lens switch. */
++    @Test
++    fun camera_live() {
++        walk("camera live", cameraScreen(CameraUiState(camera = READY_CAMERA), shot = null))
++    }
++
++    /** The camera after a shot: back, Retake and Keep, around the photo just taken. */
++    @Test
++    fun camera_after_a_shot() {
++        val state = CameraUiState(camera = READY_CAMERA, shot = File(app.filesDir, "shots/shot.jpg"))
++        walk("camera after a shot", cameraScreen(state, shot = ToolFixtures.gradient(600, 400).asImageBitmap()))
++    }
++
++    /**
++     * The camera after camera access was refused: back and the button to the settings. The
++     * screen's own refused panel is private, so its public parts are drawn with its wording.
++     */
++    @Test
++    fun camera_refused() {
++        walk("camera refused") {
++            CameraFrame(onBack = {}) {
++                AccessRefusedPanel(
++                    title = stringResource(R.string.camera_refused_title),
++                    message = stringResource(R.string.camera_refused_message),
++                    buttonLabel = stringResource(R.string.camera_open_settings),
++                    onOpenSettings = {},
++                )
++            }
++        }
++    }
++
++    /** The camera when it cannot be opened: back and the switched-off shutter, still named. */
++    @Test
++    fun camera_unavailable() {
++        val unavailable = CameraState(
++            status = CameraStatus.Unavailable,
++            canSwitchLens = false,
++            flashMode = FlashMode.Off,
++            hasFlash = false,
++        )
++        walk("camera unavailable", cameraScreen(CameraUiState(camera = unavailable), shot = null))
++    }
++
++    // --- Settings --------------------------------------------------------------------------
++
++    /**
++     * Settings with Custom colour selected, on a phone with wallpaper colours: back, the three
++     * theme mode rows and the three colour rows. The colour picker below them is the engine's
++     * and is left out by [TouchTargetCheck].
++     */
++    @Test
++    fun settings_with_custom_selected() {
++        walk("settings custom selected") {
++            SettingsContent(
++                state = SettingsUiState(
++                    themeMode = ThemeMode.System,
++                    themeColour = ThemeColour.Custom(seedArgb = CUSTOM_SEED_ARGB),
++                ),
++                wallpaperColour = WALLPAPER_COLOUR,
++                onBack = {},
++                onThemeModeSelected = {},
++                onKansoBlueChosen = {},
++                onWallpaperChosen = {},
++                onCustomChosen = {},
++                onCustomColourChosen = {},
++            )
++        }
++    }
++
++    // --- The check's own control -----------------------------------------------------------
++
++    /**
++     * The check fails a sample 40 dp icon button with no content description, drawn the way a
++     * screen would draw it: it is reported as a control with no spoken name.
++     *
++     * Its size is not asserted here. Compose widens the touch area of every small tappable node
++     * to the phone's 48 dp minimum by itself and reports that widened area as the node's touch
++     * bounds, which DoD 18 counts; the next test shows the size half of the check at work.
++     */
++    @Test
++    fun the_check_reports_a_40_dp_icon_button_without_a_name() {
++        showSampleIconButton(widenTouchArea = true)
++
++        val violations = sampleViolations()
++        assertEquals("The check must report the sample icon button once, got: $violations", 1, violations.size)
++        assertTrue(
++            "The sample icon button must be reported as having no name, got: $violations",
++            violations.single().contains(TouchTargetCheck.NO_NAME),
++        )
++    }
++
++    /**
++     * The check fails the same 40 dp icon button with no description when its touch area really
++     * is 40 dp: it is reported both as having no spoken name and as smaller than 48 dp.
++     *
++     * To get a touch area of 40 dp, the sample is drawn under a view configuration whose minimum
++     * touch target is zero, so Compose does not widen it (see the previous test). That is the
++     * only change: the button, its icon and its size are the same.
++     */
++    @Test
++    fun the_check_reports_a_40_dp_icon_button_with_a_40_dp_touch_area_as_unnamed_and_too_small() {
++        showSampleIconButton(widenTouchArea = false)
++
++        val violations = sampleViolations()
++        assertEquals("The check must report the sample icon button once, got: $violations", 1, violations.size)
++        val report = violations.single()
++        assertTrue("The sample must be reported as having no name, got: $report", report.contains(TouchTargetCheck.NO_NAME))
++        assertTrue("The sample must be reported as too small, got: $report", report.contains(TouchTargetCheck.TOO_SMALL))
++    }
++
++    // --- Helpers ---------------------------------------------------------------------------
++
++    /**
++     * Draws [content] as the state called [state] (see [show]) and checks every control in it
++     * (see [assertControlsPass]).
++     */
++    private fun walk(state: String, content: @Composable () -> Unit) {
++        show(content)
++        assertControlsPass(state)
++    }
++
++    /**
++     * Draws [content] inside KansoTheme in light mode with the test clock paused, then moves the
++     * clock on by [SETTLE_MS] and runs the main thread's queue, so the state is laid out and
++     * every finite animation has ended. The pause comes first, before anything is drawn, so a
++     * loading indicator never gets to run the clock by itself (see the class comment).
++     */
++    private fun show(content: @Composable () -> Unit) {
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            KansoTheme(themeMode = ThemeMode.Light) {
++                content()
++            }
++        }
++        compose.mainClock.advanceTimeBy(SETTLE_MS)
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /**
++     * Reads the merged semantics tree of the state on screen, called [state] in the messages,
++     * prints how many controls were checked, and fails if there were none or if any failed.
++     */
++    private fun assertControlsPass(state: String) {
++        val nodes = mergedControls()
++        val checked = TouchTargetCheck.controlsToCheck(nodes)
++        println("a11y $state: ${checked.size} nodes checked")
++        assertTrue(
++            "a11y $state: no control was checked. The merged tree has ${nodes.size} node(s) " +
++                "that can be tapped, toggled or selected, but none is both placed on screen " +
++                "and outside the colour picker",
++            checked.isNotEmpty(),
++        )
++        val violations = TouchTargetCheck.violations(nodes, compose.density)
++        assertTrue(
++            "a11y $state: ${violations.size} of ${checked.size} controls fail DoD 18 " +
++                "(a spoken name, at least ${TouchTargetCheck.MIN_SIZE} each way):\n" +
++                violations.joinToString("\n"),
++            violations.isEmpty(),
++        )
++    }
++
++    /**
++     * Returns every node of the merged semantics tree (the one TalkBack reads, where a button and
++     * what is inside it are one node) that can be tapped, toggled or selected.
++     */
++    private fun mergedControls(): List<SemanticsNode> =
++        compose.onAllNodes(IS_CONTROL, useUnmergedTree = false).fetchSemanticsNodes()
++
++    /** Checks the editor on [tool] with a photo shown and nothing said about saving. */
++    private fun walkEditorWith(tool: Tool) {
++        walk(
++            "editor ${tool.name}",
++            editorScreen(
++                ToolUiState(
++                    tool = tool,
++                    photoUri = PHOTO_URI,
++                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
++                    save = ToolUiState.SaveState.Idle,
++                ),
++            ),
++        )
++    }
++
++    /**
++     * Returns the gallery's stateless part for [state] with the permission answer [access]
++     * (the question always answered), every tap doing nothing, and the real thumbnails.
++     */
++    private fun galleryScreen(state: GalleryUiState, access: PermissionAccess): @Composable () -> Unit = {
++        GalleryContent(
++            state = state,
++            access = access,
++            answered = true,
++            onBack = {},
++            onOpenCamera = {},
++            onSelectAlbum = {},
++            onPhotoClick = {},
++            onShareMore = {},
++            onOpenSettings = {},
++        )
++    }
++
++    /** Returns the editor's stateless part for [state], every tap doing nothing. */
++    private fun editorScreen(state: ToolUiState): @Composable () -> Unit = {
++        ToolContent(state = state, onBack = {}, onSave = {}, onSelectTool = {})
++    }
++
++    /**
++     * Returns the camera's top bar around its stateless content for [state]. The live picture is
++     * a plain box; when [shot] is given, it is shown as the photo just taken, with the real shot
++     * view's description, and the bar offers Keep and Retake.
++     */
++    private fun cameraScreen(state: CameraUiState, shot: ImageBitmap?): @Composable () -> Unit = {
++        val description = stringResource(R.string.camera_shot_description)
++        // The declared type tells Kotlin the slot is a composable taking the picture's modifier,
++        // as CameraScreen's own code does; null means "show the live picture".
++        val shotPicture: (@Composable (Modifier) -> Unit)? = if (shot == null) {
++            null
++        } else {
++            { pictureModifier ->
++                Image(
++                    bitmap = shot,
++                    contentDescription = description,
++                    contentScale = ContentScale.Fit,
++                    modifier = pictureModifier,
++                )
++            }
++        }
++        CameraFrame(onBack = {}) {
++            CameraContent(
++                state = state,
++                onShutter = {},
++                onKeep = {},
++                onRetake = {},
++                onFlash = {},
++                onSwitchLens = {},
++                onZoom = {},
++                livePicture = { pictureModifier -> Box(pictureModifier) },
++                shotPicture = shotPicture,
++                modifier = Modifier.fillMaxSize(),
++            )
++        }
++    }
++
++    /**
++     * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
++     * runs every step on the calling thread, so the gallery's thumbnails load without files.
++     */
++    private fun useSolidColourThumbnails() {
++        Coil.setImageLoader(
++            ImageLoader.Builder(app)
++                .components { add(SolidColourFetcherFactory()) }
++                .dispatcher(Dispatchers.Unconfined)
++                .build(),
++        )
++        coilReplaced = true
++    }
++
++    /**
++     * Draws the sample icon button: a 40 dp tappable box with a gear icon and no content
++     * description, in the middle of the screen. With [widenTouchArea] false it is drawn under a
++     * view configuration whose minimum touch target is zero, so Compose leaves its touch area at
++     * 40 dp; otherwise under the phone's own configuration.
++     *
++     * The box sits inside a full-screen box, which hands it loose constraints: KansoTheme passes
++     * its own full-screen size down as a minimum, which would otherwise stretch the sample.
++     */
++    private fun showSampleIconButton(widenTouchArea: Boolean) {
++        show {
++            val system = LocalViewConfiguration.current
++            // Remembered, so the same configuration object is handed down on every frame.
++            val configuration: ViewConfiguration = remember(system, widenTouchArea) {
++                if (widenTouchArea) {
++                    system
++                } else {
++                    object : ViewConfiguration by system {
++                        override val minimumTouchTargetSize: DpSize = DpSize.Zero
++                    }
++                }
++            }
++            CompositionLocalProvider(LocalViewConfiguration provides configuration) {
++                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
++                    Box(
++                        modifier = Modifier
++                            .size(SAMPLE_SIZE)
++                            .testTag(SAMPLE_TAG)
++                            .clickable(role = Role.Button, onClick = {}),
++                        contentAlignment = Alignment.Center,
++                    ) {
++                        Icon(painter = painterResource(R.drawable.ic_settings), contentDescription = null)
++                    }
++                }
++            }
++        }
++    }
++
++    /**
++     * Checks that the sample icon button is laid out at exactly [SAMPLE_SIZE] and is the one
++     * control [TouchTargetCheck] checks, prints the count as the walk does, and returns the
++     * check's report for it.
++     */
++    private fun sampleViolations(): List<String> {
++        val sample = compose.onNodeWithTag(SAMPLE_TAG).fetchSemanticsNode()
++        val samplePx = with(compose.density) { SAMPLE_SIZE.toPx() }
++        assertTrue(
++            "The sample must be laid out at $SAMPLE_SIZE ($samplePx px), was ${sample.size}",
++            abs(sample.size.width - samplePx) <= 0.5f && abs(sample.size.height - samplePx) <= 0.5f,
++        )
++        val nodes = mergedControls()
++        val checked = TouchTargetCheck.controlsToCheck(nodes)
++        println("a11y sample 40 dp icon button: ${checked.size} nodes checked")
++        assertEquals("The sample must be the one control checked", listOf(sample.id), checked.map { it.id })
++        return TouchTargetCheck.violations(nodes, compose.density)
++    }
++
++    /** Values the tests share. */
++    private companion object {
++        /**
++         * How far the paused clock is moved on after a state is drawn, in milliseconds: long
++         * enough for every finite animation (a colour fade, the Saved mark) to end.
++         */
++        const val SETTLE_MS = 1_000L
++
++        /** The made-up Uri the editor and Saved states say their photo came from. */
++        const val PHOTO_URI = "content://media/external/images/media/42"
++
++        /** The test tag of the sample icon button the check is tried on. */
++        const val SAMPLE_TAG = "a11y-sample-icon-button"
++
++        /** The size of the sample icon button: 8 dp under the minimum. */
++        val SAMPLE_SIZE = 40.dp
++
++        /** A custom seed colour for the Settings state, a deep green, as an ARGB number. */
++        val CUSTOM_SEED_ARGB = 0xFF2E7D32.toInt()
++
++        /** A wallpaper colour for the Settings state, so its wallpaper row is drawn too. */
++        val WALLPAPER_COLOUR = Color(0xFF8B5000)
++
++        /** Matches a node that can be tapped, toggled or selected (see [TouchTargetCheck.isControl]). */
++        val IS_CONTROL = SemanticsMatcher("can be tapped, toggled or selected") { TouchTargetCheck.isControl(it) }
++
++        /** Home's two groups of tools, as `HomeViewModel` builds them. */
++        val HOME_STATE = HomeUiState(
++            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
++            editTools = listOf(Tool.EDIT),
++        )
++
++        /** The tools the five editor tests walk, one each; see `every_tool_has_its_own_editor_state`. */
++        val EDITOR_TOOLS_WALKED = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
++
++        /** A camera that is open and ready, with its flash on auto and a second lens. */
++        val READY_CAMERA = CameraState(
++            status = CameraStatus.Ready,
++            canSwitchLens = true,
++            flashMode = FlashMode.Auto,
++            hasFlash = true,
++        )
++
++        /** The three albums of the sample photo library. */
++        val ALBUMS = listOf(Album(1L, "Camera"), Album(2L, "Screenshots"), Album(3L, "Travel"))
++
++        /**
++         * Twelve sample photos, newest first, spread over [ALBUMS], each with its own colour in a
++         * `fake://color/AARRGGBB` address that only [SolidColourFetcherFactory] can open.
++         */
++        fun photos(): List<Photo> = (0 until 12).map { i ->
++            val red = (i * 37 + 60) % 256
++            val green = (i * 91 + 40) % 256
++            val blue = (i * 53 + 120) % 256
++            val argb = (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
++            Photo(
++                id = (i + 1).toLong(),
++                uri = "$FAKE_SCHEME://color/${"%08X".format(argb)}",
++                name = "photo_${i + 1}.jpg",
++                albumId = ALBUMS[i % ALBUMS.size].id,
++                modifiedSeconds = 1_700_000_000L - i * 3_600L,
++            )
++        }
++    }
++}
++
++/**
++ * The Robolectric screen every state is drawn on, the same as the screenshot tests': 411 dp wide,
++ * 891 dp tall, at xxhdpi, the size of a typical modern phone.
++ */
++private const val WALK_PHONE = "w411dp-h891dp-xxhdpi"
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt b/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt
+new file mode 100644
+index 0000000..146199b
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt
+@@ -0,0 +1,167 @@
++package com.phongkaster.kanso.a11y
++
++import androidx.compose.ui.layout.LayoutInfo
++import androidx.compose.ui.semantics.SemanticsActions
++import androidx.compose.ui.semantics.SemanticsNode
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.semantics.getOrNull
++import androidx.compose.ui.unit.Density
++import androidx.compose.ui.unit.Dp
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
++import java.util.Locale
++
++/**
++ * The one accessibility check every screen state is put through (DoD 18): a control that does
++ * something must have a spoken name and be at least [MIN_SIZE] wide and tall.
++ *
++ * What counts as a control. The check reads semantics nodes, the description of the screen that
++ * screen readers such as TalkBack and Compose tests read instead of pixels. A node is a control
++ * when it can be tapped (it has the `OnClick` action), when it is a switch or a toggle (it has a
++ * `ToggleableState`) or when it is one choice of a set (it has a `Selected` state, on or off).
++ * The nodes should come from the *merged* tree, the one TalkBack reads: there a button and the
++ * text and icon inside it are one node, so the button's name is the text inside it.
++ *
++ * The spoken name is the node's text or its content description, whichever is not blank. The
++ * size is the largest of three measures, in each direction:
++ * - `size`, the node's own laid-out size, never cut by the screen's edge, so a row scrolled half
++ *   out of view still counts at its real size;
++ * - `boundsInRoot`, where the node sits on screen, cut to what is visible;
++ * - `touchBoundsInRoot`, the area a finger can hit. Compose widens the touch area of a small
++ *   tappable node to the phone's minimum touch target (48 dp) by itself, and reports the widened
++ *   area here, so a Material icon button drawn at 40 dp still offers a 48 dp target. This is what
++ *   DoD 18 means by "max(boundsInRoot, touchBoundsInRoot)".
++ *
++ * Two kinds of node are left out, each for a stated reason:
++ * - nodes inside the node tagged [CUSTOM_COLOUR_PICKER_TAG]: the engine's colour picker
++ *   (`core/colorpicker`, whose source Kanso may not edit) sets no semantics of its own and draws
++ *   controls under 48 dp, the one named exception of DoD 18;
++ * - nodes that are not placed on the screen at all (a layout measured them but never put them
++ *   anywhere, such as a button group's "more" button while every button fits). Nobody can see
++ *   or reach such a node, and TalkBack skips it too.
++ *
++ * The check only reports; the test that calls it decides what a report means.
++ */
++object TouchTargetCheck {
++
++    /** The smallest width and height a control may have: Android's recommended touch target. */
++    val MIN_SIZE: Dp = 48.dp
++
++    /** The words a report uses when a control has nothing a screen reader could say for it. */
++    const val NO_NAME = "has no spoken name"
++
++    /** The words a report uses when a control is narrower or shorter than the minimum. */
++    const val TOO_SMALL = "is smaller than"
++
++    /**
++     * Half a pixel of slack when comparing sizes: a size in dp becomes a whole number of pixels,
++     * so a control of exactly 48 dp may come out up to half a pixel short of 48 dp in pixels.
++     */
++    private const val ROUNDING_SLACK_PX = 0.5f
++
++    /** Tells whether [node] is a control: it can be tapped, toggled or selected. */
++    fun isControl(node: SemanticsNode): Boolean {
++        val config = node.config
++        return SemanticsActions.OnClick in config ||
++            SemanticsProperties.ToggleableState in config ||
++            SemanticsProperties.Selected in config
++    }
++
++    /**
++     * Returns the nodes of [nodes] the check applies to: the controls that are placed on the
++     * screen and are not inside the engine's colour picker (see the KDoc of this object).
++     */
++    fun controlsToCheck(nodes: List<SemanticsNode>): List<SemanticsNode> =
++        nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) }
++
++    /**
++     * Checks every control of [nodes] (see [controlsToCheck]) and returns one line per control
++     * that fails, naming its test tag, role, text, description and measured size, and what is
++     * wrong: [NO_NAME], or [TOO_SMALL] [minSize]. [density] turns dp into pixels. An empty list
++     * means every control passed.
++     */
++    fun violations(nodes: List<SemanticsNode>, density: Density, minSize: Dp = MIN_SIZE): List<String> {
++        val minPx = with(density) { minSize.toPx() }
++        return controlsToCheck(nodes).mapNotNull { node ->
++            val problems = mutableListOf<String>()
++            if (spokenName(node) == null) {
++                problems += "$NO_NAME (no text, no content description)"
++            }
++            val (widthPx, heightPx) = measuredSizePx(node)
++            if (widthPx + ROUNDING_SLACK_PX < minPx || heightPx + ROUNDING_SLACK_PX < minPx) {
++                problems += "$TOO_SMALL $minSize in at least one direction"
++            }
++            if (problems.isEmpty()) null else "${describe(node, density)} ${problems.joinToString("; ")}"
++        }
++    }
++
++    /**
++     * Returns what a screen reader would say as [node]'s name: its first non-blank content
++     * description, else its first non-blank text, or null when it has neither.
++     */
++    fun spokenName(node: SemanticsNode): String? =
++        (descriptionsOf(node) + textsOf(node)).firstOrNull { it.isNotBlank() }
++
++    /**
++     * Returns [node]'s width and height in pixels as the check measures them: in each direction
++     * the largest of its laid-out size, its bounds on screen and its touch area (see the KDoc of
++     * this object for why all three).
++     */
++    fun measuredSizePx(node: SemanticsNode): Pair<Float, Float> {
++        val bounds = node.boundsInRoot
++        val touch = node.touchBoundsInRoot
++        val width = maxOf(node.size.width.toFloat(), bounds.width, touch.width)
++        val height = maxOf(node.size.height.toFloat(), bounds.height, touch.height)
++        return width to height
++    }
++
++    /**
++     * Describes [node] for a report: its test tag, its role, its texts, its content descriptions
++     * and its measured size in dp, so a failing node can be found in the code.
++     */
++    fun describe(node: SemanticsNode, density: Density): String {
++        val config = node.config
++        val tag = config.getOrNull(SemanticsProperties.TestTag) ?: "no tag"
++        val role = config.getOrNull(SemanticsProperties.Role)?.toString() ?: "no role"
++        val (widthPx, heightPx) = measuredSizePx(node)
++        val width = with(density) { widthPx.toDp().value }
++        val height = with(density) { heightPx.toDp().value }
++        val size = String.format(Locale.ROOT, "%.1f x %.1f dp", width, height)
++        return "control [tag: $tag, role: $role, text: ${textsOf(node)}, " +
++            "description: ${descriptionsOf(node)}, size: $size]"
++    }
++
++    /** Returns the texts [node] carries (a merged button carries the text inside it). */
++    private fun textsOf(node: SemanticsNode): List<String> =
++        node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
++
++    /** Returns the content descriptions [node] carries (a merged icon button carries its icon's). */
++    private fun descriptionsOf(node: SemanticsNode): List<String> =
++        node.config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
++
++    /**
++     * Tells whether [node] is the engine's colour picker or lies inside it: walks up the semantics
++     * tree through each node's parent, looking for the [CUSTOM_COLOUR_PICKER_TAG] test tag.
++     */
++    private fun isInsideColourPicker(node: SemanticsNode): Boolean {
++        var current: SemanticsNode? = node
++        while (current != null) {
++            if (current.config.getOrNull(SemanticsProperties.TestTag) == CUSTOM_COLOUR_PICKER_TAG) return true
++            current = current.parent
++        }
++        return false
++    }
++
++    /**
++     * Tells whether [node]'s layout, and every layout around it up to the screen's root, has
++     * been placed. A layout that was only measured, never placed, is not on the screen.
++     */
++    private fun isPlaced(node: SemanticsNode): Boolean {
++        var info: LayoutInfo? = node.layoutInfo
++        while (info != null) {
++            if (!info.isPlaced) return false
++            info = info.parentInfo
++        }
++        return true
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt b/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt
+new file mode 100644
+index 0000000..083eb30
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt
+@@ -0,0 +1,505 @@
++package com.phongkaster.kanso.navigation
++
++import android.content.Context
++import android.os.Looper
++import android.provider.Settings as SystemSettings
++import androidx.activity.ComponentActivity
++import androidx.compose.animation.core.FiniteAnimationSpec
++import androidx.compose.animation.core.LinearEasing
++import androidx.compose.animation.core.animateFloatAsState
++import androidx.compose.animation.core.tween
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.MotionScheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.State
++import androidx.compose.runtime.mutableFloatStateOf
++import androidx.compose.runtime.mutableStateListOf
++import androidx.compose.runtime.snapshots.SnapshotStateList
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.MotionDurationScale
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.compose.ui.test.onAllNodesWithTag
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.navigation3.runtime.NavKey
++import androidx.navigation3.runtime.entryProvider
++import androidx.navigation3.ui.NavDisplay
++import androidx.test.core.app.ApplicationProvider
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.koin.core.context.stopKoin
++import org.robolectric.Shadows.shadowOf
++import org.robolectric.annotation.Config
++
++/**
++ * Checks Kanso's screen transitions (DoD 14, and the machine part of DoD 13) by hosting
++ * Navigation 3's NavDisplay directly, with the three specs of KansoTransitions.kt, two plain
++ * screens (the [Home] and [Settings] keys, each drawn as a tagged box with its name) and a back
++ * stack the test changes by hand. There is no MainActivity, no Koin and no ViewModel, so the test
++ * depends only on the specs, not on how the app's navigation host is wired.
++ *
++ * The test pauses Compose's clock before anything is shown (`mainClock.autoAdvance = false`), so
++ * time only moves when the test moves it, one frame (16 ms) at a time or in larger steps. That
++ * lets it look at a transition while it runs:
++ * - a push: a frame or two after the key is added, both screens are composed at once (a change
++ *   with no transition would swap them in a single frame), the new screen is still to the right of
++ *   its place and the old one has moved to the left of its own; 2 000 ms later only the new screen
++ *   is left, resting at the left edge;
++ * - a pop: the same in reverse, the leaving screen moving right and the one underneath coming back
++ *   from the left;
++ * - a Back press, sent through the activity's back dispatcher as the system sends it, pops the top
++ *   screen with the pop transition;
++ * - each spec takes its springs from the motion scheme it is given;
++ * - with the phone's "Remove animations" setting (the animator duration scale at 0), a push ends
++ *   at once, if the test's host passes that setting on to Compose; when it does not, the test says
++ *   so and checks that the push still runs as usual.
++ *
++ * The specs' springs settle in under a second, so 2 000 ms is ample. The preview the back gesture
++ * shows while the finger moves (predictive back) is not driven here: Robolectric does not deliver
++ * a gesture's progress to Navigation 3 (assumption A-011), so a person checks it on the phone.
++ */
++@RunWith(AndroidJUnit4::class)
++@Config(sdk = [35])
++class NavTransitionTest {
++
++    /**
++     * Starts an empty activity to host NavDisplay. Unlike the plain compose rule, this one hands
++     * the test that activity, whose back dispatcher the Back test presses.
++     */
++    @get:Rule
++    val compose = createAndroidComposeRule<ComponentActivity>()
++
++    /** The app context, used to change and read the system's animation setting. */
++    private val context: Context
++        get() = ApplicationProvider.getApplicationContext()
++
++    /**
++     * Puts the system's animation scale back to normal, so no later test starts with animations
++     * removed, and stops Koin: the test does not use Koin, but KansoApplication starts it for every
++     * Robolectric test, and its state outlives the test inside the same JVM.
++     */
++    @After
++    fun restoreAnimationsAndStopKoin() {
++        setAnimatorDurationScale(1f)
++        stopKoin()
++    }
++
++    /**
++     * A push animates: shortly after Settings is added above Home both screens are composed, the
++     * arriving Settings screen is still to the right of its place while Home has slid to the left,
++     * and 2 000 ms later only Settings is left, at the left edge.
++     */
++    @Test
++    fun a_push_composes_both_screens_slides_the_new_one_in_from_the_right_and_then_leaves_only_it() {
++        val backStack = mutableStateListOf<NavKey>(Home)
++        show(backStack)
++        assertOnlyScreen(shown = HOME_TAG, gone = SETTINGS_TAG)
++
++        backStack.add(Settings)
++
++        assertPushSlidesInFromTheRight()
++    }
++
++    /**
++     * A pop animates: removing Settings from `[Home, Settings]` (a pop by NavDisplay's rule: the
++     * new back stack is the start of the old one) composes both screens, Settings slides away to
++     * the right while Home comes back from the left, and 2 000 ms later only Home is left.
++     */
++    @Test
++    fun a_pop_composes_both_screens_brings_the_old_one_back_from_the_left_and_then_leaves_only_it() {
++        val backStack = mutableStateListOf<NavKey>(Home, Settings)
++        show(backStack)
++        assertOnlyScreen(shown = SETTINGS_TAG, gone = HOME_TAG)
++
++        backStack.removeLastOrNull()
++
++        assertPopSlidesOutToTheRight()
++    }
++
++    /**
++     * A normal Back press completes the pop: with `[Home, Settings]` on the back stack, Back sent
++     * through the activity's back dispatcher (as the system's Back button or a finished gesture
++     * sends it) reaches NavDisplay, whose onBack removes Settings; the pop transition runs, and
++     * 2 000 ms later only Home is left and the back stack holds Home alone.
++     */
++    @Test
++    fun a_back_press_pops_the_top_screen_with_the_pop_transition() {
++        val backStack = mutableStateListOf<NavKey>(Home, Settings)
++        show(backStack)
++        assertOnlyScreen(shown = SETTINGS_TAG, gone = HOME_TAG)
++
++        compose.activityRule.scenario.onActivity { activity ->
++            activity.onBackPressedDispatcher.onBackPressed()
++        }
++
++        assertPopSlidesOutToTheRight()
++        assertEquals("Back did not leave Home alone on the back stack", listOf<NavKey>(Home), backStack.toList())
++    }
++
++    /**
++     * Each of the three spec functions takes its springs from the motion scheme it is given, and
++     * exactly two of them: the default spatial spring for the slides and the default effects
++     * spring for the fades. A scheme that records what is asked of it stands in for the theme's,
++     * so this needs neither a screen nor a running transition.
++     */
++    @Test
++    fun each_spec_takes_a_spatial_and_an_effects_spring_from_the_scheme_it_is_given() {
++        val asked = mutableListOf<String>()
++        val scheme = recordingScheme(asked)
++
++        kansoPushTransition(scheme)
++        assertEquals("The push asked the motion scheme for other springs", SPRINGS_USED, asked.toSet())
++
++        asked.clear()
++        kansoPopTransition(scheme)
++        assertEquals("The pop asked the motion scheme for other springs", SPRINGS_USED, asked.toSet())
++
++        asked.clear()
++        kansoPredictivePopTransition(scheme)
++        assertEquals(
++            "The back-gesture pop asked the motion scheme for other springs",
++            SPRINGS_USED,
++            asked.toSet(),
++        )
++    }
++
++    /**
++     * The "Remove animations" pass (DoD 13, machine part). The phone's setting is the animator
++     * duration scale, set here to 0 before anything is shown. Compose honours it only if the host
++     * hands it to Compose's coroutines as a `MotionDurationScale`; a Compose test builds its own
++     * host, which may not. So the test first runs a control next to the navigation: a plain
++     * one-second animation of a number, started together with a push. If the control reaches its
++     * end within a few frames, the host carries the setting, and the push must then have finished
++     * as quickly: only the new screen is left. If the control is still on its way, the host does
++     * not carry the setting; the test prints that this check is "not driven by machine" (which
++     * DoD 13 does not count as a failure) and asserts what that implies, that the push is still
++     * running like any other. Either way the outcome is asserted, so a host that starts carrying
++     * the setting changes which branch runs, and what the printed line says.
++     */
++    @Test
++    fun with_animations_removed_a_push_finishes_at_once_if_the_host_carries_the_setting() {
++        setAnimatorDurationScale(0f)
++        assertEquals(
++            "The test could not set the system's animation scale to 0",
++            0f,
++            SystemSettings.Global.getFloat(context.contentResolver, SystemSettings.Global.ANIMATOR_DURATION_SCALE, 1f),
++            0f,
++        )
++
++        val backStack = mutableStateListOf<NavKey>(Home)
++        val controlTarget = mutableFloatStateOf(0f)
++        lateinit var control: State<Float>
++        var effectRan = false
++        var effectScale: Float? = null
++
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            KansoTheme(themeMode = ThemeMode.Light) {
++                // The control: a one-second animation of a plain number, in the same composition
++                // and on the same clock as NavDisplay.
++                control = animateFloatAsState(
++                    targetValue = controlTarget.floatValue,
++                    animationSpec = tween(durationMillis = CONTROL_MS, easing = LinearEasing),
++                    label = "control",
++                )
++                // Reads the scale Compose's animations see: they run in coroutines like this one,
++                // and read it from their context (none at all means a scale of 1).
++                LaunchedEffect(Unit) {
++                    effectScale = coroutineContext[MotionDurationScale]?.scaleFactor
++                    effectRan = true
++                }
++                TwoScreenNavDisplay(backStack)
++            }
++        }
++        advance(SETTLE_MS)
++        assertTrue("The effect that reads the animation scale never ran", effectRan)
++
++        // Start the control and the push together.
++        controlTarget.floatValue = 1f
++        backStack.add(Settings)
++        stepUntil("the pushed screen to be composed") { exists(SETTINGS_TAG) }
++        repeat(REMOVED_ANIMATION_FRAMES) { nextFrame() }
++
++        val controlFinishedAtOnce = control.value == 1f
++        val oldScreenStillComposed = exists(HOME_TAG)
++        assertEquals(
++            "The scale in Compose's coroutines ($effectScale) does not match what the control did",
++            effectScale == 0f,
++            controlFinishedAtOnce,
++        )
++        if (controlFinishedAtOnce) {
++            println(
++                "NavTransitionTest: the host carries ANIMATOR_DURATION_SCALE into Compose " +
++                    "(MotionDurationScale $effectScale): the push was checked with animations removed",
++            )
++            assertFalse(
++                "With animations removed the push should have finished at once, yet the old " +
++                    "screen is still composed $REMOVED_ANIMATION_FRAMES frames after the new one appeared",
++                oldScreenStillComposed,
++            )
++        } else {
++            println(
++                "NavTransitionTest: not driven by machine. This Robolectric host does not carry " +
++                    "ANIMATOR_DURATION_SCALE into Compose (MotionDurationScale ${effectScale ?: "absent"}, " +
++                    "the control animation was at ${control.value} after the push), so the " +
++                    "Remove-animations pass of DoD 13 is left to the person on the phone",
++            )
++            assertTrue(
++                "The host does not carry the animation setting, so the push should still be " +
++                    "running like any other, yet the old screen is already gone",
++                oldScreenStillComposed,
++            )
++        }
++
++        // Whatever the host, both moves end: the control at its target, the push with only the
++        // new screen left.
++        advance(FINISH_MS)
++        assertEquals("The control animation never reached its target", 1f, control.value, 0.001f)
++        assertOnlyScreen(shown = SETTINGS_TAG, gone = HOME_TAG)
++    }
++
++    // --- Helpers -----------------------------------------------------------------------------
++
++    /**
++     * Pauses the clock, shows NavDisplay over [backStack] inside Kanso's theme, and lets
++     * everything that starts with the screen finish, so each test begins from a resting screen.
++     */
++    private fun show(backStack: SnapshotStateList<NavKey>) {
++        // Pause the clock before anything is shown: from here on, time moves only by hand.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            KansoTheme(themeMode = ThemeMode.Light) {
++                TwoScreenNavDisplay(backStack)
++            }
++        }
++        advance(SETTLE_MS)
++    }
++
++    /**
++     * After a key was added above Home: steps the clock until Settings is composed and checks
++     * that Home still is (both screens at once), then, once Settings has started to move, that it
++     * is still to the right of its place and that Home has moved to the left of its own, which is
++     * the push spec at work, not NavDisplay's default fade. Then lets the move end and checks that
++     * only Settings is left, at the left edge.
++     */
++    private fun assertPushSlidesInFromTheRight() {
++        val frames = stepUntil("the pushed screen to be composed") { exists(SETTINGS_TAG) }
++        println("NavTransitionTest: both screens composed $frames frame(s) after the push")
++        compose.onNodeWithTag(HOME_TAG).assertExists()
++        compose.onNodeWithTag(SETTINGS_TAG).assertExists()
++
++        // A tenth of the way in, long before the spring's small overshoot (about 0.2 s in).
++        stepUntil("the pushed screen to start moving") { left(SETTINGS_TAG) < width(SETTINGS_TAG) * 0.9f }
++        assertTrue(
++            "The pushed screen should arrive from the right, but its left edge is at ${left(SETTINGS_TAG)}",
++            left(SETTINGS_TAG) > 0f,
++        )
++        assertTrue(
++            "The covered screen should move left, but its left edge is at ${left(HOME_TAG)}",
++            left(HOME_TAG) < 0f,
++        )
++
++        advance(FINISH_MS)
++        assertOnlyScreen(shown = SETTINGS_TAG, gone = HOME_TAG)
++        assertEquals("The pushed screen did not come to rest at the left edge", 0f, left(SETTINGS_TAG), 0.5f)
++    }
++
++    /**
++     * After Settings was removed from `[Home, Settings]`: steps the clock until Home is composed
++     * again and checks that Settings still is (both screens at once), then, once Settings has
++     * started to move right, that Home is still to the left of its place, which is the pop spec at
++     * work. Then lets the move end and checks that only Home is left, at the left edge.
++     */
++    private fun assertPopSlidesOutToTheRight() {
++        val frames = stepUntil("the screen underneath to be composed") { exists(HOME_TAG) }
++        println("NavTransitionTest: both screens composed $frames frame(s) after the pop")
++        compose.onNodeWithTag(HOME_TAG).assertExists()
++        compose.onNodeWithTag(SETTINGS_TAG).assertExists()
++
++        // A tenth of the way out, long before the spring's small overshoot (about 0.2 s in).
++        stepUntil("the leaving screen to start moving") { left(SETTINGS_TAG) > width(SETTINGS_TAG) * 0.1f }
++        assertTrue(
++            "The screen underneath should come back from the left, but its left edge is at ${left(HOME_TAG)}",
++            left(HOME_TAG) < 0f,
++        )
++
++        advance(FINISH_MS)
++        assertOnlyScreen(shown = HOME_TAG, gone = SETTINGS_TAG)
++        assertEquals("The screen underneath did not come to rest at the left edge", 0f, left(HOME_TAG), 0.5f)
++    }
++
++    /**
++     * Moves the paused clock one frame at a time until [condition] holds, checking it before the
++     * first step too, and returns the number of frames that took. Fails after [MAX_FRAMES] frames
++     * (160 ms), naming [what] it was waiting for.
++     */
++    private fun stepUntil(what: String, condition: () -> Boolean): Int {
++        var frames = 0
++        while (!condition()) {
++            if (frames == MAX_FRAMES) {
++                throw AssertionError("Waited $MAX_FRAMES frames for $what")
++            }
++            nextFrame()
++            frames++
++        }
++        return frames
++    }
++
++    /**
++     * Moves the paused clock forward by one frame and runs whatever the main thread was asked to
++     * do meanwhile (under Robolectric the test runs on the main thread, so its queue only moves
++     * when the test runs it).
++     */
++    private fun nextFrame() {
++        compose.mainClock.advanceTimeByFrame()
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /** Moves the paused clock forward by [millis], frame after frame, and runs the main thread's queue. */
++    private fun advance(millis: Long) {
++        compose.mainClock.advanceTimeBy(millis)
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /** Fails unless the screen tagged [shown] is composed and the one tagged [gone] is not. */
++    private fun assertOnlyScreen(shown: String, gone: String) {
++        compose.onNodeWithTag(shown).assertExists()
++        compose.onNodeWithTag(gone).assertDoesNotExist()
++    }
++
++    /** Tells whether a screen tagged [tag] is composed, wherever it is drawn. */
++    private fun exists(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
++
++    /**
++     * Returns the left edge of the screen tagged [tag], in pixels from the left of the window. A
++     * slide moves where a screen is placed, so this follows the transition as it runs.
++     */
++    private fun left(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot.x
++
++    /** Returns the width of the screen tagged [tag], in pixels: the window's width. */
++    private fun width(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().size.width.toFloat()
++
++    /** Sets the system's animator duration scale, the value the "Remove animations" setting turns to 0. */
++    private fun setAnimatorDurationScale(scale: Float) {
++        SystemSettings.Global.putFloat(context.contentResolver, SystemSettings.Global.ANIMATOR_DURATION_SCALE, scale)
++    }
++
++    /**
++     * Returns a motion scheme that writes the name of every spring asked of it into [asked], and
++     * hands back the expressive scheme's own spring, so the specs built from it work as usual.
++     */
++    private fun recordingScheme(asked: MutableList<String>): MotionScheme {
++        val real = MotionScheme.expressive()
++        return object : MotionScheme {
++            /** Records the request, then returns the expressive default spatial spring. */
++            override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> {
++                asked += "defaultSpatialSpec"
++                return real.defaultSpatialSpec()
++            }
++
++            /** Records the request, then returns the expressive fast spatial spring. */
++            override fun <T> fastSpatialSpec(): FiniteAnimationSpec<T> {
++                asked += "fastSpatialSpec"
++                return real.fastSpatialSpec()
++            }
++
++            /** Records the request, then returns the expressive slow spatial spring. */
++            override fun <T> slowSpatialSpec(): FiniteAnimationSpec<T> {
++                asked += "slowSpatialSpec"
++                return real.slowSpatialSpec()
++            }
++
++            /** Records the request, then returns the expressive default effects spring. */
++            override fun <T> defaultEffectsSpec(): FiniteAnimationSpec<T> {
++                asked += "defaultEffectsSpec"
++                return real.defaultEffectsSpec()
++            }
++
++            /** Records the request, then returns the expressive fast effects spring. */
++            override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> {
++                asked += "fastEffectsSpec"
++                return real.fastEffectsSpec()
++            }
++
++            /** Records the request, then returns the expressive slow effects spring. */
++            override fun <T> slowEffectsSpec(): FiniteAnimationSpec<T> {
++                asked += "slowEffectsSpec"
++                return real.slowEffectsSpec()
++            }
++        }
++    }
++
++    /**
++     * NavDisplay over [backStack] with Kanso's three transition specs, built the way the app
++     * builds them: the theme's motion scheme is read here, while Compose draws, and handed to the
++     * spec functions, whose lambdas NavDisplay calls later. Back removes the top key. Home and
++     * Settings are each drawn as a [PlainScreen].
++     */
++    @Composable
++    private fun TwoScreenNavDisplay(backStack: SnapshotStateList<NavKey>) {
++        val motionScheme = MaterialTheme.motionScheme
++        NavDisplay(
++            backStack = backStack,
++            modifier = Modifier.fillMaxSize(),
++            onBack = { backStack.removeLastOrNull() },
++            transitionSpec = kansoPushTransition(motionScheme),
++            popTransitionSpec = kansoPopTransition(motionScheme),
++            predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
++            entryProvider = entryProvider<NavKey> {
++                entry<Home> { PlainScreen(tag = HOME_TAG, label = "Home") }
++                entry<Settings> { PlainScreen(tag = SETTINGS_TAG, label = "Settings") }
++            },
++        )
++    }
++
++    /** A screen that fills the window, tagged [tag] so the test can find it, showing [label]. */
++    @Composable
++    private fun PlainScreen(tag: String, label: String) {
++        Box(modifier = Modifier.fillMaxSize().testTag(tag)) {
++            Text(text = label)
++        }
++    }
++
++    /** Tags, timings and expectations the tests share. */
++    private companion object {
++        /** Marks the Home screen. */
++        const val HOME_TAG = "nav-test-home"
++
++        /** Marks the Settings screen. */
++        const val SETTINGS_TAG = "nav-test-settings"
++
++        /** The most frames [stepUntil] waits: 160 ms, a fraction of a transition. */
++        const val MAX_FRAMES = 10
++
++        /** How long a freshly shown screen is left to settle before a test changes anything. */
++        const val SETTLE_MS = 1_000L
++
++        /** How long after a change every transition has ended: the springs settle in under a second. */
++        const val FINISH_MS = 2_000L
++
++        /** How long the control animation of the Remove-animations pass takes at normal speed. */
++        const val CONTROL_MS = 1_000
++
++        /**
++         * How many frames after the pushed screen appears the Remove-animations pass looks:
++         * 48 ms, enough for a move with animations removed to end and be cleared away, and far
++         * too short for one at normal speed.
++         */
++        const val REMOVED_ANIMATION_FRAMES = 3
++
++        /** The springs every spec takes from its motion scheme: one to move, one to fade. */
++        val SPRINGS_USED = setOf("defaultSpatialSpec", "defaultEffectsSpec")
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/SettingsRepositoryTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/SettingsRepositoryTest.kt
+index 36eb22e..69fc901 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/SettingsRepositoryTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/SettingsRepositoryTest.kt
+@@ -1,12 +1,15 @@
+ package com.phongkaster.kanso.settings
+ 
++import androidx.compose.ui.graphics.toArgb
+ import androidx.datastore.core.DataStore
+ import androidx.datastore.preferences.core.Preferences
+ import androidx.datastore.preferences.core.edit
+ import androidx.datastore.preferences.core.stringPreferencesKey
+ import com.phongkaster.kanso.data.settings.SettingsRepository
++import com.phongkaster.kanso.data.settings.ThemeColour
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.data.settings.createSettingsDataStore
++import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
+ import java.io.File
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
+@@ -24,7 +27,9 @@ import org.junit.rules.TemporaryFolder
+ /**
+  * Checks the settings repository on the plain JVM against a real DataStore file: the default
+  * theme mode, writing and reading it back, surviving a "restart" (a fresh DataStore over the
+- * same file), and falling back to System for a value it does not recognise.
++ * same file), and falling back to System for a value it does not recognise. It also checks the
++ * last picked custom seed the Custom row's swatch shows: Kanso blue's seed when nothing was ever
++ * picked, and the picked colour still after Kanso blue or the wallpaper is chosen.
+  */
+ class SettingsRepositoryTest {
+ 
+@@ -111,10 +116,45 @@ class SettingsRepositoryTest {
+         assertEquals(ThemeMode.Dark, repository.themeMode.first())
+     }
+ 
++    /** With nothing saved yet, the last custom seed reads as Kanso blue's seed. */
++    @Test
++    fun custom_seed_defaults_to_the_kanso_blue_seed() = runBlocking {
++        val repository = SettingsRepository(openStore(), sdkInt = 35)
++
++        assertEquals(KANSO_BLUE_SEED.toArgb(), repository.customSeedArgb.first())
++    }
++
++    /**
++     * Custom is chosen and its colour set to green, as the picker does; then Kanso blue and the
++     * wallpaper are chosen in turn. Each time the choice changes, but the last custom seed still
++     * reads green, the colour Custom would bring back.
++     */
++    @Test
++    fun custom_seed_is_kept_while_kanso_blue_or_the_wallpaper_is_chosen() = runBlocking {
++        val repository = SettingsRepository(openStore(), sdkInt = 35)
++        repository.chooseCustomThemeColour()
++        repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB))
++        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
++
++        repository.setThemeColour(ThemeColour.KansoBlue)
++        assertEquals(ThemeColour.KansoBlue, repository.themeColour.first())
++        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
++
++        repository.setThemeColour(ThemeColour.Wallpaper)
++        assertEquals(ThemeColour.Wallpaper, repository.themeColour.first())
++        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
++    }
++
+     /** Opens a DataStore on [file] in a new scope that is shut down after the test. */
+     private fun openStore(): DataStore<Preferences> = createSettingsDataStore(file, newScope())
+ 
+     /** Creates a scope for one DataStore and remembers it so it is cancelled after the test. */
+     private fun newScope(): CoroutineScope =
+         CoroutineScope(Job() + Dispatchers.IO).also { scopes += it }
++
++    /** Values the tests use. */
++    private companion object {
++        /** The custom colour the tests pick: green #2E7D32, fully opaque, as ARGB. */
++        val GREEN_ARGB = 0xFF2E7D32.toInt()
++    }
+ }
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/SettingsUiStateTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/SettingsUiStateTest.kt
+index b4aff84..254e29b 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/SettingsUiStateTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/SettingsUiStateTest.kt
+@@ -28,9 +28,10 @@ import org.junit.rules.TemporaryFolder
+ 
+ /**
+  * Checks the one state SettingsViewModel hands the Settings screen (DoD 8): it starts as System
+- * mode with this phone's default theme colour, and then follows what is saved, both the theme
+- * mode set through the ViewModel and a theme colour written to the settings file, every snapshot
+- * holding the two choices together.
++ * mode with this phone's default theme colour (and Kanso blue's seed as the last custom seed),
++ * and then follows what is saved, both the theme mode set through the ViewModel and a theme
++ * colour written to the settings file, every snapshot holding the choices together. The last
++ * custom seed stays in the snapshot after another colour is chosen, so the Custom row can show it.
+  *
+  * It runs on the plain JVM. The repository sits on a real DataStore file in a temporary folder,
+  * created with createSettingsDataStore, whose storage also works on Windows. The ViewModel's own
+@@ -115,7 +116,33 @@ class SettingsUiStateTest {
+ 
+         runBlocking { repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB)) }
+ 
+-        awaitState(viewModel, SettingsUiState(ThemeMode.Dark, ThemeColour.Custom(GREEN_ARGB)))
++        // A saved custom colour is also the last custom seed, which the snapshot carries too.
++        awaitState(
++            viewModel,
++            SettingsUiState(ThemeMode.Dark, ThemeColour.Custom(GREEN_ARGB), customSeedArgb = GREEN_ARGB),
++        )
++    }
++
++    /**
++     * After a custom colour is saved and Kanso blue is chosen through the ViewModel, the state
++     * shows Kanso blue as the choice and still holds the custom colour as the last custom seed,
++     * which the Custom row's swatch shows.
++     */
++    @Test
++    fun state_keeps_the_last_custom_seed_after_kanso_blue_is_chosen() {
++        val viewModel = viewModel()
++        runBlocking { repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB)) }
++        awaitState(
++            viewModel,
++            SettingsUiState(ThemeMode.System, ThemeColour.Custom(GREEN_ARGB), customSeedArgb = GREEN_ARGB),
++        )
++
++        viewModel.onKansoBlueChosen()
++
++        awaitState(
++            viewModel,
++            SettingsUiState(ThemeMode.System, ThemeColour.KansoBlue, customSeedArgb = GREEN_ARGB),
++        )
+     }
+ 
+     /**
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
+index e7bc206..5f955fe 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
+@@ -3,6 +3,7 @@ package com.phongkaster.kanso.settings
+ import android.content.Context
+ import android.graphics.Bitmap
+ import android.graphics.Canvas
++import android.os.Looper
+ import android.view.ViewGroup
+ import androidx.compose.material3.ColorScheme
+ import androidx.compose.material3.dynamicLightColorScheme
+@@ -38,6 +39,7 @@ import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
+ import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
+ import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
+ import com.phongkaster.kanso.ui.theme.seedColorScheme
++import java.time.Duration
+ import kotlin.math.abs
+ import kotlin.math.roundToInt
+ import kotlinx.coroutines.flow.first
+@@ -51,6 +53,7 @@ import org.junit.Test
+ import org.junit.runner.RunWith
+ import org.koin.core.context.stopKoin
+ import org.koin.mp.KoinPlatform
++import org.robolectric.Shadows.shadowOf
+ import org.robolectric.annotation.Config
+ import org.robolectric.annotation.GraphicsMode
+ 
+@@ -66,7 +69,8 @@ import org.robolectric.annotation.GraphicsMode
+  *   dark = false).primary`;
+  * - From wallpaper: the light `primary` the system builds from the wallpaper,
+  *   `dynamicLightColorScheme(context).primary`;
+- * - Custom colour: the last custom seed, which on a fresh install is Kanso blue's seed itself.
++ * - Custom colour: the last custom seed, which on a fresh install is Kanso blue's seed itself,
++ *   and once a colour was picked stays that colour while Kanso blue or the wallpaper is chosen.
+  *
+  * The pixels are read by drawing the activity's content view into a bitmap, as `ScreenPixels.kt`
+  * does (Compose's own `captureToImage` times out under Robolectric here), with Robolectric's real
+@@ -156,6 +160,55 @@ class ThemeSwatchTest {
+         )
+     }
+ 
++    /**
++     * On Android 15 the Custom row's swatch shows the last custom colour picked while another
++     * colour choice is selected, not Kanso blue's seed (DoD 2: "the colour of the last custom
++     * seed"). Custom is tapped and its colour set to green #2E7D32; then Kanso blue and From
++     * wallpaper are tapped in turn, and each time the Custom swatch's middle pixel is still that
++     * green. Tapping Custom again re-themes the app in green, the colour the swatch showed.
++     *
++     * The green is written through the app's settings repository, which is what the colour
++     * picker's save does once a drag settles; the engine's picker itself is not dragged (its
++     * positions cannot be aimed at an exact colour) and its hex field is not typed into (it reads
++     * the digits as a decimal number).
++     */
++    @Test
++    fun the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected() {
++        // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
++        val greenPrimary = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false).primary
++        waitForHome()
++        openSettings()
++
++        // Tapped as a person would: on a fresh install Custom starts from Kanso blue's seed.
++        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().performClick()
++        awaitSavedThemeColour(ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()))
++        // What the picker's save writes once a drag towards green has settled.
++        runBlocking { repository().setThemeColour(ThemeColour.Custom(CUSTOM_GREEN.toArgb())) }
++        awaitSavedThemeColour(ThemeColour.Custom(CUSTOM_GREEN.toArgb()))
++        compose.waitUntil(timeoutMillis = 10_000) {
++            // The new colour reaches the screen through the main thread's queue; run it.
++            shadowOf(Looper.getMainLooper()).idle()
++            appliedScheme().primary == greenPrimary
++        }
++
++        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBluePrimary())
++        assertCustomSwatchIsGreen(selection = "Kanso blue")
++
++        choose(
++            THEME_COLOUR_WALLPAPER_TAG,
++            saved = ThemeColour.Wallpaper,
++            primary = dynamicLightColorScheme(context).primary,
++        )
++        assertCustomSwatchIsGreen(selection = "From wallpaper")
++
++        // The swatch promised green: tapping Custom brings exactly that colour back.
++        choose(
++            THEME_COLOUR_CUSTOM_TAG,
++            saved = ThemeColour.Custom(CUSTOM_GREEN.toArgb()),
++            primary = greenPrimary,
++        )
++    }
++
+     /**
+      * On Android 11 there are no wallpaper colours: two colour rows, Kanso blue then Custom
+      * colour, Kanso blue selected, no wallpaper row and no wallpaper swatch; the two swatches
+@@ -242,6 +295,35 @@ class ThemeSwatchTest {
+         assertColourNear("The middle of $swatchTag should be $what", expected, drawnPixelAt(centreX, centreY))
+     }
+ 
++    /**
++     * Lets the press ripples of the taps before it fade out, then fails unless the Custom row's
++     * swatch shows [CUSTOM_GREEN] in its middle pixel; [selection] names the colour choice that
++     * is selected, for the failure message.
++     *
++     * A tap on a row draws a ripple over it, the Custom row's swatch included, and that ripple is
++     * an Android drawable that fades on Robolectric's clock, not on Compose's, so both clocks are
++     * moved on (see [advanceBothClocks]) before the pixel is read.
++     */
++    private fun assertCustomSwatchIsGreen(selection: String) {
++        advanceBothClocks(RIPPLE_SETTLE_MILLIS)
++        assertSwatch(
++            rowTag = THEME_COLOUR_CUSTOM_TAG,
++            swatchTag = THEME_COLOUR_CUSTOM_SWATCH_TAG,
++            expected = CUSTOM_GREEN,
++            what = "the last custom colour, green, while $selection is selected (not Kanso blue's seed)",
++        )
++    }
++
++    /**
++     * Moves Compose's test clock and Robolectric's main-thread clock on by [millis] together:
++     * Compose's animations run on the first, Android's own drawables (such as a press ripple) on
++     * the second.
++     */
++    private fun advanceBothClocks(millis: Long) {
++        compose.mainClock.advanceTimeBy(millis)
++        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
++    }
++
+     /**
+      * Draws the activity's content view into a fresh bitmap and returns the colour of the pixel
+      * at ([x], [y]). The Compose root fills the content view from its top-left corner, so a
+@@ -361,6 +443,15 @@ class ThemeSwatchTest {
+         /** The smallest size a swatch may have across, so its colour is easy to see. */
+         val SWATCH_MIN_SIZE = 24.dp
+ 
++        /**
++         * The custom colour the Custom swatch test picks: green #2E7D32, the DoD's custom colour,
++         * far from Kanso blue's seed #1A73E8, so a swatch showing the seed cannot pass for it.
++         */
++        val CUSTOM_GREEN = Color(0xFF2E7D32)
++
++        /** How long both clocks are moved on before a swatch is read, so every ripple has faded. */
++        const val RIPPLE_SETTLE_MILLIS = 1_000L
++
+         /** The tags of the three colour rows, in the order the screen lists them. */
+         val COLOUR_ROW_TAGS = listOf(
+             THEME_COLOUR_KANSO_BLUE_TAG,
+diff --git a/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt b/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt
+new file mode 100644
+index 0000000..babb326
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt
+@@ -0,0 +1,772 @@
++package com.phongkaster.kanso.theme
++
++import android.Manifest
++import android.app.Application
++import android.graphics.Bitmap
++import android.graphics.Canvas
++import android.os.Looper
++import android.view.ViewGroup
++import androidx.activity.ComponentActivity
++import androidx.activity.compose.LocalActivityResultRegistryOwner
++import androidx.activity.result.ActivityResultRegistry
++import androidx.activity.result.ActivityResultRegistryOwner
++import androidx.compose.material3.ColorScheme
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.CompositionLocalProvider
++import androidx.compose.ui.geometry.Offset
++import androidx.compose.ui.geometry.Rect
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.toArgb
++import androidx.compose.ui.layout.LayoutInfo
++import androidx.compose.ui.semantics.SemanticsActions
++import androidx.compose.ui.semantics.SemanticsNode
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.semantics.getOrNull
++import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.hasTestTag
++import androidx.compose.ui.test.isEnabled
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.test.onRoot
++import androidx.compose.ui.unit.IntSize
++import androidx.compose.ui.unit.toSize
++import androidx.test.core.app.ApplicationProvider
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import coil.Coil
++import coil.ImageLoader
++import com.phongkaster.kanso.camera.FakeCameraController
++import com.phongkaster.kanso.data.media.Album
++import com.phongkaster.kanso.data.media.Photo
++import com.phongkaster.kanso.data.settings.ThemeColour
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.di.ViewModelClearedProbe
++import com.phongkaster.kanso.gallery.RecordingRegistry
++import com.phongkaster.kanso.navigation.Tool
++import com.phongkaster.kanso.screenshots.FAKE_SCHEME
++import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
++import com.phongkaster.kanso.tool.ToolFixtures
++import com.phongkaster.kanso.ui.camera.CAMERA_PREVIEW_TAG
++import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
++import com.phongkaster.kanso.ui.camera.CAMERA_SHUTTER_TAG
++import com.phongkaster.kanso.ui.camera.CameraScreen
++import com.phongkaster.kanso.ui.camera.CameraViewModel
++import com.phongkaster.kanso.ui.gallery.GALLERY_BODY_TAG
++import com.phongkaster.kanso.ui.gallery.GALLERY_GRID_TAG
++import com.phongkaster.kanso.ui.gallery.GalleryContent
++import com.phongkaster.kanso.ui.gallery.GalleryUiState
++import com.phongkaster.kanso.ui.home.HomeContent
++import com.phongkaster.kanso.ui.home.HomeUiState
++import com.phongkaster.kanso.ui.permission.PermissionAccess
++import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
++import com.phongkaster.kanso.ui.saved.SavedContent
++import com.phongkaster.kanso.ui.saved.SavedPhoto
++import com.phongkaster.kanso.ui.saved.SavedUiState
++import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
++import com.phongkaster.kanso.ui.settings.SettingsContent
++import com.phongkaster.kanso.ui.settings.SettingsUiState
++import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import com.phongkaster.kanso.ui.theme.seedColorScheme
++import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
++import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
++import com.phongkaster.kanso.ui.tool.ToolContent
++import com.phongkaster.kanso.ui.tool.ToolUiState
++import kotlin.math.abs
++import kotlin.math.pow
++import kotlin.math.roundToInt
++import kotlinx.coroutines.Dispatchers
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.koin.core.context.stopKoin
++import org.robolectric.Shadows.shadowOf
++import org.robolectric.annotation.Config
++import org.robolectric.annotation.GraphicsMode
++
++/**
++ * Checks that every screen follows the app's light or dark choice, the editor included, and
++ * paints its top bar and its background in the theme's own colours (DoD 16).
++ *
++ * Each test draws one screen in KansoTheme with the mode forced to Light or Dark and the default
++ * colour, Kanso blue, on Android 15: Home, the gallery with photos, the editor with a ready
++ * photo, Saved, Settings, and the camera twice, once after camera access was refused and once
++ * live with a [FakeCameraController] (the real camera screen, its ViewModel and a camera that
++ * reports itself ready at once). The other screens are their stateless `...Content` parts fed a
++ * UiState built here, as the previews do.
++ *
++ * The screen is then drawn into a bitmap, as `ScreenPixels.kt` does (Compose's own
++ * captureToImage times out under Robolectric here), with Robolectric's real drawing code on
++ * (`GraphicsMode.Mode.NATIVE`), and two pixels are read:
++ * - one in the top bar, near its top edge in the middle, where no title or button reaches. It
++ *   must be the scheme's `surface`, the colour Material's top bar is filled with. Home has no top
++ *   bar (its title is the first item of its scrolling column), so it has no such pixel;
++ * - one in the screen's background, outside any photo or camera picture and away from every
++ *   text and control. It must be the colour the screen really paints there: the scheme's
++ *   `background` (what a Scaffold fills its body with) on every screen but the live camera,
++ *   whose sampled background is its bottom bar, a Surface in `surface`.
++ * Both must equal the expected colour of `seedColorScheme(KANSO_BLUE_SEED, dark)` within
++ * [TOLERANCE] per channel, and the background pixel's WCAG relative luminance must be above
++ * [LIGHT_MIN_LUMINANCE] in light and below [DARK_MAX_LUMINANCE] in dark, so a screen that kept
++ * a light background in dark mode (or the reverse) fails even if its colour were close.
++ *
++ * Where each pixel goes is worked out from the screen's own layout (the positions of tagged
++ * nodes below the bar) rather than guessed, and the test first checks its own choice: the
++ * top-bar pixel must lie above the content, and no pixel may lie on a node that shows text, a
++ * picture or a control. Settings' colour swatches and the colour picker's white card are fixed
++ * colours by design (the picker card is DoD 16's one named exception), so no pixel is read
++ * there; the Saved success mark is the theme's primary colour, so its row is sampled at the
++ * screen's left edge, well clear of it.
++ */
++@RunWith(AndroidJUnit4::class)
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++@Config(sdk = [35], qualifiers = THEME_FOLLOW_PHONE)
++class ThemeFollowTest {
++
++    /** Starts an empty activity to host each screen. */
++    @get:Rule
++    val compose = createAndroidComposeRule<ComponentActivity>()
++
++    /** The application under test. */
++    private val app: Application
++        get() = ApplicationProvider.getApplicationContext()
++
++    /** Whether this test gave Coil its own image loader, which [tearDown] must then replace. */
++    private var coilReplaced = false
++
++    /**
++     * Gives Coil back a plain image loader if a test replaced it, and stops Koin: both are kept
++     * in JVM-wide singletons that outlive the test (KansoApplication starts Koin for every test).
++     */
++    @After
++    fun tearDown() {
++        if (coilReplaced) Coil.setImageLoader(ImageLoader.Builder(app).build())
++        stopKoin()
++    }
++
++    /** Home in light mode paints Kanso blue's light background. */
++    @Test
++    fun home_follows_the_light_theme() {
++        checkHome(ThemeMode.Light)
++    }
++
++    /** Home in dark mode paints Kanso blue's dark background. */
++    @Test
++    fun home_follows_the_dark_theme() {
++        checkHome(ThemeMode.Dark)
++    }
++
++    /** The gallery with photos in light mode: light top bar and background. */
++    @Test
++    fun gallery_with_photos_follows_the_light_theme() {
++        checkGallery(ThemeMode.Light)
++    }
++
++    /** The gallery with photos in dark mode: dark top bar and background. */
++    @Test
++    fun gallery_with_photos_follows_the_dark_theme() {
++        checkGallery(ThemeMode.Dark)
++    }
++
++    /** The editor with a ready photo in light mode: light top bar and background around the photo. */
++    @Test
++    fun editor_with_a_photo_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light)
++    }
++
++    /** The editor with a ready photo in dark mode: dark top bar and background around the photo. */
++    @Test
++    fun editor_with_a_photo_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark)
++    }
++
++    /** Saved in light mode: light top bar and background. */
++    @Test
++    fun saved_follows_the_light_theme() {
++        checkSaved(ThemeMode.Light)
++    }
++
++    /** Saved in dark mode: dark top bar and background. */
++    @Test
++    fun saved_follows_the_dark_theme() {
++        checkSaved(ThemeMode.Dark)
++    }
++
++    /** Settings in light mode: light top bar and background. */
++    @Test
++    fun settings_follows_the_light_theme() {
++        checkSettings(ThemeMode.Light)
++    }
++
++    /** Settings in dark mode: dark top bar and background. */
++    @Test
++    fun settings_follows_the_dark_theme() {
++        checkSettings(ThemeMode.Dark)
++    }
++
++    /** The camera after access was refused, in light mode: light top bar and background. */
++    @Test
++    fun camera_refused_follows_the_light_theme() {
++        checkCameraRefused(ThemeMode.Light)
++    }
++
++    /** The camera after access was refused, in dark mode: dark top bar and background. */
++    @Test
++    fun camera_refused_follows_the_dark_theme() {
++        checkCameraRefused(ThemeMode.Dark)
++    }
++
++    /** The live camera in light mode: light top bar and bottom bar. */
++    @Test
++    fun camera_live_follows_the_light_theme() {
++        checkCameraLive(ThemeMode.Light)
++    }
++
++    /** The live camera in dark mode: dark top bar and bottom bar. */
++    @Test
++    fun camera_live_follows_the_dark_theme() {
++        checkCameraLive(ThemeMode.Dark)
++    }
++
++    // --- One screen each -------------------------------------------------------------------
++
++    /**
++     * Draws Home in [mode] and checks a background pixel at the screen's left edge, halfway
++     * down: Home's column keeps 16 dp from the edges, so nothing but background is there.
++     */
++    private fun checkHome(mode: ThemeMode) {
++        show(mode) {
++            HomeContent(
++                state = HOME_STATE,
++                onOpenPhoto = {},
++                onCameraClick = {},
++                onToolClick = {},
++                onSettingsClick = {},
++            )
++        }
++        assertFollows(
++            screen = "Home",
++            mode = mode,
++            topBar = null,
++            background = Spot(
++                place = "background at the left edge, halfway down",
++                x = EDGE_X_PX,
++                y = rootSize().height / 2,
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = null,
++        )
++    }
++
++    /**
++     * Draws the gallery of the Edit tool in [mode] with twelve photos in three albums and checks
++     * the top bar and a background pixel in the grid's 8 dp left margin, halfway down the grid,
++     * where no photo tile reaches.
++     */
++    private fun checkGallery(mode: ThemeMode) {
++        useSolidColourThumbnails()
++        val state = GalleryUiState(tool = Tool.EDIT, albums = ALBUMS, photos = photos(), loading = false)
++        show(mode) {
++            GalleryContent(
++                state = state,
++                access = PermissionAccess.Full,
++                answered = true,
++                onBack = {},
++                onOpenCamera = {},
++                onSelectAlbum = {},
++                onPhotoClick = {},
++                onShareMore = {},
++                onOpenSettings = {},
++            )
++        }
++        val grid = nodeRect(GALLERY_GRID_TAG)
++        assertFollows(
++            screen = "Gallery with photos",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "background in the grid's left margin, halfway down the grid",
++                x = EDGE_X_PX,
++                y = grid.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = nodeRect(GALLERY_BODY_TAG).top,
++        )
++    }
++
++    /**
++     * Draws the editor on Edit in [mode] with a ready landscape photo and checks the top bar and
++     * a background pixel in the photo area above the photo, halfway between the area's top and
++     * the photo's. A landscape photo on a portrait screen fills the width and leaves that band of
++     * background above and below it; the test checks the band is there before reading it.
++     */
++    private fun checkEditor(mode: ThemeMode) {
++        val state = ToolUiState(
++            tool = Tool.EDIT,
++            photoUri = PHOTO_URI,
++            photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
++            save = ToolUiState.SaveState.Idle,
++        )
++        show(mode) {
++            ToolContent(state = state, onBack = {}, onSave = {}, onSelectTool = {})
++        }
++        val body = nodeRect(TOOL_BODY_TAG)
++        val photo = nodeRect(TOOL_IMAGE_TAG)
++        assertTrue(
++            "The photo must leave a band of background above it (photo area top ${body.top}, " +
++                "photo top ${photo.top}), or this test reads the wrong place",
++            photo.top - body.top >= MIN_BAND_PX,
++        )
++        assertFollows(
++            screen = "Editor with a ready photo",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "background above the photo, in the middle of the screen",
++                x = rootSize().width / 2,
++                y = ((body.top + photo.top) / 2f).roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = body.top,
++        )
++    }
++
++    /**
++     * Draws Saved in [mode] with its photo and checks the top bar and a background pixel at the
++     * screen's left edge, level with the success mark: the body keeps 16 dp from the edges and
++     * the mark sits in the middle, so that pixel is background and well clear of the mark.
++     */
++    private fun checkSaved(mode: ThemeMode) {
++        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
++        show(mode) {
++            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onHome = {})
++        }
++        val mark = nodeRect(SAVED_MARK_TAG)
++        assertFollows(
++            screen = "Saved",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "background at the left edge, level with the success mark",
++                x = EDGE_X_PX,
++                y = mark.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = mark.top,
++        )
++    }
++
++    /**
++     * Draws Settings in [mode] with that mode and Kanso blue chosen (no wallpaper row, no
++     * picker) and checks the top bar and a background pixel at the screen's left edge, level with
++     * the theme mode group: the groups keep 16 dp from the edges, so no row and no swatch is
++     * there.
++     */
++    private fun checkSettings(mode: ThemeMode) {
++        show(mode) {
++            SettingsContent(
++                state = SettingsUiState(themeMode = mode, themeColour = ThemeColour.KansoBlue),
++                wallpaperColour = null,
++                onBack = {},
++                onThemeModeSelected = {},
++                onKansoBlueChosen = {},
++                onWallpaperChosen = {},
++                onCustomChosen = {},
++                onCustomColourChosen = {},
++            )
++        }
++        val group = nodeRect(SETTINGS_GROUP_APPEARANCE_TAG)
++        assertFollows(
++            screen = "Settings",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "background at the left edge, level with the theme mode group",
++                x = EDGE_X_PX,
++                y = group.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = group.top,
++        )
++    }
++
++    /**
++     * Draws the real camera screen in [mode], answers its camera permission request "denied"
++     * through a [RecordingRegistry] (no system dialog), and checks the top bar and a background
++     * pixel at the screen's left edge, level with the middle of the refused panel, which keeps
++     * 24 dp from the edges.
++     */
++    private fun checkCameraRefused(mode: ThemeMode) {
++        val registry = RecordingRegistry()
++        val owner = object : ActivityResultRegistryOwner {
++            override val activityResultRegistry: ActivityResultRegistry = registry
++        }
++        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
++        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
++        compose.setContent {
++            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
++                KansoTheme(themeMode = mode) {
++                    CameraScreen(viewModel = viewModel, onBack = {}, onKept = {})
++                }
++            }
++        }
++        compose.waitForIdle()
++        assertEquals("The camera screen must ask for the camera once", 1, registry.requests.size)
++        registry.answerLatest(registry.requests.single().associateWith { false })
++        compose.waitForIdle()
++
++        val panel = nodeRect(CAMERA_REFUSED_TAG)
++        assertFollows(
++            screen = "Camera, access refused",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "background at the left edge, level with the middle of the refused panel",
++                x = EDGE_X_PX,
++                y = panel.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = panel.top,
++        )
++    }
++
++    /**
++     * Grants camera access and draws the real camera screen in [mode] with a [FakeCameraController],
++     * waits until the fake camera is connected (the shutter can be pressed), and checks the top
++     * bar and a pixel of the bottom bar at the screen's left edge, level with the shutter: the
++     * bar keeps its buttons 16 dp from the edges, and it is a Surface in the theme's `surface`.
++     * The live picture itself is not a theme colour, so no pixel is read there.
++     */
++    private fun checkCameraLive(mode: ThemeMode) {
++        shadowOf(app).grantPermissions(Manifest.permission.CAMERA)
++        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
++        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
++        show(mode) {
++            CameraScreen(viewModel = viewModel, onBack = {}, onKept = {})
++        }
++        // The fake camera connects from a coroutine the screen starts; it ends on the main thread.
++        compose.waitUntil(timeoutMillis = 10_000) {
++            shadowOf(Looper.getMainLooper()).idle()
++            compose.onAllNodes(hasTestTag(CAMERA_SHUTTER_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
++        }
++        compose.waitForIdle()
++
++        val shutter = nodeRect(CAMERA_SHUTTER_TAG)
++        assertFollows(
++            screen = "Camera, live",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "bottom bar at the left edge, level with the shutter",
++                x = EDGE_X_PX,
++                y = shutter.center.y.roundToInt(),
++                expected = scheme(mode).surface,
++                role = "surface",
++            ),
++            contentTop = nodeRect(CAMERA_PREVIEW_TAG).top,
++        )
++    }
++
++    // --- Helpers ---------------------------------------------------------------------------
++
++    /**
++     * One pixel the test reads: [place] says in words where it is, ([x], [y]) is where, in the
++     * screen's pixels from its top-left corner, and [expected] is the theme colour it must show,
++     * the scheme's colour called [role].
++     */
++    private data class Spot(
++        val place: String,
++        val x: Int,
++        val y: Int,
++        val expected: Color,
++        val role: String,
++    )
++
++    /** Returns Kanso blue in [mode]'s look, the scheme KansoTheme hands to every screen. */
++    private fun scheme(mode: ThemeMode): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
++
++    /**
++     * Returns the top-bar pixel for [mode]: the middle of the screen, [TOP_BAR_Y_PX] below the
++     * top edge, inside the bar but above its title and buttons, which are centred in its height.
++     * It must be the scheme's `surface`.
++     */
++    private fun topBarSpot(mode: ThemeMode): Spot = Spot(
++        place = "top bar, middle of its top edge",
++        x = rootSize().width / 2,
++        y = TOP_BAR_Y_PX,
++        expected = scheme(mode).surface,
++        role = "surface",
++    )
++
++    /**
++     * Draws [content] inside KansoTheme in [mode], with Kanso blue, and waits until the screen
++     * has settled. Nothing the tests draw keeps moving, so the clock runs by itself.
++     */
++    private fun show(mode: ThemeMode, content: @Composable () -> Unit) {
++        compose.setContent {
++            KansoTheme(themeMode = mode) {
++                content()
++            }
++        }
++        compose.waitForIdle()
++    }
++
++    /** Returns the size of the screen's Compose root, in pixels: the size of the drawn bitmap. */
++    private fun rootSize(): IntSize = compose.onRoot().fetchSemanticsNode().size
++
++    /**
++     * Returns where the node tagged [tag] is laid out, in the root's pixels. It is read from
++     * `positionInRoot` and the node's size, never from `boundsInRoot`, which Compose cuts to the
++     * visible part of the screen.
++     */
++    private fun nodeRect(tag: String): Rect {
++        val node = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
++        return Rect(node.positionInRoot, node.size.toSize())
++    }
++
++    /**
++     * Fails, naming [screen] and [mode], unless the [topBar] pixel (if the screen has a top bar)
++     * and the [background] pixel show their expected theme colours within [TOLERANCE] per
++     * channel, and the background's relative luminance suits the mode.
++     *
++     * Before reading, it checks its own choice of pixels: the top-bar pixel must lie above
++     * [contentTop], the top of the content below the bar, and no pixel may lie on a node that
++     * shows text, a picture or a control. Every problem is listed in one failure.
++     */
++    private fun assertFollows(screen: String, mode: ThemeMode, topBar: Spot?, background: Spot, contentTop: Float?) {
++        val spots = listOfNotNull(topBar, background)
++        val problems = mutableListOf<String>()
++        if (topBar != null) {
++            val top = checkNotNull(contentTop) { "A screen with a top bar needs the top of its content" }
++            if (topBar.y >= top) {
++                problems += "the ${topBar.place} at y ${topBar.y} is not above the content, which starts at y $top"
++            }
++        }
++        spots.forEach { spot ->
++            nodesUnder(spot).forEach { node ->
++                problems += "the ${spot.place} at (${spot.x}, ${spot.y}) lies on $node, " +
++                    "not on plain background: the test must read another pixel"
++            }
++        }
++
++        val drawn = drawnColours(spots)
++        spots.zip(drawn).forEach { (spot, colour) ->
++            if (!isNear(spot.expected, colour)) {
++                problems += "the ${spot.place} at (${spot.x}, ${spot.y}) is drawn ${hex(colour)}, " +
++                    "expected the theme's ${spot.role} ${hex(spot.expected)} within $TOLERANCE per channel"
++            }
++        }
++
++        // The background is the last spot read.
++        val luminance = relativeLuminance(drawn.last())
++        if (mode == ThemeMode.Dark) {
++            if (luminance >= DARK_MAX_LUMINANCE) {
++                problems += "the ${background.place} has relative luminance %.3f, needs below %.2f in dark"
++                    .format(luminance, DARK_MAX_LUMINANCE)
++            }
++        } else if (luminance <= LIGHT_MIN_LUMINANCE) {
++            problems += "the ${background.place} has relative luminance %.3f, needs above %.2f in light"
++                .format(luminance, LIGHT_MIN_LUMINANCE)
++        }
++
++        assertTrue(
++            "$screen in $mode does not follow the theme:\n" + problems.joinToString("\n"),
++            problems.isEmpty(),
++        )
++    }
++
++    /**
++     * Returns a description of every node placed on screen that shows text, a picture (a content
++     * description) or a control and covers [spot], from the unmerged tree, where every text and
++     * icon is a node of its own.
++     */
++    private fun nodesUnder(spot: Spot): List<String> {
++        val point = Offset(spot.x + 0.5f, spot.y + 0.5f)
++        return compose.onAllNodes(SHOWS_SOMETHING, useUnmergedTree = true).fetchSemanticsNodes()
++            .filter { node -> isPlaced(node) && Rect(node.positionInRoot, node.size.toSize()).contains(point) }
++            .map { node -> describe(node) }
++    }
++
++    /**
++     * Tells whether [node]'s layout, and every layout around it up to the root, has been placed:
++     * a layout only measured, never placed, is not on the screen and covers nothing.
++     */
++    private fun isPlaced(node: SemanticsNode): Boolean {
++        var info: LayoutInfo? = node.layoutInfo
++        while (info != null) {
++            if (!info.isPlaced) return false
++            info = info.parentInfo
++        }
++        return true
++    }
++
++    /** Describes [node] for a failure message by its test tag, texts and content descriptions. */
++    private fun describe(node: SemanticsNode): String {
++        val config = node.config
++        val tag = config.getOrNull(SemanticsProperties.TestTag) ?: "no tag"
++        val texts = config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
++        val descriptions = config.getOrNull(SemanticsProperties.ContentDescription).orEmpty()
++        return "a node (tag: $tag, text: $texts, description: $descriptions)"
++    }
++
++    /**
++     * Draws the activity's content view into a fresh bitmap and returns the colour of the pixel
++     * of each of [spots], in order. The Compose root fills the content view from its top-left
++     * corner, so a position in the root is a position in the bitmap. Runs on the main thread
++     * (the test thread under Robolectric).
++     */
++    private fun drawnColours(spots: List<Spot>): List<Color> {
++        val content = compose.activity.findViewById<ViewGroup>(android.R.id.content)
++        val view = content.getChildAt(0) ?: error("The activity has no content view yet")
++        check(view.width > 0 && view.height > 0) { "The content view is not laid out yet" }
++        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
++        try {
++            view.draw(Canvas(bitmap))
++            return spots.map { spot ->
++                check(spot.x in 0 until bitmap.width && spot.y in 0 until bitmap.height) {
++                    "The ${spot.place} at (${spot.x}, ${spot.y}) lies outside the drawn screen " +
++                        "of ${bitmap.width} x ${bitmap.height}"
++                }
++                Color(bitmap.getPixel(spot.x, spot.y))
++            }
++        } finally {
++            // A bitmap holds native memory; free it now rather than waiting for the collector.
++            bitmap.recycle()
++        }
++    }
++
++    /**
++     * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
++     * runs every step on the calling thread, so the gallery's thumbnails load without files.
++     */
++    private fun useSolidColourThumbnails() {
++        Coil.setImageLoader(
++            ImageLoader.Builder(app)
++                .components { add(SolidColourFetcherFactory()) }
++                .dispatcher(Dispatchers.Unconfined)
++                .build(),
++        )
++        coilReplaced = true
++    }
++
++    /**
++     * Tells whether [actual] equals [expected] within [TOLERANCE] in each of its alpha, red,
++     * green and blue channels (0 to 255). An undrawn, see-through pixel never passes.
++     */
++    private fun isNear(expected: Color, actual: Color): Boolean {
++        val wanted = expected.toArgb()
++        val drawn = actual.toArgb()
++        return listOf(24, 16, 8, 0).all { shift ->
++            abs(((wanted shr shift) and 0xFF) - ((drawn shr shift) and 0xFF)) <= TOLERANCE
++        }
++    }
++
++    /** Writes [colour] as `#AARRGGBB`, for failure messages. */
++    private fun hex(colour: Color): String = "#%08X".format(colour.toArgb())
++
++    /**
++     * Returns the WCAG relative luminance of [colour], from 0 (black) to 1 (white), as
++     * `KansoBlueContrastTest` works it out: each 8-bit sRGB channel is turned back into linear
++     * light, then the three are weighted by how bright the eye finds red, green and blue.
++     */
++    private fun relativeLuminance(colour: Color): Double {
++        val argb = colour.toArgb()
++        val red = linearChannel((argb shr 16) and 0xFF)
++        val green = linearChannel((argb shr 8) and 0xFF)
++        val blue = linearChannel(argb and 0xFF)
++        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
++    }
++
++    /**
++     * Undoes the sRGB gamma curve on one 8-bit [channel] (0 to 255), giving its linear light
++     * from 0 to 1: a straight line for the darkest values, a 2.4 power curve above.
++     */
++    private fun linearChannel(channel: Int): Double {
++        val value = channel / 255.0
++        return if (value <= 0.04045) value / 12.92 else ((value + 0.055) / 1.055).pow(2.4)
++    }
++
++    /** Values the tests share. */
++    private companion object {
++        /** How far, per colour channel (0 to 255), a drawn pixel may be from the expected colour. */
++        const val TOLERANCE = 2
++
++        /** The lowest relative luminance a light background may have. */
++        const val LIGHT_MIN_LUMINANCE = 0.6
++
++        /** The highest relative luminance a dark background may have. */
++        const val DARK_MAX_LUMINANCE = 0.15
++
++        /**
++         * How far below the top of the screen the top-bar pixel is, in pixels: 1 dp at xxhdpi,
++         * inside the 64 dp bar and well above its 48 dp buttons, which are centred in it.
++         */
++        const val TOP_BAR_Y_PX = 3
++
++        /**
++         * How far from the screen's left edge the background pixels are, in pixels: under 1 dp,
++         * inside the margin every screen keeps between its edge and its content (8 dp at least).
++         */
++        const val EDGE_X_PX = 2
++
++        /**
++         * The least height, in pixels, the band of background above the editor's photo must
++         * have for the test to read a pixel in its middle (4 dp at xxhdpi).
++         */
++        const val MIN_BAND_PX = 12f
++
++        /** The made-up Uri the editor and Saved say their photo came from. */
++        const val PHOTO_URI = "content://media/external/images/media/42"
++
++        /** Matches a node that shows text, a picture (it has a description) or a control. */
++        val SHOWS_SOMETHING = SemanticsMatcher("shows text, a picture or a control") { node ->
++            val config = node.config
++            SemanticsProperties.Text in config ||
++                SemanticsProperties.ContentDescription in config ||
++                SemanticsActions.OnClick in config ||
++                SemanticsProperties.ToggleableState in config ||
++                SemanticsProperties.Selected in config
++        }
++
++        /** Home's two groups of tools, as `HomeViewModel` builds them. */
++        val HOME_STATE = HomeUiState(
++            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
++            editTools = listOf(Tool.EDIT),
++        )
++
++        /** The three albums of the sample photo library. */
++        val ALBUMS = listOf(Album(1L, "Camera"), Album(2L, "Screenshots"), Album(3L, "Travel"))
++
++        /**
++         * Twelve sample photos, newest first, spread over [ALBUMS], each with its own colour in a
++         * `fake://color/AARRGGBB` address that only [SolidColourFetcherFactory] can open.
++         */
++        fun photos(): List<Photo> = (0 until 12).map { i ->
++            val red = (i * 37 + 60) % 256
++            val green = (i * 91 + 40) % 256
++            val blue = (i * 53 + 120) % 256
++            val argb = (0xFF shl 24) or (red shl 16) or (green shl 8) or blue
++            Photo(
++                id = (i + 1).toLong(),
++                uri = "$FAKE_SCHEME://color/${"%08X".format(argb)}",
++                name = "photo_${i + 1}.jpg",
++                albumId = ALBUMS[i % ALBUMS.size].id,
++                modifiedSeconds = 1_700_000_000L - i * 3_600L,
++            )
++        }
++    }
++}
++
++/**
++ * The Robolectric screen the screens are drawn on, the same as the screenshot tests': 411 dp
++ * wide, 891 dp tall, at xxhdpi, the size of a typical modern phone.
++ */
++private const val THEME_FOLLOW_PHONE = "w411dp-h891dp-xxhdpi"

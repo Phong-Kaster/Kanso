@@ -294,6 +294,7 @@ fun SettingsContent(
             )
             ThemeColourChoice(
                 selected = state.themeColour,
+                customSeedArgb = state.customSeedArgb,
                 wallpaperColour = wallpaperColour,
                 onKansoBlue = onKansoBlueChosen,
                 onWallpaper = onWallpaperChosen,
@@ -334,9 +335,11 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) 
  * - Kanso blue: the light `primary` of the Kanso blue scheme, the blue the app's buttons show in
  *   light mode;
  * - From wallpaper: [wallpaperColour], the light `primary` the phone builds from its wallpaper;
- * - Custom colour: the custom seed colour while Custom is selected. While another choice is
- *   selected, [selected] carries no seed, so the swatch shows Kanso blue's seed, which is also
- *   where the picker starts for a person who has never picked a colour.
+ * - Custom colour: the last custom colour picked, whatever is selected. While Custom is
+ *   selected that is its own seed; while another choice is selected it is [customSeedArgb], the
+ *   seed the settings file keeps meanwhile, which a tap on Custom brings back. So the swatch
+ *   always shows what Custom gives; for a person who has never picked a colour it is Kanso
+ *   blue's seed, where the picker starts.
  *
  * Each swatch shows the light version of its choice in both themes, so the same choice always
  * shows the same circle. While Custom is selected, the colour picker is shown below the group,
@@ -346,6 +349,7 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) 
 @Composable
 private fun ThemeColourChoice(
     selected: ThemeColour,
+    customSeedArgb: Int,
     wallpaperColour: Color?,
     onKansoBlue: () -> Unit,
     onWallpaper: () -> Unit,
@@ -355,7 +359,9 @@ private fun ThemeColourChoice(
     // remember keeps a value across re-draws: generating a scheme takes real work, and Kanso
     // blue never changes, so its primary is worked out once.
     val kansoBlue = remember { seedColorScheme(KANSO_BLUE_SEED, dark = false).primary }
-    val customColour = if (selected is ThemeColour.Custom) Color(selected.seedArgb) else KANSO_BLUE_SEED
+    // The last picked custom colour: Custom's own seed while it is selected (the same stored seed
+    // customSeedArgb holds), else customSeedArgb, which the file keeps while another is selected.
+    val customColour = Color(if (selected is ThemeColour.Custom) selected.seedArgb else customSeedArgb)
 
     GroupLabel(
         // stringResource looks the text up in the app's string resources (res/values/strings.xml,

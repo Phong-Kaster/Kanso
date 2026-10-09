@@ -3,6 +3,7 @@ package com.phongkaster.kanso.settings
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.os.Looper
 import android.view.ViewGroup
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -38,6 +39,7 @@ import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
 import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
 import com.phongkaster.kanso.ui.theme.seedColorScheme
+import java.time.Duration
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
@@ -51,6 +53,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.core.context.stopKoin
 import org.koin.mp.KoinPlatform
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -66,7 +69,8 @@ import org.robolectric.annotation.GraphicsMode
  *   dark = false).primary`;
  * - From wallpaper: the light `primary` the system builds from the wallpaper,
  *   `dynamicLightColorScheme(context).primary`;
- * - Custom colour: the last custom seed, which on a fresh install is Kanso blue's seed itself.
+ * - Custom colour: the last custom seed, which on a fresh install is Kanso blue's seed itself,
+ *   and once a colour was picked stays that colour while Kanso blue or the wallpaper is chosen.
  *
  * The pixels are read by drawing the activity's content view into a bitmap, as `ScreenPixels.kt`
  * does (Compose's own `captureToImage` times out under Robolectric here), with Robolectric's real
@@ -157,6 +161,55 @@ class ThemeSwatchTest {
     }
 
     /**
+     * On Android 15 the Custom row's swatch shows the last custom colour picked while another
+     * colour choice is selected, not Kanso blue's seed (DoD 2: "the colour of the last custom
+     * seed"). Custom is tapped and its colour set to green #2E7D32; then Kanso blue and From
+     * wallpaper are tapped in turn, and each time the Custom swatch's middle pixel is still that
+     * green. Tapping Custom again re-themes the app in green, the colour the swatch showed.
+     *
+     * The green is written through the app's settings repository, which is what the colour
+     * picker's save does once a drag settles; the engine's picker itself is not dragged (its
+     * positions cannot be aimed at an exact colour) and its hex field is not typed into (it reads
+     * the digits as a decimal number).
+     */
+    @Test
+    fun the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected() {
+        // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
+        val greenPrimary = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false).primary
+        waitForHome()
+        openSettings()
+
+        // Tapped as a person would: on a fresh install Custom starts from Kanso blue's seed.
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().performClick()
+        awaitSavedThemeColour(ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()))
+        // What the picker's save writes once a drag towards green has settled.
+        runBlocking { repository().setThemeColour(ThemeColour.Custom(CUSTOM_GREEN.toArgb())) }
+        awaitSavedThemeColour(ThemeColour.Custom(CUSTOM_GREEN.toArgb()))
+        compose.waitUntil(timeoutMillis = 10_000) {
+            // The new colour reaches the screen through the main thread's queue; run it.
+            shadowOf(Looper.getMainLooper()).idle()
+            appliedScheme().primary == greenPrimary
+        }
+
+        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBluePrimary())
+        assertCustomSwatchIsGreen(selection = "Kanso blue")
+
+        choose(
+            THEME_COLOUR_WALLPAPER_TAG,
+            saved = ThemeColour.Wallpaper,
+            primary = dynamicLightColorScheme(context).primary,
+        )
+        assertCustomSwatchIsGreen(selection = "From wallpaper")
+
+        // The swatch promised green: tapping Custom brings exactly that colour back.
+        choose(
+            THEME_COLOUR_CUSTOM_TAG,
+            saved = ThemeColour.Custom(CUSTOM_GREEN.toArgb()),
+            primary = greenPrimary,
+        )
+    }
+
+    /**
      * On Android 11 there are no wallpaper colours: two colour rows, Kanso blue then Custom
      * colour, Kanso blue selected, no wallpaper row and no wallpaper swatch; the two swatches
      * still show their own colours.
@@ -240,6 +293,35 @@ class ThemeSwatchTest {
         val centreX = (swatch.positionInRoot.x + swatch.size.width / 2f).roundToInt()
         val centreY = (swatch.positionInRoot.y + swatch.size.height / 2f).roundToInt()
         assertColourNear("The middle of $swatchTag should be $what", expected, drawnPixelAt(centreX, centreY))
+    }
+
+    /**
+     * Lets the press ripples of the taps before it fade out, then fails unless the Custom row's
+     * swatch shows [CUSTOM_GREEN] in its middle pixel; [selection] names the colour choice that
+     * is selected, for the failure message.
+     *
+     * A tap on a row draws a ripple over it, the Custom row's swatch included, and that ripple is
+     * an Android drawable that fades on Robolectric's clock, not on Compose's, so both clocks are
+     * moved on (see [advanceBothClocks]) before the pixel is read.
+     */
+    private fun assertCustomSwatchIsGreen(selection: String) {
+        advanceBothClocks(RIPPLE_SETTLE_MILLIS)
+        assertSwatch(
+            rowTag = THEME_COLOUR_CUSTOM_TAG,
+            swatchTag = THEME_COLOUR_CUSTOM_SWATCH_TAG,
+            expected = CUSTOM_GREEN,
+            what = "the last custom colour, green, while $selection is selected (not Kanso blue's seed)",
+        )
+    }
+
+    /**
+     * Moves Compose's test clock and Robolectric's main-thread clock on by [millis] together:
+     * Compose's animations run on the first, Android's own drawables (such as a press ripple) on
+     * the second.
+     */
+    private fun advanceBothClocks(millis: Long) {
+        compose.mainClock.advanceTimeBy(millis)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
     }
 
     /**
@@ -360,6 +442,15 @@ class ThemeSwatchTest {
 
         /** The smallest size a swatch may have across, so its colour is easy to see. */
         val SWATCH_MIN_SIZE = 24.dp
+
+        /**
+         * The custom colour the Custom swatch test picks: green #2E7D32, the DoD's custom colour,
+         * far from Kanso blue's seed #1A73E8, so a swatch showing the seed cannot pass for it.
+         */
+        val CUSTOM_GREEN = Color(0xFF2E7D32)
+
+        /** How long both clocks are moved on before a swatch is read, so every ripple has faded. */
+        const val RIPPLE_SETTLE_MILLIS = 1_000L
 
         /** The tags of the three colour rows, in the order the screen lists them. */
         val COLOUR_ROW_TAGS = listOf(

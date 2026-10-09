@@ -126,7 +126,7 @@ Option 1; DoD 3, 7 and 23 pin the behaviour and leave the mechanism to the test.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** the Phase 3 checkpoint (Iteration 4); its SHA is written by the next Iteration, a commit cannot name itself
+- **First dependent checkpoint:** `25b6c6b` (the Phase 3 checkpoint, Iteration 4)
 - **Revert:** `git revert <sha>` of the Phase 3 checkpoint (T-006, T-007)
 
 ### Question
@@ -237,7 +237,7 @@ Option 1; it is an enum entry, not a feature, and the dead-code rule applies.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
+- **First dependent checkpoint:** the Phase 4 checkpoint (Iteration 5), where the transition specs, the manifest flag and the "Remove animations" control assertion first depend on it; its SHA is written by the next Iteration (the bootstrap commit `9e2535a` only recorded it)
 - **Revert:** `git revert <sha>` of the Phase 4 checkpoint (T-008)
 
 ### Question
@@ -296,4 +296,28 @@ DoD 16 greps `app/src/main` for `Color(0x` and allows only the colour picker's c
 ### Taken, and why
 
 Option 1. It keeps the criterion provable by its own command and changes nothing a user or a test can observe. `fixed-colours.md` (the Verifier's) names the constant anyway.
+
+
+---
+
+## A-014 - Where a Proof's literal wording and the test it names differ in small ways
+
+- **Tier:** 2 (plan/architecture)
+- **Iteration:** 5
+- **First dependent checkpoint:** the Phase 4 checkpoint (Iteration 5); its SHA is written by the next Iteration, a commit cannot name itself
+- **Revert:** `git revert <sha>` of the Phase 4 checkpoint (T-008, T-011)
+
+### Question
+
+DoD 14's Proof says "one frame after a push both screens are composed"; DoD 16's says "a pixel in the top bar and a pixel in the screen background equal the mode's `surface` or top-bar container colour" for every screen listed. The tests found: a push or pop composes both screens two frames after the change (NavDisplay needs a frame to notice the new back stack), Home has no top bar (its title is the first item of the scrolling column since Phase 2), the live camera's lowest flat area is its bottom bar, and the screens' background is `background`, which equals `surface` in Kanso blue.
+
+### Options Considered
+
+1. Read "one frame" as "within a few frames, the count printed" (NavTransitionTest waits up to 10 frames, 160 ms, then asserts both screens exist and move in the right directions); sample a top-bar pixel on every screen that has a top bar and the background elsewhere; compare against `background` (what a Scaffold paints) - consequences: the test still fails if a transition is missing (no transition means the old screen is gone at once and the assertion on it fails); the DoD text is not edited.
+2. Tighten the test to exactly one frame and fail - consequences: it fails on NavDisplay's own timing, which no Kanso code controls.
+3. Queue a Tier-3 request to reword the DoD - consequences: Autonomous mode does not queue questions; the intent (the screens animate; every screen follows the theme) is unchanged.
+
+### Taken, and why
+
+Option 1: the intent of both Proofs holds, and the differences are recorded so the Verifier can say them aloud ("did not fail ... two frames after").
 

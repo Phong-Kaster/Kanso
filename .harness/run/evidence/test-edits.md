@@ -55,3 +55,13 @@ New files in Phase 2: `screenshots/GalleryLoadingScreenshotTest.kt` (pictures 26
 New files in Phase 3: `settings/ThemeSwatchTest.kt` (DoD 2: the three swatches' centre pixels, order, selection and recolouring at SDK 35; two rows at SDK 30), `screenshots/CameraControlsScreenshotTest.kt` (pictures 20 and 21).
 
 New files: `theme/KansoBlueThemeTest.kt`, `theme/KansoBlueContrastTest.kt`, `tool/ToolViewModelTest.kt`, `tool/ToolSelectionAnimationTest.kt`.
+
+## Phase 4 (T-008 screen transitions, T-011 cross-screen proofs, T-012 Custom swatch)
+
+| File | Status | Why the PRD forces it |
+|---|---|---|
+| `settings/SettingsUiStateTest.kt` | M | DoD 2: the state now also carries the last custom seed (`customSeedArgb`, a defaulted field). One existing assertion changed: `state_follows_a_saved_colour_and_keeps_the_saved_mode` now expects `customSeedArgb = GREEN_ARGB` in the snapshot after green is saved (the snapshot really holds that seed; the old expectation compared against the default). One test added: `state_keeps_the_last_custom_seed_after_kanso_blue_is_chosen`. Class KDoc extended. |
+| `settings/SettingsRepositoryTest.kt` | M | DoD 2: two tests added, no existing one changed: `custom_seed_defaults_to_the_kanso_blue_seed` and `custom_seed_is_kept_while_kanso_blue_or_the_wallpaper_is_chosen`; a `GREEN_ARGB` companion constant. |
+| `settings/ThemeSwatchTest.kt` | M | DoD 2: one test added, `the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected` (pick Custom green, tap Kanso blue and wallpaper, read the swatch centre pixel each time; then Custom brings green back). No existing test changed. |
+
+New files in Phase 4: `navigation/NavTransitionTest.kt` (DoD 14 and the machine part of 13: push, pop, Back, the springs taken from the scheme, "Remove animations"; five tests), `a11y/AccessibilityWalkTest.kt` and `a11y/TouchTargetCheck.kt` (DoD 18; 22 tests), `theme/ThemeFollowTest.kt` (DoD 16; 14 tests). 363 `@Test` at the Phase 4 checkpoint (318 + 45).

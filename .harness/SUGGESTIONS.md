@@ -102,3 +102,20 @@ The engine's contract says a Worker's report is a manifest the orchestrator read
 The engine hires several helpers for a stretch of work and each one hands back a short note when they finish. If the engine is switched off before it files those notes, the finished work is still on the desk but the notes are lost, including any warning a helper wanted to pass on. Saving each note to a file the moment it arrives costs almost nothing and means a restart can pick up exactly where things stood.
 
 ---
+
+---
+
+## S-007 - Every test class a criterion's proof names needs a task that writes it; the plan's conflict analysis should list them
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 6, Phase 4 (2026-10-10): DoD 13's proof says `NavTransitionTest` and `ToolSelectionAnimationTest` both repeat their moves with the system animation scale at 0. The plan scheduled the first (T-008) and never the second; no later phase existed, so the run would have reached its Verifier with half of the proof missing. The fresh-context review of Phase 4 found it, not a test and not the bootstrap critique.
+- **Status:** open
+
+### What happened
+
+At bootstrap the critique role checks the decomposition and the DoD's classes, and the conflict analysis maps each task to the files it touches. Nothing maps the other way: from each test class a Proof names back to the task that writes or edits it. S-005 caught the sibling case (a named class that does not hold the assertion); this one is a named class that no task is ever asked to touch, because the Proof spread one criterion across two classes in two different tasks' areas and the planner scheduled the nearer one.
+
+### In plain words
+
+The checklist said "prove this in test A and test B". The plan only ever sent someone to write test A. A final read of "every test a proof names, and which task writes it" at planning time, and again at the end of each phase, would have caught it before the last step instead of during a review.
+
