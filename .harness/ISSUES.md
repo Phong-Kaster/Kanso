@@ -1,5 +1,9 @@
 # ISSUES
 
+## Run 5 (AGP 9 and the current Compose libraries): Bootstrap, Iteration 1
+
+Nothing is built yet. Open: **D-001** (approve the Definition of Done; choose between Material3 1.5.0-beta01 on the stable Compose BOM, as drafted, and the beta BOM `compose-bom-beta:2026.10.00`, which makes all of Compose 1.13.0-beta01; and list the screenshot baselines the engine may re-record under a `## Baselines` heading in `.harness/run/DECISIONS.md`: without that list a library-moved picture stays a failing check and the run ends `DONE_PARTIAL`). Assumptions recorded: A-001 to A-006 in `.harness/run/ASSUMPTIONS.md`, the main ones A-001 (Material3 above the stable BOM) and A-002 (Kotlin leaves its recorded pin 2.3.20 for the newest stable). Criteria that will need a person once built: 3 (the Galaxy A13) and 7 (each changed screen picture). The unsigned items of Runs 1-4 below stay as they are.
+
 ## Run 4 (one class per file, one UiState per screen): Verifier, Iteration 5
 
 Phase 1 (the six screens), Phase 2 (the two guard tests) and Phase 3 (the last file splits) are built; the Verifier then re-proved every `machine` criterion on `9fa9d89` with fresh runs: `testDebugUnitTest` 231 tests (0 failed, 0 errors, 0 skipped), `verifyRoborazziDebug` 16 of 16 unchanged, `lintDebug` and `assembleDebug` exit 0, and the greps and diffs of criteria 2, 3, 7, 9, 10, 11, 16, 17 and R1 to R6 all hold. Every task is complete; nothing is abandoned or unreachable. The run is not `DONE` only because criteria 6 and 15 need a person. Problems so far:
