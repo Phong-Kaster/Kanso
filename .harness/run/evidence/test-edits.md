@@ -38,4 +38,20 @@ replacement of the same intent; none is `@Ignore`d.
 
 New files in Phase 2: `screenshots/GalleryLoadingScreenshotTest.kt` (pictures 26 and 27).
 
+## Phase 3 (T-006 the camera, T-007 Settings, T-010 Saved's success mark)
+
+| File | Status | Why the PRD forces it |
+|---|---|---|
+| `camera/CameraControlsTest.kt` | M | PRD: the camera's controls are icon buttons and the shutter answers a press (DoD 8, 18). Four tests added, no existing one changed: `back_flash_and_lens_switch_are_named_icon_buttons_without_text_of_at_least_48_dp`, `the_shutter_ring_shrinks_while_pressed_takes_one_photo_and_springs_back` (differs 150 ms after a touch-down, as before 1 000 ms after the release, exactly one `takePicture`), `the_bottom_controls_clear_the_gesture_zone_when_the_navigation_bar_is_zero_tall`, `a_loading_indicator_shows_while_the_camera_is_opening_and_leaves_once_it_is_ready`. The private helper `showCamera` gained an optional `probe` parameter (existing callers unchanged); `the_gallery_camera_button_opens_the_camera_for_its_tool` is untouched. |
+| `camera/CameraScreenTest.kt` | M | DoD 8: one test added, `keep_and_retake_are_labelled_buttons_of_at_least_48_dp` (Keep and Retake show an icon beside their text and keep their tags); no existing assertion changed. |
+| `settings/ThemeColourSettingsTest.kt` | M | DoD 19: new `colour_rows_sit_in_the_colour_group_with_an_icon_and_a_label` (the node tagged `settings-group-colour` holds exactly the colour rows, each a radio button with its icon and label), with private helpers and a KDoc sentence. Existing tests and assertions unchanged. |
+| `settings/ThemeModeSettingsTest.kt` | M | DoD 19: new `theme_mode_rows_sit_in_the_appearance_group_with_an_icon_and_a_label` (same check for the theme-mode rows), with a KDoc paragraph. The ink check of the "Dark" label is untouched because the selected row is not filled with `primary`. |
+| `screenshots/ScreenshotTest.kt` | M | DoD 20: `settings_swatches_light` and `settings_swatches_dark` added at SDK 35 (pictures 24 and 25; each first asserts the three swatches are on screen without scrolling); the class KDoc said "six" pictures and named the old purple colour, now eight and Kanso blue. Pictures 4, 5, 6 are re-recorded by the existing tests. |
+| `screenshots/SavedScreenshotTest.kt` | M | DoD 7, 20: the screen now holds a one-shot success mark and a loading indicator, so the test pauses the clock before `setContent`, steps it until the photo shows (`waitForPhoto`, replacing the real-time `waitUntil` that cannot go idle with an indicator on screen) and moves it 3 000 ms on, so pictures 18 and 19 show the mark at rest. The host, the sizes and the file names are unchanged. |
+| `saved/SavedScreenTest.kt` | M | DoD 7, 9: two tests added with the clock paused before `setContent`: `the_success_mark_plays_once_and_then_rests` (pixels of `saved-mark` at 0, 250, 1 000, 1 500 and 3 000 ms: three different, the last two equal) and `a_loading_indicator_shows_while_the_photo_decodes_and_goes_once_it_is_ready`. No existing assertion changed. |
+| `ExpressiveApiTest.kt` | M | DoD 30 (T-010 scope, KDoc only): the class comment said nothing in the app used the Expressive components yet; it now says the screens do. No test body or import changed. |
+| `previews/PreviewsRenderTest.kt` | M | Three new previews join `requiredPreviewNames` (`SettingsGroupPreview`, `ColourRowPreview`, `SavedMarkPreview`); none is removed (the Iteration's edit). |
+
+New files in Phase 3: `settings/ThemeSwatchTest.kt` (DoD 2: the three swatches' centre pixels, order, selection and recolouring at SDK 35; two rows at SDK 30), `screenshots/CameraControlsScreenshotTest.kt` (pictures 20 and 21).
+
 New files: `theme/KansoBlueThemeTest.kt`, `theme/KansoBlueContrastTest.kt`, `tool/ToolViewModelTest.kt`, `tool/ToolSelectionAnimationTest.kt`.

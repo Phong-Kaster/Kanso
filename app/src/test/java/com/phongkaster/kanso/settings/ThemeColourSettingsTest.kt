@@ -4,10 +4,18 @@ import android.content.Context
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -23,12 +31,14 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_COLOUR_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_KANSO_BLUE_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_WALLPAPER_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
+import com.phongkaster.kanso.ui.settings.settingsRowIconTag
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
 import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
@@ -52,7 +62,8 @@ import org.robolectric.annotation.Config
  * to Wallpaper, choosing Kanso blue afterwards brings Kanso blue back, the Custom option shows
  * the colour picker, and a custom colour set through the picker's callback re-themes Settings
  * and Home at once, in light and in dark. Surviving a restart is checked in
- * ThemeColourRestartTest.
+ * ThemeColourRestartTest, and the colour swatch on each row in ThemeSwatchTest. One test reads how
+ * the rows are grouped: all of them inside the colour group, each with an icon and its label.
  *
  * The colours are read from the scheme KansoTheme publishes on its semantics node, which is
  * exactly what `MaterialTheme.colorScheme` returns on every screen below it.
@@ -150,6 +161,27 @@ class ThemeColourSettingsTest {
     }
 
     /**
+     * DoD 19: on Android 15 the three colour rows sit inside the grouped container tagged
+     * `settings-group-colour`, which holds no other choice; each is still a radio-button row and
+     * holds its own icon (decorative, or an image with a description) and its label. The
+     * selection of a fresh install is unchanged: Kanso blue on, the other two off.
+     */
+    @Test
+    fun colour_rows_sit_in_the_colour_group_with_an_icon_and_a_label() {
+        waitForHome()
+        openSettings()
+        assertGroupHolds(
+            SETTINGS_GROUP_COLOUR_TAG,
+            THEME_COLOUR_KANSO_BLUE_TAG to R.string.theme_colour_kanso_blue,
+            THEME_COLOUR_WALLPAPER_TAG to R.string.theme_colour_wallpaper,
+            THEME_COLOUR_CUSTOM_TAG to R.string.theme_colour_custom,
+        )
+        compose.onNodeWithTag(THEME_COLOUR_KANSO_BLUE_TAG).assertIsSelected()
+        compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).assertIsNotSelected()
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).assertIsNotSelected()
+    }
+
+    /**
      * In light mode, the custom colour set through the picker's callback gives Settings the
      * generated light scheme at once, and Home has it after Back, with no restart.
      */
@@ -228,6 +260,46 @@ class ThemeColourSettingsTest {
         val shown = colourTags.sumOf { compose.onAllNodesWithTag(it).fetchSemanticsNodes().size }
         assertEquals("Expected exactly the colour rows ${tags.toList()}", tags.size, shown)
     }
+
+    /**
+     * Fails unless the node tagged [groupTag] holds exactly the selectable rows of [rows] (each a
+     * row tag and the string resource of its label), each one a radio button holding its icon
+     * node (tagged with `settingsRowIconTag`) and its label text.
+     *
+     * The icon and the label are looked up in the unmerged tree: a row merges its children into
+     * itself for screen readers, so only the unmerged tree still shows them as nodes of their own.
+     */
+    private fun assertGroupHolds(groupTag: String, vararg rows: Pair<String, Int>) {
+        compose.onNodeWithTag(groupTag).assertExists()
+        rows.forEach { (rowTag, labelRes) ->
+            compose.onNode(hasTestTag(rowTag) and hasAnyAncestor(hasTestTag(groupTag)))
+                .assertExists()
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            compose.onNode(
+                hasTestTag(settingsRowIconTag(rowTag)) and hasAnyAncestor(hasTestTag(rowTag)),
+                useUnmergedTree = true,
+            ).assertExists().assert(isImageOrDecorative())
+            compose.onNode(
+                hasText(context.getString(labelRes)) and hasAnyAncestor(hasTestTag(rowTag)),
+                useUnmergedTree = true,
+            ).assertExists()
+        }
+        val held = compose.onAllNodes(isSelectable() and hasAnyAncestor(hasTestTag(groupTag)))
+            .fetchSemanticsNodes()
+            .size
+        assertEquals("The group $groupTag must hold exactly its ${rows.size} rows", rows.size, held)
+    }
+
+    /**
+     * Matches an icon that is either an image with a spoken description, or decorative: it has no
+     * content description at all, so screen readers skip it and read the row's label instead.
+     */
+    private fun isImageOrDecorative(): SemanticsMatcher =
+        SemanticsMatcher("an image with a content description, or decorative") { node ->
+            val description = node.config.getOrNull(SemanticsProperties.ContentDescription)
+            val isImage = node.config.getOrNull(SemanticsProperties.Role) == Role.Image
+            description == null || (isImage && description.any { it.isNotBlank() })
+        }
 
     /** Returns the colour scheme KansoTheme currently hands to every screen. */
     private fun appliedScheme(): ColorScheme =

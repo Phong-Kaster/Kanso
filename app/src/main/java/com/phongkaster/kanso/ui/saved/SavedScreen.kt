@@ -3,6 +3,7 @@ package com.phongkaster.kanso.ui.saved
 import android.content.ActivityNotFoundException
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,14 +32,18 @@ import androidx.compose.material3.ButtonGroupMenuState
 import androidx.compose.material3.ButtonGroupScope
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,23 +52,34 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import androidx.graphics.shapes.Morph
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -75,6 +91,20 @@ const val SAVED_SCREEN_TAG = "saved-screen"
 
 /** The test tag on the saved photo. */
 const val SAVED_PHOTO_TAG = "saved-photo"
+
+/**
+ * The test tag on the success mark, the small badge above the photo that grows and changes shape
+ * once when the screen appears (see [SavedMark]). The same node carries the mark's content
+ * description, so a screen reader can say that the photo was saved.
+ */
+const val SAVED_MARK_TAG = "saved-mark"
+
+/**
+ * The test tag on the loading indicator shown in the middle of the photo area while the saved
+ * photo is being decoded. It is gone as soon as the photo is shown, or as soon as the photo turns
+ * out to be unreadable.
+ */
+const val SAVED_LOADING_TAG = "saved-loading"
 
 /**
  * The test tag on the button group that holds the three actions. The Share, Edit another and Home
@@ -136,7 +166,21 @@ private val ACTION_PADDING = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
 private val PRESS_COMPRESSION = 4.dp
 
 /**
- * The screen shown after a photo is saved: a top bar titled "Saved", the saved photo upright,
+ * The width and height of the success mark: large enough to read at a glance, small enough to
+ * leave nearly all of the space between the top bar and the actions to the photo, even on a small
+ * phone.
+ */
+private val MARK_SIZE = 64.dp
+
+/**
+ * The size of the check drawn in the middle of the success mark: half the mark, so it stays well
+ * inside the cookie's scallops.
+ */
+private val MARK_CHECK_SIZE = 32.dp
+
+/**
+ * The screen shown after a photo is saved: a top bar titled "Saved", a small success mark that
+ * grows and changes shape once to say the save worked (see [SavedMark]), the saved photo upright,
  * the message that it is in Pictures/Kanso, and three actions at the bottom: Share, Edit another
  * and Home.
  *
@@ -234,8 +278,14 @@ fun SavedScreen(
 
 /**
  * The stateless part of the Saved screen (see [SavedScreen] for why there are two): draws the top
- * bar, the photo area and the bottom actions from [state], and reports every tap through a
- * callback.
+ * bar, the success mark, the photo area and the bottom actions from [state], and reports every
+ * tap through a callback.
+ *
+ * Between the top bar and the actions the screen is one column: the success mark ([SavedMark])
+ * at the top, centred, and under it the photo area, which takes all the height the mark leaves.
+ * The photo area shows the loading indicator ([SavedLoadingIndicator]) while the photo is being
+ * decoded, then the photo as large as fits; a photo that cannot be read leaves it empty (the
+ * photo is saved all the same, and the message at the bottom says so).
  *
  * [state] holds the photo, shown once it is decoded, and its Uri, which is only carried onto the
  * photo's semantics so tests can tell which photo is shown. [sharing] is true while a share is
@@ -276,22 +326,213 @@ internal fun SavedContent(
             )
         },
     ) { innerPadding ->
-        // innerPadding is the space the top bar and the actions take; the photo stays between.
-        Box(
+        // innerPadding is the space the top bar and the actions take; the mark and the photo
+        // stay between.
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp),
-            contentAlignment = Alignment.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            when (val current = state.photo) {
-                // Decoding takes a moment, and a photo that cannot be read leaves the area empty:
-                // it is saved all the same, and the message below says so.
-                SavedPhoto.Loading, SavedPhoto.Unreadable -> Unit
-                is SavedPhoto.Ready -> PhotoView(bitmap = current.bitmap, photoUri = state.photoUri)
+            SavedMark()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // weight(1f) gives the photo area all the height the mark leaves, so the photo
+                    // stays as large as fits.
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (val current = state.photo) {
+                    // Decoding takes a moment; meanwhile an indicator moves in the middle of the area.
+                    SavedPhoto.Loading -> SavedLoadingIndicator()
+                    // A photo that cannot be read leaves the area empty: it is saved all the same,
+                    // and the message below says so.
+                    SavedPhoto.Unreadable -> Unit
+                    is SavedPhoto.Ready -> PhotoView(bitmap = current.bitmap, photoUri = state.photoUri)
+                }
             }
         }
     }
+}
+
+/**
+ * The success mark above the photo, with its animation: it plays once when the screen appears and
+ * then rests. The drawing itself is [SavedMarkBadge]; this function only moves the two numbers
+ * that the drawing reads.
+ *
+ * The mark is told in two steps, one after the other:
+ *
+ * 1. It grows from nothing to its full size as a filled circle with a check in the middle. Its
+ *    growth goes from 0 to 1 on the motion scheme's fast spatial spring (in KansoTheme's
+ *    expressive scheme: stiffness 800, damping ratio 0.6). A damping ratio below 1 lets a spring
+ *    overshoot, so the circle grows almost 10 % too far and springs back: a small, physical "pop".
+ * 2. The circle then turns into a cookie with nine scallops, the outline of a seal or a badge. This
+ *    shape change goes from 0 to 1 on the slow spatial spring (stiffness 200, damping ratio 0.8),
+ *    a calmer movement, so the eye can follow one shape flowing into the other.
+ *
+ * `Animatable` is the Compose animation API for a value that a coroutine drives: it holds a number
+ * (here it starts at 0), and `animateTo` moves it to a target frame by frame, along the spring it
+ * is given, suspending until it gets there. `LaunchedEffect(Unit)` starts that coroutine once,
+ * when the mark first appears, so the two `animateTo` calls inside it run one after the other.
+ * Reading `.value` of an `Animatable` here subscribes this function to it, so every frame draws
+ * the mark again with the new numbers.
+ *
+ * Why it rests: a spring has no fixed duration, but Compose ends it once it is within 0.01 of its
+ * target and has almost stopped, and then sets the value to exactly the target. That happens after
+ * about 0.3 s for the growth and about 0.45 s for the shape change, so well under a second after
+ * the screen appears the mark is still, and nothing in it moves again: unlike the loading
+ * indicator, it is never an endless animation. With Android's "Remove animations" setting on,
+ * Compose skips the springs and both numbers jump straight to 1.
+ *
+ * Two cases start the mark already at rest. In Android Studio's preview pane
+ * (`LocalInspectionMode` is true there) only one still picture is drawn, which would otherwise be
+ * the empty first frame. And once the mark has played, `rememberSaveable` (`remember` that also
+ * survives the screen being rebuilt, as on a rotation of the phone) keeps that fact, so turning
+ * the phone does not play it a second time. [modifier] is applied to the mark.
+ */
+@Composable
+private fun SavedMark(modifier: Modifier = Modifier) {
+    var played by rememberSaveable { mutableStateOf(false) }
+    val startAtRest = played || LocalInspectionMode.current
+    // remember keeps the same two Animatables across the frames of the animation; each starts at
+    // 0 (nothing drawn, still a circle) or, in the two cases above, at 1 (the mark at rest).
+    val growth = remember { Animatable(if (startAtRest) 1f else 0f) }
+    val shapeChange = remember { Animatable(if (startAtRest) 1f else 0f) }
+    // The springs are read from the theme here, in composition, and handed to the coroutine below.
+    val growthSpring = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val shapeSpring = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+
+    LaunchedEffect(Unit) {
+        // Each call suspends until its spring has settled, so the shape starts changing only once
+        // the mark has finished growing. A value already at 1 returns at once.
+        growth.animateTo(1f, animationSpec = growthSpring)
+        shapeChange.animateTo(1f, animationSpec = shapeSpring)
+        played = true
+    }
+
+    SavedMarkBadge(
+        growth = growth.value,
+        morphProgress = shapeChange.value,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Draws the success mark at one moment of its animation: a filled shape in the theme's primary
+ * colour with a check in the middle, in `onPrimary`, the colour that reads on primary.
+ *
+ * [growth] is the mark's size as a share of [MARK_SIZE]: 0 draws nothing, 1 is the full size, and
+ * a little above 1 while the spring overshoots. [morphProgress] is how far the shape has changed
+ * from a circle into a cookie: 0 is the circle, 1 the cookie. [modifier] is applied to the mark.
+ *
+ * What `MaterialShapes` is: Material 3 Expressive's ready-made set of shapes (circles, pills,
+ * cookies, clovers, bursts and more). Each one is a `RoundedPolygon`, a polygon with rounded
+ * corners, described inside a 1 x 1 square.
+ *
+ * What `Morph` is: a smooth in-between of two such shapes. `Morph(start, end)` matches the outline
+ * of the first shape to the outline of the second, once; `morph.toPath(progress)` then gives the
+ * outline at any point between them: progress 0 is exactly the first shape, 1 exactly the second,
+ * 0.5 halfway. Moving the progress from 0 to 1 over a few frames makes one shape flow into the
+ * other. Matching two outlines takes some work, so the morph is built once and kept with
+ * `remember` instead of being built again on every frame.
+ *
+ * The outline comes back inside that 1 x 1 square, so a scale matrix stretches it to the mark's
+ * size before it is drawn, and [growth] then draws it smaller or larger around the mark's centre.
+ * The progress handed to the morph is kept between 0 and 1 (`coerceIn`): a spring overshoots its
+ * target, and a morph pushed past its last shape would bend the cookie beyond its design. The size
+ * is allowed to overshoot, because a mark that grows a little too far and springs back reads well.
+ * (Material's own loading indicator does the same: it keeps its morph progress in range and lets
+ * the size carry the bounce.)
+ *
+ * The shape is painted in `drawBehind`, which draws under the node's content (the check) in the
+ * node's own space. The node itself keeps its full size and place whatever the growth, so a test
+ * finds it, and crops it, the same way on every frame. The check is a Material Symbols drawable
+ * drawn with `Icon` and tinted `onPrimary`; it grows with the shape through `graphicsLayer`, which
+ * scales what is drawn without changing the layout.
+ *
+ * The node carries the content description "Photo saved" and the role of an image, so a screen
+ * reader announces the mark; its test tag is [SAVED_MARK_TAG].
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SavedMarkBadge(growth: Float, morphProgress: Float, modifier: Modifier = Modifier) {
+    // From a plain circle to the nine-scalloped cookie of the Expressive shape set.
+    val morph = remember { Morph(MaterialShapes.Circle, MaterialShapes.Cookie9Sided) }
+    // A path and a matrix reused on every frame, so drawing creates no new objects.
+    val path = remember { Path() }
+    val scaleMatrix = remember { Matrix() }
+    val badgeColour = MaterialTheme.colorScheme.primary
+    val description = stringResource(R.string.saved_mark_description)
+
+    Box(
+        modifier = modifier
+            // The tag comes before the size, so the tagged node covers the whole mark.
+            .testTag(SAVED_MARK_TAG)
+            .semantics {
+                contentDescription = description
+                role = Role.Image
+            }
+            .size(MARK_SIZE)
+            .drawBehind {
+                if (growth > 0f) {
+                    // The outline at this moment of the morph, inside the 1 x 1 square.
+                    morph.toPath(progress = morphProgress.coerceIn(0f, 1f), path = path)
+                    // Stretch it from the 1 x 1 square to the node's size, in pixels.
+                    scaleMatrix.reset()
+                    scaleMatrix.scale(x = size.width, y = size.height)
+                    path.transform(scaleMatrix)
+                    // Draw it grown or shrunk around the centre of the node.
+                    scale(growth) {
+                        drawPath(path = path, color = badgeColour)
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_check),
+            // The mark's node already carries the description; the check adds nothing to say.
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .size(MARK_CHECK_SIZE)
+                .graphicsLayer {
+                    scaleX = growth
+                    scaleY = growth
+                },
+        )
+    }
+}
+
+/**
+ * The loading indicator in the middle of the photo area while the saved photo is being decoded,
+ * so the person sees that the photo is on its way instead of an empty space.
+ *
+ * `LoadingIndicator` is Material 3 Expressive's way of saying "please wait": a small rounded shape
+ * that keeps morphing into the next one while it slowly turns (the editor's photo area shows the
+ * same one, see `ToolScreen`). Called without a progress value, it does not know how long the wait
+ * will last, so it animates for as long as it is shown; it goes away by itself as soon as the photo
+ * is ready or turns out to be unreadable, because the photo area then draws that instead. It is
+ * still marked experimental in Material3 1.5.0-beta01, hence the opt-in. It keeps its standard
+ * 48 dp box and its default colour, the theme's primary.
+ *
+ * It shows no text; its content description, set on its own modifier, is what a screen reader
+ * says. Because it never stops by itself, no preview shows it, and a test that shows it pauses the
+ * test clock first.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SavedLoadingIndicator() {
+    val description = stringResource(R.string.saved_loading)
+    LoadingIndicator(
+        modifier = Modifier
+            .testTag(SAVED_LOADING_TAG)
+            // Set on the indicator's own modifier, the description becomes its spoken name.
+            .semantics { contentDescription = description },
+    )
 }
 
 /**
@@ -627,12 +868,15 @@ private fun samplePhoto(): SavedPhoto = SavedPhoto.Ready(sampleBitmap())
 
 /**
  * The Saved screen with a photo on show and every button ready, drawn once in light and once in
- * dark, from a [SavedUiState] built out of sample data. [SavedContent] draws the photo
- * ([PhotoView]) and the bottom row of three buttons in their button group ([SavedActions], whose
- * parts are [ActionButton] and [ActionLabel]), so this one picture covers them all. The overflow
- * menu's lines, [ActionMenuItem], never show here (the row always fits), so they have a preview
- * of their own, [ActionMenuItemPreview]. `ThemeMode.System` makes KansoTheme follow the preview's
- * own light or dark picture; the taps do nothing.
+ * dark, from a [SavedUiState] built out of sample data. [SavedContent] draws the success mark
+ * ([SavedMark], at rest in the preview pane, see there), the photo ([PhotoView]) and the bottom
+ * row of three buttons in their button group ([SavedActions], whose parts are [ActionButton] and
+ * [ActionLabel]), so this one picture covers them all. The overflow menu's lines,
+ * [ActionMenuItem], never show here (the row always fits), so they have a preview of their own,
+ * [ActionMenuItemPreview]. No preview shows the photo area while the photo is still being
+ * decoded: its indicator never stops moving, so a still picture of it would mean nothing.
+ * `ThemeMode.System` makes KansoTheme follow the preview's own light or dark picture; the taps do
+ * nothing.
  */
 @PreviewLightDark
 @Composable
@@ -648,6 +892,26 @@ private fun SavedPreview() {
             onEditAnother = {},
             onHome = {},
         )
+    }
+}
+
+/**
+ * The success mark at rest, as it stays once its animation has played: the cookie with nine
+ * scallops in the theme's primary colour with the check on it, drawn once in light and once in
+ * dark on the screen's background colour. [SavedMarkBadge] is given fixed numbers (full size, the
+ * shape change complete), so nothing moves here.
+ */
+@PreviewLightDark
+@Composable
+private fun SavedMarkPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            SavedMarkBadge(
+                growth = 1f,
+                morphProgress = 1f,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
     }
 }
 

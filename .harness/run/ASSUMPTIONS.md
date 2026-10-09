@@ -14,8 +14,8 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
-- **Revert:** `git revert <sha>` of the Phase 2 checkpoint that built Home (T-004)
+- **First dependent checkpoint:** `cde8d7a` (the Phase 2 checkpoint, Iteration 3, which built Home)
+- **Revert:** `git revert cde8d7a` (the Phase 2 checkpoint that built Home, T-004)
 
 ### Question
 
@@ -81,8 +81,8 @@ Option 1. The stored key names and the file never change, a new stored value `"K
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
-- **Revert:** `git revert <sha>` of the Phase 2 checkpoint (T-004)
+- **First dependent checkpoint:** `cde8d7a` (the Phase 2 checkpoint, Iteration 3)
+- **Revert:** `git revert cde8d7a` (the Phase 2 checkpoint, T-004)
 
 ### Question
 
@@ -126,7 +126,7 @@ Option 1; DoD 3, 7 and 23 pin the behaviour and leave the mechanism to the test.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
+- **First dependent checkpoint:** the Phase 3 checkpoint (Iteration 4); its SHA is written by the next Iteration, a commit cannot name itself
 - **Revert:** `git revert <sha>` of the Phase 3 checkpoint (T-006, T-007)
 
 ### Question
@@ -149,8 +149,8 @@ Option 1, written into the DoD itself so the person approving it sees the except
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
-- **Revert:** `git revert <sha>` of the Phase 2 checkpoint (T-005, T-009)
+- **First dependent checkpoint:** `cde8d7a` (the Phase 2 checkpoint, Iteration 3; Phase 3 adds the camera, Saved and `LoadingIndicator` uses in the Iteration 4 checkpoint)
+- **Revert:** `git revert cde8d7a` (the Phase 2 checkpoint, T-005, T-009)
 
 ### Question
 
@@ -215,8 +215,8 @@ Option 1; DoD 10 checks the styles are used, DoD 20 and 21 let a person judge th
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
-- **Revert:** `git revert <sha>` of the Phase 2 checkpoint (Home, T-004)
+- **First dependent checkpoint:** `cde8d7a` (the Phase 2 checkpoint, Iteration 3)
+- **Revert:** `git revert cde8d7a` (the Phase 2 checkpoint, Home, T-004)
 
 ### Question
 
