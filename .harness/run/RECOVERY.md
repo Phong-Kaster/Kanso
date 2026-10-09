@@ -11,3 +11,10 @@
 ---
 
 (none yet)
+
+## R-001 - deleted
+
+- **When:** 2026-10-09T15:31:48.7457726+07:00
+- **Target:** `C:\Users\MAC_PC\AppData\Local\Temp\kanso-v`
+- **Captured:** moved to `D:\Valve\Personal\Kanso\.harness\trash\20261009-153148-707\kanso-v`
+- **Restore:** `Copy-Item -LiteralPath 'D:\Valve\Personal\Kanso\.harness\trash\20261009-153148-707\kanso-v' -Destination 'C:\Users\MAC_PC\AppData\Local\Temp\kanso-v' -Recurse`

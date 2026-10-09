@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Phase 3 done (the last splits); PARTIAL-candidate recorded, the next invocation is the Verifier
+- **Stage:** Verifier done (Iteration 5, on `9fa9d89`); the run ends `DONE_PARTIAL`
 - **Loop Branch:** loop/kanso-one-class-per-file (started from `4d5f239`)
-- **Next Phase:** none (every task complete); the Verifier runs next
+- **Next Phase:** none (every task complete, no gap the Verifier could close)
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes (Autonomous mode, ENGINE §14.4): every task is complete and nothing is abandoned, but DoD 6 and 15 need a person, so the run cannot end `DONE`; the Verifier re-proves every `machine` criterion, drives every `machine-then-human` one, and reports `DONE_PARTIAL` unless it finds a gap it can close
+- **PARTIAL-candidate:** yes, consumed by the Verifier (Autonomous mode, ENGINE §14.4): every `machine` criterion re-proved with fresh evidence; DoD 6 and 15 await a person, so the run cannot end `DONE`; `.harness/run/` stays (no Cleanup Commit)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -26,7 +26,11 @@
 
 ## Signed off
 
-None yet. Criteria 6 and 15 need a person; Run 3's unsigned items stay in `.harness/ISSUES.md`.
+None yet. Criteria 6 and 15 need a person and are listed as unsigned items in `.harness/ISSUES.md` (Awaiting a person, Run 4), with Run 1 to 3's 17 older unsigned items carried over unchanged. Criterion 6's machine pre-check was driven on the owner's Galaxy A13 only as far as the Settings screen (a person took the phone); criterion 15's pre-check passed.
+
+## Verifier (Iteration 5, 2026-10-09, `9fa9d89`)
+
+Fresh evidence, `evidence/v-verify.log` (exit 0, `BUILD SUCCESSFUL in 5m 10s`): 231 tests, 0 failed, 0 errors, 0 skipped; `verifyRoborazziDebug` 16 total, 16 unchanged; `lintDebug` and `assembleDebug` pass. Criteria 1 to 5, 7 to 14, 16, 17 and R1 to R6: all hold (greps and diffs run by the Verifier; 198 base test names all present, no `@Ignore`, previews and KDoc tests byte-identical, 6 removed assertion lines all re-added). Criteria 6 and 15: machine pre-check done as far as possible, signatures outstanding.
 
 ## Assumptions
 

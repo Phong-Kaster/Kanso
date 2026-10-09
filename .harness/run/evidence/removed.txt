@@ -1,0 +1,6 @@
+assertTrue(
+assertTrue(
+assertTrue(
+assertTrue(
+check(latestRequestCode != -1) { "No permission request to answer" }
+check(latestRequestCode != -1) { "No permission request to answer" }

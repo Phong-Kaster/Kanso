@@ -1,0 +1,5 @@
+Verifier device pre-check, Galaxy A13 (R58W1120QVA), debug build of HEAD 9fa9d89. Raw dumps of screens that
+show the owner's photos are not kept (they list photo and album file names); only what was seen is.
+1 Home (fresh install, no data): title Kanso; rows Edit, Remove background, Enhance, Retouch, Artistic, Camera; Settings.
+2 Tap Edit: system dialog "Allow Kanso to access photos and videos on this device?" with Allow limited access / Allow all / Don't allow.
+3 Tap Allow all: gallery "Edit: choose a photo" with Back and Take a photo buttons, an album strip, and a 3-column photo grid.

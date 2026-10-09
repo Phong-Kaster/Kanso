@@ -36,8 +36,8 @@ Option 2. `CLAUDE.md` is the owner's standing rule and the PRD says it applies i
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `9fa9d89` (loop(phase-3))
+- **Revert:** `git revert 9fa9d89`
 
 ### Question
 
@@ -58,8 +58,8 @@ Option 2: `CLAUDE.md` says "every top-level class", with no visibility exception
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `9fa9d89` (loop(phase-3))
+- **Revert:** `git revert 9fa9d89`
 
 ### Question
 
@@ -256,8 +256,8 @@ Option 2, following the repository's existing scanning tests. To prove it on the
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 4, the Phase 3 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `9fa9d89` (loop(phase-3))
+- **Revert:** `git revert 9fa9d89`
 
 ### Question
 
