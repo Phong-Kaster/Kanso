@@ -53,3 +53,19 @@
   - **T-018:** DoD 11's scan (`evidence/expressive-scan.md`) found four calls with a `shapes` overload that did not pass it (the refused panel's "open settings" button, two preview buttons, one preview text button): they do now. Two calls cannot take `shapes =` and are not tasks (`ButtonGroupDefaults.OverflowIndicator` and `RadioButton`).
 - **Recorded, not fixed (see ISSUES.md):** the review's advisory points that no task was worth.
 - **Briefs:** every Phase 5 Worker was told to read `.harness/knowledge/PROJECT.md` in full and to quote the Constraints that bite; each Worker's report was written to `evidence/phase5-reports/` as it returned (S-006).
+
+### Iteration 7 - 2026-10-10 - Tier 1: the Verifier's three gaps become Phase 6 (no PRD, DoD or architecture change)
+
+- **Why:** the Verifier re-proved every `machine` criterion on fresh runs. All held except three Proof clauses. A task can close each one, so §14.4 files tasks instead of reporting `DONE_PARTIAL` (per criterion: `evidence/p7-verifier.md`).
+  - **T-019 (DoD 29):** `git grep -n 'reference/' -- settings.gradle.kts app` prints one line, a KDoc sentence in `OneTypePerFileTest.kt:394` (there since `76522d7`). The task rewords that sentence and changes no logic.
+  - **T-020 (DoD 2):** `ThemeSwatchTest.choose` proves a tap by `primary` only, while the Proof says "that choice's scheme". The task compares seven roles, the ones criterion 1 compares.
+  - **T-021 (DoD 4):** the fill check never ran on the 600x400 gradient the Proof names. The task adds it to the gradient test.
+- **Phase 6:** T-019, T-020, T-021, three disjoint test files. The Iteration writes the `test-edits.md` rows.
+- **PARTIAL-candidate cleared** in `STATE.md`. The Verifier runs again after Phase 6.
+- **A-015's checkpoint SHA written** (`1e82f8d`). **A-016 recorded**: `aapt2` 36.0.0 prints DoD 24's `sdkVersion:'27'` as `minSdkVersion:'27'`.
+- **Recorded, not tasks:** the audit's lesser points, listed in `p7-verifier.md` and `ISSUES.md`:
+  - The exact back stacks of 3, 5 and 7 are read from `KansoNavHost.kt`.
+  - Criterion 22's names and file are checked by diff.
+  - `TouchTargetCheck` also counts `node.size`.
+  - The Settings icon check accepts any node that has no description.
+  - "Inside the column" accepts any scrollable ancestor.

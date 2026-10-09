@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Phase 5 complete (Iteration 6, finished by its second process); no executable task remains. **PARTIAL-candidate recorded:** the next invocation is the Verifier (criteria 13, 20, 21 and 30 need a person)
+- **Stage:** The Verifier (Iteration 7) re-proved every `machine` criterion on fresh runs. It found three Proof clauses that no test or search satisfies yet: DoD 29's `reference/` search hits a comment, DoD 2 is proved by `primary` only, and DoD 4's fill check skips the gradient photo. They are Phase 6 (T-019 to T-021, test files only).
 - **Loop Branch:** loop/kanso-m3-expressive-blue (started from `76522d7`)
-- **Next Phase:** none; the Verifier (Capable) re-proves every `machine` criterion and drives the `machine-then-human` ones (§11, §14.4)
+- **Next Phase:** 6: T-019 (Fast), T-020 (Capable), T-021 (Fast). Three disjoint test files; then one fresh whole run.
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes (criteria 13, 20, 21, 30 await a signature and criterion 14 is assumed (A-015); Autonomous mode ends in `DONE_PARTIAL`, not `DONE`)
+- **PARTIAL-candidate:** no (cleared by the Verifier of Iteration 7). Record it again once Phase 6 is green: criteria 13, 20, 21 and 30 still await a signature, and criterion 14 is assumed (A-015).
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -34,15 +34,18 @@
 | T-016 | complete | new `navigation/PredictiveBackGestureTest.kt` (+ two KDoc passages) | same run; 3 tests |
 | T-017 | complete | new `navigation/PredictiveBackOpacityTest.kt`, the commit test of `PredictiveBackGestureTest.kt` | same run; the mutation (fade-out put back) fails exactly this test: `evidence/p5-mutation-fadeout.log` |
 | T-018 | complete | `AccessRefusedPanel.kt`, `KansoTheme.kt`, `PermissionGate.kt` | same run; pictures 12-15 unchanged |
+| T-019 | pending (Phase 6) | `OneTypePerFileTest.kt` (one KDoc sentence) | - |
+| T-020 | pending (Phase 6) | `settings/ThemeSwatchTest.kt` (`choose`) | - |
+| T-021 | pending (Phase 6) | `tool/ToolScreenTest.kt` (the gradient layout test) | - |
 
 ## Signed off
 
-None yet (no criterion awaits a signature before the build exists).
+None yet. Iteration 7 (the Verifier) drove nothing on the phone, because a person was using it, and wrote no unsigned item.
 
 ## Assumed criteria (Tier 3)
 
-**Criterion 14 (assumption A-015).** DoD 14's statement says "the expressive spring"; the back gesture's preview slides the top screen on a one-second straight line instead (the Proof still holds as written). Every other assumption, A-001 to A-014, is Tier 2.
+**Criterion 14 (assumption A-015).** DoD 14's statement says "the expressive spring"; the back gesture's preview slides the top screen on a one-second straight line instead (the Proof still holds as written). Every other assumption, A-001 to A-014 and A-016, is Tier 2.
 
 ## Assumptions
 
-- A-001 to A-015 in `ASSUMPTIONS.md` (A-015 is also a Tier-3 reading of criterion 14) (grouping of the tools, the blue seed, colour migration, Home's design, the editor's design, the colour-picker exception, no wavy indicators, the icon set, typography, `Tool.CAMERA`, predictive back and Remove animations, Material3 pinned, the seed written through a Long constant, where a proof's wording and its test differ slightly, the back gesture's straight-line slide; A-011 is updated: Robolectric does carry a gesture's progress).
+- A-001 to A-016 in `ASSUMPTIONS.md` (A-015 is also a Tier-3 reading of criterion 14) (grouping of the tools, the blue seed, colour migration, Home's design, the editor's design, the colour-picker exception, no wavy indicators, the icon set, typography, `Tool.CAMERA`, predictive back and Remove animations, Material3 pinned, the seed written through a Long constant, where a proof's wording and its test differ slightly, the back gesture's straight-line slide; A-011 is updated: Robolectric does carry a gesture's progress; A-016: DoD 24's `sdkVersion:'27'` is `aapt2`'s `minSdkVersion:'27'`).

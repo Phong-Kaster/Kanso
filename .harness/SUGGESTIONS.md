@@ -135,3 +135,23 @@ The engine's contract is one Iteration, one Phase, one atomic checkpoint at the 
 The engine is meant to do one bounded chunk of work and then save it. After the work passed its checks, the engine kept finding more things to fix and prove, and never saved in between, so when the clock ran out the saved copy was an hour and a half old. A rule such as "once the build is green and the records are written, save; anything the review finds becomes the next chunk" would make a cut-off cost minutes, not an hour.
 
 ---
+
+## S-009 - At bootstrap, run every "prints nothing" Proof against the base, and audit each test against its Proof before the Verifier does
+
+- **Destination:** loop (bootstrap §5 and the per-Phase review)
+- **Earned by:** Kanso Run 6, the Verifier of Iteration 7 (2026-10-10). Five Phases were green, and the Verifier still had to file a sixth for three Proof clauses:
+  - DoD 29's `git grep -n 'reference/' -- settings.gradle.kts app` "prints nothing", but it matched a comment that was in the repository **before the run started**, so the Proof was false on the day it was approved.
+  - Two tests checked less than their Proofs promised: one colour role instead of a whole scheme, and a fill check run on a different photo than the one the Proof names. Five fresh-context reviews had not caught either, because each read the diff, not the test against the Proof.
+- **Status:** open
+
+### What happened
+
+The bootstrap wrote each search Proof from what the code should look like after the run, and nobody ran it against the code before the run. The per-Phase reviews read the diff and the Constraints. Only the Verifier's audit read each test against the Proof it claims to satisfy, and that came after all the building was done.
+
+### In plain words
+
+Two cheap checks would have saved a whole extra round:
+- Before asking the person to approve the checklist, run every "this search should find nothing" line on today's code. If it already finds something, the line is wrong before any work starts.
+- When a test is written for a checklist line, have the reviewer hold the two side by side and ask "does this test check everything the line says?"
+
+---

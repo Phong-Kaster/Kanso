@@ -7,15 +7,54 @@
 > this file is the one that is wrong: correct it and trust the source. Recovery from a dirty tree
 > always reads ground truth, never this.
 
-- **Stage:** Phase 5 complete (Iteration 6, checkpointed by its second process, `loop(phase-5)`); no executable task remains. **PARTIAL-candidate** recorded in `STATE.md`: the next invocation is the **Verifier** (Capable, Autonomous mode: §11 steps 1 and 2, §14.2, §14.4). Loop Branch `loop/kanso-m3-expressive-blue`, base `76522d7`. D-001 answered; nothing queued.
-- **Next Phase:** none. The Verifier's job, in this order:
-  1. Re-prove every `machine` criterion on **fresh** runs, writing the logs the DoD's "Verification Evidence Required" table names (`assemble.log`, `test.log`, `verify-roborazzi.log`, lint, `aapt2` badging and xmltree, `git diff --exit-code <base> HEAD -- gradle/libs.versions.toml settings.gradle.kts build.gradle.kts gradle.properties core opencv libs`, the greps). Already on disk and to be **re-run, not trusted**: `expressive-scan.md` (DoD 11), `fixed-colours.md` (DoD 16), `head-badging.txt`, `head-deps.txt` (DoD 15, 27), `baseline-diffs/before` and `after` (DoD 20 c), `test-edits.md` (complete through Phase 5), `symbols/check.sh` (DoD 28). Still to write: `head-testnames.txt` (refresh it at the final HEAD for DoD 25).
-  2. Drive every `machine-then-human` criterion it can (13, 20, 21, 30) with `.harness/loop/bin/foreman-device.ps1` (never `adb`); the owner's Galaxy A13 `R58W1120QVA` may be in use: a person using it means "not driven", say so per criterion.
-  3. Add the unsigned `- [ ]` items to `.harness/ISSUES.md` under "Awaiting a person, Run 6" (criteria 13, 20 (one per group of pictures, naming `baseline-diffs/after` and `before`), 21 (the nine steps) and 30), each leading with what was driven, from which state, and what is still unlooked-at. **Carry every earlier `- [ ]` item word for word: 21 exist** (Runs 1, 3, 4, 5 and the Galaxy A13 list).
-  4. Gaps found: file tasks, clear the PARTIAL-candidate flag, checkpoint, `CONTINUE`. No gap: no Cleanup Commit, report `DONE_PARTIAL`.
-  Say aloud in the Verifier's report: the touch-target size half of criterion 18 cannot fail for a tappable control (Compose widens it to 48 dp); "one frame" in criterion 14 was two (A-014); "Remove animations" is "not driven by machine" (the host carries no animation scale); the back gesture's preview is machine-driven only as far as positions and pixels (`PredictiveBackGestureTest`, `PredictiveBackOpacityTest`: *did not fail when driven from a dispatched gesture*), how it feels is a person's check; A-015's straight-line slide is the one departure from the springs, and criterion 14 is therefore listed as assumed in `STATE.md` (a Tier-3 reading: its statement says "the expressive spring"): ask the person in criterion 21 step 8 to try the back swipe from both edges and a short swipe released early (a release at a tenth of the swipe leaves about 0.9 s of constant-speed slide).
+- **Stage:** The Verifier (Iteration 7) re-proved every `machine` criterion on fresh runs of `1e82f8d` and found three Proof clauses still unmet, so it filed **Phase 6**. The PARTIAL-candidate flag is cleared. Per criterion: `evidence/p7-verifier.md`. Loop Branch `loop/kanso-m3-expressive-blue`, base `76522d7`. D-001 is answered; nothing is queued.
+- **Next Phase: 6.** Three test files, pairwise disjoint, with no app code and no picture:
+  - **T-019 (Fast)** writes only `app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt`: reword the KDoc sentence at :394 so `git grep -n 'reference/' -- settings.gradle.kts app` prints nothing. `ALLOWED` stays `emptySet()`.
+  - **T-020 (Capable)** writes only `app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt`: `choose` waits for and asserts seven roles of the chosen scheme (`primary`, `onPrimary`, `primaryContainer`, `secondary`, `tertiary`, `background`, `surface`), not `primary` alone. The expected schemes, in light mode:
+    - blue: `seedColorScheme(KANSO_BLUE_SEED, false)`
+    - wallpaper: `dynamicLightColorScheme(context)`, as `KansoTheme.kt:183` makes it
+    - custom: `seedColorScheme(seed, false)`
+  - **T-021 (Fast)** writes only `app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt`: add the fill assertion (same as :162-166) to `the_photo_the_panel_and_the_toolbar_stack_from_top_to_bottom`, and update its KDoc.
+  - **The Iteration writes itself:** `.harness/run/evidence/test-edits.md`.
+    - A new row for `OneTypePerFileTest.kt`: `M`, comment only, for DoD 29 and CLAUDE.md's `reference/` rule.
+    - A line added to the `ToolScreenTest.kt` row.
+    - `ThemeSwatchTest.kt` is `A` and needs no row.
+  - **Then:** one fresh whole run, a fresh-context review, and the checkpoint. If green, record the **PARTIAL-candidate** again, so the next invocation is the Verifier.
+- **For the next Verifier:**
+  - Re-run every proof. Files are already on disk, but re-run them, never trust them: the `p7-*` logs, `expressive-scan.md`, `fixed-colours.md`, `head-*.txt`, `baseline-diffs/before` and `after`, `symbols/check.sh`.
+  - The test-name awk is in `p7-verifier.md` (criterion 25); it reproduces `base-testnames.txt` exactly. After Phase 6, `head-testnames.txt` is unchanged unless a test is renamed.
+  - Drive criteria 13, 20, 21 and 30 with `foreman-device.ps1` only when `-Op focus` names Kanso. The owner's phone `R58W1120QVA` was in use at both of Iteration 7's checks; if a person is using it, write "not driven".
+  - Then write the unsigned "Awaiting a person, Run 6" items in `.harness/ISSUES.md`:
+    - criterion 13;
+    - criterion 20, one item per group of pictures, naming `baseline-diffs/after` and `before`;
+    - criterion 21, the nine steps;
+    - criterion 30.
+    - Each item leads with what was driven, from which state, and what is still unlooked-at.
+  - **Carry all 21 earlier `- [ ]` items word for word** (Runs 1, 3, 4, 5 and the Galaxy A13 list).
+- **Already weighed, not tasks:**
+  - The audit's lesser points: the exact back stacks of 3, 5 and 7 are read from `KansoNavHost.kt`; criterion 22's names and file are checked by diff; `TouchTargetCheck` also counts `node.size`; the Settings icon check accepts any node that has no description; "inside the column" accepts any scrollable ancestor.
+  - A-016: `aapt2` 36 prints DoD 24's `sdkVersion` line as `minSdkVersion:'27'`.
+  - Say aloud in the final report:
+    - The touch-target half of criterion 18 cannot fail.
+    - "One frame" in criterion 14 is two (A-014).
+    - "Remove animations" is not driven by machine.
+    - The back gesture is machine-driven only as far as positions and pixels.
+    - Criterion 14 is assumed (A-015). Ask the person, in criterion 21 step 8, to swipe from both edges and to release a short swipe early.
 - **Queued decisions:** 0.
 - **Abandoned:** none
 - **Unreachable:** none
-- **Verified commands:** build: `cd /d/Valve/Personal/Kanso && ./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` | lint: `./gradlew :app:lintDebug` | screenshots: `./gradlew :app:verifyRoborazziDebug` (compare: `:app:compareRoborazziDebug`; record new/approved: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app`) | the whole set: `./gradlew cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue` (2 min 40 s warm, 7 min cold; 368 tests at Phase 5). Always under `timeout`, output to `.harness/run/evidence/`, begin with `cd /d/Valve/Personal/Kanso &&`. A background Gradle started with `( … ) &` is not tracked by the harness (its notification fires when the launcher shell exits): wait for it in the same turn with a bounded `for i in $(seq 1 N); do [ -f /tmp/<name>.exit ] && break; sleep 15; done` loop (a bare `sleep` is blocked, and a python heredoc hangs: do not use one). The Runtime ends an invocation at 5400 s (Iteration 6 was ended there): checkpoint early.
-- **Model tiers (resolved from `.harness/loop/models.json`):** fast: `sonnet` | capable: `opus` (dispatch every Worker with `model` set explicitly; the Reviewer and the Verifier are always `opus`)
+- **Verified commands:**
+  - Every Gradle command starts with `cd /d/Valve/Personal/Kanso &&`, runs under `timeout`, and sends its output to `.harness/run/evidence/`.
+  - build: `./gradlew :app:assembleDebug`
+  - test: `./gradlew :app:testDebugUnitTest`
+  - lint: `./gradlew :app:lintDebug`
+  - screenshots: `./gradlew :app:verifyRoborazziDebug`
+    - compare: `:app:compareRoborazziDebug`
+    - record new or approved pictures: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app`
+  - the whole set: `./gradlew cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue` (2 min 40 s warm; 3 min 33 s after `:app:clean`; 368 tests).
+  - Waiting on Gradle: run it with the Bash tool's `run_in_background` and poll an exit file with a bounded `for i in $(seq 1 N); do [ -f /tmp/<name>.exit ] && break; sleep 15; done`.
+  - Shell traps:
+    - Never `python -` or a python heredoc: it waits on stdin until the timeout.
+    - `rm -rf` is refused: use `mktemp -d`.
+  - The Runtime ends an invocation at 5400 s: checkpoint early.
+- **Model tiers (resolved from `.harness/loop/models.json`):** fast: `sonnet` | capable: `opus`. Dispatch every Worker with `model` set explicitly. The Reviewer and the Verifier are always `opus`.

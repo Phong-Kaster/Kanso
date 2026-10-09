@@ -327,8 +327,8 @@ Option 1: the intent of both Proofs holds, and the differences are recorded so t
 
 - **Tier:** 2 (plan/architecture), **with a Tier-3 reading: DoD 14's statement says "the expressive spring"**, and a straight-line slide is not a spring. Recorded as an assumption against criterion 14 (listed as assumed in `STATE.md`), found by the fresh-context review of Phase 5 (the second process of Iteration 6): the Proof of 14 still holds as written (the three specs are built from the motion scheme, and `NavTransitionTest` sees the predictive function ask it for exactly its two springs), but its statement does not hold for the one slide a finger drives, so a person confirms it in criterion 21, step 8
 - **Iteration:** 6
-- **First dependent checkpoint:** the Phase 5 checkpoint (Iteration 6); its SHA is written by the next Iteration, a commit cannot name itself
-- **Revert:** `git revert <sha>` of the Phase 5 checkpoint (T-014: put back `{ _ -> pop(this) }`, or accept the spring slide)
+- **First dependent checkpoint:** `1e82f8d` (the Phase 5 checkpoint, Iteration 6; SHA written by Iteration 7)
+- **Revert:** `git revert 1e82f8d` (the Phase 5 checkpoint; T-014: put back `{ _ -> pop(this) }`, or accept the spring slide)
 
 ### Question
 
@@ -349,3 +349,25 @@ Option 2. The preview exists to follow the finger, and a spring cannot, because 
 ## A-011 - Update (Iteration 6)
 
 The Iteration tried what A-011 assumed could not be done. Robolectric does deliver a gesture's progress to Navigation 3: `OnBackPressedDispatcher.dispatchOnBackStarted`, `dispatchOnBackProgressed` and `dispatchOnBackCancelled` (public, `@VisibleForTesting`) with a `BackEventCompat` move the screens (evidence: `evidence/p5-spike-recipe.kt.txt`, `evidence/p5-spike-output.txt`). So the gesture is now driven by `PredictiveBackGestureTest` (T-016); only how the preview *feels* with a real swipe on Android 14 or later stays with a person (criterion 21, step 8). "Remove animations" is still not carried into Compose by this host (`NavTransitionTest` and `ToolSelectionAnimationTest` print "not driven by machine"). A-011's choice (Option 1) stands; its reason for the gesture does not.
+
+---
+
+## A-016 - DoD 24's `sdkVersion:'27'` is the line `aapt2` 36.0.0 prints as `minSdkVersion:'27'`
+
+- **Tier:** 2 (reading a Proof's expected output; no intent changes)
+- **Iteration:** 7 (the Verifier)
+- **First dependent checkpoint:** none (no code depends on it; the Iteration 7 checkpoint records it)
+- **Revert:** nothing to revert; a person who reads the Proof strictly can mark criterion 24 unmet, and no change to Kanso can satisfy it
+
+### Question
+
+DoD 24's Proof says `aapt2 dump badging app-debug.apk | ... grep -E "^native-code|^sdkVersion|^targetSdkVersion|compileSdkVersion='37'"` prints `sdkVersion:'27'`. The `aapt2` the DoD names (`build-tools/36.0.0`) prints the minimum-version line as `minSdkVersion:'27'`, which `^sdkVersion` does not match. So the grep prints the other three lines and not this one.
+
+### Options Considered
+
+1. Read the Proof's `sdkVersion:'27'` as the tool's `minSdkVersion:'27'` line and check it (it reads 27, the base's minimum) - consequences: the criterion's sentence ("keeps ... its minimum Android version") is proved by the same command; the difference is the tool's wording.
+2. Report criterion 24 unmet - consequences: no change to Kanso can make this `aapt2` print `sdkVersion:`, so a task could never close it.
+
+### Taken, and why
+
+Option 1. The statement is about the app's minimum Android version, and the tool reports it as 27. Recorded so a person can disagree (`evidence/p7-verifier.md`, criterion 24).

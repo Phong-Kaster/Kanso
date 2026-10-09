@@ -50,6 +50,36 @@
 - Learned: Robolectric does carry a back gesture's progress into Navigation 3 when the events are sent through the activity's `OnBackPressedDispatcher` (A-011 was assumed without trying); a seeked transition maps progress to time, so a spring or a fade on the top screen runs ahead of the finger (A-015); a test that has to see a finished transition steps one frame at a time; `Button(onClick, shapes, ...)` pads 16 dp, not 24; an Iteration that adds tasks after every review can pass the Runtime's 90 minutes without a commit (S-008).
 - Reconciled: T-013 to T-018 complete (T-014 at attempt 2, the rest at attempt 1); T-016 to T-018 added (Tier 1, `AMENDMENTS.md`); A-015 recorded (Tier 2 with a Tier-3 reading, criterion 14 assumed) and A-011 updated; PROJECT.md Phase 5 facts and Constraints; `test-edits.md` Phase 5 section; ISSUES.md; S-008 in the Suggestion Box; PARTIAL-candidate recorded: the next invocation is the Verifier.
 
+### Iteration 7 - 2026-10-10 (the Verifier: three gaps found, Phase 6 filed)
+- **Phase:** none; this Iteration was the Verifier (Capable, Autonomous mode, §11 steps 1 and 2, §14.4), on `1e82f8d`.
+- **Recover:** tree clean except `.harness/TELEMETRY.tsv` (the Runtime's row; committed with this checkpoint). `DECISIONS.md`: only D-001, already consumed.
+- Attempted:
+  - Fresh runs, each exit 0:
+    - `:app:clean`, then the whole set: 3 min 33 s, 368 tests (0 failed, 0 errors, 0 skipped), 24 pictures (0 changed), lint 0 errors.
+    - Each named Proof command on its own: compile `--rerun-tasks`, assemble, `cleanTestDebugUnitTest testDebugUnitTest`, `verifyRoborazziDebug`, lint with `--rerun`, dependencies, `dependencyInsight`, `KansoBlueThemeTest`.
+  - Every grep and git diff of the DoD.
+  - `aapt2` badging, manifest and resources on the fresh APK.
+  - The icon check script, which fetched upstream again.
+  - The test-name awk, rebuilt and proved on the base list, then `head-testnames.txt` refreshed at HEAD.
+  - `before/` and `after/` rewritten from git (byte-identical to the committed pictures).
+  - A fresh-context read-only audit (Capable) of whether each test checks what its Proof promises.
+  - The phone: another app had focus at both checks (a person using it), so nothing was driven.
+- Evidence: `evidence/p7-verifier.md` (per criterion), `p7-clean.log`, `p7-verify-full.log`, `compile.log`, `assemble.log`, `test.log`, `verify-roborazzi.log`, `lint.log`, `head-deps.txt`, `p7-dep-insight.log`, `c1.log`, `p7-greps.txt`, `p7-per-class.txt`, `p7-symbols-check.txt`, `p7-c30-precheck.txt`, `head-badging.txt`, `head-testnames.txt`, `baseline-diffs/before/` and `after/`.
+- Learned:
+  - A Proof's literal search can match a comment that was there before the run (DoD 29).
+  - `aapt2` 36 names the minimum-version line `minSdkVersion` (A-016).
+  - Two tests checked less than their Proofs said, and only an audit that reads test against Proof shows it.
+  - Two shell traps:
+    - `rm -rf` is refused by the permission rules here, so use a fresh `mktemp -d` instead.
+    - A stray `python -` waits on stdin until the 120 s timeout, and it took the log edit after it with it (redone with the Edit tool).
+- Reconciled:
+  - T-019, T-020, T-021 added (Tier 1, `AMENDMENTS.md`) as Phase 6.
+  - PARTIAL-candidate cleared.
+  - A-015's SHA written, A-016 recorded.
+  - The audit's lesser points recorded in `ISSUES.md`.
+  - PROJECT.md facts added.
+  - No "Awaiting a person, Run 6" item written yet: the next Verifier writes them from what it actually drives.
+
 ## Archived Decisions
 
 <!-- Full request + decision + rationale of every consumed Decision Queue entry. -->

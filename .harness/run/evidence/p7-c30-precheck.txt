@@ -1,0 +1,15 @@
+KansoTheme.kt MaterialExpressiveTheme/spring/MotionScheme:
+  MaterialExpressiveTheme: 4 comment lines
+  spring: 4 comment lines
+  MotionScheme: 5 comment lines
+KansoTransitions.kt:
+  transitionSpec: 6
+  predictive: 10
+SavedScreen.kt:
+  Morph: 1
+  MaterialShapes: 1
+ToolScreen.kt:
+  toolbar: 16
+  toggle: 24
+GalleryScreen.kt:
+  LoadingIndicator: 2
