@@ -504,7 +504,7 @@ class ToolScreenTest {
             }
             // Camera takes photos instead of editing one: no toggle is named after it or tagged for it.
             compose.onAllNodes(
-                hasContentDescription(label(Tool.CAMERA)) and hasAnyAncestor(hasTestTag(EDITOR_TOOLBAR_TAG)),
+                hasContentDescription(cameraLabel()) and hasAnyAncestor(hasTestTag(EDITOR_TOOLBAR_TAG)),
             ).assertCountEquals(0)
             compose.onAllNodesWithTag(CAMERA_TOGGLE_TAG).assertCountEquals(0)
             // The tags were checked in order above, so this is "the first on, the other four off".
@@ -534,7 +534,7 @@ class ToolScreenTest {
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             waitFor { count(GALLERY_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
-            compose.onNodeWithText(label(Tool.CAMERA)).assertExists()
+            compose.onNodeWithText(cameraLabel()).assertExists()
         }
     }
 
@@ -635,6 +635,12 @@ class ToolScreenTest {
 
     /** The label of [tool] as the app shows it, such as "Retouch". */
     private fun label(tool: Tool): String = context.getString(tool.labelRes)
+
+    /**
+     * The label "Camera" as the app shows it. Camera is no longer a [Tool]: Home draws it as a
+     * shortcut, and the editor has no toggle for it.
+     */
+    private fun cameraLabel(): String = context.getString(R.string.tool_camera)
 
     /** Checks that [selected]'s toggle is on and every other editing tool's toggle is off. */
     private fun assertOnlyOn(selected: Tool) {

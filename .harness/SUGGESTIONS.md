@@ -84,3 +84,21 @@ A criterion said which test classes prove it, but the tests that really contain 
 
 The checklist said "to prove this, run these tests", but the real check was written in a different test file, so running the named tests would have passed without proving anything. Reading a criterion's proof against where its assertions actually live, at the bootstrap critique and again in review, would catch it before a Verifier trusts a green line.
 
+
+---
+
+## S-006 - Write each Worker's manifest to disk the moment it returns, so a process that ends before its checkpoint loses nothing the Workers learned
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 6, Phase 2 (2026-10-10, Iteration 3): a process dispatched three Capable Workers (Home, gallery, editor), their files reached the working tree, and the process ended before the wiring and before any commit; no status was written and the cause of the end is not recorded anywhere the next process can read. The Workers' reports (the files each wrote, what it could not do, what it learned) were never saved, and the task files still read `pending, 0 attempts`. The next process could verify the diff but not recover what the Workers had reported. Iteration 2 of the same run also ended without a checkpoint (the Runtime's timeout, during the picture comparison).
+- **Status:** open
+
+### What happened
+
+The engine's contract says a Worker's report is a manifest the orchestrator reads, and that everything learned must be persisted in the same checkpoint commit as the code. Both are right, but the report only exists in the orchestrator's conversation until that commit. When a process ends in between, the working tree keeps the Workers' files (which a recovery step can salvage, and here did: it built, passed, and needed only the shared-file wiring and one missing import) while the reports, any "I could not do X", and any trap a Worker noticed are gone with the conversation. A small change closes the gap: as each Worker returns, the orchestrator writes its manifest to `.harness/run/evidence/phase-<n>-reports/<task>.md` (a plain file, no commit needed), and the Recover step reads that folder before judging the debris. A second, larger option, for the doctrine owner to weigh: let an Iteration make a work-in-progress commit on the Loop Branch after the Workers return, squashed or marked at the real checkpoint.
+
+### In plain words
+
+The engine hires several helpers for a stretch of work and each one hands back a short note when they finish. If the engine is switched off before it files those notes, the finished work is still on the desk but the notes are lost, including any warning a helper wanted to pass on. Saving each note to a file the moment it arrives costs almost nothing and means a restart can pick up exactly where things stood.
+
+---

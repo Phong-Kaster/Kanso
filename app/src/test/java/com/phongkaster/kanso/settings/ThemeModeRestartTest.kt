@@ -97,9 +97,12 @@ class ThemeModeRestartTest {
 
     /**
      * Lets Compose settle, then draws [scenario]'s Home and samples its background and the text
-     * of its "Settings" row (its own bounds, from the unmerged tree).
+     * of its "Settings" row (its own bounds, from the unmerged tree). Home is taller than this
+     * test's screen (Robolectric's default 320 x 470 dp), so the row is first scrolled into view:
+     * the text must be drawn on screen to be sampled.
      */
     private fun sampleHome(scenario: ActivityScenario<MainActivity>): ScreenSample {
+        compose.onNodeWithText(context.getString(R.string.settings)).performScrollTo()
         compose.waitForIdle()
         val bounds = compose
             .onNodeWithText(context.getString(R.string.settings), useUnmergedTree = true)

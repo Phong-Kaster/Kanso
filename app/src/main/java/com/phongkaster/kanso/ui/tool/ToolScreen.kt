@@ -32,8 +32,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
@@ -41,6 +41,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.IconToggleButtonColors
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -67,6 +69,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -91,10 +94,17 @@ const val TOOL_IMAGE_TAG = "tool-image"
 /** The test tag on the message shown when the photo cannot be opened. */
 const val TOOL_UNREADABLE_TAG = "tool-unreadable"
 
+/**
+ * The test tag on the loading indicator shown in the middle of the photo area while the photo is
+ * being decoded. It is gone as soon as the photo, or the message saying it cannot be opened, is
+ * shown.
+ */
+const val TOOL_LOADING_TAG = "tool-loading"
+
 /** The test tag on the Save action in the top bar. */
 const val TOOL_SAVE_TAG = "tool-save"
 
-/** The test tag on the small spinner the Save action shows while a save runs. */
+/** The test tag on the small loading indicator the Save action shows while a save runs. */
 const val TOOL_SAVE_PROGRESS_TAG = "tool-save-progress"
 
 /** The test tag on the message about the last save (failed, refused, or kept sideways). */
@@ -146,13 +156,14 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * again.
  *
  * The photo is decoded to about twice the screen's longest edge (see [displayMaxEdgePx]), in the
- * background, and never at full size. If it cannot be opened, a plain message says so.
+ * background, and never at full size; meanwhile a loading indicator moves in the middle of the
+ * photo area. If the photo cannot be opened, a plain message says so.
  *
  * Save sits in the top bar, clear of the gesture area at the bottom of the screen. It can be
  * tapped once the photo is shown, and writes a new upright JPEG into the phone's `Pictures/Kanso`
- * album (see `MediaStorePhotoSaver`); while it runs, Save shows a small spinner and "Saving…",
- * and the toolbar is switched off, because the tool selected when the save ends decides which
- * gallery "Edit another" opens on the Saved screen.
+ * album (see `MediaStorePhotoSaver`); while it runs, Save shows a small loading indicator and
+ * "Saving…", and the toolbar is switched off, because the tool selected when the save ends
+ * decides which gallery "Edit another" opens on the Saved screen.
  * On Android 8.1 and 9 writing there needs the WRITE_EXTERNAL_STORAGE permission, so the first
  * tap asks for it; after a refusal a plain message says nothing was saved. Android 10 and later
  * ask for nothing. A failed save, or a photo too large to turn upright, is also explained by a
@@ -262,9 +273,10 @@ fun ToolScreen(
  * screen's one snapshot, from top to bottom.
  *
  * - The top bar: the back arrow, the selected tool's name and the Save button.
- * - The photo area: whatever the photo part of [state] says (nothing while loading, the photo
- *   when ready, a plain message when unreadable), plus the message about the last save at its
- *   bottom when the save part has one. It takes all the height the other parts leave.
+ * - The photo area: whatever the photo part of [state] says (a loading indicator while the photo
+ *   is decoded, the photo when ready, a plain message when unreadable), plus the message about
+ *   the last save at its bottom when the save part has one. It takes all the height the other
+ *   parts leave.
  * - The panel: a short message saying what the selected tool will offer.
  * - The floating toolbar: one toggle per editing tool, the selected one on. While a save runs
  *   the toggles are switched off, so the tool cannot change under a save that is still going.
@@ -339,7 +351,8 @@ fun ToolContent(
  * squares its corners a little), animated with the theme's motion scheme.
  *
  * Save is always visible, so the bar does not jump, and can be tapped once the photo is shown and
- * no save is running. While a save runs it shows a small spinner and "Saving…".
+ * no save is running. While a save runs it shows a small loading indicator ([SavingIndicator])
+ * and "Saving…".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -383,12 +396,7 @@ private fun EditorTopBar(state: ToolUiState, onBack: () -> Unit, onSave: () -> U
                     .testTag(TOOL_SAVE_TAG),
             ) {
                 if (saving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .testTag(TOOL_SAVE_PROGRESS_TAG),
-                        strokeWidth = 2.dp,
-                    )
+                    SavingIndicator()
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.tool_saving))
                 } else {
@@ -407,9 +415,44 @@ private fun EditorTopBar(state: ToolUiState, onBack: () -> Unit, onSave: () -> U
 }
 
 /**
- * The photo area of the editor for [state]: nothing while the photo loads, the photo when it is
- * ready, a plain message when it cannot be opened, and the message about the last save, if any,
- * on a card at its bottom.
+ * The small loading indicator inside the Save button while a save runs, drawn just before the
+ * word "Saving…".
+ *
+ * `LoadingIndicator` is the Material 3 Expressive way of saying "please wait". Instead of the
+ * classic spinning ring, a small rounded shape keeps morphing into the next one (a soft burst, a
+ * cookie, a pentagon, a pill and so on) while it slowly turns. Called without a progress value,
+ * as here, it does not know how long the wait will last, so it animates forever: it keeps moving
+ * for as long as it is on screen, and stops only when the save ends and the button shows its
+ * icon again. That is also why no preview shows the Saving state: a preview draws one still
+ * picture, and a shape that never stops moving never gives one.
+ *
+ * Its usual box is 48 dp; here it is 24 dp so that it fits in the button beside the text. The
+ * shape fills about four fifths of its box, so it ends up the size of the Save icon it replaces.
+ *
+ * Its colour is `LocalContentColor`, the colour the button hands to everything inside it, so it
+ * always matches the word "Saving…" next to it and reads on the button whatever colour the button
+ * has. While a save runs the button is switched off, so both are drawn in its faint "switched
+ * off" colour. (The indicator's own default, the theme's primary blue, is meant for a plain
+ * background, like the photo area's indicator.)
+ *
+ * It has no description of its own: the word "Saving…" next to it already says what is happening.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SavingIndicator() {
+    LoadingIndicator(
+        // A size given by the caller replaces the indicator's own 48 dp box.
+        modifier = Modifier
+            .size(24.dp)
+            .testTag(TOOL_SAVE_PROGRESS_TAG),
+        color = LocalContentColor.current,
+    )
+}
+
+/**
+ * The photo area of the editor for [state]: a loading indicator while the photo is decoded, the
+ * photo when it is ready, a plain message when it cannot be opened, and the message about the
+ * last save, if any, on a card at its bottom.
  */
 @Composable
 private fun PhotoArea(state: ToolUiState, modifier: Modifier = Modifier) {
@@ -418,8 +461,8 @@ private fun PhotoArea(state: ToolUiState, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         when (val current = state.photo) {
-            // Decoding takes a moment; the area simply stays empty meanwhile.
-            ToolUiState.PhotoState.Loading -> Unit
+            // Decoding takes a moment; meanwhile an indicator moves in the middle of the area.
+            ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
             is ToolUiState.PhotoState.Ready -> PhotoView(
                 current = current,
                 photoUri = state.photoUri,
@@ -441,6 +484,32 @@ private fun PhotoArea(state: ToolUiState, modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+/**
+ * The loading indicator in the middle of the photo area while the photo is being decoded, so the
+ * person sees that the photo is on its way instead of an empty space.
+ *
+ * It is the same Material 3 Expressive `LoadingIndicator` as the one in the Save button (see
+ * [SavingIndicator] for what it is): a shape that keeps morphing and turning for as long as it
+ * is shown. Here it has its standard 48 dp box and its default colour, the theme's primary blue,
+ * which stands out on the screen's plain background. It goes away by itself as soon as the photo
+ * is ready or turns out to be unreadable, because the photo area then draws that instead.
+ *
+ * It shows no text, so the selected tool's name stays the only text naming the tool on this
+ * screen. Its content description, which screen readers say, tells that the photo is being
+ * opened.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun PhotoLoadingIndicator() {
+    val description = stringResource(R.string.tool_loading)
+    LoadingIndicator(
+        modifier = Modifier
+            .testTag(TOOL_LOADING_TAG)
+            // Set on the indicator's own modifier, the description becomes its spoken name.
+            .semantics { contentDescription = description },
+    )
 }
 
 /**
@@ -466,31 +535,29 @@ private fun EditorPanel(tool: Tool, modifier: Modifier = Modifier) {
             transitionSpec = { fadeIn(animationSpec = fade) togetherWith fadeOut(animationSpec = fade) },
             label = "editorPanelMessage",
         ) { shownTool ->
-            panelMessageRes(shownTool)?.let { messageRes ->
-                Text(
-                    text = stringResource(messageRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            }
+            Text(
+                text = stringResource(panelMessageRes(shownTool)),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
         }
     }
 }
 
 /**
- * Returns the panel message for [tool]: what that tool will offer once its controls exist.
- * Returns null for a tool the editor does not offer (the editor never opens on one).
+ * Returns the panel message for [tool]: what that tool will offer once its controls exist. Every
+ * tool has one, and the `when` has no `else` on purpose: a sixth [Tool] would not compile until it
+ * is given a message here.
  */
-private fun panelMessageRes(tool: Tool): Int? = when (tool) {
+private fun panelMessageRes(tool: Tool): Int = when (tool) {
     Tool.EDIT -> R.string.editor_panel_edit
     Tool.REMOVE_BACKGROUND -> R.string.editor_panel_remove_background
     Tool.ENHANCE -> R.string.editor_panel_enhance
     Tool.RETOUCH -> R.string.editor_panel_retouch
     Tool.ARTISTIC -> R.string.editor_panel_artistic
-    else -> null
 }
 
 /**
@@ -616,7 +683,7 @@ private const val DISABLED_ICON_ALPHA = 0.38f
 
 /**
  * Returns the message to show for [save], or null when there is nothing to say: a running save
- * shows its spinner in the Save action, and a normal successful save says nothing here.
+ * shows its loading indicator in the Save action, and a normal successful save says nothing here.
  */
 private fun saveMessageRes(save: ToolUiState.SaveState): Int? = when (save) {
     is ToolUiState.SaveState.Saved ->

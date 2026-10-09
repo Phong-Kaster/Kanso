@@ -86,12 +86,16 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    // Every tool opens the photo gallery to pick a photo from. The Camera tile
-                    // opens the camera instead; a shot that is kept opens the Edit tool.
+                    // "Open a photo" is the main action: it opens the gallery to pick from, and the
+                    // photo picked there opens in the editor with the Edit tool selected.
+                    onOpenPhoto = { if (backStack.last() == Home) backStack.add(Gallery(Tool.EDIT)) },
+                    // The Camera shortcut opens the camera instead; a shot that is kept opens the
+                    // editor with the Edit tool selected.
+                    onCameraClick = { if (backStack.last() == Home) backStack.add(Camera(Tool.EDIT)) },
+                    // Every tool card opens the photo gallery, and the photo picked there opens
+                    // in the editor with that tool selected.
                     onToolClick = { tool ->
-                        if (backStack.last() == Home) {
-                            backStack.add(if (tool == Tool.CAMERA) Camera(Tool.EDIT) else Gallery(tool))
-                        }
+                        if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },
                     onSettingsClick = { if (backStack.last() == Home) backStack.add(Settings) },
                 )
@@ -218,8 +222,14 @@ fun KansoNavDisplay(
     )
 }
 
-/** Sample data for the preview: every tool the app has, the same list the real Home shows. */
-private val sampleHomeTools: List<Tool> = Tool.entries
+/**
+ * Sample data for the preview: the two groups of cards the real Home shows, the AI tools and then
+ * Edit.
+ */
+private val sampleHomeState = HomeUiState(
+    aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+    editTools = listOf(Tool.EDIT),
+)
 
 /**
  * The navigation host as the app opens, drawn once in light and once in dark.
@@ -240,7 +250,9 @@ private fun KansoNavHostPreview() {
             entryProvider = entryProvider<NavKey> {
                 entry<Home> {
                     HomeContent(
-                        state = HomeUiState(tools = sampleHomeTools),
+                        state = sampleHomeState,
+                        onOpenPhoto = {},
+                        onCameraClick = {},
                         onToolClick = {},
                         onSettingsClick = {},
                     )

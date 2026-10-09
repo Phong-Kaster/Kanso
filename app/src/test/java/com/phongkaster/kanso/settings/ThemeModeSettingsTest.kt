@@ -140,9 +140,15 @@ class ThemeModeSettingsTest {
         assertDrawnLight(sampleHome())
     }
 
-    /** Draws Home and samples its background and the text of its "Settings" row. */
-    private fun sampleHome(): ScreenSample =
-        sampleAround(hasText(context.getString(R.string.settings)))
+    /**
+     * Draws Home and samples its background and the text of its "Settings" row. Home is taller
+     * than this test's screen (Robolectric's default 320 x 470 dp), so the row is first scrolled
+     * into view: the text must be drawn on screen to be sampled.
+     */
+    private fun sampleHome(): ScreenSample {
+        compose.onNodeWithText(context.getString(R.string.settings)).performScrollTo()
+        return sampleAround(hasText(context.getString(R.string.settings)))
+    }
 
     /** Draws Settings and samples its background and the text of its "Dark" row. */
     private fun sampleSettings(): ScreenSample = sampleAround(

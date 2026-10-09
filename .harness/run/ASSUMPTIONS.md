@@ -36,8 +36,8 @@ Option 1: Kanso's own README makes the same split, and DoD 5 states it.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (T-001)
 
 ### Question
 
@@ -58,8 +58,8 @@ Option 1: smallest change, the existing function already does it, and the pictur
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (T-001)
 
 ### Question
 
@@ -95,7 +95,7 @@ The PRD describes Home's content but not where "Open a photo" leads, how Setting
 
 ### Taken, and why
 
-Option 1, to keep existing behaviour and tests stable (PRD: existing tests keep asserting what they assert).
+Option 1, to keep existing behaviour and tests stable (PRD: existing tests keep asserting what they assert). The title "Kanso" is the first item of the same scrolling column and Home has no top bar, because DoD 5 lists the title among the things "inside its one scrolling column" (the fresh-context review of Phase 2 found the first build kept it in a top bar, outside the column).
 
 ---
 
@@ -103,8 +103,8 @@ Option 1, to keep existing behaviour and tests stable (PRD: existing tests keep 
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-002)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (T-002)
 
 ### Question
 
@@ -171,8 +171,8 @@ Option 1; the DoD lists it under Questions so the person sees it.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint that added the drawables
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) that added the drawables
 
 ### Question
 
@@ -193,8 +193,8 @@ Option 1. In Autonomous mode network access is not gated; provenance (URL and SH
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (T-001)
 
 ### Question
 
@@ -259,8 +259,8 @@ Option 1 (POLICIES: classify for a signature when a command cannot drive it).
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (T-001)
 
 ### Question
 
@@ -281,8 +281,8 @@ Option 1.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 2 (review finding of Phase 1)
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
-- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (`SeedColorScheme.kt` only: put `Color(0xFF1A73E8)` back on the declaration)
+- **First dependent checkpoint:** `5d5ac91` (the Phase 1 checkpoint, Iteration 2)
+- **Revert:** `git revert 5d5ac91` (the Phase 1 checkpoint) (`SeedColorScheme.kt` only: put `Color(0xFF1A73E8)` back on the declaration)
 
 ### Question
 
