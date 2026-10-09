@@ -1,13 +1,18 @@
 package com.phongkaster.kanso.settings
 
 import android.content.Context
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -20,11 +25,14 @@ import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_LIGHT_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_SYSTEM_TAG
+import com.phongkaster.kanso.ui.settings.settingsRowIconTag
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +48,9 @@ import org.robolectric.annotation.GraphicsMode
  * Every check looks at two things in one drawing: the background, and the text of a known label
  * (the "Dark" row on Settings, the "Settings" row on Home), which must have the opposite
  * brightness. So a screen that only painted its own background would not pass.
+ *
+ * One more test reads the semantics tree instead of pixels: the theme mode rows sit together in
+ * their grouped container, each with an icon and its label.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -140,9 +151,76 @@ class ThemeModeSettingsTest {
         assertDrawnLight(sampleHome())
     }
 
-    /** Draws Home and samples its background and the text of its "Settings" row. */
-    private fun sampleHome(): ScreenSample =
-        sampleAround(hasText(context.getString(R.string.settings)))
+    /**
+     * DoD 19: the three theme mode rows sit inside the grouped container tagged
+     * `settings-group-appearance`, which holds no other choice; each is still a radio-button row
+     * and holds its own icon (decorative, or an image with a description) and its label.
+     */
+    @Test
+    @Config(qualifiers = "notnight")
+    fun theme_mode_rows_sit_in_the_appearance_group_with_an_icon_and_a_label() {
+        waitForHome()
+        openSettings()
+        assertGroupHolds(
+            SETTINGS_GROUP_APPEARANCE_TAG,
+            THEME_MODE_SYSTEM_TAG to R.string.theme_mode_system,
+            THEME_MODE_LIGHT_TAG to R.string.theme_mode_light,
+            THEME_MODE_DARK_TAG to R.string.theme_mode_dark,
+        )
+        compose.onNodeWithTag(THEME_MODE_SYSTEM_TAG).assertIsSelected()
+        compose.onNodeWithTag(THEME_MODE_LIGHT_TAG).assertIsNotSelected()
+        compose.onNodeWithTag(THEME_MODE_DARK_TAG).assertIsNotSelected()
+    }
+
+    /**
+     * Fails unless the node tagged [groupTag] holds exactly the selectable rows of [rows] (each a
+     * row tag and the string resource of its label), each one a radio button holding its icon
+     * node (tagged with `settingsRowIconTag`) and its label text.
+     *
+     * The icon and the label are looked up in the unmerged tree: a row merges its children into
+     * itself for screen readers, so only the unmerged tree still shows them as nodes of their own.
+     */
+    private fun assertGroupHolds(groupTag: String, vararg rows: Pair<String, Int>) {
+        compose.onNodeWithTag(groupTag).assertExists()
+        rows.forEach { (rowTag, labelRes) ->
+            compose.onNode(hasTestTag(rowTag) and hasAnyAncestor(hasTestTag(groupTag)))
+                .assertExists()
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+            compose.onNode(
+                hasTestTag(settingsRowIconTag(rowTag)) and hasAnyAncestor(hasTestTag(rowTag)),
+                useUnmergedTree = true,
+            ).assertExists().assert(isImageOrDecorative())
+            compose.onNode(
+                hasText(context.getString(labelRes)) and hasAnyAncestor(hasTestTag(rowTag)),
+                useUnmergedTree = true,
+            ).assertExists()
+        }
+        val held = compose.onAllNodes(isSelectable() and hasAnyAncestor(hasTestTag(groupTag)))
+            .fetchSemanticsNodes()
+            .size
+        assertEquals("The group $groupTag must hold exactly its ${rows.size} rows", rows.size, held)
+    }
+
+    /**
+     * Matches an icon that is either an image with a spoken description, or decorative: it has no
+     * content description at all, so screen readers skip it and read the row's label instead.
+     */
+    private fun isImageOrDecorative(): SemanticsMatcher =
+        SemanticsMatcher("an image with a content description, or decorative") { node ->
+            val description = node.config.getOrNull(SemanticsProperties.ContentDescription)
+            val isImage = node.config.getOrNull(SemanticsProperties.Role) == Role.Image
+            description == null || (isImage && description.any { it.isNotBlank() })
+        }
+
+    /**
+     * Draws Home and samples its background and the text of its "Settings" row. Home is taller
+     * than this test's screen (Robolectric's default 320 x 470 dp), so the row is first scrolled
+     * into view: the text must be drawn on screen to be sampled.
+     */
+    private fun sampleHome(): ScreenSample {
+        compose.onNodeWithText(context.getString(R.string.settings)).performScrollTo()
+        return sampleAround(hasText(context.getString(R.string.settings)))
+    }
 
     /** Draws Settings and samples its background and the text of its "Dark" row. */
     private fun sampleSettings(): ScreenSample = sampleAround(

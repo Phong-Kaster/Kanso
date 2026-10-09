@@ -14,13 +14,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
@@ -34,6 +38,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeColour
@@ -56,21 +61,57 @@ val KansoColorSchemeKey = SemanticsPropertyKey<ColorScheme>("KansoColorScheme")
 private var SemanticsPropertyReceiver.kansoColorScheme by KansoColorSchemeKey
 
 /**
- * Kanso's Material 3 theme: wraps [content] so every Material component inside it takes its
- * colours from the light or dark scheme that [themeMode] selects, in the colours that
- * [themeColour] selects.
+ * Kanso's theme, built on Material 3 Expressive: wraps [content] so every Material component
+ * inside it takes its colours from the light or dark scheme that [themeMode] selects, in the
+ * colours that [themeColour] selects, and moves with Material's expressive motion.
  *
  * [ThemeMode.System] follows the phone's dark-theme setting, [ThemeMode.Light] and
- * [ThemeMode.Dark] force one scheme. [ThemeColour.Wallpaper] uses the phone's wallpaper colours
- * (Android 12 and later, the baseline scheme below), [ThemeColour.Baseline] the Material 3
- * baseline purple, and [ThemeColour.Custom] a scheme generated from the picked seed colour.
- * Because both are parameters, passing a new value re-draws everything below with the new
- * colours at once, with no restart.
+ * [ThemeMode.Dark] force one scheme. [ThemeColour.KansoBlue] (the default, on every Android
+ * version) is the scheme generated from [KANSO_BLUE_SEED]; [ThemeColour.Wallpaper] uses the
+ * phone's wallpaper colours (Android 12 and later; Kanso blue below), and [ThemeColour.Custom]
+ * a scheme generated from the picked seed colour. Because both are parameters, passing a new
+ * value re-draws everything below with the new colours at once, with no restart.
+ *
+ * What `MaterialExpressiveTheme` is: Material 3 Expressive is the newer, livelier style of
+ * Material 3 (bolder shapes, emphasized text styles, bouncier movement). `MaterialExpressiveTheme`
+ * is the theme function that switches it on. Like the plain Material 3 theme it hands a colour
+ * scheme, shapes and typography down the tree, and it also hands down a motion scheme; where a
+ * value is not given, it falls back to Material's defaults (for colours and motion, the
+ * expressive ones). Kanso gives it its own colours, the expressive motion and a type scale (see
+ * the next paragraph), and leaves the shapes to the default, whose shape scale already includes
+ * the larger expressive corner sizes.
+ *
+ * What the typography is: a `Typography` is the app's type scale, the set of named text styles
+ * (`titleLarge`, `headlineSmall`, `bodyMedium` and so on) that every Text and every component
+ * reads through `MaterialTheme.typography`. Material 3 Expressive adds an `…Emphasized` twin to
+ * each style, a bolder version for the words that matter most on a screen; Kanso's screens use
+ * them for their titles. Kanso passes `Typography(fontFamily = FontFamily.SansSerif)` instead of
+ * leaving the type scale to the theme because of a quirk of the library: the theme's fallback is
+ * `Typography()` with no arguments, and with no arguments Kotlin picks the older constructor of
+ * `Typography`, which only knows the regular styles and fills each `…Emphasized` style with a
+ * copy of its regular twin, so an emphasized title would look exactly like a regular one. The
+ * constructor that takes a font family builds every style, the emphasized ones included, from
+ * Material's own design values (its "tokens"), drawn in the font family it is given. SansSerif
+ * is the font those design values name anyway, so the regular styles come out exactly as
+ * before; only the emphasized ones change, to their heavier weight.
+ *
+ * What the `MotionScheme` is: one set of animation settings that every Material component reads
+ * when it moves (a button changing shape when pressed, a toolbar item becoming selected), so all
+ * motion in the app feels the same. `MotionScheme.expressive()` makes those animations springs:
+ * a spring has no fixed duration, it pulls the value towards its target with a given stiffness
+ * and lets it overshoot a little and settle (its damping), which reads as lively and physical.
+ * The standard scheme's springs are stiffer and barely overshoot. Components read the scheme
+ * with `MaterialTheme.motionScheme`, for example `MaterialTheme.motionScheme.defaultSpatialSpec()`
+ * for an animation that moves or resizes something, and Kanso's own animations can do the same.
+ *
+ * In Material3 1.5.0-beta01 `MaterialExpressiveTheme` and `MotionScheme.expressive()` are stable,
+ * so this function needs no opt-in; only components that are still experimental (such as the
+ * loading indicator) need `@OptIn(ExperimentalMaterial3ExpressiveApi::class)` where they are used.
  */
 @Composable
 fun KansoTheme(
     themeMode: ThemeMode,
-    themeColour: ThemeColour = ThemeColour.Baseline,
+    themeColour: ThemeColour = ThemeColour.KansoBlue,
     content: @Composable () -> Unit,
 ) {
     val dark = isDarkTheme(themeMode)
@@ -90,9 +131,18 @@ fun KansoTheme(
         }
     }
 
-    // MaterialTheme hands the colour scheme down the tree; any composable below reads it with
-    // MaterialTheme.colorScheme.
-    MaterialTheme(colorScheme = colorScheme) {
+    // MaterialExpressiveTheme hands the colour scheme, the springy expressive motion scheme and
+    // the type scale down the tree; any composable below reads them with
+    // MaterialTheme.colorScheme, MaterialTheme.motionScheme and MaterialTheme.typography. Shapes
+    // are not passed, so Material's default shape scale applies.
+    MaterialExpressiveTheme(
+        colorScheme = colorScheme,
+        motionScheme = MotionScheme.expressive(),
+        // The constructor with a font family gives the emphasized styles their own, bolder
+        // design values; Typography() with no arguments would copy the regular ones into them
+        // (see the KDoc above). SansSerif is Material's own font, so regular text is unchanged.
+        typography = Typography(fontFamily = FontFamily.SansSerif),
+    ) {
         // A Box that only passes its size on (propagateMinConstraints) and publishes the scheme
         // the content sees, read back from MaterialTheme, so tests can check it.
         val applied = MaterialTheme.colorScheme
@@ -120,9 +170,9 @@ private fun isDarkTheme(themeMode: ThemeMode): Boolean = when (themeMode) {
  * Returns the colour scheme for [themeColour] in the dark or light look.
  *
  * The wallpaper schemes come from the system (`dynamicLightColorScheme` and
- * `dynamicDarkColorScheme`, Android 12 and later only); everywhere else, and for the baseline
- * choice, the Material 3 baseline scheme is used; a custom colour is turned into a full scheme
- * by [seedColorScheme].
+ * `dynamicDarkColorScheme`, Android 12 and later only); below Android 12, and for the Kanso
+ * blue choice, Kanso blue is used; a custom colour is turned into a full scheme by
+ * [seedColorScheme].
  */
 @Composable
 private fun colorSchemeFor(themeColour: ThemeColour, dark: Boolean): ColorScheme {
@@ -132,9 +182,9 @@ private fun colorSchemeFor(themeColour: ThemeColour, dark: Boolean): ColorScheme
             if (isWallpaperColourAvailable()) {
                 if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             } else {
-                baselineColorScheme(dark)
+                rememberKansoBlueScheme(dark)
             }
-        ThemeColour.Baseline -> baselineColorScheme(dark)
+        ThemeColour.KansoBlue -> rememberKansoBlueScheme(dark)
         // remember keeps a value across re-draws (recompositions) of this composable, and works
         // it out again only when one of its keys changes. Generating a scheme takes real work,
         // so it is done once per seed and light/dark look, not on every frame.
@@ -143,6 +193,14 @@ private fun colorSchemeFor(themeColour: ThemeColour, dark: Boolean): ColorScheme
         }
     }
 }
+
+/**
+ * Returns Kanso blue, the scheme generated from [KANSO_BLUE_SEED], in the [dark] or light look.
+ * It is generated once per look and remembered (see `remember` in [colorSchemeFor]).
+ */
+@Composable
+private fun rememberKansoBlueScheme(dark: Boolean): ColorScheme =
+    remember(dark) { seedColorScheme(KANSO_BLUE_SEED, dark) }
 
 /**
  * Re-applies edge-to-edge drawing with bars styled for the app's [dark] choice: transparent
@@ -175,9 +233,9 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 /**
- * A sample of Kanso's colours: a few common Material 3 components (a title, a card with text, a
- * filled and an outlined button, a switch on and off) drawn on the theme, once in light and once
- * in dark.
+ * A sample of Kanso's colours, in Kanso blue: a few common Material 3 components (a title, a card
+ * with text, a filled and an outlined button, a switch on and off) drawn on the theme, once in
+ * light and once in dark.
  *
  * `@PreviewLightDark` asks Android Studio for two pictures, one with the phone in day mode and
  * one in night mode, and `ThemeMode.System` makes KansoTheme follow that setting. In the preview
@@ -202,8 +260,8 @@ private fun KansoThemePreview() {
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {}) { Text("Save") }
-                    OutlinedButton(onClick = {}) { Text("Retake") }
+                    Button(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Save") }
+                    OutlinedButton(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Retake") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Switch(checked = true, onCheckedChange = {})

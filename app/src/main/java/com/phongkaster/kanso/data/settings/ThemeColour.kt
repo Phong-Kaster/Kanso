@@ -18,10 +18,14 @@ sealed interface ThemeColour {
     data object Wallpaper : ThemeColour
 
     /**
-     * The built-in Material 3 baseline scheme, whose primary colour is purple `#6750A4`. It is
-     * the default on phones older than Android 12, which cannot take colours from the wallpaper.
+     * Kanso blue, the app's own colours: a full light and dark scheme generated from one blue
+     * seed colour (`KANSO_BLUE_SEED` in the theme package). It is what every fresh install
+     * starts with, on every Android version, and it is offered in Settings on every version.
+     *
+     * A `data object` is a single value (there is only one Kanso blue) that still prints its
+     * name and compares equal like a data class, which keeps tests and logs readable.
      */
-    data object Baseline : ThemeColour
+    data object KansoBlue : ThemeColour
 
     /**
      * A colour the person picked: [seedArgb] is that colour as an ARGB integer (always fully
@@ -31,16 +35,13 @@ sealed interface ThemeColour {
 
     /** Values shared by every kind of theme colour. */
     companion object {
-        /** The Material 3 baseline purple, the first colour the picker shows. */
-        val BASELINE_SEED_ARGB: Int = 0xFF6750A4.toInt()
-
         /**
          * Returns the theme colour a fresh install starts with on a phone running Android API
-         * level [sdkInt]: the wallpaper on Android 12 (API 31) and later, the baseline purple
-         * below.
+         * level [sdkInt]: Kanso blue, on every version. The wallpaper colours stay one tap away
+         * in Settings on Android 12 and later. The level is still asked for so the settings code
+         * keeps one place to decide a default per Android version, should one ever differ.
          */
-        fun defaultFor(sdkInt: Int): ThemeColour =
-            if (sdkInt >= Build.VERSION_CODES.S) Wallpaper else Baseline
+        fun defaultFor(sdkInt: Int): ThemeColour = KansoBlue
     }
 }
 

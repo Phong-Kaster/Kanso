@@ -7,14 +7,18 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.R
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.ui.camera.CAMERA_KEEP_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
@@ -40,7 +44,7 @@ import org.robolectric.annotation.Config
  * Checks the camera screen on its own, with camera access granted and a [FakeCameraController]
  * in place of the real camera: the shutter takes a shot into the app's private `shots/` folder,
  * Keep hands that shot's `file://` Uri to the caller and keeps the file, and Retake deletes the
- * file and brings the shutter back.
+ * file and brings the shutter back. Keep and Retake are labelled buttons of at least 48 dp.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -126,6 +130,31 @@ class CameraScreenTest {
         // A second shot works after a retake.
         takeShot()
         assertEquals(2, fake.takenFiles.size)
+    }
+
+    /**
+     * Once a shot waits, Keep and Retake keep their tags and their visible words ("Keep",
+     * "Retake"; each button's icon has no spoken name of its own, so the word is the button's
+     * only text), can be tapped, and are at least 48 dp tall and wide (DoD 8).
+     */
+    @Test
+    fun keep_and_retake_are_labelled_buttons_of_at_least_48_dp() {
+        showCamera()
+        takeShot()
+
+        val minimumPx = with(compose.density) { 48.dp.toPx() }
+        listOf(CAMERA_KEEP_TAG to R.string.camera_keep, CAMERA_RETAKE_TAG to R.string.camera_retake)
+            .forEach { (tag, label) ->
+                val button = compose.onNodeWithTag(tag)
+                    .assertHasClickAction()
+                    .assertTextEquals(app.getString(label))
+                val bounds = button.fetchSemanticsNode().boundsInRoot
+                // Half a pixel of slack for rounding between dp and pixels.
+                assertTrue(
+                    "$tag is ${bounds.width} x ${bounds.height} px, smaller than 48 dp ($minimumPx px)",
+                    bounds.width >= minimumPx - 0.5f && bounds.height >= minimumPx - 0.5f,
+                )
+            }
     }
 
     /** Shows the camera screen, with the fake camera, and waits until the shutter can be used. */

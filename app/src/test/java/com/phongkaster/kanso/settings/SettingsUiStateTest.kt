@@ -28,9 +28,10 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * Checks the one state SettingsViewModel hands the Settings screen (DoD 8): it starts as System
- * mode with this phone's default theme colour, and then follows what is saved, both the theme
- * mode set through the ViewModel and a theme colour written to the settings file, every snapshot
- * holding the two choices together.
+ * mode with this phone's default theme colour (and Kanso blue's seed as the last custom seed),
+ * and then follows what is saved, both the theme mode set through the ViewModel and a theme
+ * colour written to the settings file, every snapshot holding the choices together. The last
+ * custom seed stays in the snapshot after another colour is chosen, so the Custom row can show it.
  *
  * It runs on the plain JVM. The repository sits on a real DataStore file in a temporary folder,
  * created with createSettingsDataStore, whose storage also works on Windows. The ViewModel's own
@@ -115,7 +116,33 @@ class SettingsUiStateTest {
 
         runBlocking { repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB)) }
 
-        awaitState(viewModel, SettingsUiState(ThemeMode.Dark, ThemeColour.Custom(GREEN_ARGB)))
+        // A saved custom colour is also the last custom seed, which the snapshot carries too.
+        awaitState(
+            viewModel,
+            SettingsUiState(ThemeMode.Dark, ThemeColour.Custom(GREEN_ARGB), customSeedArgb = GREEN_ARGB),
+        )
+    }
+
+    /**
+     * After a custom colour is saved and Kanso blue is chosen through the ViewModel, the state
+     * shows Kanso blue as the choice and still holds the custom colour as the last custom seed,
+     * which the Custom row's swatch shows.
+     */
+    @Test
+    fun state_keeps_the_last_custom_seed_after_kanso_blue_is_chosen() {
+        val viewModel = viewModel()
+        runBlocking { repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB)) }
+        awaitState(
+            viewModel,
+            SettingsUiState(ThemeMode.System, ThemeColour.Custom(GREEN_ARGB), customSeedArgb = GREEN_ARGB),
+        )
+
+        viewModel.onKansoBlueChosen()
+
+        awaitState(
+            viewModel,
+            SettingsUiState(ThemeMode.System, ThemeColour.KansoBlue, customSeedArgb = GREEN_ARGB),
+        )
     }
 
     /**

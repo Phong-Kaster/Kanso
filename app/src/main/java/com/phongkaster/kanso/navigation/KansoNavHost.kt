@@ -1,6 +1,8 @@
 package com.phongkaster.kanso.navigation
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -86,12 +88,16 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    // Every tool opens the photo gallery to pick a photo from. The Camera tile
-                    // opens the camera instead; a shot that is kept opens the Edit tool.
+                    // "Open a photo" is the main action: it opens the gallery to pick from, and the
+                    // photo picked there opens in the editor with the Edit tool selected.
+                    onOpenPhoto = { if (backStack.last() == Home) backStack.add(Gallery(Tool.EDIT)) },
+                    // The Camera shortcut opens the camera instead; a shot that is kept opens the
+                    // editor with the Edit tool selected.
+                    onCameraClick = { if (backStack.last() == Home) backStack.add(Camera(Tool.EDIT)) },
+                    // Every tool card opens the photo gallery, and the photo picked there opens
+                    // in the editor with that tool selected.
                     onToolClick = { tool ->
-                        if (backStack.last() == Home) {
-                            backStack.add(if (tool == Tool.CAMERA) Camera(Tool.EDIT) else Gallery(tool))
-                        }
+                        if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },
                     onSettingsClick = { if (backStack.last() == Home) backStack.add(Settings) },
                 )
@@ -141,11 +147,14 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     onBack = goBack,
                     // A saved photo replaces everything above Home with the Saved screen, so
                     // Back from Saved goes to Home, not to the tool screen. Only act while the
-                    // tool screen is on top.
+                    // tool screen is on top. The editor can switch tools in place, so the Saved
+                    // key carries the tool selected when the person saved (read from the
+                    // ViewModel's state, not the key's first tool): "Edit another" then opens
+                    // that tool's gallery.
                     onSaved = { photoUri ->
                         if (backStack.last() == key) {
                             while (backStack.size > 1) backStack.removeLastOrNull()
-                            backStack.add(Saved(key.tool, photoUri))
+                            backStack.add(Saved(viewModel.state.value.tool, photoUri))
                         }
                     },
                 )
@@ -195,6 +204,13 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
  * a screen gets its own saved state or its own ViewModelStore. System Back (including the
  * predictive back gesture) calls [onBack]; deciding what Back means is the caller's job.
  *
+ * How the screens move is set here too: the push, pop and back-gesture transitions come from
+ * KansoTransitions.kt, built from the theme's motion scheme, so a screen slides and fades with the
+ * Expressive springs. The manifest's `enableOnBackInvokedCallback` switches predictive back on, so
+ * the back gesture drives the last of the three; that one departs from the springs for the top
+ * screen's slide, which follows the swipe's progress along a straight line, to the right whichever
+ * edge the swipe starts from (the reason is in its KDoc).
+ *
  * Because this function takes only plain values and lambdas, a preview can call it with a
  * one-key back stack and a sample screen, without Koin or a ViewModel.
  */
@@ -206,17 +222,37 @@ fun KansoNavDisplay(
     entryProvider: (NavKey) -> NavEntry<NavKey>,
     modifier: Modifier = Modifier,
 ) {
+    // The theme's motion scheme (Expressive: springs, which the screens' moves use) is read here,
+    // while Compose is drawing, because MaterialTheme.motionScheme only works inside a composable
+    // function and the spec lambdas NavDisplay calls later are not composable. The three functions
+    // below take the scheme and build the lambdas; see KansoTransitions.kt for what each one does.
+    val motionScheme = MaterialTheme.motionScheme
     NavDisplay(
         backStack = backStack,
-        modifier = modifier,
+        // While two screens slide past each other the old one fades out faster than the new one
+        // arrives, so for a moment part of the window shows through. Painting the theme's own
+        // background behind both keeps that strip in the app's light or dark colour; the window's
+        // own background follows the phone's night setting, which can differ from the app's choice.
+        modifier = modifier.background(MaterialTheme.colorScheme.background),
         onBack = onBack,
         entryDecorators = entryDecorators,
+        // How the screens move when a screen opens, when one closes, and while the back gesture
+        // is still under the finger (predictive back).
+        transitionSpec = kansoPushTransition(motionScheme),
+        popTransitionSpec = kansoPopTransition(motionScheme),
+        predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
         entryProvider = entryProvider,
     )
 }
 
-/** Sample data for the preview: every tool the app has, the same list the real Home shows. */
-private val sampleHomeTools: List<Tool> = Tool.entries
+/**
+ * Sample data for the preview: the two groups of cards the real Home shows, the AI tools and then
+ * Edit.
+ */
+private val sampleHomeState = HomeUiState(
+    aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+    editTools = listOf(Tool.EDIT),
+)
 
 /**
  * The navigation host as the app opens, drawn once in light and once in dark.
@@ -237,7 +273,9 @@ private fun KansoNavHostPreview() {
             entryProvider = entryProvider<NavKey> {
                 entry<Home> {
                     HomeContent(
-                        state = HomeUiState(tools = sampleHomeTools),
+                        state = sampleHomeState,
+                        onOpenPhoto = {},
+                        onCameraClick = {},
                         onToolClick = {},
                         onSettingsClick = {},
                     )

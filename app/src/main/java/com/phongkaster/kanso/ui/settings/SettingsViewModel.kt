@@ -49,26 +49,33 @@ class SettingsViewModel(
     private var pendingColourJob: Job? = null
 
     /**
-     * What Settings shows: the saved theme mode and theme colour together, as one snapshot the
-     * screen can read at any moment (see HomeUiState for what a UiState is).
+     * What Settings shows: the saved theme mode, the saved theme colour and the last picked
+     * custom colour together, as one snapshot the screen can read at any moment (see HomeUiState
+     * for what a UiState is).
      *
-     * The repository gives the two choices as two separate Flows. `combine` joins them into one:
-     * once each Flow has given its first value, and again every time either of them gives a new
-     * one, it calls the function it is given with the latest value of both. That function is
-     * `::SettingsUiState`, a reference to SettingsUiState's constructor, so each call builds a
-     * new snapshot holding the two choices side by side, and the screen has only one StateFlow
-     * to read instead of one per setting.
+     * The repository gives the three values as three separate Flows. `combine` joins them into
+     * one: once each Flow has given its first value, and again every time any of them gives a
+     * new one, it calls the block it is given with the latest value of all three. The block
+     * builds a new SettingsUiState from them, so each snapshot holds the three side by side, and
+     * the screen has only one StateFlow to read instead of one per setting.
      *
      * A StateFlow is a Flow that always holds one current value. stateIn turns the combined Flow
      * into one: it collects the Flow in viewModelScope (a scope cancelled when this ViewModel is
      * cleared), starts at once (Eagerly), and shows System with this phone's default colour until
-     * the file is read.
+     * the file is read; the custom colour starts at SettingsUiState's own default, Kanso blue's
+     * seed, which is also what the file gives when no colour was ever picked.
      */
     val state: StateFlow<SettingsUiState> = combine(
         repository.themeMode,
         repository.themeColour,
-        ::SettingsUiState,
-    ).stateIn(
+        repository.customSeedArgb,
+    ) { themeMode, themeColour, customSeedArgb ->
+        SettingsUiState(
+            themeMode = themeMode,
+            themeColour = themeColour,
+            customSeedArgb = customSeedArgb,
+        )
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = SettingsUiState(ThemeMode.System, repository.defaultThemeColour),
@@ -96,23 +103,23 @@ class SettingsViewModel(
     }
 
     /**
-     * Uses the built-in baseline purple colours (offered below Android 12 instead of wallpaper).
-     * A custom colour still waiting to be saved is dropped first, so it cannot overwrite this.
+     * Uses Kanso blue, the app's own colours (offered on every Android version). A custom
+     * colour still waiting to be saved is dropped first, so it cannot overwrite this choice.
      */
-    fun onBaselineChosen() {
+    fun onKansoBlueChosen() {
         val pending = dropPendingColour()
         // Runs in colourWriteScope, not viewModelScope, so leaving Settings at once cannot
         // cancel it.
         colourWriteScope.launch {
             // Wait until the dropped save has really stopped before writing the new choice.
             pending?.cancelAndJoin()
-            repository.setThemeColour(ThemeColour.Baseline)
+            repository.setThemeColour(ThemeColour.KansoBlue)
         }
     }
 
     /**
-     * Selects the Custom option with the last picked colour (or the baseline purple), which
-     * also shows the colour picker.
+     * Selects the Custom option with the last picked colour (or Kanso blue's seed, when none was
+     * ever picked), which also shows the colour picker.
      */
     fun onCustomChosen() {
         viewModelScope.launch { repository.chooseCustomThemeColour() }

@@ -391,7 +391,7 @@ class OneTypePerFileTest {
      * are the files' paths below the app's package folder with a `main/` or `test/` prefix, the
      * keys [ALLOWED] uses, in sorted order. It fails when either folder holds no Kotlin file, so a
      * scan that looks in the wrong place cannot pass. Both folders are inside `app/src`, so the
-     * scan never reaches `reference/` or the engine modules in `core/`.
+     * scan never reaches the `reference` folder (Retica's app) or the engine modules in `core/`.
      */
     private fun scanAppSources(): Map<String, List<String>> {
         val mainRoot = findAppSourceRoot()

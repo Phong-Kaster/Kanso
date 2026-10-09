@@ -23,7 +23,6 @@
     <!-- Theme colour setting: its label and its three options. -->
     <string name="theme_colour_title">Theme colour</string>
     <string name="theme_colour_wallpaper">From wallpaper</string>
-    <string name="theme_colour_default">Default purple</string>
     <string name="theme_colour_custom">Custom colour</string>
 
     <!-- Photo gallery shown by every tool except the camera. %1$s is the tool name. -->

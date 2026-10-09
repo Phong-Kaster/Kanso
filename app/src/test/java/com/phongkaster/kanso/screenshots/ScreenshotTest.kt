@@ -1,9 +1,10 @@
 package com.phongkaster.kanso.screenshots
 
 import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -24,12 +25,17 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_SWATCH_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_KANSO_BLUE_SWATCH_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_KANSO_BLUE_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_WALLPAPER_SWATCH_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_WALLPAPER_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_LIGHT_TAG
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
 import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
-import com.phongkaster.kanso.ui.theme.baselineColorScheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.flow.first
@@ -46,8 +52,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the six reference pictures of the app: Home and Settings, each in
- * light, in dark, and in the custom colour #2E7D32.
+ * Takes eight reference pictures of the app: Home and Settings, each in light, in dark, and in
+ * the custom colour #2E7D32, and Settings once more in light and in dark on Android 15, where the
+ * colour list shows all three rows with their swatches.
  *
  * Roborazzi is a library that draws a screen on the computer, with no phone or emulator, and
  * saves it as a PNG. Each saved PNG is a baseline: the agreed look of that screen. Later runs
@@ -60,9 +67,11 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Every test drives the real app: MainActivity, its navigation, its ViewModels and Koin, nothing
  * faked. Light and dark are chosen the way a person would, through Settings -> Theme mode. The
- * light and dark pictures run as Android 11 (no wallpaper colours there), so the colours are the
- * built-in baseline purple. The custom colour pictures run as Android 15 in light mode. All of
- * them use the screen size of a typical phone (411 x 891 dp at xxhdpi density).
+ * light and dark pictures 1, 2, 4 and 5 run as Android 11 (no wallpaper colours there), in Kanso
+ * blue, the colours of a fresh install. The custom colour pictures run as Android 15 in light
+ * mode. The swatch pictures 24 and 25 run as Android 15 in Kanso blue, so the wallpaper row is
+ * offered too. All of them use the screen size of a typical phone (411 x 891 dp at xxhdpi
+ * density).
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -157,6 +166,55 @@ class ScreenshotTest {
     }
 
     /**
+     * Picture 24: Settings on Android 15 in light mode with Kanso blue, a fresh install's colour:
+     * the colour group shows Kanso blue (selected), From wallpaper and Custom colour, each with its
+     * swatch, all on screen without scrolling.
+     */
+    @Test
+    @Config(sdk = [35], qualifiers = PHONE)
+    fun settings_swatches_light() {
+        waitForHome()
+        openSettings()
+        chooseThemeMode(ThemeMode.Light)
+        assertThreeSwatchRowsShown()
+        capture("24_settings_swatches_light.png")
+    }
+
+    /**
+     * Picture 25: Settings on Android 15 in dark mode with Kanso blue: the same three colour rows
+     * and swatches as picture 24, on the dark theme. Each swatch shows the light version of its
+     * colour in both pictures.
+     */
+    @Test
+    @Config(sdk = [35], qualifiers = PHONE)
+    fun settings_swatches_dark() {
+        waitForHome()
+        openSettings()
+        chooseThemeMode(ThemeMode.Dark)
+        assertThreeSwatchRowsShown()
+        capture("25_settings_swatches_dark.png")
+    }
+
+    /**
+     * Fails unless the three colour rows' swatches are all on screen as the picture will show it
+     * (the list is not scrolled for them), with Kanso blue selected and the other two not.
+     * The swatches are found in the unmerged tree, because each row merges its swatch for screen
+     * readers.
+     */
+    private fun assertThreeSwatchRowsShown() {
+        listOf(
+            THEME_COLOUR_KANSO_BLUE_SWATCH_TAG,
+            THEME_COLOUR_WALLPAPER_SWATCH_TAG,
+            THEME_COLOUR_CUSTOM_SWATCH_TAG,
+        ).forEach { tag ->
+            compose.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed()
+        }
+        compose.onNodeWithTag(THEME_COLOUR_KANSO_BLUE_TAG).assertIsSelected()
+        compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).assertIsNotSelected()
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).assertIsNotSelected()
+    }
+
+    /**
      * Saves a picture of the whole window as `src/test/screenshots/[name]`. When baselines are
      * checked, Roborazzi compares the drawing with that file instead of saving it.
      */
@@ -167,21 +225,20 @@ class ScreenshotTest {
 
     /**
      * Taps the Light or Dark row of Settings -> Theme mode (only those two are used), waits in
-     * real time until the choice is saved, then waits until the theme hands out the baseline
-     * scheme of that mode. On Android 11 the baseline is the colour source, so its background is
-     * exactly what the app must show; on Android 15 the wallpaper scheme is in use, so only the
-     * saved mode is waited for there and the custom colour check follows.
+     * real time until the choice is saved, then waits until the theme hands out Kanso blue in
+     * that mode (`seedColorScheme(KANSO_BLUE_SEED, dark)`). Every test calls this on a fresh
+     * install, before any custom colour is picked, and a fresh install is in Kanso blue on every
+     * Android version, so its background is exactly what the app must show on Android 11 and 15
+     * alike; the custom colour pictures then wait for their own colour in chooseCustomColour.
      */
     private fun chooseThemeMode(mode: ThemeMode) {
         val tag = if (mode == ThemeMode.Dark) THEME_MODE_DARK_TAG else THEME_MODE_LIGHT_TAG
         compose.onNodeWithTag(tag).performScrollTo().performClick()
         awaitSaved("theme mode $mode") { savedThemeMode() == mode }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            val expected = baselineColorScheme(dark = mode == ThemeMode.Dark)
-            compose.waitUntil(timeoutMillis = 10_000) {
-                appliedScheme().background == expected.background &&
-                    appliedScheme().primary == expected.primary
-            }
+        val expected = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
+        compose.waitUntil(timeoutMillis = 10_000) {
+            appliedScheme().background == expected.background &&
+                appliedScheme().primary == expected.primary
         }
     }
 

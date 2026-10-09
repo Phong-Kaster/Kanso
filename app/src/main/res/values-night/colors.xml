@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window background before Compose draws, matching Material 3's dark baseline surface. -->
-    <color name="window_background">#FF141218</color>
+    <!-- Window background before Compose draws: the dark background of Kanso blue, so there is no colour flash. -->
+    <color name="window_background">#FF111318</color>
 </resources>

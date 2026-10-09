@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Holds the Home screen's state: one [HomeUiState] listing the tools, in display order.
+ * Holds the Home screen's state: one [HomeUiState] with the two groups of tool cards, the AI
+ * tools and the Edit tool, each in display order.
  *
  * A ViewModel outlives a single drawing of the screen: Android keeps it across rotation and
  * clears it only when its owner is gone for good. Here the owner is Home's navigation entry,
@@ -19,10 +20,16 @@ class HomeViewModel(private val probe: ViewModelClearedProbe) : ViewModel() {
 
     /**
      * The writable holder of Home's state. Only this class may put a new snapshot into it, and
-     * Home never needs one, so it keeps its first snapshot for good: every tool, in the order
-     * [Tool.entries] lists them.
+     * Home never needs one, so it keeps its first snapshot for good: the four AI tools under
+     * "AI tools", then Edit alone under "Edit". The camera is in neither group: Home shows it as
+     * a shortcut of its own, because it takes a photo instead of editing one.
      */
-    private val mutableState = MutableStateFlow(HomeUiState(tools = Tool.entries))
+    private val mutableState = MutableStateFlow(
+        HomeUiState(
+            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            editTools = listOf(Tool.EDIT),
+        ),
+    )
 
     /**
      * What Home shows, as the one StateFlow the screen reads (see [HomeUiState] for the whole

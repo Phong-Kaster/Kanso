@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Gallery: the spoken name of the loading indicator shown while the photo library is read
+         for the first time. It has no visible text, so a screen reader says this instead. -->
+    <string name="gallery_loading">Loading photos</string>
+</resources>

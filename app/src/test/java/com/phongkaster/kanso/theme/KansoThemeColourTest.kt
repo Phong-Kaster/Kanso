@@ -12,6 +12,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
 import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -25,8 +26,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Checks that KansoTheme maps each theme colour to the right scheme: the custom colour to the
- * generated scheme, the baseline to purple #6750A4, and the wallpaper to the system's dynamic
- * schemes on Android 12 and later (and to the baseline below), in light and in dark.
+ * generated scheme, Kanso blue to the scheme generated from KANSO_BLUE_SEED, and the wallpaper
+ * to the system's dynamic schemes on Android 12 and later (and to Kanso blue below), in light
+ * and in dark.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -45,7 +47,10 @@ class KansoThemeColourTest {
     fun custom_colour_gives_the_generated_light_scheme() {
         val primary = primaryFor(ThemeMode.Light, ThemeColour.Custom(GREEN_ARGB))
         assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = false).primary, primary)
-        assertTrue("Expected a primary other than the baseline", primary != BASELINE_PURPLE)
+        assertTrue(
+            "Expected a primary other than the default Kanso blue",
+            primary != seedColorScheme(KANSO_BLUE_SEED, dark = false).primary,
+        )
     }
 
     /** A custom colour gives its generated dark scheme in dark mode. */
@@ -55,10 +60,22 @@ class KansoThemeColourTest {
         assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = true).primary, primary)
     }
 
-    /** The baseline choice gives the Material 3 baseline purple. */
+    /** The Kanso blue choice gives the light scheme generated from Kanso blue's seed. */
     @Test
-    fun baseline_gives_the_baseline_purple() {
-        assertEquals(BASELINE_PURPLE, primaryFor(ThemeMode.Light, ThemeColour.Baseline))
+    fun kanso_blue_gives_the_generated_light_scheme() {
+        assertEquals(
+            seedColorScheme(KANSO_BLUE_SEED, dark = false).primary,
+            primaryFor(ThemeMode.Light, ThemeColour.KansoBlue),
+        )
+    }
+
+    /** The Kanso blue choice gives the dark scheme generated from Kanso blue's seed in dark mode. */
+    @Test
+    fun kanso_blue_gives_the_generated_dark_scheme() {
+        assertEquals(
+            seedColorScheme(KANSO_BLUE_SEED, dark = true).primary,
+            primaryFor(ThemeMode.Dark, ThemeColour.KansoBlue),
+        )
     }
 
     /** On Android 15 the wallpaper choice gives the system's dynamic schemes. */
@@ -79,11 +96,14 @@ class KansoThemeColourTest {
         )
     }
 
-    /** On Android 11, which has no wallpaper colours, the wallpaper choice falls back to the baseline. */
+    /** On Android 11, which has no wallpaper colours, the wallpaper choice falls back to Kanso blue. */
     @Test
     @Config(sdk = [30])
-    fun wallpaper_falls_back_to_the_baseline_below_android_12() {
-        assertEquals(BASELINE_PURPLE, primaryFor(ThemeMode.Light, ThemeColour.Wallpaper))
+    fun wallpaper_falls_back_to_kanso_blue_below_android_12() {
+        assertEquals(
+            seedColorScheme(KANSO_BLUE_SEED, dark = false).primary,
+            primaryFor(ThemeMode.Light, ThemeColour.Wallpaper),
+        )
     }
 
     /** The scheme published on the theme's semantics node is the one its content reads. */
@@ -119,8 +139,5 @@ class KansoThemeColourTest {
     private companion object {
         /** The custom colour of the DoD, green #2E7D32, as ARGB. */
         val GREEN_ARGB = 0xFF2E7D32.toInt()
-
-        /** The Material 3 baseline primary, purple #6750A4. */
-        val BASELINE_PURPLE = Color(0xFF6750A4)
     }
 }

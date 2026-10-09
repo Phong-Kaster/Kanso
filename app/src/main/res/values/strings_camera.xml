@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Camera: the spoken name of the loading indicator shown in the picture area while the
+         camera is being opened (or reopened after a lens switch). It has no visible text, so a
+         screen reader says this instead. -->
+    <string name="camera_loading">Opening the camera</string>
+</resources>

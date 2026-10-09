@@ -1,5 +1,6 @@
 package com.phongkaster.kanso.settings
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -8,6 +9,7 @@ import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +26,9 @@ import org.junit.rules.TemporaryFolder
 
 /**
  * Checks how the settings repository keeps the theme colour, on the plain JVM against a real
- * DataStore file: the default on new and old phones, saving each option and the custom seed,
- * and surviving a "restart" (a fresh DataStore over the same file).
+ * DataStore file: the default on new and old phones (Kanso blue on both), saving each option and
+ * the custom seed, surviving a "restart" (a fresh DataStore over the same file), and reading the
+ * values older versions of Kanso stored.
  */
 class ThemeColourStoreTest {
 
@@ -51,16 +54,21 @@ class ThemeColourStoreTest {
         scopes.forEach { it.coroutineContext[Job]!!.cancelAndJoin() }
     }
 
-    /** With nothing saved, Android 12 and later start on the wallpaper colours. */
+    /** With nothing saved, Android 12 and later start on Kanso blue, not the wallpaper colours. */
     @Test
-    fun default_is_wallpaper_on_android_12_and_later() = runBlocking {
-        assertEquals(ThemeColour.Wallpaper, repository(sdkInt = 31).themeColour.first())
+    fun default_is_kanso_blue_on_android_12_and_later() = runBlocking {
+        // One DataStore per file: both phones are read through the same, empty store.
+        val store = openStore()
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 31).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 35).themeColour.first())
     }
 
-    /** With nothing saved, phones below Android 12 start on the baseline purple. */
+    /** With nothing saved, phones below Android 12 start on Kanso blue. */
     @Test
-    fun default_is_baseline_below_android_12() = runBlocking {
-        assertEquals(ThemeColour.Baseline, repository(sdkInt = 30).themeColour.first())
+    fun default_is_kanso_blue_below_android_12() = runBlocking {
+        val store = openStore()
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 27).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 30).themeColour.first())
     }
 
     /** A saved custom seed is read back, and so is a later switch to the wallpaper. */
@@ -91,11 +99,61 @@ class ThemeColourStoreTest {
         }.let { assertEquals(ThemeColour.Wallpaper, it.themeColour.first()) }
     }
 
-    /** A Baseline choice is read from disk by a fresh DataStore. */
+    /**
+     * A Kanso blue choice is read from disk by a fresh DataStore, after a custom colour was used
+     * (so the default cannot pass for it).
+     */
     @Test
-    fun baseline_choice_survives_a_fresh_store_over_the_same_file() = runBlocking {
-        writeThenReopen { it.setThemeColour(ThemeColour.Baseline) }
-            .let { assertEquals(ThemeColour.Baseline, it.themeColour.first()) }
+    fun kanso_blue_choice_survives_a_fresh_store_over_the_same_file() = runBlocking {
+        writeThenReopen {
+            it.setThemeColour(ThemeColour.Custom(GREEN_ARGB))
+            it.setThemeColour(ThemeColour.KansoBlue)
+        }.let { assertEquals(ThemeColour.KansoBlue, it.themeColour.first()) }
+    }
+
+    /** The Kanso blue choice is stored under the colour source key as "KansoBlue". */
+    @Test
+    fun kanso_blue_is_stored_as_kanso_blue() = runBlocking {
+        val store = openStore()
+        SettingsRepository(store, sdkInt = 35).setThemeColour(ThemeColour.KansoBlue)
+
+        assertEquals("KansoBlue", store.data.first()[SOURCE_KEY])
+    }
+
+    /**
+     * The name an older Kanso stored for its first default colour, "Baseline", reads as Kanso
+     * blue on Android 11 and on Android 15.
+     */
+    @Test
+    fun stored_baseline_reads_as_kanso_blue_on_android_11_and_15() = runBlocking {
+        val store = openStore()
+        store.edit { it[SOURCE_KEY] = "Baseline" }
+
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 30).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 35).themeColour.first())
+    }
+
+    /**
+     * A stored "Custom" source with no seed colour beside it (a file that lost its seed) cannot
+     * be drawn as a custom colour, so it reads as the default, Kanso blue, on Android 11 and 15.
+     */
+    @Test
+    fun stored_custom_without_a_seed_reads_as_kanso_blue() = runBlocking {
+        val store = openStore()
+        // Only the source is written; the seed key stays empty.
+        store.edit { it[SOURCE_KEY] = "Custom" }
+
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 30).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 35).themeColour.first())
+    }
+
+    /** A stored "Wallpaper" stays the wallpaper choice on Android 15, which has wallpaper colours. */
+    @Test
+    fun stored_wallpaper_stays_wallpaper_on_android_15() = runBlocking {
+        val store = openStore()
+        store.edit { it[SOURCE_KEY] = "Wallpaper" }
+
+        assertEquals(ThemeColour.Wallpaper, SettingsRepository(store, sdkInt = 35).themeColour.first())
     }
 
     /** The theme mode and the theme colour are kept side by side in the same file. */
@@ -121,35 +179,36 @@ class ThemeColourStoreTest {
         assertEquals(ThemeColour.Custom(GREEN_ARGB), repository.themeColour.first())
     }
 
-    /** Choosing Custom before any colour was picked starts from the baseline purple. */
+    /** Choosing Custom before any colour was picked starts from Kanso blue's seed. */
     @Test
-    fun choosing_custom_first_starts_from_the_baseline_purple() = runBlocking {
+    fun choosing_custom_first_starts_from_kanso_blue() = runBlocking {
         val repository = repository(sdkInt = 35)
 
         repository.chooseCustomThemeColour()
 
         assertEquals(
-            ThemeColour.Custom(ThemeColour.BASELINE_SEED_ARGB),
+            ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()),
             repository.themeColour.first(),
         )
     }
 
-    /** A Wallpaper choice read on a phone below Android 12 falls back to the baseline. */
+    /** A Wallpaper choice read on a phone below Android 12 falls back to Kanso blue. */
     @Test
-    fun wallpaper_reads_as_baseline_below_android_12() = runBlocking {
+    fun wallpaper_reads_as_kanso_blue_below_android_12() = runBlocking {
         val store = openStore()
         SettingsRepository(store, sdkInt = 35).setThemeColour(ThemeColour.Wallpaper)
 
-        assertEquals(ThemeColour.Baseline, SettingsRepository(store, sdkInt = 30).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 30).themeColour.first())
     }
 
-    /** A stored source name the app does not know reads as the default. */
+    /** A stored source name the app does not know reads as the default, Kanso blue. */
     @Test
     fun unknown_source_reads_as_the_default() = runBlocking {
         val store = openStore()
-        store.edit { it[stringPreferencesKey("theme_colour_source")] = "Sepia" }
+        store.edit { it[SOURCE_KEY] = "Sepia" }
 
-        assertEquals(ThemeColour.Wallpaper, SettingsRepository(store, sdkInt = 35).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 35).themeColour.first())
+        assertEquals(ThemeColour.KansoBlue, SettingsRepository(store, sdkInt = 30).themeColour.first())
     }
 
     /**
@@ -179,5 +238,8 @@ class ThemeColourStoreTest {
     private companion object {
         /** The custom colour of the DoD, green #2E7D32, as ARGB. */
         val GREEN_ARGB = 0xFF2E7D32.toInt()
+
+        /** The stored name of the colour source, as the settings file keeps it (never renamed). */
+        val SOURCE_KEY = stringPreferencesKey("theme_colour_source")
     }
 }

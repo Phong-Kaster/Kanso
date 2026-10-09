@@ -38,8 +38,11 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Proves that the Material 3 Expressive components of Material3 1.5.0-beta01 compile in this app
  * and work on screen: a button group, a floating toolbar, a loading indicator, a shape from
- * MaterialShapes and the two wavy progress indicators. Nothing in the app uses them yet (the new
- * look comes in the next run), so this test is the evidence that the library is ready for it.
+ * MaterialShapes and the two wavy progress indicators. The app's screens now use all of them but
+ * the two wavy indicators (the editor's floating toolbar, the Saved screen's button group and its
+ * shape-morph mark built from MaterialShapes, the loading indicator of the gallery, the editor and
+ * the Saved screen), so this test is the evidence, apart from any screen, that each component
+ * compiles and draws with this version of the library.
  *
  * What each test proves, and no more: the component is composed and laid out (it has a size and
  * a place inside the window). For the button group and the toolbar that is shown by finding their

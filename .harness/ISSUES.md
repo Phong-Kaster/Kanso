@@ -1,5 +1,129 @@
 # ISSUES
 
+## Run 6 (Material 3 Expressive, Kanso blue): ended DONE_PARTIAL, Verifier Iteration 9
+
+The Verifier re-proved every `machine` criterion on the tree of `a118896` with fresh runs (2026-10-10). All of them exited 0:
+
+- `:app:clean`, then 368 unit tests: 0 failed, 0 errors, 0 skipped.
+- `verifyRoborazziDebug`: 24 total, 0 changed.
+- Lint: 0 errors, with its analysis forced to run again.
+- `assembleDebug`.
+- Each Proof's own command, run on its own.
+
+Two fresh-context audits compared the tests with their Proofs and found no gap. Per criterion: `.harness/run/evidence/p9-verifier.md`. Nothing is abandoned, unreachable or queued.
+
+The run is not `DONE` for two reasons:
+
+- Criterion 14 is assumed (A-015, below).
+- Criteria 13, 20, 21 and 30 need a person (the items below).
+
+`.harness/run/` stays on the branch (no Cleanup Commit), so the evidence and the assumptions are still there when you merge.
+
+### Awaiting a person, Run 6
+
+Each item is unsigned. A machine pre-check that did not fail is not a signature. Tick it here or in `DECISIONS.md`.
+
+**Nothing below was driven on the phone.** At each of the Verifier's checks (Iteration 9, 2026-10-10, 05:59 to 06:08), another app had focus on the Galaxy A13 (`R58W1120QVA`). So Foreman installed, started and read nothing there.
+
+The criterion 20 pictures were drawn by the unit tests on the computer (Robolectric, a 411 x 891 dp screen, sample photos), never on a phone. The pictures are in `.harness/run/evidence/baseline-diffs/`:
+
+- `after/` holds all 24 new pictures.
+- `before/` holds the 16 old ones.
+- `phase1/`, `phase2/` and `phase3/` hold the comparison images (old | difference | new).
+
+The Iteration 9 pre-check for every group of pictures:
+
+- `verifyRoborazziDebug`: 24 pictures, 0 changed.
+- `before/` and `after/` were rewritten from git and equal the committed pictures.
+- The 16 old pictures are modified and the 8 new ones added. None was deleted.
+
+Before the criterion 21 steps, once:
+
+1. On the computer, at the tip of `loop/kanso-m3-expressive-blue`, run `./gradlew :app:assembleDebug`.
+2. Install `app/build/outputs/apk/debug/app-debug.apk` over the Kanso already on the phone: use Android Studio's Run button on `app`, or `adb install -r app/build/outputs/apk/debug/app-debug.apk`. Do not uninstall first, so you see what an update does.
+3. Leave Kanso's theme mode on System default.
+4. Put the phone in light mode (Settings → Display → Light) and do steps 1 to 8.
+5. Switch the phone to dark mode (Settings → Display → Dark) and do steps 1 to 8 again.
+6. Do step 9.
+
+- [ ] Run 6 21.1 Home: **not driven on the phone, and not looked at by anyone.** Machine evidence only, on the computer: `LaunchTest` opens Home with "Open a photo" at Android 8.1, 11 and 15. `NavigationTest` finds "Kanso", "Open a photo", "Camera", the headers "AI tools" and "Edit", five tool cards and "Settings" in Home's one column. Open Kanso from the launcher. Expect Kanso blue, not your wallpaper colours: your phone never chose a colour, so the update switches it to blue (A-003). Expect "Open a photo" to be the largest thing on the screen, with a Camera button under it. Expect four cards with icons under "AI tools" (Remove background, Enhance, Retouch, Artistic), one card under "Edit" (Edit), and "Settings" at the bottom. The app never closes by itself.
+- [ ] Run 6 21.2 Gallery: **not driven on the phone.** Machine evidence, on the computer with sample photos: `GalleryGridTest` and `GalleryLoadingScreenshotTest` show the loading indicator first, then rounded tiles under album chips. Tap "Open a photo". Expect a small shape that keeps changing shape while photos load. Then expect your photos as rounded tiles under a row of album chips, with "All photos" first and marked as selected. Tap another chip: only that album's photos show.
+- [ ] Run 6 21.3 Editor: **not driven on the phone.** Machine evidence: `ToolScreenTest` and `ToolViewModelTest` check five toggles, one selected, and that switching keeps both the photo and the screen. `ToolSelectionAnimationTest` checks that the selection moves for under a second and then rests. Pick a photo. Expect it to fill the width (or the height) of the space above. Below it, expect a short message ending "coming in a later run." and a bar of five icons. Expect Back (an arrow) at the top left and Save at the top right. Every control should sit clear of the phone's navigation bar and be easy to hit. Tap each of the five icons. The selected one should change shape with a springy movement, the title should become that tool's name, and the photo should stay where it is.
+- [ ] Run 6 21.4 Save and Saved: **not driven on the phone.** Machine evidence: `SavedScreenTest` shows the mark drawn differently at 0, 250 and 1 000 ms and still from 1 500 ms. `SavedNavigationTest` shows Edit another opening the gallery of the selected tool. The share tests check the share request. In the editor, tap Save. This saves a photo into Pictures/Kanso. Expect the Saved screen with a mark at the top: it morphs once into a wavy badge with a tick, then stays still. Expect Share, Edit another and Home side by side in one row at the bottom. Tap Share: the phone's share sheet opens (close it without sharing). Tap Edit another: the gallery opens for the tool you had selected.
+- [ ] Run 6 21.5 Each card: **not driven on the phone.** Machine evidence: `NavigationTest` and `PhotoToToolNavigationTest` check that each card opens "<tool>: choose a photo" and then the editor with that tool selected, and that Back leads to the gallery, then Home. From Home, tap each of the five cards in turn. Expect the gallery titled "<tool>: choose a photo". Pick a photo and expect the editor with that tool's icon selected. Back twice returns to Home.
+- [ ] Run 6 21.6 Camera: **not driven on the phone.** Machine evidence: `CameraControlsTest` checks that the shutter's inner ring is drawn differently 150 ms into a press and as before 1 s after it, and that one press takes one picture. `CameraScreenTest` covers the rest of the screen. Pictures 20 and 21 use a stand-in picture. From Home, tap Camera and allow the camera if asked. Expect a live picture. Expect buttons with icons and no words: back at the top, flash to the left of the shutter, switch lens to the right. Press and hold the shutter: it squishes under your finger. Let go: one photo is taken, with Keep and Retake. Also look at the picture area before the live picture starts: it should be the app's own colour, not black. The camera's own view is set to transparent, which no test can see (A-006).
+- [ ] Run 6 21.7 Settings: **not driven on the phone.** Machine evidence: `ThemeColourSettingsTest`, `ThemeSwatchTest` and `ThemeModeSettingsTest` check two groups, an icon on every row, three swatches with blue first, and that a tap recolours the app within 10 s. From Home, tap Settings. Expect two grouped blocks with an icon on every row:
+  - Theme mode: System default, Light, Dark.
+  - Theme colour: Kanso blue, From wallpaper, Custom colour, in that order, each with a round swatch of its colour.
+
+  Pick each colour in turn: the whole app recolours at once. Go back to Home and into Settings again: the choice is kept. Finish on Kanso blue.
+- [ ] Run 6 21.8 Screen changes and the back gesture: **not driven on the phone. A machine drove the gesture only as positions and pixels.** Machine evidence: `NavTransitionTest` checks that both screens are drawn during a move and then only the new one. `PredictiveBackGestureTest` and `PredictiveBackOpacityTest` send a back gesture into the app: the top screen moves with the swipe's progress, a cancel puts it back, and a release closes it. Move between screens: they should slide or fade into each other, not jump. Then turn on Settings → Display → Navigation bar → Swipe gestures. In Kanso, open Settings and swipe back slowly from the left edge. Settings should move aside and show Home underneath while your finger moves. Let go early: Settings should come back. Try it from the right edge too, and let go of a short swipe early. The slide moves in a straight line, not on a spring (A-015). From the right edge the screen moves right while your finger moves left. After an early release, the slide can take up to about a second to finish. Say whether this feels right.
+- [ ] Run 6 21.9 Remove animations: **not driven on the phone, and not driven by machine** (see Run 6 13). Turn on Settings → Accessibility → Visibility enhancements → Remove animations (if it is not there, search Settings for "Remove animations"). In Kanso, go Home → Settings → Home, then switch tools once in the editor, then save a photo. Expect every change to appear at once in its final state. Expect the Saved screen's mark to appear already settled, and nothing to keep spinning or moving. Turn Remove animations off again afterwards.
+- [ ] Run 6 13: **not driven by machine, and not looked at by anyone.** The test host on the computer (Robolectric) does not pass the phone's animation-speed setting into Compose. So `NavTransitionTest` and `ToolSelectionAnimationTest` print "not driven by machine" (fresh run, Iteration 9). Machine evidence only: a search of `app/src/main` finds no older Android animator (`ObjectAnimator`, `ValueAnimator`, `AnimatorSet`, `android.view.animation`, `ViewPropertyAnimator`, `.animate()`). Every animation is a Compose one, which Android shortens or skips by itself when the setting is on. To check, do item Run 6 21.9 above; one walk closes both. Expect screen changes, tool changes and the Saved screen's mark to go straight to their final state.
+- [ ] Run 6 20 Home (pictures 1, 2, 3): **not looked at by a person.** `ScreenshotTest` drew Home in light and dark with Kanso blue, and with a custom green. The Verifier opened all three and did not see a defect in 1, 2 or 3. Worth your eye: Kanso blue comes out as a calm slate blue, not the vivid `#1A73E8`, because MaterialKolor mutes the seed (one of the DoD's Questions). Open `after/1_home_light.png`, `after/2_home_dark.png` and `after/3_home_custom_colour.png`, each beside the same name in `before/`. The difference images are `phase1/` and `phase2/` `*_compare.png`. Expect:
+  - "Open a photo" as the largest, clearest control, with a Camera button under it.
+  - Cards with icons under "AI tools" and "Edit", and "Settings" at the bottom.
+  - Blue accents in 1 and 2, green in 3.
+  - Text and icons readable in light and in dark.
+  - Nothing that looks like Adobe Lightroom or another photo editor.
+- [ ] Run 6 20 Settings (pictures 4, 5, 6, 24, 25): **not looked at by a person.** Pictures 4 and 5 are Android 11, which has no From wallpaper row; 6, 24 and 25 are Android 15. The Verifier did not see a defect in 4, 5, 6, 24 or 25. Worth your eye:
+  - On a fresh install the Kanso blue swatch (the calm generated blue) and the Custom swatch (the vivid seed `#1A73E8`) are two different blues.
+  - In the dark pictures 5 and 25, the Kanso blue swatch shows the light-mode blue on the dark selected row.
+  - The Light row's icon is a half-filled circle.
+  - In 6, the colour picker keeps its white card in a green theme. It is the one named exception (A-006).
+  - The From wallpaper swatch is a stand-in colour the tests use, not a real wallpaper.
+
+  Open `after/4_settings_light.png`, `5_settings_dark.png`, `6_settings_custom_colour.png`, `24_settings_swatches_light.png` and `25_settings_swatches_dark.png`. Compare 4, 5 and 6 with `before/` and `phase3/`. Expect:
+  - Two grouped blocks with an icon on every row.
+  - The colour rows in the order Kanso blue, From wallpaper, Custom colour, each with its swatch.
+  - The selected rows clearly marked, and text readable in light and in dark.
+- [ ] Run 6 20 Gallery (pictures 10, 11, 26, 27): **not looked at by a person.** Drawn by `GalleryGridScreenshotTest` and `GalleryLoadingScreenshotTest` with solid-colour sample photos. The Verifier did not see a defect in 10, 11, 26 or 27. Worth your eye: the album chips run off the right edge (the row scrolls). Pictures 26 and 27 catch the loading shape at one moment, small and alone in the middle of an empty screen. Open the four in `after/`, and 10 and 11 beside `before/` and `phase1/`/`phase2/`. Expect rounded photo tiles under album chips with "All photos" selected, the loading shape in Kanso blue, and the camera button at the top right, readable in light and in dark.
+- [ ] Run 6 20 Refused access (pictures 12, 13, 14, 15): **not looked at by a person.** Drawn by `GalleryRefusedScreenshotTest` and `CameraRefusedScreenshotTest`. The Verifier did not see a defect in 12, 13, 14 or 15. Open the four in `after/`, beside `before/` and `phase1/` to `phase3/`. Expect "Photo access is off" or "Camera access is off", the explanation, and an "Open settings" button in Kanso blue, all readable in light and in dark.
+- [ ] Run 6 20 Editor (pictures 16, 17, 22, 23): **not looked at by a person.** Drawn by `ToolScreenshotTest` with a 600 x 400 sample gradient. The Verifier did not see a defect in 16, 17, 22 or 23. Worth your eye: in 16 and 17 the panel message wraps, leaving the last word "run." alone on its second line. The wide sample photo leaves tall empty bands above and below it. Open the four in `after/`, and 16 and 17 beside `before/` and `phase1/`. Expect:
+  - The photo filling the width of its area.
+  - The editor light in 16 and 22, and dark in 17 and 23.
+  - The message panel and a floating bar of five icons at the bottom, with the selected tool (Edit in 16 and 17, Enhance in 22 and 23) filled in blue.
+  - Back and Save at the top.
+- [ ] Run 6 20 Saved (pictures 18, 19): **not looked at by a person.** Drawn by `SavedScreenshotTest` with the mark settled. The Verifier did not see a defect in 18 or 19. Worth your eye: the photo sits in the middle with wide empty bands above and below it, and the three buttons sit at the very bottom (the test screen has no navigation bar). Open both in `after/`, beside `before/` and `phase1/`/`phase3/`. Expect the settled mark (a wavy badge with a tick) at the top, then the photo, then "Your photo is saved in Pictures/Kanso.", with Share, Edit another and Home side by side, readable in light and in dark.
+- [ ] Run 6 20 Camera live (pictures 20, 21): **not looked at by a person.** Drawn by `CameraControlsScreenshotTest` with a fake camera; the picture area is a stand-in gradient. The Verifier did not see a defect in 20 or 21. Open both in `after/` (new, so there is no `before/`; `phase3/` has the first recording). Expect buttons with icons and no words (back, flash, switch lens) and a round shutter, with bars that follow the theme: light in 20, dark in 21.
+- [ ] Run 6 30: **not read by anyone.** Pre-check only: a word search of the comments (Iteration 9, `p9-c30-precheck.txt`) found:
+  - `KansoTheme.kt` mentions `MaterialExpressiveTheme`, "spring" and `MotionScheme`.
+  - `KansoTransitions.kt` mentions `transitionSpec` and "predictive".
+  - `SavedScreen.kt` mentions `Morph` and `MaterialShapes`.
+  - `ToolScreen.kt` mentions "toolbar" and "toggle".
+  - `GalleryScreen.kt` mentions `LoadingIndicator`.
+
+  A word being there is not an explanation. Read these four files, in this order, under `app/src/main/java/com/phongkaster/kanso/`: `ui/theme/KansoTheme.kt`, `navigation/KansoTransitions.kt`, `ui/tool/ToolScreen.kt`, `ui/saved/SavedScreen.kt`. Expect each new idea to be explained in plain English where it is first used, in words a learner of Navigation 3 and Compose can follow:
+  - the Expressive theme;
+  - the motion scheme and its springs;
+  - screen transitions and predictive back;
+  - the floating toolbar and its toggle buttons;
+  - the shape morph;
+  - the loading indicator.
+
+### Run 6, other problems
+
+- **The Verifier's audits (Iteration 9) weighed these points and found that each Proof still holds; recorded, not fixed:**
+  - DoD 6 accepts the cell's centre pixel within 8 per channel of the thumbnail colour. That is the Proof's own line between "the thumbnail colour" and "not".
+  - DoD 8 draws the shutter's inner ring, which the Proof itself calls "the inner shutter node". A button stuck in its pressed shape would still show at that square's corners.
+  - DoD 16 compares the background pixel with the scheme's `background`. For Kanso blue that is the same colour as `surface` (`#F9F9FF` light, `#111318` dark, read from the pictures).
+  - DoD 2 reads the rows' order from `positionInRoot`, because `boundsInRoot` clips rows scrolled out of view (A-014).
+  - "Identical at 1 500 and 3 000 ms" (DoD 7) and "at +1 000 and +2 000 ms" (DoD 12) would also pass an endless loop whose period divides the gap. Today the mark plays once and the springs settle.
+- **Iteration 7's audit, lesser points, recorded rather than fixed:**
+  - Criteria 3, 5 and 7: the tests prove the back stacks from where Back leads; the Verifier read the exact stacks from `KansoNavHost.kt`.
+  - Criterion 22: the stored names and the settings file are proved by a diff, not a test.
+  - Criterion 18: `TouchTargetCheck` also counts a node's own size and skips nodes that are not placed.
+  - Criterion 19: the icon check accepts any node that has no description.
+  - Criterion 5: "inside the column" accepts any scrollable ancestor.
+- **Review of Phase 6 (fresh context, Capable), recorded:** nothing blocking. T-020 went back for a second attempt (Tier 1, `AMENDMENTS.md`): the save wait and the scheme wait each had 10 s, so a tap could take about 20 s to recolour the app and pass, while DoD 2 says "within 10 s of real time"; one deadline from the tap now covers both. **Not fixed, advisory:** `ThemeSwatchTest.rolesOf` repeats the seven-role list of `KansoBlueThemeTest` (if DoD 1's list grew and only one copy changed, DoD 2's proof would be weaker than DoD 1's; one shared function in a test-support file would remove it, and no Proof asks for it). The seven roles are seven of a scheme's roughly 36, as DoD 1 compares them: a tap that applied a scheme wrong only in `surfaceContainer` or `outline` would pass, and so would DoD 1's own check of the same roles. **The second review (fresh context, of the finished tree) found nothing blocking** and three notes, left as they are: a failure message that can name the recolouring when the save was late; the deadline reads the wall clock (`System.currentTimeMillis()`, as the base's wait did); and two KDoc nits in `ThemeSwatchTest.kt` (a 117-character line at :139, and "then only that row may be selected" where the code asserts it is).
+- **A-016:** the `aapt2` the DoD names prints criterion 24's `sdkVersion:'27'` as `minSdkVersion:'27'`. The minimum is 27.
+- **Review of Phase 5 (fresh context, three reviews), recorded:** the first two found blocking and advisory points that became T-014's second attempt, T-016 and T-017 (all fixed). The third (T-016's commit assertions, T-017, T-018): **no blocking finding**, no Constraint violation. Fixed in the checkpoint: five KDoc claims (what no test "can" do, now "does not drive"; the Android versions that need the manifest flag; "follows the finger" when the swipe's edge is ignored; the slow finish after an early release; which test pins opacity), one stale-copy constant (`PREDICTIVE_SLIDE_MILLIS` is `internal`, read by `PredictiveBackGestureTest`) and four over-long lines. **Left as is (advisory):** `PredictiveBackOpacityTest` and `PredictiveBackGestureTest` (and `NavTransitionTest`) each hold their own copy of the two-screen gesture host and its helpers, so a Navigation 3 change in how a gesture must be stepped needs three edits; the four test composables of the two new files have no preview (the same precedent as `CameraControlsTest` and `SavedScreenTest`, but CLAUDE.md's text says "every composable in app/"); the dormant "host carries the setting" branch of `ToolSelectionAnimationTest` accepts 6 frames where DoD 13's wording says "within one frame" (it never runs on this host).
+- **A-015 (read this first): the back gesture's preview moves the top screen on a straight line, not a spring.** The review of Phase 5 pointed out that DoD 14's statement says "the expressive spring", so this is a Tier-3 reading; criterion 14 is listed as **assumed** in `STATE.md`, its Proof still holds as written. Two costs for a person to judge in criterion 21, step 8: after a release the slide carries on at a constant speed (an early release at a tenth of the swipe leaves about 0.9 s), and the swipe's edge is ignored, so from the right edge the screen moves right while the finger moves left (the machine tests send the swipe from the left edge only: try both). The spring figures behind the choice are worked out from the stiffness and damping, not timed on a phone.
+- **Recorded, not fixed (earlier phases):** the 48 dp half of criterion 18 cannot fail for a tappable control, because Compose widens every clickable's touch bounds to 48 dp (it measures the effective touch target); "one frame after a push" in criterion 14 is two frames in the test (A-014); Home has no top bar, so `ThemeFollowTest` samples only its background, and on the live camera the sampled "background" pixel is the bottom bar; five helpers are copied between `ThemeFollowTest` and `AccessibilityWalkTest`, five test files each carry their own draw-the-content-view-into-a-bitmap helper, and two settings tests share identical private helpers; test files declare composable helpers without previews; `GalleryGridTest.setGallery` (eight tests) and the Save tests of `SaveButtonTest` wait for idle while a loading indicator shows with the clock running, which has not hung in any whole run (more than a dozen fresh runs), but a future test that holds a read open (`holdReads()`) and then calls `showGallery` would hang the test JVM with no timeout; `lastRequestedPermission` keeps only the latest request, so "asks only for X" (DoD 15) is proved by the last request plus the absence of the other screen; the Kanso blue swatch (the generated, calmer primary) and the Custom swatch (the vivid seed `#1A73E8`) are two different blues on a fresh install, as DoD 2 words it; the Light theme-mode row's icon is the half-filled circle `ic_contrast` because no sun icon was fetched; CameraX's `PreviewView` paints its own background (believed black) until its first frame and `LivePreview` sets it transparent, which no test can see.
+- **Unprovable by machine:** "Remove animations" (the Robolectric host carries no animation scale into Compose: `NavTransitionTest` and `ToolSelectionAnimationTest` print "not driven by machine") and how the back gesture's preview feels with a real swipe on Android 14 or later (criteria 13 and 21).
+- **Recovery:** the first process of Iteration 2 was ended during the picture comparison (no checkpoint; the second finished the Phase), the first of Iteration 3 ended after its Workers returned (the Workers' reports were lost: S-006), and the first of Iteration 6 was ended by the Runtime at 5400 s after finishing all six tasks and two reviews but before any checkpoint (its Workers' reports were saved, so only the records had to be rebuilt: S-008).
+- **Assumptions recorded:** A-001 to A-016 in `.harness/run/ASSUMPTIONS.md`, all Tier 2 (A-015 with the Tier-3 reading above; A-016 by the Verifier, see the top of this section); read first: A-001 (which tools are "AI tools"), A-002 (the blue seed `#1A73E8`), A-003 (an install that never chose a colour, your Galaxy A13 included, turns from wallpaper colours to blue), A-006 (every screen follows the theme except the engine colour picker's light card), A-011 (updated: a machine drives the gesture's progress; "Remove animations" and the feel stay with a person), A-013 (how the seed is written in code), A-015.
+
 ## Run 5 (AGP 9 and the current Compose libraries): ended DONE_PARTIAL, Verifier Iteration 5
 
 The Verifier re-proved every `machine` criterion on the tree of `c0871f3` with fresh runs (2026-10-09): 238 unit tests (0 failed, 0 errors, 0 skipped; all 231 earlier test names still there, no test file edited), `verifyRoborazziDebug` 16 total / 0 changed, lint 0 errors (analysis forced to rerun), `assembleDebug`, `assembleRelease` and the nine modules in debug and release all exit 0; the debug APK asks for the same permissions, targets the same SDK levels and holds the same three ABIs and 34 native libraries as before the run; the catalog's versions are still the newest on Google Maven and Maven Central today. Per criterion: `.harness/run/evidence/verifier.md`. Nothing is abandoned or unreachable. The run is not `DONE` because criterion 11 is assumed (A-007, below) and criteria 3 and 7 need a person.

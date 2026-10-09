@@ -33,7 +33,7 @@ import org.junit.Test
  * Checks that the custom colour picker saves the theme once the drag settles, not on every
  * movement: fifty colour changes 16 ms apart write nothing, the last colour is written exactly
  * once after the settle interval, a colour still waiting when Settings closes is saved, and a
- * later Wallpaper choice cancels a waiting colour.
+ * later Wallpaper or Kanso blue choice cancels a waiting colour.
  *
  * It runs on the plain JVM in virtual time: a test dispatcher stands in for the main thread and
  * for the background, so `advanceTimeBy` moves the clock without really waiting. Writes are
@@ -125,6 +125,19 @@ class CustomColourDebounceTest {
 
         assertEquals(1, store.writes)
         assertEquals(ThemeColour.Wallpaper, repository.themeColour.first())
+    }
+
+    /** Choosing Kanso blue while a colour is waiting cancels it, so Kanso blue stays saved. */
+    @Test
+    fun a_later_kanso_blue_choice_cancels_the_waiting_colour() = runTest {
+        val viewModel = viewModel()
+
+        drag(viewModel)
+        viewModel.onKansoBlueChosen()
+        advanceUntilIdle()
+
+        assertEquals(1, store.writes)
+        assertEquals(ThemeColour.KansoBlue, repository.themeColour.first())
     }
 
     /**

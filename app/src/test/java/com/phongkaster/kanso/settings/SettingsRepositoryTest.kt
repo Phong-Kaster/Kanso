@@ -1,12 +1,15 @@
 package com.phongkaster.kanso.settings
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.phongkaster.kanso.data.settings.SettingsRepository
+import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +27,9 @@ import org.junit.rules.TemporaryFolder
 /**
  * Checks the settings repository on the plain JVM against a real DataStore file: the default
  * theme mode, writing and reading it back, surviving a "restart" (a fresh DataStore over the
- * same file), and falling back to System for a value it does not recognise.
+ * same file), and falling back to System for a value it does not recognise. It also checks the
+ * last picked custom seed the Custom row's swatch shows: Kanso blue's seed when nothing was ever
+ * picked, and the picked colour still after Kanso blue or the wallpaper is chosen.
  */
 class SettingsRepositoryTest {
 
@@ -111,10 +116,45 @@ class SettingsRepositoryTest {
         assertEquals(ThemeMode.Dark, repository.themeMode.first())
     }
 
+    /** With nothing saved yet, the last custom seed reads as Kanso blue's seed. */
+    @Test
+    fun custom_seed_defaults_to_the_kanso_blue_seed() = runBlocking {
+        val repository = SettingsRepository(openStore(), sdkInt = 35)
+
+        assertEquals(KANSO_BLUE_SEED.toArgb(), repository.customSeedArgb.first())
+    }
+
+    /**
+     * Custom is chosen and its colour set to green, as the picker does; then Kanso blue and the
+     * wallpaper are chosen in turn. Each time the choice changes, but the last custom seed still
+     * reads green, the colour Custom would bring back.
+     */
+    @Test
+    fun custom_seed_is_kept_while_kanso_blue_or_the_wallpaper_is_chosen() = runBlocking {
+        val repository = SettingsRepository(openStore(), sdkInt = 35)
+        repository.chooseCustomThemeColour()
+        repository.setThemeColour(ThemeColour.Custom(GREEN_ARGB))
+        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
+
+        repository.setThemeColour(ThemeColour.KansoBlue)
+        assertEquals(ThemeColour.KansoBlue, repository.themeColour.first())
+        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
+
+        repository.setThemeColour(ThemeColour.Wallpaper)
+        assertEquals(ThemeColour.Wallpaper, repository.themeColour.first())
+        assertEquals(GREEN_ARGB, repository.customSeedArgb.first())
+    }
+
     /** Opens a DataStore on [file] in a new scope that is shut down after the test. */
     private fun openStore(): DataStore<Preferences> = createSettingsDataStore(file, newScope())
 
     /** Creates a scope for one DataStore and remembers it so it is cancelled after the test. */
     private fun newScope(): CoroutineScope =
         CoroutineScope(Job() + Dispatchers.IO).also { scopes += it }
+
+    /** Values the tests use. */
+    private companion object {
+        /** The custom colour the tests pick: green #2E7D32, fully opaque, as ARGB. */
+        val GREEN_ARGB = 0xFF2E7D32.toInt()
+    }
 }

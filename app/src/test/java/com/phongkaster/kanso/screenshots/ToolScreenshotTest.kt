@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -22,6 +24,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
+import com.phongkaster.kanso.ui.tool.editorToolTag
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -31,13 +34,15 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the reference pictures of the Edit tool showing a photo, with its Save action visible,
- * in light and in dark (pictures 16 and 17, DoD 25).
+ * Takes the reference pictures of the editor showing a photo, with its Save action visible, in
+ * light and in dark: on the Edit tool (pictures 16 and 17, DoD 25) and after switching to Enhance
+ * in the toolbar (pictures 22 and 23), where the title, the panel's message and the toolbar's
+ * selected toggle follow the new tool.
  *
  * The photo is a 600 x 400 gradient drawn in code and handed over by a [FakePhotoLoader], so the
  * pictures never depend on a file or on the decoder. The screen is hosted directly in KansoTheme
- * with the mode forced and the baseline colours, on Android 11 and the same phone screen as
- * [ScreenshotTest].
+ * with the mode forced and the default colours (Kanso blue), on Android 11 and the same phone
+ * screen as [ScreenshotTest].
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -71,8 +76,38 @@ class ToolScreenshotTest {
         capture("17_tool_photo_dark.png")
     }
 
-    /** Shows the Edit tool on the gradient photo in [mode] and waits until the photo is drawn. */
-    private fun showToolWithPhoto(mode: ThemeMode) {
+    /** Picture 22: the editor switched to Enhance on the same photo, in light mode. */
+    @Test
+    fun editor_enhance_light() {
+        val viewModel = showToolWithPhoto(ThemeMode.Light)
+        selectEnhance(viewModel)
+        capture("22_editor_enhance_light.png")
+    }
+
+    /** Picture 23: the editor switched to Enhance on the same photo, in dark mode. */
+    @Test
+    fun editor_enhance_dark() {
+        val viewModel = showToolWithPhoto(ThemeMode.Dark)
+        selectEnhance(viewModel)
+        capture("23_editor_enhance_dark.png")
+    }
+
+    /**
+     * Selects Enhance through [viewModel], as a tap on its toggle does, waits until the screen
+     * has finished moving, and checks that Enhance's toggle is the one on.
+     */
+    private fun selectEnhance(viewModel: ToolViewModel) {
+        compose.runOnUiThread { viewModel.selectTool(Tool.ENHANCE) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(editorToolTag(Tool.ENHANCE)).assertIsOn()
+        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOff()
+    }
+
+    /**
+     * Shows the Edit tool on the gradient photo in [mode], waits until the photo is drawn, and
+     * returns the screen's ViewModel so a test can change the selected tool.
+     */
+    private fun showToolWithPhoto(mode: ThemeMode): ToolViewModel {
         val context: Context = ApplicationProvider.getApplicationContext()
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
@@ -93,6 +128,7 @@ class ToolScreenshotTest {
         }
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
+        return viewModel
     }
 
     /** Saves a picture of the whole window as `src/test/screenshots/[name]`. */
