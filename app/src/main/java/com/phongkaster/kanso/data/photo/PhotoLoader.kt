@@ -11,11 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * One photo decoded for display: [bitmap] is already upright and no larger than the screen needs.
- */
-data class LoadedPhoto(val bitmap: Bitmap)
-
-/**
  * Returns the `inSampleSize` to decode a [width] x [height] image with, so that the decoded
  * image's longest edge is at most [maxEdgePx] pixels.
  *

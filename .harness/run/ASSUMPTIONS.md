@@ -14,8 +14,8 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 3, the Phase 2 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `e50a0a5` (loop(phase-2))
+- **Revert:** `git revert e50a0a5`
 
 ### Question
 
@@ -234,8 +234,8 @@ Option 2. `GalleryUiState` gets one extra field, `tool`, so `GalleryContent` tak
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 3, the Phase 2 checkpoint (the next Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `e50a0a5` (loop(phase-2))
+- **Revert:** `git revert e50a0a5`
 
 ### Question
 

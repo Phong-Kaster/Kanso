@@ -51,10 +51,11 @@ class OneTypePerFileTest {
     }
 
     /**
-     * Every file on [ALLOWED] still exists and still breaks the rule. This is what proves, on the
-     * real code, that the checker does find a second type and a misnamed type; and it makes the
-     * list shrink as the files are fixed, so a fixed file cannot stay on it and later break again
-     * unnoticed.
+     * Every file on [ALLOWED] still exists and still breaks the rule. The list is empty now, so
+     * this passes at once; it stays so that a file added to the list later cannot be forgotten
+     * there after it is fixed. (While the list held the fourteen files of Run 4, this test proved
+     * on the real code that the checker finds a second type and a misnamed type; now the sample
+     * sources in the tests below carry that proof.)
      */
     @Test
     fun every_allowed_file_still_breaks_the_rule() {
@@ -749,27 +750,13 @@ class OneTypePerFileTest {
     /** The allow-list, and the text and patterns the checker uses. */
     private companion object {
         /**
-         * The files that still break the rule when it arrives (Run 4), as paths below the app's
-         * package folder with a `main/` or `test/` prefix; their problems are not reported. The
-         * next Phase splits each of them into one file per type and empties this list, and
-         * [every_allowed_file_still_breaks_the_rule] fails while a fixed file is still on it.
+         * The files that are allowed to break the rule, as paths below the app's package folder
+         * with a `main/` or `test/` prefix; their problems are not reported. It is empty: when
+         * the rule arrived (Run 4) fourteen files broke it, and each has been split into one file
+         * per type. A file added here would hide a real problem, so it needs the owner's approval;
+         * [every_allowed_file_still_breaks_the_rule] fails while a fixed file is still on the list.
          */
-        private val ALLOWED: Set<String> = setOf(
-            "main/navigation/Destinations.kt",
-            "main/data/media/PhotoSource.kt",
-            "main/data/photo/PhotoLoader.kt",
-            "main/data/photo/PhotoSaver.kt",
-            "main/ui/permission/PermissionGate.kt",
-            "main/data/photo/UprightJpeg.kt",
-            "main/data/settings/SettingsStore.kt",
-            "test/gallery/GalleryPermissionTest.kt",
-            "test/gallery/GalleryGridTest.kt",
-            "test/save/SaveTestSupport.kt",
-            "test/settings/PickerNoAlphaTest.kt",
-            "test/screenshots/GalleryGridScreenshotTest.kt",
-            "test/tool/ToolFixtures.kt",
-            "test/settings/ScreenPixels.kt",
-        )
+        private val ALLOWED: Set<String> = emptySet()
 
         /** The app's package folder: every scanned path starts with it below its source root. */
         const val PACKAGE_FOLDER = "com/phongkaster/kanso/"

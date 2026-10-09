@@ -2,16 +2,9 @@ package com.phongkaster.kanso.save
 
 import android.graphics.BitmapFactory
 import android.os.Environment
-import androidx.activity.result.ActivityResultRegistry
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.core.app.ActivityOptionsCompat
 import androidx.exifinterface.media.ExifInterface
-import com.phongkaster.kanso.data.photo.PhotoSaver
-import com.phongkaster.kanso.data.photo.SaveResult
 import java.io.File
 import java.security.MessageDigest
-import java.util.concurrent.CopyOnWriteArrayList
-import kotlinx.coroutines.CompletableDeferred
 
 /** The name every saved photo must have: `Kanso_<yyyyMMdd>_<HHmmss>[_n].jpg`. */
 val SAVED_NAME = Regex("""Kanso_\d{8}_\d{6}(_\d+)?\.jpg""")
@@ -49,59 +42,3 @@ fun legacyKansoFolder(): File =
 /** The files now in `<Pictures>/Kanso`, by name. */
 fun legacyKansoFiles(): List<File> =
     legacyKansoFolder().listFiles()?.filter { it.isFile }?.sortedBy { it.name }.orEmpty()
-
-/**
- * A [PhotoSaver] that writes nothing: it records each photo it is asked to save and answers
- * [result]. With [gate] set, each save waits until the test completes it, so the screen can be
- * seen mid-save.
- */
-class FakePhotoSaver(
-    var needsPermission: Boolean = false,
-    var result: SaveResult = SaveResult.Saved("content://media/external_primary/images/media/1"),
-    val gate: CompletableDeferred<Unit>? = null,
-) : PhotoSaver {
-
-    /** The source Uri of every save asked for, oldest first. */
-    val calls = CopyOnWriteArrayList<String>()
-
-    /** Answers [needsPermission]. */
-    override fun needsWritePermission(): Boolean = needsPermission
-
-    /** Records the call, waits for [gate] if any, and answers [result]. */
-    override suspend fun save(sourceUri: String): SaveResult {
-        calls += sourceUri
-        gate?.await()
-        return result
-    }
-}
-
-/**
- * An ActivityResultRegistry that shows no dialog: it records the permission of each single
- * permission request (`RequestPermission`, whose input is one String) and lets the test answer
- * the latest one with [answerLatest].
- */
-class SinglePermissionRegistry : ActivityResultRegistry() {
-
-    /** The permission of every request so far, oldest first. */
-    val requests = mutableListOf<String>()
-
-    /** The request code of the latest request, used to deliver its answer. */
-    private var latestRequestCode = -1
-
-    /** Records the request instead of showing the system permission dialog. */
-    override fun <I, O> onLaunch(
-        requestCode: Int,
-        contract: ActivityResultContract<I, O>,
-        input: I,
-        options: ActivityOptionsCompat?,
-    ) {
-        requests += input.toString()
-        latestRequestCode = requestCode
-    }
-
-    /** Delivers [granted] as the answer to the latest request. */
-    fun answerLatest(granted: Boolean) {
-        check(latestRequestCode != -1) { "No permission request to answer" }
-        dispatchResult(latestRequestCode, granted)
-    }
-}

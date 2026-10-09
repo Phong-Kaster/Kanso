@@ -6,6 +6,14 @@
 
 <!-- Newest first. One entry per iteration. -->
 
+### Iteration 4 - 2026-10-09 (Phase 3)
+- **Phase:** 3 - T-006, T-007 (two Fast-tier Workers in parallel, scopes disjoint; `git status` showed exactly the declared new and edited files, 36 paths, nothing outside either scope)
+- Attempted: 13 new and 7 edited main files (`Photo`, `Album`, `LoadedPhoto`, `SaveResult`, `FullSizeDecoder`, `RetryingMoveFileSystem` now `internal`, `PermissionAccess`, six navigation keys; the NavKey explanation moved to `Home.kt`), 9 new and 7 edited test files (`FakePhotoSource`, `RecordingRegistry`, `FakePhotoSaver`, `SinglePermissionRegistry`, `PickerDefaultAlphaTest`, `PickerMatchers`, `ScreenSample`, `FakePhotoLoader`, `SolidColourFetcherFactory`). The Iteration `git rm -f`'d the stub `Destinations.kt` (a Worker cannot delete) and emptied `ALLOWED` in `OneTypePerFileTest.kt` (`emptySet()`, KDoc rewritten); `PROJECT.md` updated for the new fake locations.
+- Verified: combined run `cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue` exit 0 (`evidence/p3-verify.log`): 231 tests, 0 failures, 0 skipped; the 231 test names are identical before and after (`evidence/p3-testnames-*.txt`); 16 baselines untouched. A multiset comparison of every old line against the new files found only the allowed deviations (private -> internal, KDoc wording). Rerun after the review's two comment fixes: `evidence/p3-verify-2.log`.
+- Review (Capable, fresh context): nothing blocking. Two non-blocking comments that said something untrue (the `PERCENTAGE` KDoc gave a wrong reason for `internal`; the KDoc of `every_allowed_file_still_breaks_the_rule` still claimed a proof the empty list no longer gives). Both fixed by the Iteration.
+- Learned: `git rm` refuses a file the Worker already edited (use `-f`); the review of a Phase that adds untracked files needs them staged first (`git add -A app`, then `git diff --cached`).
+- Reconciled: A-001 and A-011 now name `e50a0a5`; A-002, A-003 and A-012 depend on this checkpoint. Every task is complete: PARTIAL-candidate recorded (DoD 6 and 15 need a person), next invocation is the Verifier.
+
 ### Iteration 3 - 2026-10-09 (Phase 2)
 - **Phase:** 2 - T-004, T-005 (two Capable Workers in parallel, scopes disjoint; `git status` showed exactly the two new files)
 - Attempted: before dispatch, a rough scan of both source trees found exactly the 14 files `ALLOWED` lists, so Phase 1 left no stray offender. `OneTypePerFileTest` (rule, 14-entry allow-list, stale-entry check, self-checks) and `ScreenStateTest` (six ViewModels by Java reflection, `…Content` takes the UiState, no `var`/`Mutable…` in a UiState, self-checks) written; neither Worker could build or run, both desk-checked.

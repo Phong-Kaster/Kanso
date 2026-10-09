@@ -1,8 +1,11 @@
 # ISSUES
 
-## Run 4 (one class per file, one UiState per screen): Phase 2 done, Iteration 3
+## Run 4 (one class per file, one UiState per screen): Phase 3 done, Iteration 4
 
-Phase 1 (the six screens) and Phase 2 (the two guard tests) are built and verified. Problems so far:
+Phase 1 (the six screens), Phase 2 (the two guard tests) and Phase 3 (the last file splits) are built and verified. Every task is complete; nothing is abandoned or unreachable. Problems so far:
+
+- **Review findings recorded and fixed (Phase 3, non-blocking):** a KDoc that gave a wrong reason for `internal` (`PickerMatchers.kt`) and one that still claimed the empty allow-list proves the checker on real code (`OneTypePerFileTest.kt`); both reworded in the Phase 3 checkpoint.
+- **Recorded, not a defect (Phase 3):** `every_allowed_file_still_breaks_the_rule` passes at once now that `ALLOWED` is empty; the proof that the checker finds a second type and a misnamed type rests on the sample-source tests in the same class.
 
 - **Review findings recorded, not fixed (Phase 2, Minor):** `ScreenStateTest` reads declared types only, so a ViewModel whose `val state: StateFlow<…UiState> = mutableState` (no `asStateFlow()`) passes, a `Flow<…>` property that holds a `MutableStateFlow` at run time passes, and a top-level extension property such as `val HomeViewModel.busy: StateFlow<Boolean>` in a ViewModel file is not a member of the class and is not seen. Its `var`/`Mutable…` check misses `ArrayList`, `HashMap` and arrays, and would report a local `var` inside a helper function in a `…UiState.kt` (loud, harmless). Neither test is a substitute for the Phase 1 review of how each state is built.
 - **Not a defect, recorded:** the first Phase 2 combined run failed on `cleanTestDebugUnitTest` only because the engine's shell stood inside `app/build/test-results`; rerun green (Constraint in `knowledge/PROJECT.md`, suggestion S-001).

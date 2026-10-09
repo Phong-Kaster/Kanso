@@ -9,16 +9,14 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
-import com.phongkaster.kanso.data.photo.LoadedPhoto
-import com.phongkaster.kanso.data.photo.PhotoLoader
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.concurrent.CopyOnWriteArrayList
 import org.robolectric.Shadows.shadowOf
 
 /**
- * Test helpers for the tool screen: photo fixtures made at test time and a fake loader.
+ * Test helpers for the tool screen: photo fixtures made at test time. (The fake loader that goes
+ * with them is [FakePhotoLoader], in its own file.)
  *
  * The fixtures are real JPEG files written into a temporary folder. They are served to the app
  * under a `content://` Uri through Robolectric's ContentResolver, the way MediaStore serves real
@@ -88,23 +86,4 @@ object ToolFixtures {
 
     /** A content Uri nothing is served under: opening it fails like a deleted photo. */
     const val MISSING_URI = "content://$AUTHORITY/missing.jpg"
-}
-
-/**
- * A [PhotoLoader] that decodes nothing: it hands back [bitmap] (or null, "unreadable") at once
- * and records every size it was asked for.
- */
-class FakePhotoLoader(
-    context: Context,
-    private val bitmap: Bitmap?,
-) : PhotoLoader(context) {
-
-    /** The `maxEdgePx` of every call, oldest first. */
-    val requestedEdges = CopyOnWriteArrayList<Int>()
-
-    /** Records the request and returns the fixed bitmap. */
-    override suspend fun load(uri: String, maxEdgePx: Int): LoadedPhoto? {
-        requestedEdges += maxEdgePx
-        return bitmap?.let(::LoadedPhoto)
-    }
 }

@@ -11,7 +11,6 @@ import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.ActivityResultRegistryOwner
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
@@ -20,7 +19,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -314,36 +312,5 @@ class GalleryPermissionTest {
             Manifest.permission.READ_MEDIA_IMAGES,
             Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
         )
-    }
-}
-
-/**
- * An ActivityResultRegistry that shows no dialog: it records the permissions of each request
- * and lets the test answer the latest one with [answerLatest].
- */
-class RecordingRegistry : ActivityResultRegistry() {
-
-    /** The permissions of every request so far, oldest first. */
-    val requests = mutableListOf<List<String>>()
-
-    /** The request code of the latest request, used to deliver its answer. */
-    private var latestRequestCode = -1
-
-    /** Records the request instead of showing the system permission dialog. */
-    override fun <I, O> onLaunch(
-        requestCode: Int,
-        contract: ActivityResultContract<I, O>,
-        input: I,
-        options: ActivityOptionsCompat?,
-    ) {
-        @Suppress("UNCHECKED_CAST")
-        requests += (input as Array<String>).toList()
-        latestRequestCode = requestCode
-    }
-
-    /** Delivers [result] as the answer to the latest request. */
-    fun answerLatest(result: Map<String, Boolean>) {
-        check(latestRequestCode != -1) { "No permission request to answer" }
-        dispatchResult(latestRequestCode, result)
     }
 }

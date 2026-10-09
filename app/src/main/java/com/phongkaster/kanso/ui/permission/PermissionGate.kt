@@ -35,18 +35,6 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
-/** How much a set of runtime permissions currently lets the app do. */
-enum class PermissionAccess {
-    /** Every permission needed for full access is granted. */
-    Full,
-
-    /** Only a partial-access permission is granted (Android 14+ "Select photos"). */
-    Partial,
-
-    /** Nothing useful is granted. */
-    None,
-}
-
 /**
  * Reads, right now, what the phone has granted: [PermissionAccess.Full] when every one of
  * [fullAccess] is granted, [PermissionAccess.Partial] when at least one of [partialAccess] is,

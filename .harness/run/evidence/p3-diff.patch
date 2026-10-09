@@ -1,0 +1,1467 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/media/Album.kt b/app/src/main/java/com/phongkaster/kanso/data/media/Album.kt
+new file mode 100644
+index 0000000..d0e72d8
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/media/Album.kt
+@@ -0,0 +1,4 @@
++package com.phongkaster.kanso.data.media
++
++/** One album (a folder of photos, such as "Camera" or "Screenshots"), with its [id] and [name]. */
++data class Album(val id: Long, val name: String)
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/media/Photo.kt b/app/src/main/java/com/phongkaster/kanso/data/media/Photo.kt
+new file mode 100644
+index 0000000..3770669
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/media/Photo.kt
+@@ -0,0 +1,19 @@
++package com.phongkaster.kanso.data.media
++
++/**
++ * One photo on the phone, as the gallery needs it.
++ *
++ * [id] is the photo's number in the phone's media database; it never changes for the same photo,
++ * which is why the gallery grid uses it as the key of each cell. [uri] is the photo's content URI
++ * as text (for example `content://media/external/images/media/42`): it is how any part of the
++ * app, and any other app, opens the photo, so it is what travels to the tool screen. [name] is the
++ * file name shown to screen readers, [albumId] the album (folder) it is in, and [modifiedSeconds]
++ * when it was last changed, in seconds since 1970.
++ */
++data class Photo(
++    val id: Long,
++    val uri: String,
++    val name: String,
++    val albumId: Long,
++    val modifiedSeconds: Long,
++)
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/media/PhotoSource.kt b/app/src/main/java/com/phongkaster/kanso/data/media/PhotoSource.kt
+index 73ae184..9d73a68 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/media/PhotoSource.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/media/PhotoSource.kt
+@@ -1,26 +1,5 @@
+ package com.phongkaster.kanso.data.media
+ 
+-/**
+- * One photo on the phone, as the gallery needs it.
+- *
+- * [id] is the photo's number in the phone's media database; it never changes for the same photo,
+- * which is why the gallery grid uses it as the key of each cell. [uri] is the photo's content URI
+- * as text (for example `content://media/external/images/media/42`): it is how any part of the
+- * app, and any other app, opens the photo, so it is what travels to the tool screen. [name] is the
+- * file name shown to screen readers, [albumId] the album (folder) it is in, and [modifiedSeconds]
+- * when it was last changed, in seconds since 1970.
+- */
+-data class Photo(
+-    val id: Long,
+-    val uri: String,
+-    val name: String,
+-    val albumId: Long,
+-    val modifiedSeconds: Long,
+-)
+-
+-/** One album (a folder of photos, such as "Camera" or "Screenshots"), with its [id] and [name]. */
+-data class Album(val id: Long, val name: String)
+-
+ /**
+  * Where the gallery gets its photos from.
+  *
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/FullSizeDecoder.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/FullSizeDecoder.kt
+new file mode 100644
+index 0000000..0be79d9
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/FullSizeDecoder.kt
+@@ -0,0 +1,16 @@
++package com.phongkaster.kanso.data.photo
++
++import android.graphics.Bitmap
++import java.io.InputStream
++
++/**
++ * Decodes a whole photo at full size, every pixel of it, from a stream.
++ *
++ * It is a small interface so that a test can hand the saver a decoder that runs out of memory,
++ * the way a huge photo would on a real phone, and check that the saver still saves something.
++ */
++fun interface FullSizeDecoder {
++
++    /** Decodes [input] at full size, or returns null when the bytes are not a picture. */
++    fun decode(input: InputStream): Bitmap?
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/LoadedPhoto.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/LoadedPhoto.kt
+new file mode 100644
+index 0000000..d20b497
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/LoadedPhoto.kt
+@@ -0,0 +1,8 @@
++package com.phongkaster.kanso.data.photo
++
++import android.graphics.Bitmap
++
++/**
++ * One photo decoded for display: [bitmap] is already upright and no larger than the screen needs.
++ */
++data class LoadedPhoto(val bitmap: Bitmap)
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoLoader.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoLoader.kt
+index b949b7c..76495c9 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoLoader.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoLoader.kt
+@@ -10,11 +10,6 @@ import kotlinx.coroutines.CancellationException
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.withContext
+ 
+-/**
+- * One photo decoded for display: [bitmap] is already upright and no larger than the screen needs.
+- */
+-data class LoadedPhoto(val bitmap: Bitmap)
+-
+ /**
+  * Returns the `inSampleSize` to decode a [width] x [height] image with, so that the decoded
+  * image's longest edge is at most [maxEdgePx] pixels.
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
+index a6edcc3..c05c8f3 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
+@@ -1,23 +1,5 @@
+ package com.phongkaster.kanso.data.photo
+ 
+-/**
+- * What came of one attempt to save a photo into the phone's own gallery.
+- */
+-sealed interface SaveResult {
+-
+-    /**
+-     * The photo was saved. [uri] is the text of the new picture's content Uri.
+-     *
+-     * [keptOriginalOrientation] is true when the photo was too large to turn upright in memory,
+-     * so its bytes were copied as they are and the picture still carries its rotation tag; the
+-     * screen tells the person, because some apps ignore that tag.
+-     */
+-    data class Saved(val uri: String, val keptOriginalOrientation: Boolean = false) : SaveResult
+-
+-    /** The photo could not be saved, and nothing was written. */
+-    data object Failed : SaveResult
+-}
+-
+ /**
+  * Saves a photo as a new JPEG in the phone's `Pictures/Kanso` album.
+  *
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/SaveResult.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/SaveResult.kt
+new file mode 100644
+index 0000000..aa45257
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/SaveResult.kt
+@@ -0,0 +1,19 @@
++package com.phongkaster.kanso.data.photo
++
++/**
++ * What came of one attempt to save a photo into the phone's own gallery.
++ */
++sealed interface SaveResult {
++
++    /**
++     * The photo was saved. [uri] is the text of the new picture's content Uri.
++     *
++     * [keptOriginalOrientation] is true when the photo was too large to turn upright in memory,
++     * so its bytes were copied as they are and the picture still carries its rotation tag; the
++     * screen tells the person, because some apps ignore that tag.
++     */
++    data class Saved(val uri: String, val keptOriginalOrientation: Boolean = false) : SaveResult
++
++    /** The photo could not be saved, and nothing was written. */
++    data object Failed : SaveResult
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt
+index 76217b0..0edddc8 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt
+@@ -6,18 +6,6 @@ import android.graphics.Matrix
+ import androidx.exifinterface.media.ExifInterface
+ import java.io.InputStream
+ 
+-/**
+- * Decodes a whole photo at full size, every pixel of it, from a stream.
+- *
+- * It is a small interface so that a test can hand the saver a decoder that runs out of memory,
+- * the way a huge photo would on a real phone, and check that the saver still saves something.
+- */
+-fun interface FullSizeDecoder {
+-
+-    /** Decodes [input] at full size, or returns null when the bytes are not a picture. */
+-    fun decode(input: InputStream): Bitmap?
+-}
+-
+ /** The decoder used outside tests: Android's own BitmapFactory, with no shrinking at all. */
+ val DefaultFullSizeDecoder: FullSizeDecoder = FullSizeDecoder { input -> BitmapFactory.decodeStream(input) }
+ 
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/settings/RetryingMoveFileSystem.kt b/app/src/main/java/com/phongkaster/kanso/data/settings/RetryingMoveFileSystem.kt
+new file mode 100644
+index 0000000..8973a7b
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/settings/RetryingMoveFileSystem.kt
+@@ -0,0 +1,37 @@
++package com.phongkaster.kanso.data.settings
++
++import java.io.IOException
++import okio.FileSystem
++import okio.ForwardingFileSystem
++import okio.Path
++
++/**
++ * A file system that behaves like [delegate] but tries the "move over the old file" step again
++ * when it fails.
++ *
++ * On Windows a move onto an existing file is refused for a moment while another program, such as
++ * an antivirus scanner looking at the freshly written file, still has it open. The block clears
++ * within milliseconds, so a few short waits turn a random failure into a success. On Android the
++ * first try always works and nothing is waited for.
++ */
++internal class RetryingMoveFileSystem(delegate: FileSystem) : ForwardingFileSystem(delegate) {
++    override fun atomicMove(source: Path, target: Path) {
++        var attempt = 0
++        while (true) {
++            try {
++                super.atomicMove(source, target)
++                return
++            } catch (e: IOException) {
++                // Give up after about two seconds and let DataStore report the real error.
++                if (++attempt >= MOVE_ATTEMPTS) throw e
++                Thread.sleep(MOVE_WAIT_MILLIS)
++            }
++        }
++    }
++
++    /** The retry limits: how many tries a move gets, and how long to wait between them. */
++    private companion object {
++        const val MOVE_ATTEMPTS = 40
++        const val MOVE_WAIT_MILLIS = 50L
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt b/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt
+index 7ba498f..2e0e038 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/settings/SettingsStore.kt
+@@ -9,10 +9,7 @@ import androidx.datastore.preferences.core.PreferencesSerializer
+ import androidx.datastore.preferences.core.emptyPreferences
+ import java.io.File
+ import kotlinx.coroutines.CoroutineScope
+-import java.io.IOException
+ import okio.FileSystem
+-import okio.ForwardingFileSystem
+-import okio.Path
+ import okio.Path.Companion.toPath
+ import org.koin.core.qualifier.Qualifier
+ import org.koin.core.qualifier.named
+@@ -55,34 +52,3 @@ fun createSettingsDataStore(file: File, scope: CoroutineScope): DataStore<Prefer
+         scope = scope,
+     )
+ }
+-
+-/**
+- * A file system that behaves like [delegate] but tries the "move over the old file" step again
+- * when it fails.
+- *
+- * On Windows a move onto an existing file is refused for a moment while another program, such as
+- * an antivirus scanner looking at the freshly written file, still has it open. The block clears
+- * within milliseconds, so a few short waits turn a random failure into a success. On Android the
+- * first try always works and nothing is waited for.
+- */
+-private class RetryingMoveFileSystem(delegate: FileSystem) : ForwardingFileSystem(delegate) {
+-    override fun atomicMove(source: Path, target: Path) {
+-        var attempt = 0
+-        while (true) {
+-            try {
+-                super.atomicMove(source, target)
+-                return
+-            } catch (e: IOException) {
+-                // Give up after about two seconds and let DataStore report the real error.
+-                if (++attempt >= MOVE_ATTEMPTS) throw e
+-                Thread.sleep(MOVE_WAIT_MILLIS)
+-            }
+-        }
+-    }
+-
+-    /** The retry limits: how many tries a move gets, and how long to wait between them. */
+-    private companion object {
+-        const val MOVE_ATTEMPTS = 40
+-        const val MOVE_WAIT_MILLIS = 50L
+-    }
+-}
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Camera.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Camera.kt
+new file mode 100644
+index 0000000..5da966f
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/Camera.kt
+@@ -0,0 +1,11 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++/**
++ * The camera screen. The shot the person keeps opens [tool], so Home passes the Edit tool and a
++ * gallery passes its own. The tool is the key's only argument so it is saved with the back stack.
++ */
++@Serializable
++data class Camera(val tool: Tool) : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Destinations.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Destinations.kt
+deleted file mode 100644
+index 33c494c..0000000
+--- a/app/src/main/java/com/phongkaster/kanso/navigation/Destinations.kt
++++ /dev/null
+@@ -1,53 +0,0 @@
+-package com.phongkaster.kanso.navigation
+-
+-import androidx.navigation3.runtime.NavKey
+-import kotlinx.serialization.Serializable
+-
+-// Navigation 3 concepts used in this file:
+-// - A NavKey is a small value that names one screen (a "destination"), plus any arguments it
+-//   needs. The app keeps a list of these keys, the back stack; the last key is the screen shown.
+-// - Keys must be @Serializable so the back stack can be written into the saved state and read
+-//   back after rotation or after Android kills and restores the process.
+-
+-/** The Home screen: the list of tools and the Settings entry. It is the first and bottom key. */
+-@Serializable
+-data object Home : NavKey
+-
+-/**
+- * The camera screen. The shot the person keeps opens [tool], so Home passes the Edit tool and a
+- * gallery passes its own. The tool is the key's only argument so it is saved with the back stack.
+- */
+-@Serializable
+-data class Camera(val tool: Tool) : NavKey
+-
+-/**
+- * The photo gallery opened by a tool: the user picks a photo here to work on with [tool].
+- *
+- * The tool is the key's only argument, so it is saved with the back stack and the gallery comes
+- * back for the same tool after rotation or process death.
+- */
+-@Serializable
+-data class Gallery(val tool: Tool) : NavKey
+-
+-/**
+- * The screen where [tool] works on one photo, named by [photoUri].
+- *
+- * The photo travels inside the key, as the text form of its content Uri (a Uri itself is not
+- * @Serializable). The key is saved with the back stack, so after rotation or process death the
+- * same tool reopens on the same photo with nothing else to restore.
+- */
+-@Serializable
+-data class ToolPhoto(val tool: Tool, val photoUri: String) : NavKey
+-
+-/**
+- * The screen shown after a photo is saved: the saved picture and what to do next.
+- *
+- * [photoUri] is the text of the saved picture's content Uri and [tool] is the tool that saved it,
+- * so Edit another can open that tool's gallery again. Both are saved with the back stack.
+- */
+-@Serializable
+-data class Saved(val tool: Tool, val photoUri: String) : NavKey
+-
+-/** The Settings screen. */
+-@Serializable
+-data object Settings : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Gallery.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Gallery.kt
+new file mode 100644
+index 0000000..204e1c5
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/Gallery.kt
+@@ -0,0 +1,13 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++/**
++ * The photo gallery opened by a tool: the user picks a photo here to work on with [tool].
++ *
++ * The tool is the key's only argument, so it is saved with the back stack and the gallery comes
++ * back for the same tool after rotation or process death.
++ */
++@Serializable
++data class Gallery(val tool: Tool) : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Home.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Home.kt
+new file mode 100644
+index 0000000..b90cce6
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/Home.kt
+@@ -0,0 +1,15 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++// Navigation 3 concepts used by the keys in this package (Home here, then Camera, Gallery,
++// ToolPhoto, Saved and Settings, one file each):
++// - A NavKey is a small value that names one screen (a "destination"), plus any arguments it
++//   needs. The app keeps a list of these keys, the back stack; the last key is the screen shown.
++// - Keys must be @Serializable so the back stack can be written into the saved state and read
++//   back after rotation or after Android kills and restores the process.
++
++/** The Home screen: the list of tools and the Settings entry. It is the first and bottom key. */
++@Serializable
++data object Home : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Saved.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Saved.kt
+new file mode 100644
+index 0000000..4e3b4b8
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/Saved.kt
+@@ -0,0 +1,13 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++/**
++ * The screen shown after a photo is saved: the saved picture and what to do next.
++ *
++ * [photoUri] is the text of the saved picture's content Uri and [tool] is the tool that saved it,
++ * so Edit another can open that tool's gallery again. Both are saved with the back stack.
++ */
++@Serializable
++data class Saved(val tool: Tool, val photoUri: String) : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/Settings.kt b/app/src/main/java/com/phongkaster/kanso/navigation/Settings.kt
+new file mode 100644
+index 0000000..1514611
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/Settings.kt
+@@ -0,0 +1,8 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++/** The Settings screen. */
++@Serializable
++data object Settings : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/ToolPhoto.kt b/app/src/main/java/com/phongkaster/kanso/navigation/ToolPhoto.kt
+new file mode 100644
+index 0000000..cc9c7ba
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/ToolPhoto.kt
+@@ -0,0 +1,14 @@
++package com.phongkaster.kanso.navigation
++
++import androidx.navigation3.runtime.NavKey
++import kotlinx.serialization.Serializable
++
++/**
++ * The screen where [tool] works on one photo, named by [photoUri].
++ *
++ * The photo travels inside the key, as the text form of its content Uri (a Uri itself is not
++ * @Serializable). The key is saved with the back stack, so after rotation or process death the
++ * same tool reopens on the same photo with nothing else to restore.
++ */
++@Serializable
++data class ToolPhoto(val tool: Tool, val photoUri: String) : NavKey
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionAccess.kt b/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionAccess.kt
+new file mode 100644
+index 0000000..e19e7f7
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionAccess.kt
+@@ -0,0 +1,13 @@
++package com.phongkaster.kanso.ui.permission
++
++/** How much a set of runtime permissions currently lets the app do. */
++enum class PermissionAccess {
++    /** Every permission needed for full access is granted. */
++    Full,
++
++    /** Only a partial-access permission is granted (Android 14+ "Select photos"). */
++    Partial,
++
++    /** Nothing useful is granted. */
++    None,
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt b/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt
+index 7e21c73..d885690 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt
+@@ -35,18 +35,6 @@ import com.phongkaster.kanso.R
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.ui.theme.KansoTheme
+ 
+-/** How much a set of runtime permissions currently lets the app do. */
+-enum class PermissionAccess {
+-    /** Every permission needed for full access is granted. */
+-    Full,
+-
+-    /** Only a partial-access permission is granted (Android 14+ "Select photos"). */
+-    Partial,
+-
+-    /** Nothing useful is granted. */
+-    None,
+-}
+-
+ /**
+  * Reads, right now, what the phone has granted: [PermissionAccess.Full] when every one of
+  * [fullAccess] is granted, [PermissionAccess.Partial] when at least one of [partialAccess] is,
+diff --git a/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt b/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
+index 16d09c4..3b95092 100644
+--- a/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
+@@ -749,27 +749,13 @@ class OneTypePerFileTest {
+     /** The allow-list, and the text and patterns the checker uses. */
+     private companion object {
+         /**
+-         * The files that still break the rule when it arrives (Run 4), as paths below the app's
+-         * package folder with a `main/` or `test/` prefix; their problems are not reported. The
+-         * next Phase splits each of them into one file per type and empties this list, and
+-         * [every_allowed_file_still_breaks_the_rule] fails while a fixed file is still on it.
++         * The files that are allowed to break the rule, as paths below the app's package folder
++         * with a `main/` or `test/` prefix; their problems are not reported. It is empty: when
++         * the rule arrived (Run 4) fourteen files broke it, and each has been split into one file
++         * per type. A file added here would hide a real problem, so it needs the owner's approval;
++         * [every_allowed_file_still_breaks_the_rule] fails while a fixed file is still on the list.
+          */
+-        private val ALLOWED: Set<String> = setOf(
+-            "main/navigation/Destinations.kt",
+-            "main/data/media/PhotoSource.kt",
+-            "main/data/photo/PhotoLoader.kt",
+-            "main/data/photo/PhotoSaver.kt",
+-            "main/ui/permission/PermissionGate.kt",
+-            "main/data/photo/UprightJpeg.kt",
+-            "main/data/settings/SettingsStore.kt",
+-            "test/gallery/GalleryPermissionTest.kt",
+-            "test/gallery/GalleryGridTest.kt",
+-            "test/save/SaveTestSupport.kt",
+-            "test/settings/PickerNoAlphaTest.kt",
+-            "test/screenshots/GalleryGridScreenshotTest.kt",
+-            "test/tool/ToolFixtures.kt",
+-            "test/settings/ScreenPixels.kt",
+-        )
++        private val ALLOWED: Set<String> = emptySet()
+ 
+         /** The app's package folder: every scanned path starts with it below its source root. */
+         const val PACKAGE_FOLDER = "com/phongkaster/kanso/"
+diff --git a/app/src/test/java/com/phongkaster/kanso/gallery/FakePhotoSource.kt b/app/src/test/java/com/phongkaster/kanso/gallery/FakePhotoSource.kt
+new file mode 100644
+index 0000000..61785db
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/gallery/FakePhotoSource.kt
+@@ -0,0 +1,51 @@
++package com.phongkaster.kanso.gallery
++
++import com.phongkaster.kanso.data.media.Album
++import com.phongkaster.kanso.data.media.Photo
++import com.phongkaster.kanso.data.media.PhotoSource
++import java.util.concurrent.CopyOnWriteArrayList
++
++/**
++ * A photo library for tests: it holds [albums] and [allPhotos], answers like the real source
++ * (an album's photos, newest first), records the thread of every call in [callingThreads], and
++ * throws [failure] instead of answering when one is set.
++ *
++ * Its fields are @Volatile because the gallery reads them on a background thread while the test
++ * sets them on the main thread.
++ */
++class FakePhotoSource(
++    albums: List<Album>,
++    allPhotos: List<Photo>,
++) : PhotoSource {
++
++    /** The albums the fake answers with. */
++    @Volatile
++    var albums: List<Album> = albums
++
++    /** Every photo of every album, in any order; the fake sorts them when asked. */
++    @Volatile
++    var allPhotos: List<Photo> = allPhotos
++
++    /** When set, every call throws it instead of answering. */
++    @Volatile
++    var failure: Exception? = null
++
++    /** The thread each call ran on, in call order. */
++    val callingThreads: MutableList<Thread> = CopyOnWriteArrayList()
++
++    /** Returns [albums], after recording the calling thread. */
++    override suspend fun albums(): List<Album> {
++        callingThreads += Thread.currentThread()
++        failure?.let { throw it }
++        return albums
++    }
++
++    /** Returns the photos of [albumId] (all when null), newest first, after recording the thread. */
++    override suspend fun photos(albumId: Long?): List<Photo> {
++        callingThreads += Thread.currentThread()
++        failure?.let { throw it }
++        return allPhotos
++            .filter { albumId == null || it.albumId == albumId }
++            .sortedByDescending { it.modifiedSeconds }
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/gallery/GalleryGridTest.kt b/app/src/test/java/com/phongkaster/kanso/gallery/GalleryGridTest.kt
+index b364654..4b9f29d 100644
+--- a/app/src/test/java/com/phongkaster/kanso/gallery/GalleryGridTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/gallery/GalleryGridTest.kt
+@@ -24,7 +24,6 @@ import androidx.test.core.app.ApplicationProvider
+ import androidx.test.ext.junit.runners.AndroidJUnit4
+ import com.phongkaster.kanso.data.media.Album
+ import com.phongkaster.kanso.data.media.Photo
+-import com.phongkaster.kanso.data.media.PhotoSource
+ import com.phongkaster.kanso.di.ViewModelClearedProbe
+ import com.phongkaster.kanso.navigation.Tool
+ import com.phongkaster.kanso.ui.gallery.GALLERY_BODY_TAG
+@@ -36,7 +35,6 @@ import com.phongkaster.kanso.ui.gallery.GalleryUiState
+ import com.phongkaster.kanso.ui.gallery.GalleryViewModel
+ import com.phongkaster.kanso.ui.gallery.galleryAlbumTag
+ import com.phongkaster.kanso.ui.gallery.galleryPhotoTag
+-import java.util.concurrent.CopyOnWriteArrayList
+ import org.junit.After
+ import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertTrue
+@@ -304,48 +302,3 @@ class GalleryGridTest {
+         }
+     }
+ }
+-
+-/**
+- * A photo library for tests: it holds [albums] and [allPhotos], answers like the real source
+- * (an album's photos, newest first), records the thread of every call in [callingThreads], and
+- * throws [failure] instead of answering when one is set.
+- *
+- * Its fields are @Volatile because the gallery reads them on a background thread while the test
+- * sets them on the main thread.
+- */
+-class FakePhotoSource(
+-    albums: List<Album>,
+-    allPhotos: List<Photo>,
+-) : PhotoSource {
+-
+-    /** The albums the fake answers with. */
+-    @Volatile
+-    var albums: List<Album> = albums
+-
+-    /** Every photo of every album, in any order; the fake sorts them when asked. */
+-    @Volatile
+-    var allPhotos: List<Photo> = allPhotos
+-
+-    /** When set, every call throws it instead of answering. */
+-    @Volatile
+-    var failure: Exception? = null
+-
+-    /** The thread each call ran on, in call order. */
+-    val callingThreads: MutableList<Thread> = CopyOnWriteArrayList()
+-
+-    /** Returns [albums], after recording the calling thread. */
+-    override suspend fun albums(): List<Album> {
+-        callingThreads += Thread.currentThread()
+-        failure?.let { throw it }
+-        return albums
+-    }
+-
+-    /** Returns the photos of [albumId] (all when null), newest first, after recording the thread. */
+-    override suspend fun photos(albumId: Long?): List<Photo> {
+-        callingThreads += Thread.currentThread()
+-        failure?.let { throw it }
+-        return allPhotos
+-            .filter { albumId == null || it.albumId == albumId }
+-            .sortedByDescending { it.modifiedSeconds }
+-    }
+-}
+diff --git a/app/src/test/java/com/phongkaster/kanso/gallery/GalleryPermissionTest.kt b/app/src/test/java/com/phongkaster/kanso/gallery/GalleryPermissionTest.kt
+index 8573c25..0c3775c 100644
+--- a/app/src/test/java/com/phongkaster/kanso/gallery/GalleryPermissionTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/gallery/GalleryPermissionTest.kt
+@@ -11,7 +11,6 @@ import androidx.activity.compose.LocalActivityResultRegistryOwner
+ import androidx.activity.compose.setContent
+ import androidx.activity.result.ActivityResultRegistry
+ import androidx.activity.result.ActivityResultRegistryOwner
+-import androidx.activity.result.contract.ActivityResultContract
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.CompositionLocalProvider
+ import androidx.compose.ui.test.assertIsDisplayed
+@@ -20,7 +19,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.test.onNodeWithText
+ import androidx.compose.ui.test.performClick
+-import androidx.core.app.ActivityOptionsCompat
+ import androidx.lifecycle.Lifecycle
+ import androidx.test.core.app.ActivityScenario
+ import androidx.test.core.app.ApplicationProvider
+@@ -316,34 +314,3 @@ class GalleryPermissionTest {
+         )
+     }
+ }
+-
+-/**
+- * An ActivityResultRegistry that shows no dialog: it records the permissions of each request
+- * and lets the test answer the latest one with [answerLatest].
+- */
+-class RecordingRegistry : ActivityResultRegistry() {
+-
+-    /** The permissions of every request so far, oldest first. */
+-    val requests = mutableListOf<List<String>>()
+-
+-    /** The request code of the latest request, used to deliver its answer. */
+-    private var latestRequestCode = -1
+-
+-    /** Records the request instead of showing the system permission dialog. */
+-    override fun <I, O> onLaunch(
+-        requestCode: Int,
+-        contract: ActivityResultContract<I, O>,
+-        input: I,
+-        options: ActivityOptionsCompat?,
+-    ) {
+-        @Suppress("UNCHECKED_CAST")
+-        requests += (input as Array<String>).toList()
+-        latestRequestCode = requestCode
+-    }
+-
+-    /** Delivers [result] as the answer to the latest request. */
+-    fun answerLatest(result: Map<String, Boolean>) {
+-        check(latestRequestCode != -1) { "No permission request to answer" }
+-        dispatchResult(latestRequestCode, result)
+-    }
+-}
+diff --git a/app/src/test/java/com/phongkaster/kanso/gallery/RecordingRegistry.kt b/app/src/test/java/com/phongkaster/kanso/gallery/RecordingRegistry.kt
+new file mode 100644
+index 0000000..2ab77e5
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/gallery/RecordingRegistry.kt
+@@ -0,0 +1,36 @@
++package com.phongkaster.kanso.gallery
++
++import androidx.activity.result.ActivityResultRegistry
++import androidx.activity.result.contract.ActivityResultContract
++import androidx.core.app.ActivityOptionsCompat
++
++/**
++ * An ActivityResultRegistry that shows no dialog: it records the permissions of each request
++ * and lets the test answer the latest one with [answerLatest].
++ */
++class RecordingRegistry : ActivityResultRegistry() {
++
++    /** The permissions of every request so far, oldest first. */
++    val requests = mutableListOf<List<String>>()
++
++    /** The request code of the latest request, used to deliver its answer. */
++    private var latestRequestCode = -1
++
++    /** Records the request instead of showing the system permission dialog. */
++    override fun <I, O> onLaunch(
++        requestCode: Int,
++        contract: ActivityResultContract<I, O>,
++        input: I,
++        options: ActivityOptionsCompat?,
++    ) {
++        @Suppress("UNCHECKED_CAST")
++        requests += (input as Array<String>).toList()
++        latestRequestCode = requestCode
++    }
++
++    /** Delivers [result] as the answer to the latest request. */
++    fun answerLatest(result: Map<String, Boolean>) {
++        check(latestRequestCode != -1) { "No permission request to answer" }
++        dispatchResult(latestRequestCode, result)
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/save/FakePhotoSaver.kt b/app/src/test/java/com/phongkaster/kanso/save/FakePhotoSaver.kt
+new file mode 100644
+index 0000000..5131cff
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/save/FakePhotoSaver.kt
+@@ -0,0 +1,31 @@
++package com.phongkaster.kanso.save
++
++import com.phongkaster.kanso.data.photo.PhotoSaver
++import com.phongkaster.kanso.data.photo.SaveResult
++import java.util.concurrent.CopyOnWriteArrayList
++import kotlinx.coroutines.CompletableDeferred
++
++/**
++ * A [PhotoSaver] that writes nothing: it records each photo it is asked to save and answers
++ * [result]. With [gate] set, each save waits until the test completes it, so the screen can be
++ * seen mid-save.
++ */
++class FakePhotoSaver(
++    var needsPermission: Boolean = false,
++    var result: SaveResult = SaveResult.Saved("content://media/external_primary/images/media/1"),
++    val gate: CompletableDeferred<Unit>? = null,
++) : PhotoSaver {
++
++    /** The source Uri of every save asked for, oldest first. */
++    val calls = CopyOnWriteArrayList<String>()
++
++    /** Answers [needsPermission]. */
++    override fun needsWritePermission(): Boolean = needsPermission
++
++    /** Records the call, waits for [gate] if any, and answers [result]. */
++    override suspend fun save(sourceUri: String): SaveResult {
++        calls += sourceUri
++        gate?.await()
++        return result
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/save/SaveTestSupport.kt b/app/src/test/java/com/phongkaster/kanso/save/SaveTestSupport.kt
+index e788161..d6718e7 100644
+--- a/app/src/test/java/com/phongkaster/kanso/save/SaveTestSupport.kt
++++ b/app/src/test/java/com/phongkaster/kanso/save/SaveTestSupport.kt
+@@ -2,16 +2,9 @@ package com.phongkaster.kanso.save
+ 
+ import android.graphics.BitmapFactory
+ import android.os.Environment
+-import androidx.activity.result.ActivityResultRegistry
+-import androidx.activity.result.contract.ActivityResultContract
+-import androidx.core.app.ActivityOptionsCompat
+ import androidx.exifinterface.media.ExifInterface
+-import com.phongkaster.kanso.data.photo.PhotoSaver
+-import com.phongkaster.kanso.data.photo.SaveResult
+ import java.io.File
+ import java.security.MessageDigest
+-import java.util.concurrent.CopyOnWriteArrayList
+-import kotlinx.coroutines.CompletableDeferred
+ 
+ /** The name every saved photo must have: `Kanso_<yyyyMMdd>_<HHmmss>[_n].jpg`. */
+ val SAVED_NAME = Regex("""Kanso_\d{8}_\d{6}(_\d+)?\.jpg""")
+@@ -49,59 +42,3 @@ fun legacyKansoFolder(): File =
+ /** The files now in `<Pictures>/Kanso`, by name. */
+ fun legacyKansoFiles(): List<File> =
+     legacyKansoFolder().listFiles()?.filter { it.isFile }?.sortedBy { it.name }.orEmpty()
+-
+-/**
+- * A [PhotoSaver] that writes nothing: it records each photo it is asked to save and answers
+- * [result]. With [gate] set, each save waits until the test completes it, so the screen can be
+- * seen mid-save.
+- */
+-class FakePhotoSaver(
+-    var needsPermission: Boolean = false,
+-    var result: SaveResult = SaveResult.Saved("content://media/external_primary/images/media/1"),
+-    val gate: CompletableDeferred<Unit>? = null,
+-) : PhotoSaver {
+-
+-    /** The source Uri of every save asked for, oldest first. */
+-    val calls = CopyOnWriteArrayList<String>()
+-
+-    /** Answers [needsPermission]. */
+-    override fun needsWritePermission(): Boolean = needsPermission
+-
+-    /** Records the call, waits for [gate] if any, and answers [result]. */
+-    override suspend fun save(sourceUri: String): SaveResult {
+-        calls += sourceUri
+-        gate?.await()
+-        return result
+-    }
+-}
+-
+-/**
+- * An ActivityResultRegistry that shows no dialog: it records the permission of each single
+- * permission request (`RequestPermission`, whose input is one String) and lets the test answer
+- * the latest one with [answerLatest].
+- */
+-class SinglePermissionRegistry : ActivityResultRegistry() {
+-
+-    /** The permission of every request so far, oldest first. */
+-    val requests = mutableListOf<String>()
+-
+-    /** The request code of the latest request, used to deliver its answer. */
+-    private var latestRequestCode = -1
+-
+-    /** Records the request instead of showing the system permission dialog. */
+-    override fun <I, O> onLaunch(
+-        requestCode: Int,
+-        contract: ActivityResultContract<I, O>,
+-        input: I,
+-        options: ActivityOptionsCompat?,
+-    ) {
+-        requests += input.toString()
+-        latestRequestCode = requestCode
+-    }
+-
+-    /** Delivers [granted] as the answer to the latest request. */
+-    fun answerLatest(granted: Boolean) {
+-        check(latestRequestCode != -1) { "No permission request to answer" }
+-        dispatchResult(latestRequestCode, granted)
+-    }
+-}
+diff --git a/app/src/test/java/com/phongkaster/kanso/save/SinglePermissionRegistry.kt b/app/src/test/java/com/phongkaster/kanso/save/SinglePermissionRegistry.kt
+new file mode 100644
+index 0000000..bd7d73a
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/save/SinglePermissionRegistry.kt
+@@ -0,0 +1,36 @@
++package com.phongkaster.kanso.save
++
++import androidx.activity.result.ActivityResultRegistry
++import androidx.activity.result.contract.ActivityResultContract
++import androidx.core.app.ActivityOptionsCompat
++
++/**
++ * An ActivityResultRegistry that shows no dialog: it records the permission of each single
++ * permission request (`RequestPermission`, whose input is one String) and lets the test answer
++ * the latest one with [answerLatest].
++ */
++class SinglePermissionRegistry : ActivityResultRegistry() {
++
++    /** The permission of every request so far, oldest first. */
++    val requests = mutableListOf<String>()
++
++    /** The request code of the latest request, used to deliver its answer. */
++    private var latestRequestCode = -1
++
++    /** Records the request instead of showing the system permission dialog. */
++    override fun <I, O> onLaunch(
++        requestCode: Int,
++        contract: ActivityResultContract<I, O>,
++        input: I,
++        options: ActivityOptionsCompat?,
++    ) {
++        requests += input.toString()
++        latestRequestCode = requestCode
++    }
++
++    /** Delivers [granted] as the answer to the latest request. */
++    fun answerLatest(granted: Boolean) {
++        check(latestRequestCode != -1) { "No permission request to answer" }
++        dispatchResult(latestRequestCode, granted)
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryGridScreenshotTest.kt b/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryGridScreenshotTest.kt
+index a6c1cd4..c6389d8 100644
+--- a/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryGridScreenshotTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryGridScreenshotTest.kt
+@@ -1,10 +1,7 @@
+ package com.phongkaster.kanso.screenshots
+ 
+ import android.app.Application
+-import android.graphics.Bitmap
+ import android.graphics.Color
+-import android.graphics.drawable.BitmapDrawable
+-import android.net.Uri
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.LocalActivityResultRegistryOwner
+ import androidx.activity.result.ActivityResultRegistry
+@@ -18,11 +15,6 @@ import androidx.test.core.app.ApplicationProvider
+ import androidx.test.ext.junit.runners.AndroidJUnit4
+ import coil.Coil
+ import coil.ImageLoader
+-import coil.decode.DataSource
+-import coil.fetch.DrawableResult
+-import coil.fetch.FetchResult
+-import coil.fetch.Fetcher
+-import coil.request.Options
+ import com.github.takahirom.roborazzi.captureRoboImage
+ import com.phongkaster.kanso.data.media.Album
+ import com.phongkaster.kanso.data.media.Photo
+@@ -36,7 +28,6 @@ import com.phongkaster.kanso.ui.gallery.GalleryScreen
+ import com.phongkaster.kanso.ui.gallery.GalleryViewModel
+ import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+ import com.phongkaster.kanso.ui.theme.KansoTheme
+-import java.util.concurrent.atomic.AtomicInteger
+ import kotlinx.coroutines.Dispatchers
+ import org.junit.After
+ import org.junit.Assert.assertTrue
+@@ -176,37 +167,10 @@ class GalleryGridScreenshotTest {
+ }
+ 
+ /**
+- * Teaches Coil the test-only `fake` scheme: for `fake://color/AARRGGBB` it hands back a 64 x 64
+- * bitmap filled with that colour. Coil crops and scales it to the cell like a real thumbnail.
+- * [fetched] counts the bitmaps made, so a test can wait for them.
++ * The URI scheme of the fake photos; only [SolidColourFetcherFactory] can open it. It is internal,
++ * not private, because the factory lives in its own file and reads it from this package.
+  */
+-class SolidColourFetcherFactory : Fetcher.Factory<Uri> {
+-
+-    /** How many thumbnails have been made so far. */
+-    val fetched = AtomicInteger()
+-
+-    /** Returns a fetcher for `fake` URIs, or null so Coil tries its own fetchers for others. */
+-    override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
+-        if (data.scheme != FAKE_SCHEME) return null
+-        val colour = data.lastPathSegment.orEmpty().toLong(radix = 16).toInt()
+-        return object : Fetcher {
+-            /** Makes the solid-colour bitmap. */
+-            override suspend fun fetch(): FetchResult {
+-                val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+-                bitmap.eraseColor(colour)
+-                fetched.incrementAndGet()
+-                return DrawableResult(
+-                    drawable = BitmapDrawable(options.context.resources, bitmap),
+-                    isSampled = false,
+-                    dataSource = DataSource.MEMORY,
+-                )
+-            }
+-        }
+-    }
+-}
+-
+-/** The URI scheme of the fake photos; only [SolidColourFetcherFactory] can open it. */
+-private const val FAKE_SCHEME = "fake"
++internal const val FAKE_SCHEME = "fake"
+ 
+ /**
+  * The Robolectric screen the pictures are drawn on, the same as [ScreenshotTest]'s: 411 dp wide,
+diff --git a/app/src/test/java/com/phongkaster/kanso/screenshots/SolidColourFetcherFactory.kt b/app/src/test/java/com/phongkaster/kanso/screenshots/SolidColourFetcherFactory.kt
+new file mode 100644
+index 0000000..2afa567
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/screenshots/SolidColourFetcherFactory.kt
+@@ -0,0 +1,42 @@
++package com.phongkaster.kanso.screenshots
++
++import android.graphics.Bitmap
++import android.graphics.drawable.BitmapDrawable
++import android.net.Uri
++import coil.ImageLoader
++import coil.decode.DataSource
++import coil.fetch.DrawableResult
++import coil.fetch.FetchResult
++import coil.fetch.Fetcher
++import coil.request.Options
++import java.util.concurrent.atomic.AtomicInteger
++
++/**
++ * Teaches Coil the test-only `fake` scheme: for `fake://color/AARRGGBB` it hands back a 64 x 64
++ * bitmap filled with that colour. Coil crops and scales it to the cell like a real thumbnail.
++ * [fetched] counts the bitmaps made, so a test can wait for them.
++ */
++class SolidColourFetcherFactory : Fetcher.Factory<Uri> {
++
++    /** How many thumbnails have been made so far. */
++    val fetched = AtomicInteger()
++
++    /** Returns a fetcher for `fake` URIs, or null so Coil tries its own fetchers for others. */
++    override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
++        if (data.scheme != FAKE_SCHEME) return null
++        val colour = data.lastPathSegment.orEmpty().toLong(radix = 16).toInt()
++        return object : Fetcher {
++            /** Makes the solid-colour bitmap. */
++            override suspend fun fetch(): FetchResult {
++                val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
++                bitmap.eraseColor(colour)
++                fetched.incrementAndGet()
++                return DrawableResult(
++                    drawable = BitmapDrawable(options.context.resources, bitmap),
++                    isSampled = false,
++                    dataSource = DataSource.MEMORY,
++                )
++            }
++        }
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/PickerDefaultAlphaTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/PickerDefaultAlphaTest.kt
+new file mode 100644
+index 0000000..986e57e
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/settings/PickerDefaultAlphaTest.kt
+@@ -0,0 +1,125 @@
++package com.phongkaster.kanso.settings
++
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.width
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.semantics.getOrNull
++import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.hasAnyAncestor
++import androidx.compose.ui.test.hasTestTag
++import androidx.compose.ui.test.junit4.createComposeRule
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.unit.dp
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import com.library.colorpicker.HSVColorPicker
++import org.junit.After
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.koin.core.context.stopKoin
++import org.robolectric.annotation.Config
++
++/**
++ * Hosts the engine's HSVColorPicker directly, twice: once as every other caller uses it (the
++ * default, `showAlpha = true`) and once with `showAlpha = false`. The default still shows its
++ * percentage, so the photo editor's colour sheet in core/common behaves as before; the other
++ * shows none and is shorter by at least the transparency bar and its gap.
++ */
++@RunWith(AndroidJUnit4::class)
++@Config(sdk = [35], qualifiers = "w411dp-h891dp-xxhdpi")
++class PickerDefaultAlphaTest {
++
++    /** Hosts the composables under test in an empty activity. */
++    @get:Rule
++    val compose = createComposeRule()
++
++    /** Stops Koin, which the app's Application class starts, so it does not leak into other tests. */
++    @After
++    fun stopKoinAfterTest() {
++        stopKoin()
++    }
++
++    /** The default picker shows a percentage (and "100%" for an opaque colour); the other none. */
++    @Test
++    fun default_picker_keeps_its_percentage_and_the_other_has_none() {
++        showBothPickers()
++
++        assertTrue(
++            "The default picker should still show its percentage",
++            compose.onAllNodes(
++                hasAnyAncestor(hasTestTag(WITH_ALPHA_TAG)) and hasPercentageText(),
++                useUnmergedTree = true,
++            ).fetchSemanticsNodes().isNotEmpty(),
++        )
++        assertTrue(
++            "The default picker should show 100% for an opaque white",
++            compose.onAllNodes(
++                hasAnyAncestor(hasTestTag(WITH_ALPHA_TAG)) and hasExactText("100%"),
++                useUnmergedTree = true,
++            ).fetchSemanticsNodes().isNotEmpty(),
++        )
++        assertTrue(
++            "The picker without alpha should show no percentage",
++            compose.onAllNodes(
++                hasAnyAncestor(hasTestTag(WITHOUT_ALPHA_TAG)) and hasPercentageText(),
++                useUnmergedTree = true,
++            ).fetchSemanticsNodes().isEmpty(),
++        )
++    }
++
++    /**
++     * The transparency bar draws on a Canvas with no semantics, so its absence is measured: the
++     * picker without alpha is shorter by at least the bar's 8dp plus the column's 16dp gap.
++     */
++    @Test
++    fun picker_without_alpha_has_no_transparency_bar() {
++        showBothPickers()
++
++        val withAlpha = compose.onNodeWithTag(WITH_ALPHA_TAG).fetchSemanticsNode().size.height
++        val withoutAlpha = compose.onNodeWithTag(WITHOUT_ALPHA_TAG).fetchSemanticsNode().size.height
++        // Half a pixel of slack absorbs rounding from dp to whole pixels.
++        val barAndGapPx = with(compose.density) { (8.dp + 16.dp).toPx() } - 0.5f
++        assertTrue(
++            "Expected the picker without alpha to be at least ${barAndGapPx}px shorter " +
++                "(with alpha: $withAlpha px, without: $withoutAlpha px)",
++            withAlpha - withoutAlpha >= barAndGapPx,
++        )
++    }
++
++    /** Shows one default picker and one with `showAlpha = false`, each at the same width. */
++    private fun showBothPickers() {
++        compose.setContent {
++            Column {
++                Box(modifier = Modifier.width(PICKER_WIDTH).testTag(WITH_ALPHA_TAG)) {
++                    HSVColorPicker(onColorChanged = {})
++                }
++                Box(modifier = Modifier.width(PICKER_WIDTH).testTag(WITHOUT_ALPHA_TAG)) {
++                    HSVColorPicker(onColorChanged = {}, showAlpha = false)
++                }
++            }
++        }
++        compose.waitForIdle()
++    }
++
++    /** Tags and size the two hosted pickers use. */
++    private companion object {
++        /** Tag on the box around the default picker. */
++        const val WITH_ALPHA_TAG = "picker_with_alpha"
++
++        /** Tag on the box around the picker with `showAlpha = false`. */
++        const val WITHOUT_ALPHA_TAG = "picker_without_alpha"
++
++        /** Both pickers get this width, so only the alpha parts can make their heights differ. */
++        val PICKER_WIDTH = 360.dp
++    }
++}
++
++/** Matches a node whose own text is exactly [text]. */
++private fun hasExactText(text: String): SemanticsMatcher =
++    SemanticsMatcher("has exact text '$text'") { node ->
++        node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { it.text == text }
++    }
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/PickerMatchers.kt b/app/src/test/java/com/phongkaster/kanso/settings/PickerMatchers.kt
+new file mode 100644
+index 0000000..297d71e
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/settings/PickerMatchers.kt
+@@ -0,0 +1,22 @@
++package com.phongkaster.kanso.settings
++
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.semantics.getOrNull
++import androidx.compose.ui.test.SemanticsMatcher
++
++/**
++ * Any number followed by a percent sign, such as "100%" or "42%". It is internal, not private,
++ * because [hasPercentageText] uses it and both picker tests use that matcher.
++ */
++internal val PERCENTAGE = Regex("""\d+%""")
++
++/**
++ * Matches a node whose own text reads like a percentage or contains "100%". It is shared by
++ * [PickerNoAlphaTest] (no percentage anywhere) and [PickerDefaultAlphaTest] (a percentage in the
++ * default picker only), so it lives in this file and is internal.
++ */
++internal fun hasPercentageText(): SemanticsMatcher =
++    SemanticsMatcher("has text with a percentage") { node ->
++        node.config.getOrNull(SemanticsProperties.Text).orEmpty()
++            .any { PERCENTAGE.containsMatchIn(it.text) || it.text.contains("100%") }
++    }
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/PickerNoAlphaTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/PickerNoAlphaTest.kt
+index c68b185..dbd1ed2 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/PickerNoAlphaTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/PickerNoAlphaTest.kt
+@@ -1,28 +1,20 @@
+ package com.phongkaster.kanso.settings
+ 
+ import android.content.Context
+-import androidx.compose.foundation.layout.Box
+-import androidx.compose.foundation.layout.Column
+-import androidx.compose.foundation.layout.width
+-import androidx.compose.ui.Modifier
+-import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.semantics.SemanticsProperties
+ import androidx.compose.ui.semantics.getOrNull
+ import androidx.compose.ui.test.SemanticsMatcher
+ import androidx.compose.ui.test.hasAnyAncestor
+ import androidx.compose.ui.test.hasTestTag
+ import androidx.compose.ui.test.junit4.createAndroidComposeRule
+-import androidx.compose.ui.test.junit4.createComposeRule
+ import androidx.compose.ui.test.onAllNodesWithTag
+ import androidx.compose.ui.test.onAllNodesWithText
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.test.onNodeWithText
+ import androidx.compose.ui.test.performClick
+ import androidx.compose.ui.test.performScrollTo
+-import androidx.compose.ui.unit.dp
+ import androidx.test.core.app.ApplicationProvider
+ import androidx.test.ext.junit.runners.AndroidJUnit4
+-import com.library.colorpicker.HSVColorPicker
+ import com.phongkaster.kanso.MainActivity
+ import com.phongkaster.kanso.R
+ import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
+@@ -117,119 +109,8 @@ class PickerNoAlphaTest {
+     }
+ }
+ 
+-/**
+- * Hosts the engine's HSVColorPicker directly, twice: once as every other caller uses it (the
+- * default, `showAlpha = true`) and once with `showAlpha = false`. The default still shows its
+- * percentage, so the photo editor's colour sheet in core/common behaves as before; the other
+- * shows none and is shorter by at least the transparency bar and its gap.
+- */
+-@RunWith(AndroidJUnit4::class)
+-@Config(sdk = [35], qualifiers = "w411dp-h891dp-xxhdpi")
+-class PickerDefaultAlphaTest {
+-
+-    /** Hosts the composables under test in an empty activity. */
+-    @get:Rule
+-    val compose = createComposeRule()
+-
+-    /** Stops Koin, which the app's Application class starts, so it does not leak into other tests. */
+-    @After
+-    fun stopKoinAfterTest() {
+-        stopKoin()
+-    }
+-
+-    /** The default picker shows a percentage (and "100%" for an opaque colour); the other none. */
+-    @Test
+-    fun default_picker_keeps_its_percentage_and_the_other_has_none() {
+-        showBothPickers()
+-
+-        assertTrue(
+-            "The default picker should still show its percentage",
+-            compose.onAllNodes(
+-                hasAnyAncestor(hasTestTag(WITH_ALPHA_TAG)) and hasPercentageText(),
+-                useUnmergedTree = true,
+-            ).fetchSemanticsNodes().isNotEmpty(),
+-        )
+-        assertTrue(
+-            "The default picker should show 100% for an opaque white",
+-            compose.onAllNodes(
+-                hasAnyAncestor(hasTestTag(WITH_ALPHA_TAG)) and hasExactText("100%"),
+-                useUnmergedTree = true,
+-            ).fetchSemanticsNodes().isNotEmpty(),
+-        )
+-        assertTrue(
+-            "The picker without alpha should show no percentage",
+-            compose.onAllNodes(
+-                hasAnyAncestor(hasTestTag(WITHOUT_ALPHA_TAG)) and hasPercentageText(),
+-                useUnmergedTree = true,
+-            ).fetchSemanticsNodes().isEmpty(),
+-        )
+-    }
+-
+-    /**
+-     * The transparency bar draws on a Canvas with no semantics, so its absence is measured: the
+-     * picker without alpha is shorter by at least the bar's 8dp plus the column's 16dp gap.
+-     */
+-    @Test
+-    fun picker_without_alpha_has_no_transparency_bar() {
+-        showBothPickers()
+-
+-        val withAlpha = compose.onNodeWithTag(WITH_ALPHA_TAG).fetchSemanticsNode().size.height
+-        val withoutAlpha = compose.onNodeWithTag(WITHOUT_ALPHA_TAG).fetchSemanticsNode().size.height
+-        // Half a pixel of slack absorbs rounding from dp to whole pixels.
+-        val barAndGapPx = with(compose.density) { (8.dp + 16.dp).toPx() } - 0.5f
+-        assertTrue(
+-            "Expected the picker without alpha to be at least ${barAndGapPx}px shorter " +
+-                "(with alpha: $withAlpha px, without: $withoutAlpha px)",
+-            withAlpha - withoutAlpha >= barAndGapPx,
+-        )
+-    }
+-
+-    /** Shows one default picker and one with `showAlpha = false`, each at the same width. */
+-    private fun showBothPickers() {
+-        compose.setContent {
+-            Column {
+-                Box(modifier = Modifier.width(PICKER_WIDTH).testTag(WITH_ALPHA_TAG)) {
+-                    HSVColorPicker(onColorChanged = {})
+-                }
+-                Box(modifier = Modifier.width(PICKER_WIDTH).testTag(WITHOUT_ALPHA_TAG)) {
+-                    HSVColorPicker(onColorChanged = {}, showAlpha = false)
+-                }
+-            }
+-        }
+-        compose.waitForIdle()
+-    }
+-
+-    /** Tags and size the two hosted pickers use. */
+-    private companion object {
+-        /** Tag on the box around the default picker. */
+-        const val WITH_ALPHA_TAG = "picker_with_alpha"
+-
+-        /** Tag on the box around the picker with `showAlpha = false`. */
+-        const val WITHOUT_ALPHA_TAG = "picker_without_alpha"
+-
+-        /** Both pickers get this width, so only the alpha parts can make their heights differ. */
+-        val PICKER_WIDTH = 360.dp
+-    }
+-}
+-
+-/** Any number followed by a percent sign, such as "100%" or "42%". */
+-private val PERCENTAGE = Regex("""\d+%""")
+-
+-/** Matches a node whose own text reads like a percentage or contains "100%". */
+-private fun hasPercentageText(): SemanticsMatcher =
+-    SemanticsMatcher("has text with a percentage") { node ->
+-        node.config.getOrNull(SemanticsProperties.Text).orEmpty()
+-            .any { PERCENTAGE.containsMatchIn(it.text) || it.text.contains("100%") }
+-    }
+-
+ /** Matches a text field, that is a node carrying editable text. */
+ private fun hasEditableText(): SemanticsMatcher =
+     SemanticsMatcher("is a text field") { node ->
+         node.config.getOrNull(SemanticsProperties.EditableText) != null
+     }
+-
+-/** Matches a node whose own text is exactly [text]. */
+-private fun hasExactText(text: String): SemanticsMatcher =
+-    SemanticsMatcher("has exact text '$text'") { node ->
+-        node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { it.text == text }
+-    }
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/ScreenPixels.kt b/app/src/test/java/com/phongkaster/kanso/settings/ScreenPixels.kt
+index 8507be0..b78682e 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/ScreenPixels.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/ScreenPixels.kt
+@@ -10,13 +10,6 @@ import androidx.compose.ui.graphics.luminance
+ import kotlin.math.abs
+ import org.junit.Assert.assertTrue
+ 
+-/**
+- * What one drawing of the screen shows: the [background] colour near the bottom-left corner
+- * (plain background on Home and Settings, never text) and the [ink] colour, the pixel inside a
+- * text's bounds that differs most in luminance from that background, i.e. the text itself.
+- */
+-internal class ScreenSample(val background: Color, val ink: Color)
+-
+ /**
+  * Draws this activity's Compose content into a fresh bitmap and returns the colour of a pixel
+  * near its bottom-left corner, which on Home and Settings is plain background, never text.
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/ScreenSample.kt b/app/src/test/java/com/phongkaster/kanso/settings/ScreenSample.kt
+new file mode 100644
+index 0000000..776624a
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/settings/ScreenSample.kt
+@@ -0,0 +1,10 @@
++package com.phongkaster.kanso.settings
++
++import androidx.compose.ui.graphics.Color
++
++/**
++ * What one drawing of the screen shows: the [background] colour near the bottom-left corner
++ * (plain background on Home and Settings, never text) and the [ink] colour, the pixel inside a
++ * text's bounds that differs most in luminance from that background, i.e. the text itself.
++ */
++internal class ScreenSample(val background: Color, val ink: Color)
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/FakePhotoLoader.kt b/app/src/test/java/com/phongkaster/kanso/tool/FakePhotoLoader.kt
+new file mode 100644
+index 0000000..3b849e2
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/tool/FakePhotoLoader.kt
+@@ -0,0 +1,26 @@
++package com.phongkaster.kanso.tool
++
++import android.content.Context
++import android.graphics.Bitmap
++import com.phongkaster.kanso.data.photo.LoadedPhoto
++import com.phongkaster.kanso.data.photo.PhotoLoader
++import java.util.concurrent.CopyOnWriteArrayList
++
++/**
++ * A [PhotoLoader] that decodes nothing: it hands back [bitmap] (or null, "unreadable") at once
++ * and records every size it was asked for.
++ */
++class FakePhotoLoader(
++    context: Context,
++    private val bitmap: Bitmap?,
++) : PhotoLoader(context) {
++
++    /** The `maxEdgePx` of every call, oldest first. */
++    val requestedEdges = CopyOnWriteArrayList<Int>()
++
++    /** Records the request and returns the fixed bitmap. */
++    override suspend fun load(uri: String, maxEdgePx: Int): LoadedPhoto? {
++        requestedEdges += maxEdgePx
++        return bitmap?.let(::LoadedPhoto)
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/ToolFixtures.kt b/app/src/test/java/com/phongkaster/kanso/tool/ToolFixtures.kt
+index bbcf582..c58d78d 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/ToolFixtures.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/ToolFixtures.kt
+@@ -9,16 +9,14 @@ import android.graphics.Paint
+ import android.graphics.Shader
+ import android.net.Uri
+ import androidx.exifinterface.media.ExifInterface
+-import com.phongkaster.kanso.data.photo.LoadedPhoto
+-import com.phongkaster.kanso.data.photo.PhotoLoader
+ import java.io.File
+ import java.io.FileInputStream
+ import java.io.FileOutputStream
+-import java.util.concurrent.CopyOnWriteArrayList
+ import org.robolectric.Shadows.shadowOf
+ 
+ /**
+- * Test helpers for the tool screen: photo fixtures made at test time and a fake loader.
++ * Test helpers for the tool screen: photo fixtures made at test time. (The fake loader that goes
++ * with them is [FakePhotoLoader], in its own file.)
+  *
+  * The fixtures are real JPEG files written into a temporary folder. They are served to the app
+  * under a `content://` Uri through Robolectric's ContentResolver, the way MediaStore serves real
+@@ -89,22 +87,3 @@ object ToolFixtures {
+     /** A content Uri nothing is served under: opening it fails like a deleted photo. */
+     const val MISSING_URI = "content://$AUTHORITY/missing.jpg"
+ }
+-
+-/**
+- * A [PhotoLoader] that decodes nothing: it hands back [bitmap] (or null, "unreadable") at once
+- * and records every size it was asked for.
+- */
+-class FakePhotoLoader(
+-    context: Context,
+-    private val bitmap: Bitmap?,
+-) : PhotoLoader(context) {
+-
+-    /** The `maxEdgePx` of every call, oldest first. */
+-    val requestedEdges = CopyOnWriteArrayList<Int>()
+-
+-    /** Records the request and returns the fixed bitmap. */
+-    override suspend fun load(uri: String, maxEdgePx: Int): LoadedPhoto? {
+-        requestedEdges += maxEdgePx
+-        return bitmap?.let(::LoadedPhoto)
+-    }
+-}
