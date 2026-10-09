@@ -1,10 +1,10 @@
 # ISSUES
 
-## Run 4 (one class per file, one UiState per screen): bootstrap, Iteration 1
+## Run 4 (one class per file, one UiState per screen): Phase 1 done, Iteration 2
 
-Nothing is implemented yet. Problems so far:
+Phase 1 (the six screens) is built and verified. Problems so far:
 
-- **Decision awaiting an answer:** D-001, approve `.harness/run/DoD.md` (17 criteria, 6 removals). It blocks T-001 to T-007, so the run is stopped until you answer it in `.harness/run/DECISIONS.md`.
+- **Review finding recorded, not fixed (Phase 1, Minor):** `CameraContent` (`CameraScreen.kt`) takes a `CameraUiState` but decides "a photo waits" from its `shotPicture` slot, not from `state.shot`, so a caller that passes a state holding a shot without the slot would get the live picture. The real screen passes the slot exactly when the state holds a shot, the output is identical, and the KDoc says so; `CameraAfterShotPreview` passes `shot = null` with a shot picture. Left as is.
 - **Assumptions recorded:** A-001 to A-012 in `.harness/run/ASSUMPTIONS.md` (the readings of the PRD this plan takes). None is Tier 3.
 - **Will await a person at the end of the run:** DoD 6 (walk the six screens on the phone; the same walk as Run 3's item 10 below, so one signed walk may close both) and DoD 15 (read the UiState explanation in the three Home files). They are listed here, as unsigned items, by the Verifier.
 - **Left out by the PRD, recorded as questions in the DoD:** the unused strings `gallery_body_placeholder` and `gallery_album_label`; the no-op `onShare = {}` hook in the navigation host; the no-op default of `GalleryScreen.onOpenCamera`; `ViewModelClearedProbe` being test-only code in the app.

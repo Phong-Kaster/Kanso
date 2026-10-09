@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 4
 
-- **Status:** pending
+- **Status:** answered (2026-10-09, approved as written)
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-09
@@ -60,6 +60,6 @@ None (Autonomous mode runs under the Deny List).
 
 ### Decision
 
-<!-- Answered in `.harness/run/DECISIONS.md`, under a heading `## D-001` - never here. -->
+Approved as written (2026-10-09, `DECISIONS.md` `## D-001`): all 17 criteria and Removals R1-R6 with their Verification Classes; A-001 to A-012 not overturned; Q1-Q4 stay out of scope.
 
 ---

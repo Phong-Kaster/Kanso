@@ -2,8 +2,6 @@ package com.phongkaster.kanso.ui.gallery
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.phongkaster.kanso.data.media.Album
-import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.media.PhotoSource
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
@@ -18,22 +16,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Everything the gallery shows at one moment.
- *
- * [albums] feed the album switcher; [selectedAlbumId] is the chosen album, or null for
- * "All photos"; [photos] are that album's photos, newest first; [loading] is true while the
- * photo library is being read.
- */
-data class GalleryUiState(
-    val albums: List<Album> = emptyList(),
-    val selectedAlbumId: Long? = null,
-    val photos: List<Photo> = emptyList(),
-    val loading: Boolean = true,
-)
-
-/**
- * Holds the state of a tool's photo gallery: which [tool] the chosen photo will be opened in,
- * the albums, the chosen album and its photos.
+ * Holds the state of a tool's photo gallery, as one [GalleryUiState]: which [tool] the chosen
+ * photo will be opened in, the albums, the chosen album and its photos.
  *
  * The photos come from [photoSource]; in the app it reads the phone's library, in tests it is a
  * fake. It belongs to the gallery's navigation entry, so it survives rotation and is cleared as
@@ -41,13 +25,16 @@ data class GalleryUiState(
  * check it.
  */
 class GalleryViewModel(
-    val tool: Tool,
+    private val tool: Tool,
     private val probe: ViewModelClearedProbe,
     private val photoSource: PhotoSource,
 ) : ViewModel() {
 
-    /** The writable state; only this class changes it. */
-    private val mutableState = MutableStateFlow(GalleryUiState())
+    /**
+     * The writable state; only this class changes it. It starts with the gallery's [tool], so
+     * the top bar can name the tool before the library has been read.
+     */
+    private val mutableState = MutableStateFlow(GalleryUiState(tool = tool))
 
     /**
      * What the gallery shows. A StateFlow always holds a current value and tells its readers
@@ -83,6 +70,7 @@ class GalleryViewModel(
                     Triple(albums, albumId, photoSource.photos(albumId))
                 }
                 mutableState.value = GalleryUiState(
+                    tool = tool,
                     albums = albums,
                     selectedAlbumId = albumId,
                     photos = photos,

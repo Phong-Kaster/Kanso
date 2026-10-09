@@ -19,8 +19,10 @@ import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeContent
 import com.phongkaster.kanso.ui.home.HomeScreen
+import com.phongkaster.kanso.ui.home.HomeUiState
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.saved.SavedScreen
+import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -149,9 +151,13 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 )
             }
             entry<Saved> { key ->
+                // The saved photo's Uri travels inside the key and reaches the ViewModel as a Koin
+                // parameter, the same way the tool screen's ViewModel gets its photo.
+                val viewModel = koinViewModel<SavedViewModel>(
+                    parameters = { parametersOf(key.photoUri) },
+                )
                 SavedScreen(
-                    tool = key.tool,
-                    photoUri = key.photoUri,
+                    viewModel = viewModel,
                     onShare = {},
                     // Edit another: back to [Home, Gallery(tool)]. Home: back to [Home].
                     onEditAnother = {
@@ -231,7 +237,7 @@ private fun KansoNavHostPreview() {
             entryProvider = entryProvider<NavKey> {
                 entry<Home> {
                     HomeContent(
-                        tools = sampleHomeTools,
+                        state = HomeUiState(tools = sampleHomeTools),
                         onToolClick = {},
                         onSettingsClick = {},
                     )

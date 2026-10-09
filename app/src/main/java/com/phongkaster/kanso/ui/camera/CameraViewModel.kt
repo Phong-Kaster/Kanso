@@ -27,16 +27,6 @@ import java.io.File
  */
 fun shotsDirectory(context: Context): File = File(context.filesDir, "shots")
 
-/** What the camera screen shows besides the live picture. */
-data class CameraUiState(
-    /** The photo just taken, waiting for Keep or Retake; null while the live picture shows. */
-    val shot: File? = null,
-    /** True while a photo is being taken, so the shutter cannot be pressed twice. */
-    val taking: Boolean = false,
-    /** True when the last attempt to take a photo failed; cleared by the next attempt. */
-    val shotFailed: Boolean = false,
-)
-
 /**
  * Holds the state of the camera screen: the camera itself ([controller]) and the photo just
  * taken, which the person then keeps or retakes.
@@ -54,14 +44,32 @@ class CameraViewModel(
     private val probe: ViewModelClearedProbe,
 ) : ViewModel() {
 
-    /** What the camera is doing (opening, ready, unavailable), straight from the controller. */
-    val cameraState: StateFlow<CameraState> = controller.state
+    /**
+     * The current state behind [state]; only this ViewModel changes it. It starts with the camera
+     * as the controller reports it right now, so even the first snapshot is complete.
+     */
+    private val mutableState = MutableStateFlow(CameraUiState(camera = controller.state.value))
 
-    /** The current state behind [state]; only this ViewModel changes it. */
-    private val mutableState = MutableStateFlow(CameraUiState())
-
-    /** The photo waiting for a decision, and whether a photo is being taken. */
+    /**
+     * Everything the camera screen shows, as one snapshot: what the camera is doing (opening,
+     * ready, unavailable, with its lens, flash and zoom), the photo waiting for a decision, and
+     * whether a photo is being taken.
+     */
     val state: StateFlow<CameraUiState> = mutableState.asStateFlow()
+
+    init {
+        // An init block runs once, while this ViewModel is being built, in the order it sits among
+        // the property declarations: it must stay below mutableState, which it writes to.
+        // The controller keeps its own state (a StateFlow of CameraState). collect runs the block
+        // once with the current value and again after every change, copying each one into the
+        // screen's one snapshot, so the screen reads a single state. update { } swaps only the
+        // camera part and keeps the rest of the snapshot as it is at that instant, so a photo
+        // taken in between is never undone. viewModelScope ends this copying when the ViewModel
+        // is cleared.
+        viewModelScope.launch {
+            controller.state.collect { camera -> mutableState.update { it.copy(camera = camera) } }
+        }
+    }
 
     /** Whether the waiting photo was kept, so clearing this ViewModel does not delete it. */
     private var kept = false
@@ -89,19 +97,27 @@ class CameraViewModel(
         controller.switchLens()
     }
 
-    /** Moves the flash to its next mode: auto, then on, then off, then auto again. */
+    /**
+     * Moves the flash to its next mode: auto, then on, then off, then auto again.
+     *
+     * It reads the mode from the controller itself, not from the copy in [state]: the copy is
+     * updated a moment later, and two quick taps must move the flash two steps.
+     */
     fun cycleFlash() {
-        controller.setFlashMode(cameraState.value.flashMode.next())
+        controller.setFlashMode(controller.state.value.flashMode.next())
     }
 
     /**
      * Zooms by [factor] from the current zoom: 2 doubles it, 0.5 halves it. A pinch reports how
      * much the fingers spread or closed since its last report as such a factor, so each report
      * multiplies the zoom a little more. The controller keeps the result within the lens's limits.
+     *
+     * Like [cycleFlash], it starts from the controller's own zoom rather than the copy in
+     * [state], because a pinch sends many reports in a row and each must build on the last.
      */
     fun zoomBy(factor: Float) {
         if (factor <= 0f || factor.isNaN()) return
-        val current = cameraState.value
+        val current = controller.state.value
         val target = (current.zoomRatio * factor).coerceIn(current.minZoomRatio, current.maxZoomRatio)
         if (target != current.zoomRatio) controller.setZoomRatio(target)
     }

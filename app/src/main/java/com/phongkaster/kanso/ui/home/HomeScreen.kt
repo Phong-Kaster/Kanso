@@ -13,6 +13,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -31,15 +33,16 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
  * out of the part that draws, up to its caller):
  *
  * - [HomeScreen], this function, is the *stateful* part. It knows where the state lives: it reads
- *   the list of tools from [viewModel] and hands it on. It draws nothing itself.
+ *   Home's state, one [HomeUiState], from [viewModel] and hands it on. It draws nothing itself.
  * - [HomeContent] is the *stateless* part. It holds no state of its own and knows nothing about
- *   ViewModels or Koin: it simply draws whatever list of tools it is given, and reports taps
+ *   ViewModels or Koin: it simply draws whatever [HomeUiState] it is given, and reports taps
  *   through the callbacks it is given.
  *
- * Because [HomeContent] needs only plain values (a list, two lambdas), a preview can call it
- * with made-up sample data and see exactly what the person sees, with none of the app's
- * machinery running. That is what `HomePreview` at the bottom of this file does. The other
- * screens of the app follow the same pattern.
+ * Because [HomeContent] needs only plain values (a [HomeUiState], two lambdas), a preview can
+ * call it with a state built from made-up sample data and see exactly what the person sees,
+ * with none of the app's machinery running. That is what `HomePreview` at the bottom of this
+ * file does. The other screens of the app follow the same pattern. (What a UiState is, and why
+ * every screen has one, is explained in `HomeUiState.kt`.)
  *
  * Tapping a tool row calls [onToolClick] with that tool; tapping Settings calls
  * [onSettingsClick]. The screen itself does not navigate: the caller decides what happens.
@@ -51,8 +54,13 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // collectAsState turns the ViewModel's StateFlow into Compose state: whenever a new
+    // snapshot arrives, Home is drawn again with it. `by` lets `state` be used as the current
+    // snapshot itself, rather than as a box holding it.
+    val state by viewModel.state.collectAsState()
+
     HomeContent(
-        tools = viewModel.tools,
+        state = state,
         onToolClick = onToolClick,
         onSettingsClick = onSettingsClick,
         modifier = modifier,
@@ -61,7 +69,7 @@ fun HomeScreen(
 
 /**
  * The stateless part of Home (see [HomeScreen] for why there are two): draws the top bar, one
- * row for each of [tools] in the order given, a divider and the Settings row.
+ * row for each tool of [state] in the order given, a divider and the Settings row.
  *
  * Tapping a tool row calls [onToolClick] with that tool; tapping Settings calls
  * [onSettingsClick].
@@ -69,7 +77,7 @@ fun HomeScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(
-    tools: List<Tool>,
+    state: HomeUiState,
     onToolClick: (Tool) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -87,7 +95,7 @@ fun HomeContent(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            tools.forEach { tool ->
+            state.tools.forEach { tool ->
                 HomeRow(
                     label = stringResource(tool.labelRes),
                     onClick = { onToolClick(tool) },
@@ -117,15 +125,16 @@ private fun HomeRow(label: String, onClick: () -> Unit) {
  *
  * `@PreviewLightDark` asks Android Studio for two pictures of this function, one with the phone
  * in day mode and one in night mode; `ThemeMode.System` makes KansoTheme follow that setting.
- * The sample data is simply every tool the app has (`Tool.entries`, the same list the real Home
- * shows), and the taps do nothing, because a preview cannot be tapped into another screen.
+ * The sample data is a [HomeUiState] built by hand, holding simply every tool the app has
+ * (`Tool.entries`, the same list the real Home shows); no ViewModel is needed to make one. The
+ * taps do nothing, because a preview cannot be tapped into another screen.
  */
 @PreviewLightDark
 @Composable
 private fun HomePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         HomeContent(
-            tools = Tool.entries,
+            state = HomeUiState(tools = Tool.entries),
             onToolClick = {},
             onSettingsClick = {},
         )

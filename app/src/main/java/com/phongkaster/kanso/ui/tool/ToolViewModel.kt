@@ -1,6 +1,5 @@
 package com.phongkaster.kanso.ui.tool
 
-import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.phongkaster.kanso.data.photo.PhotoLoader
@@ -15,46 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/**
- * What the tool screen shows in place of the photo: still loading, the photo, or a message.
- */
-sealed interface ToolUiState {
-
-    /** The photo is being decoded; nothing is shown yet. */
-    data object Loading : ToolUiState
-
-    /** The photo is decoded: [bitmap] is upright and sized for the screen. */
-    data class Ready(val bitmap: Bitmap) : ToolUiState
-
-    /** The photo is missing, not readable by Kanso, or not an image. */
-    data object Unreadable : ToolUiState
-}
-
-/**
- * Where saving the photo stands, for the Save action and the message under the photo.
- */
-sealed interface SaveUiState {
-
-    /** Nothing saved yet on this visit, or the last message has been replaced. */
-    data object Idle : SaveUiState
-
-    /** A save is running; Save cannot be tapped again until it ends. */
-    data object Saving : SaveUiState
-
-    /**
-     * The photo was saved. [keptOriginalOrientation] is true when it was too large to turn
-     * upright and was copied as it is; the screen then says some apps may show it sideways.
-     */
-    data class Saved(val keptOriginalOrientation: Boolean) : SaveUiState
-
-    /** The photo could not be saved; nothing was written. */
-    data object Failed : SaveUiState
-
-    /** The person refused the storage-write permission (Android 8.1 and 9); nothing was written. */
-    data object PermissionDenied : SaveUiState
-}
 
 /**
  * Holds the state of the screen where [tool] works on the photo named by [photoUri].
@@ -69,17 +30,23 @@ sealed interface SaveUiState {
  * album when the person taps Save.
  */
 class ToolViewModel(
-    val tool: Tool,
-    val photoUri: String,
+    private val tool: Tool,
+    private val photoUri: String,
     private val loader: PhotoLoader,
     private val probe: ViewModelClearedProbe,
     private val saver: PhotoSaver,
 ) : ViewModel() {
 
-    /** The current state behind [state]; only this ViewModel changes it. */
-    private val mutableState = MutableStateFlow<ToolUiState>(ToolUiState.Loading)
+    /**
+     * The current state behind [state]; only this ViewModel changes it. It starts with the tool
+     * and the photo's Uri from the key, nothing decoded yet and nothing saved.
+     */
+    private val mutableState = MutableStateFlow(ToolUiState(tool, photoUri))
 
-    /** What the screen shows, as state it can read at any moment. */
+    /**
+     * What the screen shows (the tool, the photo, and where saving stands), as one snapshot it
+     * can read at any moment.
+     */
     val state: StateFlow<ToolUiState> = mutableState.asStateFlow()
 
     /** The size the photo was last asked for, so the same request is not decoded twice. */
@@ -102,19 +69,16 @@ class ToolViewModel(
         // is no longer wanted. The loader itself moves the heavy work off the main thread.
         loadJob = viewModelScope.launch {
             val photo = loader.load(photoUri, maxEdgePx)
-            mutableState.value = if (photo != null) {
-                ToolUiState.Ready(photo.bitmap)
+            val shown = if (photo != null) {
+                ToolUiState.PhotoState.Ready(photo.bitmap)
             } else {
-                ToolUiState.Unreadable
+                ToolUiState.PhotoState.Unreadable
             }
+            // update { } changes only the photo part of the snapshot as it is right now, so a
+            // decode that finishes while a save runs leaves the save part alone.
+            mutableState.update { it.copy(photo = shown) }
         }
     }
-
-    /** The current state behind [saveState]; only this ViewModel changes it. */
-    private val mutableSaveState = MutableStateFlow<SaveUiState>(SaveUiState.Idle)
-
-    /** Where saving stands, as state the screen can read at any moment. */
-    val saveState: StateFlow<SaveUiState> = mutableSaveState.asStateFlow()
 
     /**
      * Carries the Uri (as text) of each newly saved photo to the screen, once.
@@ -139,22 +103,26 @@ class ToolViewModel(
      * running is ignored, so one tap never makes two files.
      */
     fun save() {
-        if (mutableSaveState.value == SaveUiState.Saving) return
-        mutableSaveState.value = SaveUiState.Saving
+        if (mutableState.value.save == ToolUiState.SaveState.Saving) return
+        mutableState.update { it.copy(save = ToolUiState.SaveState.Saving) }
         viewModelScope.launch {
             when (val result = saver.save(photoUri)) {
                 is SaveResult.Saved -> {
-                    mutableSaveState.value = SaveUiState.Saved(result.keptOriginalOrientation)
+                    mutableState.update {
+                        it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
+                    }
                     savedChannel.send(result.uri)
                 }
-                SaveResult.Failed -> mutableSaveState.value = SaveUiState.Failed
+                SaveResult.Failed -> mutableState.update {
+                    it.copy(save = ToolUiState.SaveState.Failed)
+                }
             }
         }
     }
 
     /** Records that the person refused the storage-write permission, so the screen says why. */
     fun onWritePermissionDenied() {
-        mutableSaveState.value = SaveUiState.PermissionDenied
+        mutableState.update { it.copy(save = ToolUiState.SaveState.PermissionDenied) }
     }
 
     /** Reports to the probe that this ViewModel has been cleared. */

@@ -15,6 +15,7 @@ import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.CameraXController
+import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,9 @@ val appModule = module {
             saver = get(),
         )
     }
+
+    // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
+    viewModel { params -> SavedViewModel(photoUri = params.get(), loader = get(), probe = get()) }
 
     // Writes the finished photo into Pictures/Kanso on the phone.
     single<PhotoSaver> { MediaStorePhotoSaver(androidContext()) }

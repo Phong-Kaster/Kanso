@@ -20,8 +20,7 @@ import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.data.photo.PhotoLoader
-import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
@@ -31,18 +30,16 @@ import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
 import com.phongkaster.kanso.ui.saved.SavedScreen
+import com.phongkaster.kanso.ui.saved.SavedViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.koin.core.context.loadKoinModules
 import org.koin.core.context.stopKoin
-import org.koin.dsl.module
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
@@ -51,8 +48,8 @@ import org.robolectric.annotation.GraphicsMode
  * Checks the Saved screen (DoD 15): the saved photo is shown, Share opens the system share sheet
  * for it with a read grant and no chosen app, and Edit another and Home call back.
  *
- * The photo decoder is swapped in Koin for a [FakePhotoLoader] holding a picture drawn in code,
- * so nothing depends on a file. The screen runs on the same phone size as the pictures.
+ * The screen's [SavedViewModel] is built with a [FakePhotoLoader] holding a picture drawn in
+ * code, so nothing depends on a file. The screen runs on the same phone size as the pictures.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -66,15 +63,6 @@ class SavedScreenTest {
     /** The application under test. */
     private val app: Application
         get() = ApplicationProvider.getApplicationContext()
-
-    /**
-     * Swaps the photo decoder for a fake. KansoApplication has already started Koin; a later
-     * module replaces the earlier recipe of the same type.
-     */
-    @Before
-    fun useFakeLoader() {
-        loadKoinModules(module { single<PhotoLoader> { FakePhotoLoader(app, ToolFixtures.gradient(600, 400)) } })
-    }
 
     /**
      * Stops Koin after each test: KansoApplication starts it for every Robolectric test, and its
@@ -170,18 +158,26 @@ class SavedScreenTest {
 
     // --- Helpers -----------------------------------------------------------------------------
 
-    /** Shows the Saved screen for the Edit tool and [photoUri]. */
+    /**
+     * Shows the Saved screen for [photoUri]. Its ViewModel is built here, before the screen is
+     * drawn (lint forbids building a ViewModel while drawing), with a fake loader that hands
+     * back a 600 x 400 gradient for any Uri.
+     */
     private fun show(
         photoUri: String,
         onShare: () -> Unit = {},
         onEditAnother: () -> Unit = {},
         onHome: () -> Unit = {},
     ) {
+        val viewModel = SavedViewModel(
+            photoUri = photoUri,
+            loader = FakePhotoLoader(app, ToolFixtures.gradient(600, 400)),
+            probe = ViewModelClearedProbe(),
+        )
         compose.setContent {
             MaterialTheme {
                 SavedScreen(
-                    tool = Tool.EDIT,
-                    photoUri = photoUri,
+                    viewModel = viewModel,
                     onShare = onShare,
                     onEditAnother = onEditAnother,
                     onHome = onHome,
@@ -192,9 +188,13 @@ class SavedScreenTest {
         compose.onNodeWithTag(SAVED_SCREEN_TAG).assertExists()
     }
 
-    /** Waits until the photo is on screen. */
+    /**
+     * Waits until the photo is on screen. The ViewModel's load ends on the main thread, so the
+     * main thread's queue is run while waiting.
+     */
     private fun waitForPhoto() {
         compose.waitUntil(timeoutMillis = 10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
             compose.onAllNodes(hasTestTag(SAVED_PHOTO_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
     }
