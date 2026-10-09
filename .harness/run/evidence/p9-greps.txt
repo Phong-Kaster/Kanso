@@ -1,0 +1,116 @@
+== DoD 29: reference/ grep (expect nothing)
+exit 1
+== DoD 29: reference diff vs a0d9a79
+exit 0
+== DoD 29: lottie|airbnb
+gradle/libs.versions.toml:43:lottie = "6.6.2"
+gradle/libs.versions.toml:118:lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
+exit 0
+== at base:
+76522d7:gradle/libs.versions.toml:43:lottie = "6.6.2"
+76522d7:gradle/libs.versions.toml:118:lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
+== DoD 29: lightroom|adobe
+exit 1
+== OneTypePerFileTest ALLOWED
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:39:     * the files on [ALLOWED].
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:43:        val problems = unexpectedProblems(scanAppSources(), ALLOWED)
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:54:     * Every file on [ALLOWED] still exists and still breaks the rule. The list is empty now, so
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:62:        val stale = staleEntries(scanAppSources(), ALLOWED)
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:64:            "These ALLOWED entries are stale; remove them from the list:\n" + stale.joinToString("\n"),
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:371:                "main/Fixed.kt is on ALLOWED but no longer breaks the rule",
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:372:                "main/Gone.kt is on ALLOWED but no such file exists",
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:392:     * keys [ALLOWED] uses, in sorted order. It fails when either folder holds no Kotlin file, so a
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:425:                problems == null -> "$path is on ALLOWED but no such file exists"
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:426:                problems.isEmpty() -> "$path is on ALLOWED but no longer breaks the rule"
+app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:759:        private val ALLOWED: Set<String> = emptySet()
+== DoD 9/R5: stock spinners
+exit 1
+== DoD 9: LoadingIndicator hits
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:454:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:497:        LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:350:                    SavedPhoto.Loading -> SavedLoadingIndicator()
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:528:private fun SavedLoadingIndicator() {
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:530:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:443:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:465:            ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:505:private fun PhotoLoadingIndicator() {
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:507:    LoadingIndicator(
+== DoD 9: LoadingIndicator|Wavy all
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:44:import androidx.compose.material3.LoadingIndicator
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:439: * `LoadingIndicator` is explained where it first appears, on the gallery's `GalleryLoading`: a
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:454:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:41:import androidx.compose.material3.LoadingIndicator
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:418: * library is [loading] and no photo is known yet, the Expressive `LoadingIndicator` shows in the
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:468: * `LoadingIndicator` is the Expressive replacement for the old round spinner. Instead of a
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:497:        LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:38:import androidx.compose.material3.LoadingIndicator
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:286: * The photo area shows the loading indicator ([SavedLoadingIndicator]) while the photo is being
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:350:                    SavedPhoto.Loading -> SavedLoadingIndicator()
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:514: * `LoadingIndicator` is Material 3 Expressive's way of saying "please wait": a small rounded shape
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:528:private fun SavedLoadingIndicator() {
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:530:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:44:import androidx.compose.material3.LoadingIndicator
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:421: * `LoadingIndicator` is the Material 3 Expressive way of saying "please wait". Instead of the
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:443:    LoadingIndicator(
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:465:            ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:493: * It is the same Material 3 Expressive `LoadingIndicator` as the one in the Save button (see
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:505:private fun PhotoLoadingIndicator() {
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:507:    LoadingIndicator(
+== DoD 10: MaterialExpressiveTheme(
+app/src/main/java/com/phongkaster/kanso/ui/theme/KansoTheme.kt:138:    MaterialExpressiveTheme(
+== DoD 10: MaterialTheme(
+exit 1
+== DoD 10: Emphasized
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:244: * `headlineSmallEmphasized` is one of the "Emphasized" text styles Material 3 Expressive adds to
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:255:        style = MaterialTheme.typography.headlineSmallEmphasized,
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:357: * emphasized title style (see [HomeContent] for what "Emphasized" means).
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:367:        style = MaterialTheme.typography.titleMediumEmphasized,
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:312:                        // headlineSmallEmphasized is one of the "Emphasized" text styles that Material 3
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:315:                        style = MaterialTheme.typography.headlineSmallEmphasized,
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:366:                style = MaterialTheme.typography.titleLargeEmphasized,
+== DoD 13: animators
+exit 1
+== DoD 14: NavDisplay specs
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:77:    KansoNavDisplay(
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:218:fun KansoNavDisplay(
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:230:    NavDisplay(
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:241:        transitionSpec = kansoPushTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:242:        popTransitionSpec = kansoPopTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:243:        predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:269:        KansoNavDisplay(
+== DoD 14: KansoTransitions motionScheme
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:226:    // while Compose is drawing, because MaterialTheme.motionScheme only works inside a composable
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:229:    val motionScheme = MaterialTheme.motionScheme
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:241:        transitionSpec = kansoPushTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:242:        popTransitionSpec = kansoPopTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:243:        predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:13:import androidx.compose.material3.MotionScheme
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:46: * Why springs: the slides and the fades take their timing from [motionScheme], which in the app is
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:47: * the motion scheme of Kanso's theme, `MotionScheme.expressive()` (see KansoTheme). Its
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:58: * Why the motion scheme is a parameter: the theme's scheme is read with `MaterialTheme.motionScheme`,
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:67:    motionScheme: MotionScheme,
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:71:    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:72:    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:104:    motionScheme: MotionScheme,
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:107:    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:108:    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:232:    motionScheme: MotionScheme,
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:236:    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt:237:    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
+== DoD 16: fixed colours
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:862:                listOf(Color(0xFF7FB3D5), Color(0xFFF5CBA7), Color(0xFF58804A)),
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:872:                .background(Color(0xFFFFE08A), CircleShape),
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:894:        drawRect(Brush.verticalGradient(listOf(Color(0xFF5DADE2), Color(0xFFD6EAF8))))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:895:        drawCircle(color = Color(0xFFF7DC6F), radius = 36f, center = Offset(300f, 80f))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:896:        drawCircle(color = Color(0xFF52BE80), radius = 260f, center = Offset(140f, 470f))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:897:        drawCircle(color = Color(0xFF27AE60), radius = 220f, center = Offset(380f, 500f))
+app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt:128:private val PickerSurfaceColor = Color.White
+app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt:653:private val sampleWallpaperColour = Color(0xFF8B5000)
+== DoD 26: headlineContent
+exit 1
+== DoD 26: Suppress DEPRECATION added
+exit 1
+== DoD 26: Suppress any in main
+app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt:195:        @Suppress("DEPRECATION")
+app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt:72:@Suppress("DEPRECATION")
+exit 0

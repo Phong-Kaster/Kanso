@@ -100,6 +100,32 @@
   - PARTIAL-candidate recorded in `STATE.md`: nothing executable remains, criteria 13, 20, 21 and 30 await a signature and criterion 14 is assumed (A-015). The next invocation is the Verifier.
   - No decision queued, nothing abandoned, no new assumption.
 
+### Iteration 9 - 2026-10-10 (the Verifier: no gap; the run ends DONE_PARTIAL)
+
+- **Role:** Verifier (Capable), because the PARTIAL-candidate was recorded. Wrote no implementation.
+- **Recover:** the tree was clean except `.harness/TELEMETRY.tsv` (the Runtime's row; committed with this checkpoint). `DECISIONS.md` holds only D-001, already consumed.
+- **Fresh runs**, all exit 0 (`evidence/p9-verifier.md`):
+  - `:app:clean`, then the whole set (3 min 30 s): 368 tests, 0 failed, 0 errors, 0 skipped; 24 pictures, 0 changed; lint 0 errors.
+  - Each Proof's own command on its own: `c1.log`, `test.log`, `verify-roborazzi.log`, `lint.log` (analysis forced), `compile.log` (`--rerun-tasks`, no `deprecat` line for the app), `assemble.log`, `head-deps.txt` (equal to the base), `p9-dep-insight.log` (`1.5.0-beta01`).
+  - Every search, diff and `aapt2` check of the Proofs: `p9-greps*.txt`, `p9-apk.txt`. The symbols check fetched all 21 upstream files again: all `OK` (`p9-symbols-check.txt`).
+  - `before/` and `after/` were rewritten from git and are unchanged.
+- **Audits.** Two fresh-context, read-only audits (Capable):
+  - The first read the three clauses Phase 6 closed (DoD 2, 4, 29): all hold.
+  - The second read DoD 1, 6, 7, 8, 12, 16, 17 and 23 clause by clause. It raised DoD 6 (the centre pixel within 8), DoD 8 (the inner ring's bounds) and DoD 16 (`background` against `surface`). The Verifier traced each and found the Proof holds (reasons in `p9-verifier.md`). For DoD 16, the pictures show `background` and `surface` are one colour for Kanso blue.
+- **Pictures.** The Verifier opened all 24 `after/` pictures and did not see a defect in any. What is worth a person's eye is written per group in `.harness/ISSUES.md`.
+- **Phone: not driven.**
+  - The first `-Op focus` (05:57) was refused, because `:app:clean` had removed the debug APK the wrapper needs.
+  - At 05:59, 06:02, 06:06 and 06:08 another app had focus on the Galaxy A13 (a person using it).
+- **Reconciled:**
+  - No gap, so no task. Every `machine` criterion holds.
+  - 18 unsigned "Awaiting a person, Run 6" items were written into `.harness/ISSUES.md`: criterion 13; criterion 20 in seven groups of pictures; criterion 21 as nine steps; criterion 30. The 21 earlier unsigned items were carried word for word.
+  - PARTIAL-candidate resolved: criteria 13, 20, 21 and 30 await a person and criterion 14 is assumed (A-015), so `DONE_PARTIAL` with no Cleanup Commit.
+  - No decision queued, nothing abandoned, no new assumption.
+- **Learned:**
+  - A Verifier that runs `:app:clean` first must check the phone only after `assembleDebug`: the device wrapper refuses until a debug APK exists.
+  - The DoD's `check.sh` ends with `rm -rf`. Run a copy without that line.
+  - Both recorded in `PROJECT.md`.
+
 ## Archived Decisions
 
 <!-- Full request + decision + rationale of every consumed Decision Queue entry. -->

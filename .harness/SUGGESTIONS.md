@@ -155,3 +155,19 @@ Two cheap checks would have saved a whole extra round:
 - When a test is written for a checklist line, have the reviewer hold the two side by side and ask "does this test check everything the line says?"
 
 ---
+
+## S-010 - Let `foreman-device.ps1 -Op focus` answer before a debug APK exists
+
+- **Destination:** loop (`.harness/loop/bin/foreman-device.ps1`)
+- **Earned by:** Kanso Run 6, the Verifier of Iteration 9 (2026-10-10). The Verifier started with `:app:clean`, as a fresh re-proof should. Its first `-Op focus`, sent to learn whether a person was using the phone, was refused: "this repository has no debug APK built yet". It had to wait about 3 minutes for the build before it could ask again.
+- **Status:** open
+
+### What happened
+
+The wrapper checks for a debug APK the repository built before it runs any operation, `focus` included. `focus` reads which window has the screen. It installs, taps and reads nothing of the app, so the APK check guards nothing there. Its answer decides whether the phone may be driven at all, and the Verifier wants that answer first, while the build is still running.
+
+### In plain words
+
+Before touching the phone, the engine asks "is someone using it?". The helper refused to answer until the app had been built, even though answering does not touch the app. Letting that one question through, while every other operation still needs a built app, would let the check happen alongside the build instead of after it.
+
+---

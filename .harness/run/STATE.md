@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Phase 6 (Iteration 8) closed the three Proof clauses the Verifier of Iteration 7 found unmet: DoD 29's `reference/` search prints nothing (T-019), a tapped colour row is proved by the choice's seven-role scheme (T-020), and the 600x400 photo is proved to fill its area (T-021). Test files only. The whole set is green (`evidence/p8-full-2.log`). The Verifier runs next.
+- **Stage:** Run ended `DONE_PARTIAL` (Iteration 9, the Verifier). Every `machine` criterion was re-proved on the tree of `a118896` with fresh runs, and two fresh-context audits found no gap (`evidence/p9-verifier.md`). Nothing is abandoned, unreachable or queued. Criteria 13, 20, 21 and 30 await a person: 18 unsigned "Awaiting a person, Run 6" items are in `.harness/ISSUES.md`. Criterion 14 is assumed (A-015). No Cleanup Commit, so `.harness/run/` stays for the report.
 - **Loop Branch:** loop/kanso-m3-expressive-blue (started from `76522d7`)
-- **Next Phase:** none. The next invocation is the Verifier (PARTIAL-candidate below): it re-proves every `machine` criterion fresh, drives what it can, and writes the "Awaiting a person, Run 6" items.
+- **Next Phase:** none. Nothing executable remains. A later invocation only consumes a person's ticks or answers.
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes (recorded by Iteration 8). Nothing executable remains; criteria 13, 20, 21 and 30 await a signature and criterion 14 is assumed (A-015), so the run cannot be `DONE`.
+- **PARTIAL-candidate:** resolved by Iteration 9 as `DONE_PARTIAL`. Criteria 13, 20, 21 and 30 are unsigned and criterion 14 is assumed, so the run cannot be `DONE`.
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -40,7 +40,7 @@
 
 ## Signed off
 
-None yet. Iteration 7 (the Verifier) drove nothing on the phone, because a person was using it, and wrote no unsigned item.
+None yet. Neither Verifier (Iterations 7 and 9) drove anything on the phone, because a person was using it at every check. Iteration 9 wrote the 18 unsigned items for criteria 13, 20, 21 and 30 into `.harness/ISSUES.md` ("Awaiting a person, Run 6").
 
 ## Assumed criteria (Tier 3)
 

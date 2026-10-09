@@ -1,0 +1,24 @@
+== compile
+BUILD SUCCESSFUL in 18s
+74 actionable tasks: 74 executed
+6
+> Task :app:compileDebugKotlin
+deprecat lines for app/src/main: 0
+2
+== lint
+> Task :app:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :app:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :app:lintAnalyzeDebug
+BUILD SUCCESSFUL in 21s
+== assemble
+BUILD SUCCESSFUL in 4s
+== deps
+633
+deps equal base
+== insight
+androidx.compose.material3:material3:1.5.0-beta01
+   Selection reasons:
+androidx.compose.material3:material3:1.5.0-beta01
+BUILD SUCCESSFUL in 2s
+== c1 count
+0
