@@ -2,12 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "com.photo.editor.editimage"
+    // Its own namespace: this module only wraps the prebuilt editimage AAR, whose namespace is the
+    // original com.photo.editor.editimage, and AGP 9 refuses one namespace in two places.
+    namespace = "com.phongkaster.kanso.engine.editimage"
     compileSdk = 35
 
     defaultConfig {

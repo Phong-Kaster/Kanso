@@ -1,0 +1,446 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preReleaseBuild UP-TO-DATE
+> Task :opencv:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :opencv:buildCMakeRelWithDebInfo[arm64-v8a][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :opencv:buildCMakeRelWithDebInfo[armeabi-v7a][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[x86]
+> Task :opencv:buildCMakeRelWithDebInfo[x86][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[x86_64]
+> Task :opencv:buildCMakeRelWithDebInfo[x86_64][opencv_jni_shared]
+> Task :opencv:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :opencv:mergeReleaseNativeLibs UP-TO-DATE
+> Task :opencv:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preReleaseBuild UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:colorpicker:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preReleaseBuild UP-TO-DATE
+> Task :core:common:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:common:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:common:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preReleaseBuild UP-TO-DATE
+> Task :core:editimage:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:editimage:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:editimage:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preReleaseBuild UP-TO-DATE
+> Task :core:gallery:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:gallery:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:gallery:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preReleaseBuild UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:imagecrop:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preReleaseBuild UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:imageprocessor:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preReleaseBuild UP-TO-DATE
+> Task :core:localml:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:localml:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:localml:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preReleaseBuild UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:overlaybrush:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :app:mergeReleaseNativeLibs UP-TO-DATE
+> Task :app:stripReleaseDebugSymbols UP-TO-DATE
+> Task :app:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :app:mergeReleaseNativeDebugMetadata UP-TO-DATE
+> Task :opencv:generateReleaseBuildConfig UP-TO-DATE
+> Task :opencv:generateReleaseResources UP-TO-DATE
+> Task :opencv:packageReleaseResources UP-TO-DATE
+> Task :opencv:processReleaseNavigationResources UP-TO-DATE
+> Task :opencv:parseReleaseLocalResources UP-TO-DATE
+> Task :opencv:generateReleaseRFile UP-TO-DATE
+> Task :opencv:compileReleaseKotlin UP-TO-DATE
+> Task :opencv:javaPreCompileRelease UP-TO-DATE
+> Task :opencv:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :opencv:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :opencv:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:generateReleaseResources UP-TO-DATE
+> Task :core:imageprocessor:packageReleaseResources UP-TO-DATE
+> Task :core:imageprocessor:processReleaseNavigationResources UP-TO-DATE
+> Task :core:imageprocessor:parseReleaseLocalResources UP-TO-DATE
+> Task :core:imageprocessor:generateReleaseRFile UP-TO-DATE
+> Task :core:imageprocessor:compileReleaseKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileRelease UP-TO-DATE
+> Task :core:imageprocessor:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:generateReleaseResources UP-TO-DATE
+> Task :core:colorpicker:packageReleaseResources UP-TO-DATE
+> Task :core:colorpicker:processReleaseNavigationResources UP-TO-DATE
+> Task :core:colorpicker:parseReleaseLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateReleaseRFile UP-TO-DATE
+> Task :core:colorpicker:compileReleaseKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileRelease UP-TO-DATE
+> Task :core:colorpicker:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:common:generateReleaseResources UP-TO-DATE
+> Task :core:common:packageReleaseResources UP-TO-DATE
+> Task :core:common:processReleaseNavigationResources UP-TO-DATE
+> Task :core:common:parseReleaseLocalResources UP-TO-DATE
+> Task :core:common:generateReleaseRFile UP-TO-DATE
+> Task :core:common:compileReleaseKotlin UP-TO-DATE
+> Task :core:common:javaPreCompileRelease UP-TO-DATE
+> Task :core:common:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:common:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:common:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:colorpicker:exportReleaseConsumerProguardFiles UP-TO-DATE
+> Task :opencv:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :opencv:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :opencv:processReleaseJavaRes UP-TO-DATE
+> Task :core:colorpicker:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:colorpicker:processReleaseJavaRes UP-TO-DATE
+> Task :core:common:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:common:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:common:processReleaseJavaRes UP-TO-DATE
+> Task :core:editimage:generateReleaseResources UP-TO-DATE
+> Task :core:editimage:packageReleaseResources UP-TO-DATE
+> Task :core:editimage:processReleaseNavigationResources UP-TO-DATE
+> Task :core:editimage:parseReleaseLocalResources UP-TO-DATE
+> Task :core:editimage:generateReleaseRFile UP-TO-DATE
+> Task :core:imageprocessor:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:editimage:compileReleaseKotlin NO-SOURCE
+> Task :core:editimage:javaPreCompileRelease UP-TO-DATE
+> Task :core:editimage:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:editimage:extractProguardFiles UP-TO-DATE
+> Task :core:editimage:processReleaseManifest UP-TO-DATE
+> Task :core:editimage:generateReleaseLibraryProguardRules UP-TO-DATE
+> Task :core:editimage:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:editimage:processReleaseJavaRes NO-SOURCE
+> Task :core:editimage:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:imageprocessor:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:imageprocessor:processReleaseJavaRes NO-SOURCE
+> Task :core:editimage:minifyReleaseWithR8 UP-TO-DATE
+> Task :core:editimage:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:localml:mergeReleaseMlModels UP-TO-DATE
+> Task :core:localml:generateReleaseMlModelClass UP-TO-DATE
+> Task :core:localml:compileReleaseKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileRelease UP-TO-DATE
+> Task :core:localml:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:localml:extractProguardFiles UP-TO-DATE
+> Task :core:localml:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:localml:processReleaseJavaRes NO-SOURCE
+> Task :core:localml:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:localml:minifyReleaseWithR8 UP-TO-DATE
+> Task :core:localml:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:overlaybrush:generateReleaseResources UP-TO-DATE
+> Task :core:overlaybrush:packageReleaseResources UP-TO-DATE
+> Task :core:overlaybrush:processReleaseNavigationResources UP-TO-DATE
+> Task :core:overlaybrush:parseReleaseLocalResources UP-TO-DATE
+> Task :core:overlaybrush:generateReleaseRFile UP-TO-DATE
+> Task :core:overlaybrush:compileReleaseKotlin NO-SOURCE
+> Task :core:overlaybrush:javaPreCompileRelease UP-TO-DATE
+> Task :core:overlaybrush:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:common:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:colorpicker:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:gallery:generateReleaseResources UP-TO-DATE
+> Task :core:gallery:packageReleaseResources UP-TO-DATE
+> Task :core:gallery:processReleaseNavigationResources UP-TO-DATE
+> Task :core:gallery:parseReleaseLocalResources UP-TO-DATE
+> Task :core:gallery:generateReleaseRFile UP-TO-DATE
+> Task :core:gallery:compileReleaseKotlin UP-TO-DATE
+> Task :core:gallery:javaPreCompileRelease UP-TO-DATE
+> Task :core:gallery:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:gallery:extractProguardFiles UP-TO-DATE
+> Task :core:gallery:processReleaseManifest UP-TO-DATE
+> Task :core:gallery:generateReleaseLibraryProguardRules UP-TO-DATE
+> Task :core:gallery:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:gallery:processReleaseJavaRes UP-TO-DATE
+> Task :core:gallery:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:gallery:minifyReleaseWithR8 UP-TO-DATE
+> Task :core:gallery:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:imagecrop:generateReleaseResources UP-TO-DATE
+> Task :core:imagecrop:packageReleaseResources UP-TO-DATE
+> Task :core:imagecrop:processReleaseNavigationResources UP-TO-DATE
+> Task :core:imagecrop:parseReleaseLocalResources UP-TO-DATE
+> Task :core:imagecrop:generateReleaseRFile UP-TO-DATE
+> Task :core:imagecrop:compileReleaseKotlin UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileRelease UP-TO-DATE
+> Task :core:imagecrop:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :core:imageprocessor:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :app:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :app:generateReleaseResources UP-TO-DATE
+> Task :app:packageReleaseResources UP-TO-DATE
+> Task :core:localml:generateReleaseEmptyResourceFiles UP-TO-DATE
+> Task :app:processReleaseNavigationResources UP-TO-DATE
+> Task :app:parseReleaseLocalResources UP-TO-DATE
+> Task :app:generateReleaseRFile UP-TO-DATE
+> Task :core:editimage:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:gallery:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:imagecrop:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:localml:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :core:overlaybrush:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :app:javaPreCompileRelease UP-TO-DATE
+> Task :opencv:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:colorpicker:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:common:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:editimage:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:gallery:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:imagecrop:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:imageprocessor:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:localml:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:overlaybrush:writeReleaseAarMetadata UP-TO-DATE
+> Task :opencv:bundleLibRuntimeToDirRelease
+> Task :app:checkReleaseAarMetadata UP-TO-DATE
+> Task :app:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :app:compileReleaseNavigationResources UP-TO-DATE
+> Task :app:mergeReleaseResources UP-TO-DATE
+> Task :app:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksRelease UP-TO-DATE
+> Task :opencv:extractDeepLinksRelease UP-TO-DATE
+> Task :opencv:processReleaseManifest UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksRelease UP-TO-DATE
+> Task :core:colorpicker:processReleaseManifest UP-TO-DATE
+> Task :core:common:extractDeepLinksRelease UP-TO-DATE
+> Task :core:common:processReleaseManifest UP-TO-DATE
+> Task :core:editimage:extractDeepLinksRelease UP-TO-DATE
+> Task :core:gallery:extractDeepLinksRelease UP-TO-DATE
+> Task :core:imagecrop:extractDeepLinksRelease UP-TO-DATE
+> Task :core:imagecrop:processReleaseManifest UP-TO-DATE
+> Task :core:imageprocessor:extractDeepLinksRelease UP-TO-DATE
+> Task :core:imageprocessor:processReleaseManifest UP-TO-DATE
+> Task :core:localml:processReleaseManifest UP-TO-DATE
+> Task :core:overlaybrush:extractDeepLinksRelease UP-TO-DATE
+> Task :core:overlaybrush:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseMainManifest UP-TO-DATE
+> Task :app:processReleaseManifest UP-TO-DATE
+> Task :app:processReleaseManifestForPackage UP-TO-DATE
+> Task :opencv:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :opencv:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:colorpicker:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:colorpicker:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:common:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:common:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:editimage:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:editimage:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:gallery:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:gallery:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:imagecrop:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:imagecrop:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:imageprocessor:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:imageprocessor:compileReleaseLibraryResources UP-TO-DATE
+> Task :core:overlaybrush:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:overlaybrush:compileReleaseLibraryResources UP-TO-DATE
+> Task :app:processReleaseResources UP-TO-DATE
+> Task :app:desugarReleaseFileDependencies UP-TO-DATE
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:mergeExtDexRelease UP-TO-DATE
+> Task :opencv:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:colorpicker:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:common:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:editimage:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:gallery:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:imagecrop:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:imageprocessor:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:localml:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:overlaybrush:prepareReleaseArtProfile UP-TO-DATE
+> Task :app:mergeReleaseArtProfile UP-TO-DATE
+> Task :core:editimage:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:localml:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:overlaybrush:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:gallery:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :core:imagecrop:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :opencv:generateReleaseAssets UP-TO-DATE
+> Task :opencv:mergeReleaseAssets UP-TO-DATE
+> Task :core:colorpicker:generateReleaseAssets UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseAssets UP-TO-DATE
+> Task :core:common:generateReleaseAssets UP-TO-DATE
+> Task :core:common:mergeReleaseAssets UP-TO-DATE
+> Task :core:editimage:generateReleaseAssets UP-TO-DATE
+> Task :core:editimage:mergeReleaseAssets UP-TO-DATE
+> Task :core:gallery:generateReleaseAssets UP-TO-DATE
+> Task :core:gallery:mergeReleaseAssets UP-TO-DATE
+> Task :core:imagecrop:generateReleaseAssets UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseAssets UP-TO-DATE
+> Task :core:imageprocessor:generateReleaseAssets UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseAssets UP-TO-DATE
+> Task :core:localml:generateReleaseAssets UP-TO-DATE
+> Task :core:localml:mergeReleaseAssets UP-TO-DATE
+> Task :core:overlaybrush:generateReleaseAssets UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets UP-TO-DATE
+> Task :app:compressReleaseAssets UP-TO-DATE
+> Task :app:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:compileReleaseKotlin
+> Task :opencv:createFullJarRelease
+> Task :app:compileReleaseJavaWithJavac NO-SOURCE
+> Task :app:dexBuilderRelease UP-TO-DATE
+> Task :opencv:extractProguardFiles UP-TO-DATE
+> Task :opencv:generateReleaseLintModel
+> Task :opencv:prepareLintJarForPublish UP-TO-DATE
+> Task :core:colorpicker:createFullJarRelease UP-TO-DATE
+> Task :core:colorpicker:extractProguardFiles UP-TO-DATE
+> Task :core:colorpicker:generateReleaseLintModel UP-TO-DATE
+> Task :core:colorpicker:prepareLintJarForPublish UP-TO-DATE
+> Task :core:common:createFullJarRelease UP-TO-DATE
+> Task :core:common:extractProguardFiles UP-TO-DATE
+> Task :core:common:generateReleaseLintModel UP-TO-DATE
+> Task :app:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :core:common:prepareLintJarForPublish UP-TO-DATE
+> Task :core:editimage:createFullJarRelease UP-TO-DATE
+> Task :core:imageprocessor:createFullJarRelease UP-TO-DATE
+> Task :core:imageprocessor:extractProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:generateReleaseLintModel UP-TO-DATE
+> Task :core:imageprocessor:prepareLintJarForPublish UP-TO-DATE
+> Task :core:editimage:generateReleaseLintModel
+> Task :core:editimage:prepareLintJarForPublish UP-TO-DATE
+> Task :core:gallery:createFullJarRelease UP-TO-DATE
+> Task :core:gallery:generateReleaseLintModel UP-TO-DATE
+> Task :core:gallery:prepareLintJarForPublish UP-TO-DATE
+> Task :core:imagecrop:processReleaseJavaRes UP-TO-DATE
+> Task :core:imagecrop:createFullJarRelease UP-TO-DATE
+> Task :core:imagecrop:extractProguardFiles UP-TO-DATE
+> Task :core:imagecrop:generateReleaseLintModel UP-TO-DATE
+> Task :core:imagecrop:prepareLintJarForPublish UP-TO-DATE
+> Task :core:localml:createFullJarRelease UP-TO-DATE
+> Task :core:localml:generateReleaseLintModel
+> Task :core:localml:prepareLintJarForPublish UP-TO-DATE
+> Task :core:overlaybrush:processReleaseJavaRes NO-SOURCE
+> Task :core:overlaybrush:createFullJarRelease UP-TO-DATE
+> Task :core:overlaybrush:extractProguardFiles UP-TO-DATE
+> Task :core:overlaybrush:generateReleaseLintModel UP-TO-DATE
+> Task :core:overlaybrush:prepareLintJarForPublish UP-TO-DATE
+> Task :app:generateReleaseLintVitalReportModel
+> Task :core:editimage:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:editimage:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:editimage:extractReleaseAnnotations UP-TO-DATE
+> Task :core:editimage:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:editimage:syncReleaseLibJars UP-TO-DATE
+> Task :core:editimage:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:localml:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:localml:extractReleaseAnnotations UP-TO-DATE
+> Task :core:localml:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:localml:syncReleaseLibJars UP-TO-DATE
+> Task :core:localml:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:overlaybrush:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:overlaybrush:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:overlaybrush:extractReleaseAnnotations UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:overlaybrush:syncReleaseLibJars UP-TO-DATE
+> Task :core:overlaybrush:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:common:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:common:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:common:extractReleaseAnnotations UP-TO-DATE
+> Task :core:common:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:common:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:common:syncReleaseLibJars UP-TO-DATE
+> Task :core:common:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:colorpicker:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:colorpicker:extractReleaseAnnotations UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:colorpicker:syncReleaseLibJars UP-TO-DATE
+> Task :core:colorpicker:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:gallery:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:gallery:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:gallery:extractReleaseAnnotations UP-TO-DATE
+> Task :core:gallery:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:gallery:syncReleaseLibJars UP-TO-DATE
+> Task :core:gallery:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:imagecrop:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:imagecrop:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:imagecrop:extractReleaseAnnotations UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:imagecrop:syncReleaseLibJars UP-TO-DATE
+> Task :core:imagecrop:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :core:imageprocessor:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:imageprocessor:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:imageprocessor:extractReleaseAnnotations UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:imageprocessor:syncReleaseLibJars UP-TO-DATE
+> Task :core:imageprocessor:bundleReleaseLocalLintAar UP-TO-DATE
+> Task :opencv:checkReleaseAarMetadata UP-TO-DATE
+> Task :opencv:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :opencv:extractReleaseAnnotations UP-TO-DATE
+> Task :opencv:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :opencv:externalNativeBuildRelease
+> Task :opencv:generateJsonModelRelease
+> Task :opencv:prefabReleaseConfigurePackage UP-TO-DATE
+> Task :opencv:prefabReleasePackage UP-TO-DATE
+> Task :opencv:mergeReleaseJavaResource UP-TO-DATE
+> Task :opencv:syncReleaseLibJars UP-TO-DATE
+> Task :opencv:bundleReleaseLocalLintAar
+> Task :opencv:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:colorpicker:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:colorpicker:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:common:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:common:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:imageprocessor:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:editimage:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:gallery:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:gallery:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:imagecrop:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:imagecrop:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:imageprocessor:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:localml:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :core:overlaybrush:lintVitalAnalyzeRelease UP-TO-DATE
+> Task :core:overlaybrush:writeReleaseLintModelMetadata UP-TO-DATE
+> Task :opencv:generateReleaseLintVitalModel
+> Task :core:colorpicker:generateReleaseLintVitalModel UP-TO-DATE
+> Task :core:common:generateReleaseLintVitalModel UP-TO-DATE
+> Task :core:editimage:generateReleaseLintVitalModel
+> Task :core:gallery:generateReleaseLintVitalModel UP-TO-DATE
+> Task :core:imagecrop:generateReleaseLintVitalModel UP-TO-DATE
+> Task :core:imageprocessor:generateReleaseLintVitalModel UP-TO-DATE
+> Task :core:localml:generateReleaseLintVitalModel
+> Task :core:overlaybrush:generateReleaseLintVitalModel UP-TO-DATE
+> Task :app:processReleaseJavaRes UP-TO-DATE
+> Task :app:optimizeReleaseResources UP-TO-DATE
+> Task :app:collectReleaseDependencies UP-TO-DATE
+> Task :app:sdkReleaseDependencyData UP-TO-DATE
+> Task :app:writeReleaseAppMetadata UP-TO-DATE
+> Task :app:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :opencv:lintVitalAnalyzeRelease
+> Task :core:localml:lintVitalAnalyzeRelease
+> Task :core:editimage:lintVitalAnalyzeRelease
+> Task :app:mergeReleaseJavaResource
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleRelease
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 58s
+372 actionable tasks: 30 executed, 342 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

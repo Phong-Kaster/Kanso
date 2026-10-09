@@ -35,3 +35,35 @@ A fix that stays inside the wrapper: after the dump, also read the focused windo
 ### In plain words
 
 The tool that lets the engine look at the phone is built so it only ever sees the app being built. One screen slipped through: the pull-down notification area, which is part of the phone's system, not the app. If the owner pulls it down while the engine is looking, the engine can copy their messages into a file that is then saved with the project. Nothing leaked here because the engine noticed first, but it should not depend on that.
+
+---
+
+## S-003 - After an AGP 9 move, a green build and green tests can hide source that is no longer compiled: read the `NO-SOURCE` lines
+
+- **Destination:** stack · android
+- **Earned by:** Kanso Run 5, Phase 1 (2026-10-09): the whole project built and 231 tests passed, yet OpenCV's only live Kotlin file (`opencv/java/src/org/opencv/core/MatMatMul.kt`, class `org.opencv.core.MatMatMulKt`) was no longer in the library. Only the fresh-context review noticed, from `> Task :opencv:compileDebugKotlin NO-SOURCE` in the build log.
+- **Status:** open
+
+### What happened
+
+The module set its folders in the AGP 8 way, `java.srcDirs = ['java/src']`, and applied the Kotlin plugin only to add `.kt` support. Under AGP 9's built-in Kotlin, Kotlin sources are read only from the source set's `kotlin` directories; the Android documentation says adding Kotlin folders to the `java` set is not supported. Nothing failed: the Kotlin task simply found no source (`NO-SOURCE`), the library built without the class, and no JVM test used it. The fix is `sourceSets.main.kotlin.directories.add('java/src')` (Groovy) or `kotlin.directories += "..."` (Kotlin DSL). A cheap check that would have caught it with no reviewer: after the migration, for every module that has `.kt` files, require its `compile…Kotlin` task not to say `NO-SOURCE`, and compare the library's class list with the one built before the move (`apkanalyzer dex packages --defined-only` on both APKs, then `comm` on the class names).
+
+### In plain words
+
+Moving the build to the new Android tooling can quietly drop a piece of code from a library. Nothing breaks, because nothing the tests touch uses it, so a green build proves nothing about it. The cheap safeguard is to compare what ends up in the app before and after the move, not just to see that it builds.
+
+---
+
+## S-004 - AGP 9 refuses two modules or libraries with one namespace; a premise about it should be checked in the repository at bootstrap
+
+- **Destination:** stack · android
+- **Earned by:** Kanso Run 5, Phase 1 (2026-10-09), attempt 1: `:app:processDebugMainManifest` failed with `Namespace '...' is used in multiple modules and/or libraries` for four wrapper modules and for `com.google.ai.edge.litert:litert-support:1.3.0` next to `litert-support-api:1.3.0`; it cost a failed attempt, a Tier-3 assumption and the run's chance of ending `DONE`.
+- **Status:** open
+
+### What happened
+
+AGP 8 only warned about two modules or libraries declaring one namespace; AGP 9 turns it into a manifest-merge error for the app, with no per-module switch short of a global opt-out flag. Two shapes appeared. (1) Four modules that only wrap a prebuilt AAR (`api(group = "local", name = "x", ext = "aar")`, no `src/`) declared the AAR's own namespace; the fix without a flag is a unique `namespace` line in the wrapper's build script, which changes nothing that ships but an empty `R` class. (2) `litert-support` (LiteRT 1.3.0 and 1.4.2) is an empty forwarding artifact whose namespace equals that of `litert-support-api`; the fix is to depend on `litert-support-api` directly. The bootstrap plan and the approved Definition of Done both predicted the first shape and wrote "a namespace change is an engine source change; report the criterion unmet", without ever listing the wrapper modules' folders: they have no source, so the premise was false, and the approved sentence had to be departed from.
+
+### In plain words
+
+The new Android build tool no longer tolerates two parts of an app claiming the same name. This project had four empty shell modules that copied the name of the ready-made library they wrap, and one Google library that does the same with its own twin. The cure is giving the shell a different name, which changes nothing the person using the app sees. The lesson for the planner is smaller: before writing "this failure will need a source change, so report it", open the folder and look.

@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 5, and the screenshot re-recording it asks for
 
-- **Status:** pending
+- **Status:** answered (Iteration 2, 2026-10-09)
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-09
@@ -78,6 +78,6 @@ None (Autonomous mode runs under the Deny List; the baseline recorder is the exi
 
 ### Decision
 
-<!-- Answered in `.harness/run/DECISIONS.md`, under a heading `## D-001` - never here. -->
+Answered in `.harness/run/DECISIONS.md` (`## D-001`, with a `## Baselines` list of 16 pictures): approved as written, Option 1. Applied in Iteration 2; see `AMENDMENTS.md`.
 
 ---

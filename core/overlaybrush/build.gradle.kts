@@ -2,12 +2,13 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "com.photo.editor.overlaybrush"
+    // Its own namespace: this module only wraps the prebuilt overlaybrush AAR, whose namespace is the
+    // original com.photo.editor.overlaybrush, and AGP 9 refuses one namespace in two places.
+    namespace = "com.phongkaster.kanso.engine.overlaybrush"
     compileSdk = 35
 
     defaultConfig {

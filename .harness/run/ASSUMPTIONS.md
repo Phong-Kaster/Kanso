@@ -14,7 +14,7 @@
 
 - **Tier:** Missing information (the PRD's wording "a Compose BOM that resolves Material3 1.5.0" can be met only by a beta BOM, which has a price; the choice is put to the human in D-001)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the Definition of Done); filled in with a commit SHA by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** `git revert <sha>` (of the Phase 3 checkpoint, once it exists)
 - **Assumed DoD criteria:** none (DoD 12 states the delivered outcome in these words, and you approve it at the gate)
 
@@ -38,7 +38,7 @@ Option 1. It keeps the pre-release surface to the one library the PRD needs, add
 
 - **Tier:** Missing information (two sentences of the PRD pull in different directions)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (plan); filled in by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** `git revert <sha>` (of the Phase 1 checkpoint for Gradle, of the Phase 2 checkpoint for Kotlin)
 - **Assumed DoD criteria:** none (DoD 9, R3)
 
@@ -62,7 +62,7 @@ Option 1. DoD 9 asks PROJECT.md to record each version and why it is not older o
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (plan); filled in by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** `git revert <sha>` (of the Phase 1 checkpoint)
 - **Assumed DoD criteria:** none (DoD 10 and Questions Q1, Q3)
 
@@ -85,7 +85,7 @@ Option 1: smallest change that meets the PRD. Left for the human as Questions Q1
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (plan); filled in by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** not needed (nothing changes)
 - **Assumed DoD criteria:** none (DoD Q2)
 
@@ -108,7 +108,7 @@ Option 1. Listed in the DoD (Q2) so you can ask for them in a later run.
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the Definition of Done); filled in by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** not needed
 - **Assumed DoD criteria:** none (DoD 8, 12, 13)
 
@@ -126,7 +126,7 @@ A version whose name carries none of `alpha`, `beta`, `rc`, `dev`: Navigation 3 
 
 - **Tier:** Missing information
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the Definition of Done); filled in by Iteration 2
+- **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
 - **Revert:** `git revert <sha>` (of the checkpoint that re-recorded)
 - **Assumed DoD criteria:** none (DoD 5, 6, 7 and "Approval requested")
 
@@ -142,3 +142,51 @@ The PRD: "Ask me in the DoD to approve re-recording the existing Roborazzi basel
 ### Taken, and why
 
 Option 1. D-001 carries the exact text to paste so one answer covers both the DoD and the baselines.
+
+---
+
+## A-007 - The four empty wrapper modules get their own namespaces, although DoD 11 names a shared namespace as "unmet, reported"
+
+- **Tier:** 3 (it touches how the approved DoD 11 reads; taken as the reading closest to the PRD's literal text, item 4: adapt the build scripts "only as far as the build requires", source code not changed)
+- **Iteration:** 2
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (a later Iteration replaces this with its commit SHA)
+- **Revert:** `git revert <Phase 1 sha>` undoes the whole toolchain move; to undo only this, put the four `namespace` lines of `core/editimage`, `overlaybrush`, `imageprocessor` and `localml` back to the AAR's namespace, which makes AGP 9 refuse the app's manifest merge again
+- **Assumed DoD criteria:** 11 (its sentence "a change AGP 9 forces on an engine source file (for example a namespace shared by a prebuilt library and its module) makes this criterion unmet and is reported"); listed as **assumed** in `STATE.md`
+
+### Question
+
+With AGP 9.4.1 the app's manifest merge fails: `Namespace 'com.photo.editor.editimage' is used in multiple modules and/or libraries: :core:editimage, local:editimage:` (and the same for `overlaybrush`, `imageprocessor` and `localml`). DoD 11 expects this case to make criterion 11 "unmet and reported", because it assumed fixing it would change an engine source file. What was found: these four modules have **no `src/` folder at all** (only a build script and a proguard file); each is an empty wrapper of its prebuilt AAR in `libs/` (`api(group = "local", name = ..., ext = "aar")`), and the namespace is a line in the wrapper's build script. Nothing in `app/src`, `core/*/src` or `opencv/java` refers to the wrappers' `R` or `BuildConfig`. Without a fix the app cannot be built, so no other criterion can be proved.
+
+### Options Considered
+
+1. Give each wrapper its own namespace in its build script (`com.phongkaster.kanso.engine.<module>`) - consequences: no engine source file changes (DoD 11's own proof command, `git diff --exit-code --stat <base> HEAD -- 'core/*/src' opencv/java opencv/native opencv/libcxx_helper libs 'core/*/proguard-rules.pro'`, exits 0); the AARs keep their namespaces, classes and resources; the debug APK differs from the base APK only in the compile-SDK stamps of the binary manifest and AGP's metadata file (`evidence/phase1-apk-vs-base.txt`); the only thing that changes is the empty `R` class of each wrapper.
+2. Leave it and report criterion 11 unmet - consequences: the app does not build under AGP 9; T-001 fails its attempts and is abandoned, T-002 and T-003 become unreachable, nothing of the PRD is delivered, and the report would say "AGP 9 cannot build this engine" without the way out.
+3. `android.uniquePackageNames=false` in `gradle.properties` - consequences: an opt-out flag that holds an AGP 8 behaviour, forbidden by DoD 11 and by D-001 ("AGP 9 on its defaults").
+
+### Taken, and why
+
+Option 1. It is a build-script adaptation the PRD allows ("only as far as the build requires"), it leaves every proof command of criterion 11 passing, and it is one `git revert` away. The owner may still prefer to read the DoD's sentence strictly; this assumption puts that choice in front of them, and the run cannot end `DONE` while it stands. The Reviewer flagged the same point (Phase 1 review).
+
+---
+
+## A-008 - `core/localml` depends on `litert-support-api` directly instead of the empty `litert-support`
+
+- **Tier:** 2
+- **Iteration:** 2
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (a later Iteration replaces this with its commit SHA)
+- **Revert:** `git revert <Phase 1 sha>`; to undo only this, restore `implementation(libs.litert.support)` in `core/localml/build.gradle.kts`, which makes AGP 9 refuse the manifest merge again
+- **Assumed DoD criteria:** none (DoD 14's coordinate-set check still passes; its sentence "No library was added" is read as "no library that was not already resolved")
+
+### Question
+
+AGP 9.4.1 also refuses the pair `com.google.ai.edge.litert:litert-support:1.3.0` and `litert-support-api:1.3.0`: both declare the namespace `org.tensorflow.lite.support`. `litert-support` is an empty forwarding artifact (empty `classes.jar`, no resources, empty `R.txt`; its POM only depends on `litert-support-api:[1.3.0]` and `litert:1.3.0`); 1.4.2 has the same two namespaces, so a version move does not help. How does `core/localml` keep the LiteRT support classes without the clash?
+
+### Options Considered
+
+1. Declare `litert-support-api` (same version, `libs.versions.litertSupport`) directly with named arguments and drop the empty artifact - consequences: the resolved classpath is the same minus an empty artifact; the catalog keeps its `litert-support` alias, now unused, so DoD 14's coordinate-set check passes textually; the declaration is not a catalog entry (its colon-string grep cannot see it), so `PROJECT.md` and this entry say so.
+2. Add a catalog alias for `litert-support-api` and delete or retarget the `litert-support` alias - consequences: cleaner, but the catalog's coordinate set differs from the base, which DoD 14 forbids.
+3. The opt-out flag of A-007 option 3 - consequences: forbidden.
+
+### Taken, and why
+
+Option 1: it changes nothing that runs and breaks no check. The cleaner option 2 is for a later run if the owner wants the catalog changed.
