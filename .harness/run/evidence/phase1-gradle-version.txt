@@ -1,4 +1,0 @@
-Gradle 9.6.0
-Kotlin:        2.3.21
-Launcher JVM:  24.0.2 (Oracle Corporation 24.0.2+12-54)
-Daemon JVM:    C:\Program Files\Java\jdk-24 (no Daemon JVM specified, using current Java home)
