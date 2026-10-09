@@ -310,7 +310,8 @@ class ToolScreenTest {
 
     /**
      * DoD 4, layout: from top to bottom the photo area, the panel and the toolbar, none
-     * overlapping the next, the toolbar inside the window and the photo inside its area.
+     * overlapping the next, the toolbar inside the window and the photo inside its area. The
+     * photo also fills that area on one side: its width or its height equals the area's, within 1 px.
      */
     @Test
     fun the_photo_the_panel_and_the_toolbar_stack_from_top_to_bottom() {
@@ -329,6 +330,11 @@ class ToolScreenTest {
         assertTrue("The panel $panel runs into the toolbar $toolbar", panel.bottom <= toolbar.top + SLACK)
         assertInside(toolbar, root)
         assertInside(image, body)
+        assertTrue(
+            "The photo $image does not fill $body on either side",
+            kotlin.math.abs(image.width - body.width) <= 1f ||
+                kotlin.math.abs(image.height - body.height) <= 1f,
+        )
     }
 
     /**

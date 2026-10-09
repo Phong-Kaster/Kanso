@@ -136,27 +136,28 @@ class ThemeSwatchTest {
 
     /**
      * On Android 15, tapping each colour row saves that choice and re-themes the app in its
-     * scheme within ten seconds of real time. The rows are tapped so that each tap moves the app
+     * scheme within ten seconds of real time counted from the tap. The rows are tapped so that each tap moves the app
      * away from the scheme it showed before (the custom scheme of a fresh install grows from
      * Kanso blue's seed, so it looks like Kanso blue and is tapped after the wallpaper instead):
      * From wallpaper, Kanso blue, From wallpaper again, then Custom colour.
      */
     @Test
     fun tapping_each_colour_row_applies_its_scheme() {
-        val wallpaper = dynamicLightColorScheme(context).primary
-        val kansoBlue = kansoBluePrimary()
+        // What KansoTheme shows for From wallpaper on Android 12 and later, in the light look.
+        val wallpaper = dynamicLightColorScheme(context)
+        val kansoBlue = kansoBlueScheme()
         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
-        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false).primary
+        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false)
         waitForHome()
         openSettings()
 
-        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, primary = wallpaper)
-        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBlue)
-        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, primary = wallpaper)
+        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, scheme = wallpaper)
+        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, scheme = kansoBlue)
+        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, scheme = wallpaper)
         choose(
             THEME_COLOUR_CUSTOM_TAG,
             saved = ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()),
-            primary = custom,
+            scheme = custom,
         )
     }
 
@@ -175,7 +176,7 @@ class ThemeSwatchTest {
     @Test
     fun the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected() {
         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
-        val greenPrimary = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false).primary
+        val green = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false)
         waitForHome()
         openSettings()
 
@@ -188,24 +189,25 @@ class ThemeSwatchTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             // The new colour reaches the screen through the main thread's queue; run it.
             shadowOf(Looper.getMainLooper()).idle()
-            appliedScheme().primary == greenPrimary
+            appliedScheme().primary == green.primary
         }
 
-        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBluePrimary())
+        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, scheme = kansoBlueScheme())
         assertCustomSwatchIsGreen(selection = "Kanso blue")
 
         choose(
             THEME_COLOUR_WALLPAPER_TAG,
             saved = ThemeColour.Wallpaper,
-            primary = dynamicLightColorScheme(context).primary,
+            // What KansoTheme shows for From wallpaper on Android 12 and later, in the light look.
+            scheme = dynamicLightColorScheme(context),
         )
         assertCustomSwatchIsGreen(selection = "From wallpaper")
 
-        // The swatch promised green: tapping Custom brings exactly that colour back.
+        // The swatch promised green: tapping Custom brings exactly that colour's scheme back.
         choose(
             THEME_COLOUR_CUSTOM_TAG,
             saved = ThemeColour.Custom(CUSTOM_GREEN.toArgb()),
-            primary = greenPrimary,
+            scheme = green,
         )
     }
 
@@ -249,19 +251,52 @@ class ThemeSwatchTest {
     }
 
     /**
-     * Taps the colour row tagged [rowTag] and waits until the settings file holds [saved] and
-     * the app's scheme has [primary] as its `primary`; then only that row is selected. Before the
-     * tap the app must show another `primary`, so the wait proves the tap changed the scheme.
+     * Taps the colour row tagged [rowTag] and fails unless, within ten seconds of real time
+     * counted from the tap, the settings file holds [saved] and the scheme the app hands to every
+     * screen matches [scheme], the choice's own light scheme (DoD 2); then only that row may be
+     * selected. The ten seconds are one budget for the whole tap: the save uses some of it, and
+     * the recolouring gets only what is left, so a slow save cannot buy the recolouring more time.
+     *
+     * "Matches" means equal in the seven colour roles DoD 1 compares (see [rolesOf]): primary,
+     * onPrimary, primaryContainer, secondary, tertiary, background and surface. Comparing seven
+     * roles, not only `primary`, catches a tap that brought the right `primary` with another
+     * seed's scheme. Before the tap the app must show another `primary`, so the wait proves the
+     * tap changed the scheme.
+     *
+     * The seven roles are waited for together and then checked one by one, so a failure names the
+     * role that differs.
      */
-    private fun choose(rowTag: String, saved: ThemeColour, primary: Color) {
+    private fun choose(rowTag: String, saved: ThemeColour, scheme: ColorScheme) {
         assertNotEquals(
             "Before $rowTag is tapped the app must show another scheme, or the tap proves nothing",
-            primary,
+            scheme.primary,
             appliedScheme().primary,
         )
-        compose.onNodeWithTag(rowTag).performScrollTo().performClick()
-        awaitSavedThemeColour(saved)
-        compose.waitUntil(timeoutMillis = 10_000) { appliedScheme().primary == primary }
+        val row = compose.onNodeWithTag(rowTag).performScrollTo()
+        // One deadline on the wall clock for the whole tap, taken just before it: the save and
+        // the recolouring below share these ten seconds instead of getting ten seconds each.
+        val deadline = System.currentTimeMillis() + TAP_TO_SCHEME_MILLIS
+        row.performClick()
+        awaitSavedThemeColour(saved, deadline)
+        val expected = rolesOf(scheme)
+        // runCatching holds on to a failed wait instead of ending the test at once: the checks
+        // below then name the role that is still wrong, and getOrThrow() fails the test anyway if
+        // every role only matched after the deadline.
+        val waited = runCatching {
+            // Only what is left of the ten seconds; at least 1 ms, so the time is never negative.
+            val remaining = (deadline - System.currentTimeMillis()).coerceAtLeast(1L)
+            compose.waitUntil(timeoutMillis = remaining) { rolesOf(appliedScheme()) == expected }
+            // waitUntil looks at the scheme once before it reads its own clock, so a scheme that
+            // arrived only after the deadline would still get through it; this check fails it.
+            assertTrue(
+                "Tapping $rowTag must recolour the app within ten seconds of the tap",
+                System.currentTimeMillis() <= deadline,
+            )
+        }
+        expected.zip(rolesOf(appliedScheme())).forEach { (want, got) ->
+            assertEquals("${want.first} of the scheme after tapping $rowTag", want.second, got.second)
+        }
+        waited.getOrThrow()
         compose.onNodeWithTag(rowTag).assertIsSelected()
         COLOUR_ROW_TAGS.filter { it != rowTag && rowExists(it) }.forEach { other ->
             compose.onNodeWithTag(other).assertIsNotSelected()
@@ -392,22 +427,49 @@ class ThemeSwatchTest {
     private fun rowExists(tag: String): Boolean =
         compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
+    /**
+     * Returns Kanso blue's light scheme, the one KansoTheme grows from Kanso blue's seed when the
+     * phone is in day mode, as it is in these tests.
+     */
+    private fun kansoBlueScheme(): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark = false)
+
     /** Returns the light `primary` of Kanso blue, the scheme grown from Kanso blue's seed. */
-    private fun kansoBluePrimary(): Color = seedColorScheme(KANSO_BLUE_SEED, dark = false).primary
+    private fun kansoBluePrimary(): Color = kansoBlueScheme().primary
 
     /** Returns the colour scheme KansoTheme currently hands to every screen. */
     private fun appliedScheme(): ColorScheme =
         compose.onNodeWithTag(KANSO_THEME_TAG).fetchSemanticsNode().config[KansoColorSchemeKey]
 
+    /**
+     * Returns the seven colour roles DoD 1 compares, each with its name, in a fixed order, as
+     * `KansoBlueThemeTest` does: two schemes that agree in all seven are taken to be the same.
+     */
+    private fun rolesOf(scheme: ColorScheme): List<Pair<String, Color>> = listOf(
+        "primary" to scheme.primary,
+        "onPrimary" to scheme.onPrimary,
+        "primaryContainer" to scheme.primaryContainer,
+        "secondary" to scheme.secondary,
+        "tertiary" to scheme.tertiary,
+        "background" to scheme.background,
+        "surface" to scheme.surface,
+    )
+
     /** Reads the theme colour saved in the settings file right now. */
     private fun savedThemeColour(): ThemeColour = runBlocking { repository().themeColour.first() }
 
     /**
-     * Waits, in real time, until the saved theme colour is [expected]. The write runs on a
-     * background thread, which Compose's test clock does not wait for.
+     * Waits, in real time, until the saved theme colour is [expected], and fails unless it is by
+     * then. The write runs on a background thread, which Compose's test clock does not wait for.
+     *
+     * [deadline] is the moment on the wall clock (`System.currentTimeMillis()`) at which the wait
+     * gives up: by default ten seconds from the call, while [choose] passes the deadline it took at
+     * its tap, so the save only spends part of the tap's ten seconds.
      */
-    private fun awaitSavedThemeColour(expected: ThemeColour) {
-        val deadline = System.currentTimeMillis() + 10_000
+    private fun awaitSavedThemeColour(
+        expected: ThemeColour,
+        // A default value is worked out afresh at every call, so each call gets its own ten seconds.
+        deadline: Long = System.currentTimeMillis() + 10_000,
+    ) {
         while (savedThemeColour() != expected && System.currentTimeMillis() < deadline) {
             Thread.sleep(50)
             compose.waitForIdle()
@@ -451,6 +513,12 @@ class ThemeSwatchTest {
 
         /** How long both clocks are moved on before a swatch is read, so every ripple has faded. */
         const val RIPPLE_SETTLE_MILLIS = 1_000L
+
+        /**
+         * How long, in real milliseconds counted from the tap, a tap on a colour row may take to
+         * save the choice and recolour the app (DoD 2: "within 10 s of real time").
+         */
+        const val TAP_TO_SCHEME_MILLIS = 10_000L
 
         /** The tags of the three colour rows, in the order the screen lists them. */
         val COLOUR_ROW_TAGS = listOf(

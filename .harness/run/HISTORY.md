@@ -80,6 +80,26 @@
   - PROJECT.md facts added.
   - No "Awaiting a person, Run 6" item written yet: the next Verifier writes them from what it actually drives.
 
+### Iteration 8 - 2026-10-10 (Phase 6: T-019, T-020, T-021; PARTIAL-candidate recorded)
+- **Phase:** 6 - three test-only edits that close the Proof clauses the Verifier of Iteration 7 found unmet: DoD 29's `reference/` search prints nothing (T-019, Fast), a tapped colour row is proved in the choice's seven roles and within 10 s of the tap (T-020, Capable), the 600x400 photo is proved to fill its area (T-021, Fast). Pairwise disjoint scopes (three files), no app code, no picture.
+- **Recover:** tree clean except `.harness/TELEMETRY.tsv` (the Runtime's row; committed with this checkpoint). `DECISIONS.md`: only D-001, already consumed.
+- Attempted:
+  - Three Workers dispatched in parallel at their tiers (`sonnet`, `opus`, `sonnet`); each returned a manifest; the diff was read from git, the three files matched the declared scopes.
+  - Whole run 1 (`p8-full-1.log`): exit 0 in 3 min 9 s, 368 tests, 24 of 24 pictures unchanged, lint 0 errors.
+  - A fresh-context review (Capable, read `p8-diff.patch`): nothing blocking. One point touched DoD 2's "within 10 s": the save wait and the scheme wait each had 10 s. T-020 went back to a Capable Worker (attempt 2) for one deadline taken at the tap, shared by both waits, with a clock check after `waitUntil`, and a KDoc that says seven roles.
+  - Whole run 2 (`p8-full-2.log`, the finished tree): exit 0 in 3 min 6 s, 368 tests (0 failed, 0 errors, 0 skipped), `verifyRoborazziDebug` 24 of 24 unchanged, lint 0 errors, 54 warnings, 2 hints, the debug APK built. `git grep -n 'reference/' -- settings.gradle.kts app` prints nothing; `ALLOWED` is still `emptySet()`.
+  - A second fresh-context review (Capable, read `p8-diff-2.patch`): nothing blocking, six notes (one fixed here: the stale T-020 record; one fixed: `test-edits.md` listed `ThemeSwatchTest.kt` as `M` where it is `A` against the base; four recorded in `ISSUES.md`).
+- Evidence: `evidence/p8-full-1.log`, `p8-full-2.log`, `p8-diff.patch`, `p8-diff-2.patch`, `test-edits.md` (a Phase 6 row, a line in the `ToolScreenTest.kt` row), the task files.
+- Learned:
+  - Compose's `waitUntil` reads its condition before its clock, so a strict real-time limit needs its own check after it.
+  - Two stacked waits of N seconds prove "within 2N", not "within N": a Proof's "within N s of the tap" is one budget from the tap.
+  - `rolesOf` is written twice (`ThemeSwatchTest`, `KansoBlueThemeTest`): change both together. All three recorded in `PROJECT.md`.
+- Reconciled:
+  - T-019, T-020 (attempt 2 of 3, review-driven, no failure), T-021 complete.
+  - Tier 1 amendment for T-020's second attempt in `AMENDMENTS.md`.
+  - PARTIAL-candidate recorded in `STATE.md`: nothing executable remains, criteria 13, 20, 21 and 30 await a signature and criterion 14 is assumed (A-015). The next invocation is the Verifier.
+  - No decision queued, nothing abandoned, no new assumption.
+
 ## Archived Decisions
 
 <!-- Full request + decision + rationale of every consumed Decision Queue entry. -->

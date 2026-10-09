@@ -1,17 +1,18 @@
 # ISSUES
 
-## Run 6 (Material 3 Expressive, Kanso blue): Phases 1 to 5 built at Iterations 2 to 6; the Verifier (Iteration 7) filed Phase 6
+## Run 6 (Material 3 Expressive, Kanso blue): Phases 1 to 5 built at Iterations 2 to 6; the Verifier (Iteration 7) filed Phase 6, built at Iteration 8
 
-- **The Verifier (Iteration 7) found three gaps; Phase 6 closes them.** Fresh runs of `1e82f8d` all exit 0: `:app:clean`, then 368 tests (0 failed, 0 errors, 0 skipped), `verifyRoborazziDebug` 24 total and 0 changed, lint 0 errors, and every named Proof command on its own (`.harness/run/evidence/p7-verifier.md`). Every `machine` criterion held except three Proof clauses:
-  - **DoD 29:** `git grep -n 'reference/' -- settings.gradle.kts app` prints one line, a comment in `OneTypePerFileTest.kt` that was there before this run. It is not a build or an import of `reference/`, but the Proof says "prints nothing". Task T-019.
-  - **DoD 2:** a tapped colour row is proved by `primary` only, not by "that choice's scheme". Task T-020.
-  - **DoD 4:** the "photo fills its area" check does not run on the 600x400 photo the Proof names. Task T-021.
+- **The Verifier (Iteration 7) found three gaps; Phase 6 (Iteration 8) closed them, and the next Verifier re-proves them.** One fresh whole run of the finished tree is green (`evidence/p8-full-2.log`: exit 0, 368 tests, 24 of 24 pictures unchanged, lint 0 errors). The Verifier's own fresh runs of `1e82f8d` all exit 0: `:app:clean`, then 368 tests (0 failed, 0 errors, 0 skipped), `verifyRoborazziDebug` 24 total and 0 changed, lint 0 errors, and every named Proof command on its own (`.harness/run/evidence/p7-verifier.md`). Every `machine` criterion held except three Proof clauses:
+  - **DoD 29:** `git grep -n 'reference/' -- settings.gradle.kts app` prints one line, a comment in `OneTypePerFileTest.kt` that was there before this run. It is not a build or an import of `reference/`, but the Proof says "prints nothing". Task T-019: the sentence is reworded and the search prints nothing.
+  - **DoD 2:** a tapped colour row is proved by `primary` only, not by "that choice's scheme". Task T-020: `choose` waits for and asserts the choice's seven roles.
+  - **DoD 4:** the "photo fills its area" check does not run on the 600x400 photo the Proof names. Task T-021: the gradient test asserts the fill.
 - **The audit's lesser points, recorded rather than fixed:**
   - Criteria 3, 5 and 7: the tests prove the back stacks from where Back leads; the Verifier read the exact stacks from `KansoNavHost.kt`.
   - Criterion 22: the stored names and the settings file are proved by a diff, not a test.
   - Criterion 18: `TouchTargetCheck` also counts a node's own size and skips nodes that are not placed.
   - Criterion 19: the icon check accepts any node that has no description.
   - Criterion 5: "inside the column" accepts any scrollable ancestor.
+- **Review of Phase 6 (fresh context, Capable), recorded:** nothing blocking. T-020 went back for a second attempt (Tier 1, `AMENDMENTS.md`): the save wait and the scheme wait each had 10 s, so a tap could take about 20 s to recolour the app and pass, while DoD 2 says "within 10 s of real time"; one deadline from the tap now covers both. **Not fixed, advisory:** `ThemeSwatchTest.rolesOf` repeats the seven-role list of `KansoBlueThemeTest` (if DoD 1's list grew and only one copy changed, DoD 2's proof would be weaker than DoD 1's; one shared function in a test-support file would remove it, and no Proof asks for it). The seven roles are seven of a scheme's roughly 36, as DoD 1 compares them: a tap that applied a scheme wrong only in `surfaceContainer` or `outline` would pass, and so would DoD 1's own check of the same roles. **The second review (fresh context, of the finished tree) found nothing blocking** and three notes, left as they are: a failure message that can name the recolouring when the save was late; the deadline reads the wall clock (`System.currentTimeMillis()`, as the base's wait did); and two KDoc nits in `ThemeSwatchTest.kt` (a 117-character line at :139, and "then only that row may be selected" where the code asserts it is).
 - **A-016:** the `aapt2` the DoD names prints criterion 24's `sdkVersion:'27'` as `minSdkVersion:'27'`. The minimum is 27.
 - **Not driven on the phone:** another app had focus on the Galaxy A13 at both of the Verifier's checks (a person using it). So nothing was installed or started, and no "Awaiting a person, Run 6" item exists yet. The next Verifier writes those items.
 

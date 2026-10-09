@@ -124,3 +124,8 @@
   - `rm -rf` is refused by the permission rules: use a fresh `mktemp -d`.
   - A stray `python -` waits on stdin until the Bash timeout.
   - A literal "prints nothing" search over `app` also matches comments in `app/src/test`.
+- Reference (Run 6, Phase 6, Iteration 8, 2026-10-10):
+  - Compose's `waitUntil(timeoutMillis)` looks at its condition once before it reads its clock, so a condition that first becomes true after the deadline still passes. A strict real-time limit needs its own check of `System.currentTimeMillis()` after the wait (`ThemeSwatchTest.choose`).
+  - A Proof's "within N s of the tap" is one budget from the tap: two stacked waits of N s each prove "within 2N". Take one deadline at the tap and give each wait what is left.
+  - A tap that applies a choice's colour scheme is proved in the seven roles of DoD 1 (`primary`, `onPrimary`, `primaryContainer`, `secondary`, `tertiary`, `background`, `surface`); `rolesOf` in `ThemeSwatchTest.kt` and `KansoBlueThemeTest.kt` hold the same list, so change both together.
+  - The whole set on the finished Phase 6 tree: 3 min 9 s warm after `cleanTestDebugUnitTest`, 368 tests.

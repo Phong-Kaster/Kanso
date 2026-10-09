@@ -1,0 +1,188 @@
+diff --git a/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt b/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
+index fa073b7..1ed1a1a 100644
+--- a/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt
+@@ -391,7 +391,7 @@ class OneTypePerFileTest {
+      * are the files' paths below the app's package folder with a `main/` or `test/` prefix, the
+      * keys [ALLOWED] uses, in sorted order. It fails when either folder holds no Kotlin file, so a
+      * scan that looks in the wrong place cannot pass. Both folders are inside `app/src`, so the
+-     * scan never reaches `reference/` or the engine modules in `core/`.
++     * scan never reaches the `reference` folder (Retica's app) or the engine modules in `core/`.
+      */
+     private fun scanAppSources(): Map<String, List<String>> {
+         val mainRoot = findAppSourceRoot()
+diff --git a/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt b/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
+index 5f955fe..17e4b6d 100644
+--- a/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt
+@@ -143,20 +143,21 @@ class ThemeSwatchTest {
+      */
+     @Test
+     fun tapping_each_colour_row_applies_its_scheme() {
+-        val wallpaper = dynamicLightColorScheme(context).primary
+-        val kansoBlue = kansoBluePrimary()
++        // What KansoTheme shows for From wallpaper on Android 12 and later, in the light look.
++        val wallpaper = dynamicLightColorScheme(context)
++        val kansoBlue = kansoBlueScheme()
+         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
+-        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false).primary
++        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false)
+         waitForHome()
+         openSettings()
+ 
+-        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, primary = wallpaper)
+-        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBlue)
+-        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, primary = wallpaper)
++        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, scheme = wallpaper)
++        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, scheme = kansoBlue)
++        choose(THEME_COLOUR_WALLPAPER_TAG, saved = ThemeColour.Wallpaper, scheme = wallpaper)
+         choose(
+             THEME_COLOUR_CUSTOM_TAG,
+             saved = ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()),
+-            primary = custom,
++            scheme = custom,
+         )
+     }
+ 
+@@ -175,7 +176,7 @@ class ThemeSwatchTest {
+     @Test
+     fun the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected() {
+         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
+-        val greenPrimary = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false).primary
++        val green = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false)
+         waitForHome()
+         openSettings()
+ 
+@@ -188,24 +189,25 @@ class ThemeSwatchTest {
+         compose.waitUntil(timeoutMillis = 10_000) {
+             // The new colour reaches the screen through the main thread's queue; run it.
+             shadowOf(Looper.getMainLooper()).idle()
+-            appliedScheme().primary == greenPrimary
++            appliedScheme().primary == green.primary
+         }
+ 
+-        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, primary = kansoBluePrimary())
++        choose(THEME_COLOUR_KANSO_BLUE_TAG, saved = ThemeColour.KansoBlue, scheme = kansoBlueScheme())
+         assertCustomSwatchIsGreen(selection = "Kanso blue")
+ 
+         choose(
+             THEME_COLOUR_WALLPAPER_TAG,
+             saved = ThemeColour.Wallpaper,
+-            primary = dynamicLightColorScheme(context).primary,
++            // What KansoTheme shows for From wallpaper on Android 12 and later, in the light look.
++            scheme = dynamicLightColorScheme(context),
+         )
+         assertCustomSwatchIsGreen(selection = "From wallpaper")
+ 
+-        // The swatch promised green: tapping Custom brings exactly that colour back.
++        // The swatch promised green: tapping Custom brings exactly that colour's scheme back.
+         choose(
+             THEME_COLOUR_CUSTOM_TAG,
+             saved = ThemeColour.Custom(CUSTOM_GREEN.toArgb()),
+-            primary = greenPrimary,
++            scheme = green,
+         )
+     }
+ 
+@@ -250,18 +252,35 @@ class ThemeSwatchTest {
+ 
+     /**
+      * Taps the colour row tagged [rowTag] and waits until the settings file holds [saved] and
+-     * the app's scheme has [primary] as its `primary`; then only that row is selected. Before the
+-     * tap the app must show another `primary`, so the wait proves the tap changed the scheme.
++     * the scheme the app hands to every screen equals [scheme], the choice's own light scheme, in
++     * the seven colour roles DoD 1 compares (see [rolesOf]); then only that row is selected.
++     * Comparing the whole scheme, not only its `primary`, catches a tap that brought the right
++     * `primary` with the wrong scheme, such as the dark one or another seed's that shares it.
++     * Before the tap the app must show another `primary`, so the wait proves the tap changed the
++     * scheme.
++     *
++     * The seven roles are waited for together, for at most ten seconds of real time, and then
++     * checked one by one, so a failure names the role that differs.
+      */
+-    private fun choose(rowTag: String, saved: ThemeColour, primary: Color) {
++    private fun choose(rowTag: String, saved: ThemeColour, scheme: ColorScheme) {
+         assertNotEquals(
+             "Before $rowTag is tapped the app must show another scheme, or the tap proves nothing",
+-            primary,
++            scheme.primary,
+             appliedScheme().primary,
+         )
+         compose.onNodeWithTag(rowTag).performScrollTo().performClick()
+         awaitSavedThemeColour(saved)
+-        compose.waitUntil(timeoutMillis = 10_000) { appliedScheme().primary == primary }
++        val expected = rolesOf(scheme)
++        // runCatching holds on to a timed-out wait instead of ending the test at once: the checks
++        // below then name the role that is still wrong, and getOrThrow() fails the test anyway if
++        // every role only matched after the ten seconds ran out.
++        val waited = runCatching {
++            compose.waitUntil(timeoutMillis = 10_000) { rolesOf(appliedScheme()) == expected }
++        }
++        expected.zip(rolesOf(appliedScheme())).forEach { (want, got) ->
++            assertEquals("${want.first} of the scheme after tapping $rowTag", want.second, got.second)
++        }
++        waited.getOrThrow()
+         compose.onNodeWithTag(rowTag).assertIsSelected()
+         COLOUR_ROW_TAGS.filter { it != rowTag && rowExists(it) }.forEach { other ->
+             compose.onNodeWithTag(other).assertIsNotSelected()
+@@ -392,13 +411,33 @@ class ThemeSwatchTest {
+     private fun rowExists(tag: String): Boolean =
+         compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+ 
++    /**
++     * Returns Kanso blue's light scheme, the one KansoTheme grows from Kanso blue's seed when the
++     * phone is in day mode, as it is in these tests.
++     */
++    private fun kansoBlueScheme(): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark = false)
++
+     /** Returns the light `primary` of Kanso blue, the scheme grown from Kanso blue's seed. */
+-    private fun kansoBluePrimary(): Color = seedColorScheme(KANSO_BLUE_SEED, dark = false).primary
++    private fun kansoBluePrimary(): Color = kansoBlueScheme().primary
+ 
+     /** Returns the colour scheme KansoTheme currently hands to every screen. */
+     private fun appliedScheme(): ColorScheme =
+         compose.onNodeWithTag(KANSO_THEME_TAG).fetchSemanticsNode().config[KansoColorSchemeKey]
+ 
++    /**
++     * Returns the seven colour roles DoD 1 compares, each with its name, in a fixed order, as
++     * `KansoBlueThemeTest` does: two schemes that agree in all seven are taken to be the same.
++     */
++    private fun rolesOf(scheme: ColorScheme): List<Pair<String, Color>> = listOf(
++        "primary" to scheme.primary,
++        "onPrimary" to scheme.onPrimary,
++        "primaryContainer" to scheme.primaryContainer,
++        "secondary" to scheme.secondary,
++        "tertiary" to scheme.tertiary,
++        "background" to scheme.background,
++        "surface" to scheme.surface,
++    )
++
+     /** Reads the theme colour saved in the settings file right now. */
+     private fun savedThemeColour(): ThemeColour = runBlocking { repository().themeColour.first() }
+ 
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt
+index 1d6728c..60aa401 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt
+@@ -310,7 +310,8 @@ class ToolScreenTest {
+ 
+     /**
+      * DoD 4, layout: from top to bottom the photo area, the panel and the toolbar, none
+-     * overlapping the next, the toolbar inside the window and the photo inside its area.
++     * overlapping the next, the toolbar inside the window and the photo inside its area. The
++     * photo also fills that area on one side: its width or its height equals the area's, within 1 px.
+      */
+     @Test
+     fun the_photo_the_panel_and_the_toolbar_stack_from_top_to_bottom() {
+@@ -329,6 +330,11 @@ class ToolScreenTest {
+         assertTrue("The panel $panel runs into the toolbar $toolbar", panel.bottom <= toolbar.top + SLACK)
+         assertInside(toolbar, root)
+         assertInside(image, body)
++        assertTrue(
++            "The photo $image does not fill $body on either side",
++            kotlin.math.abs(image.width - body.width) <= 1f ||
++                kotlin.math.abs(image.height - body.height) <= 1f,
++        )
+     }
+ 
+     /**

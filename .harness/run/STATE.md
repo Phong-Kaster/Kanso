@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** The Verifier (Iteration 7) re-proved every `machine` criterion on fresh runs. It found three Proof clauses that no test or search satisfies yet: DoD 29's `reference/` search hits a comment, DoD 2 is proved by `primary` only, and DoD 4's fill check skips the gradient photo. They are Phase 6 (T-019 to T-021, test files only).
+- **Stage:** Phase 6 (Iteration 8) closed the three Proof clauses the Verifier of Iteration 7 found unmet: DoD 29's `reference/` search prints nothing (T-019), a tapped colour row is proved by the choice's seven-role scheme (T-020), and the 600x400 photo is proved to fill its area (T-021). Test files only. The whole set is green (`evidence/p8-full-2.log`). The Verifier runs next.
 - **Loop Branch:** loop/kanso-m3-expressive-blue (started from `76522d7`)
-- **Next Phase:** 6: T-019 (Fast), T-020 (Capable), T-021 (Fast). Three disjoint test files; then one fresh whole run.
+- **Next Phase:** none. The next invocation is the Verifier (PARTIAL-candidate below): it re-proves every `machine` criterion fresh, drives what it can, and writes the "Awaiting a person, Run 6" items.
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** no (cleared by the Verifier of Iteration 7). Record it again once Phase 6 is green: criteria 13, 20, 21 and 30 still await a signature, and criterion 14 is assumed (A-015).
+- **PARTIAL-candidate:** yes (recorded by Iteration 8). Nothing executable remains; criteria 13, 20, 21 and 30 await a signature and criterion 14 is assumed (A-015), so the run cannot be `DONE`.
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -34,9 +34,9 @@
 | T-016 | complete | new `navigation/PredictiveBackGestureTest.kt` (+ two KDoc passages) | same run; 3 tests |
 | T-017 | complete | new `navigation/PredictiveBackOpacityTest.kt`, the commit test of `PredictiveBackGestureTest.kt` | same run; the mutation (fade-out put back) fails exactly this test: `evidence/p5-mutation-fadeout.log` |
 | T-018 | complete | `AccessRefusedPanel.kt`, `KansoTheme.kt`, `PermissionGate.kt` | same run; pictures 12-15 unchanged |
-| T-019 | pending (Phase 6) | `OneTypePerFileTest.kt` (one KDoc sentence) | - |
-| T-020 | pending (Phase 6) | `settings/ThemeSwatchTest.kt` (`choose`) | - |
-| T-021 | pending (Phase 6) | `tool/ToolScreenTest.kt` (the gradient layout test) | - |
+| T-019 | complete | `OneTypePerFileTest.kt` (one KDoc sentence) | `evidence/p8-full-2.log`; the `reference/` search prints nothing |
+| T-020 | complete | `settings/ThemeSwatchTest.kt` (`choose`) | same run; 4 of 4 green |
+| T-021 | complete | `tool/ToolScreenTest.kt` (the gradient layout test) | same run; 13 of 13 green |
 
 ## Signed off
 

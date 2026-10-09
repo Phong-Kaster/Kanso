@@ -7,20 +7,12 @@
 > this file is the one that is wrong: correct it and trust the source. Recovery from a dirty tree
 > always reads ground truth, never this.
 
-- **Stage:** The Verifier (Iteration 7) re-proved every `machine` criterion on fresh runs of `1e82f8d` and found three Proof clauses still unmet, so it filed **Phase 6**. The PARTIAL-candidate flag is cleared. Per criterion: `evidence/p7-verifier.md`. Loop Branch `loop/kanso-m3-expressive-blue`, base `76522d7`. D-001 is answered; nothing is queued.
-- **Next Phase: 6.** Three test files, pairwise disjoint, with no app code and no picture:
-  - **T-019 (Fast)** writes only `app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt`: reword the KDoc sentence at :394 so `git grep -n 'reference/' -- settings.gradle.kts app` prints nothing. `ALLOWED` stays `emptySet()`.
-  - **T-020 (Capable)** writes only `app/src/test/java/com/phongkaster/kanso/settings/ThemeSwatchTest.kt`: `choose` waits for and asserts seven roles of the chosen scheme (`primary`, `onPrimary`, `primaryContainer`, `secondary`, `tertiary`, `background`, `surface`), not `primary` alone. The expected schemes, in light mode:
-    - blue: `seedColorScheme(KANSO_BLUE_SEED, false)`
-    - wallpaper: `dynamicLightColorScheme(context)`, as `KansoTheme.kt:183` makes it
-    - custom: `seedColorScheme(seed, false)`
-  - **T-021 (Fast)** writes only `app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt`: add the fill assertion (same as :162-166) to `the_photo_the_panel_and_the_toolbar_stack_from_top_to_bottom`, and update its KDoc.
-  - **The Iteration writes itself:** `.harness/run/evidence/test-edits.md`.
-    - A new row for `OneTypePerFileTest.kt`: `M`, comment only, for DoD 29 and CLAUDE.md's `reference/` rule.
-    - A line added to the `ToolScreenTest.kt` row.
-    - `ThemeSwatchTest.kt` is `A` and needs no row.
-  - **Then:** one fresh whole run, a fresh-context review, and the checkpoint. If green, record the **PARTIAL-candidate** again, so the next invocation is the Verifier.
+- **Stage:** Phase 6 (Iteration 8) is built and checked: T-019, T-020 and T-021 are complete, and one fresh whole run of the finished tree is green (`evidence/p8-full-2.log`: exit 0 in 3 min 6 s, 368 tests with 0 failed, 0 errors and 0 skipped, `verifyRoborazziDebug` 24 of 24 unchanged, lint 0 errors, 54 warnings, 2 hints, the debug APK built). The **PARTIAL-candidate** is recorded again, so **the next invocation is the Verifier** (Capable). Loop Branch `loop/kanso-m3-expressive-blue`, base `76522d7`. D-001 is answered; nothing is queued.
+- **Next Phase:** none. Nothing executable remains.
+  - What Phase 6 changed (test files only, no app code, no picture): the `reference/` text left a KDoc sentence in `OneTypePerFileTest.kt` (DoD 29's search prints nothing); `ThemeSwatchTest.choose` waits for and asserts seven roles of the chosen scheme (DoD 2); the gradient layout test in `ToolScreenTest.kt` asserts the photo fills its area on one side (DoD 4).
+  - `evidence/test-edits.md` has the Phase 6 row and the `ToolScreenTest.kt` line. `evidence/p8-diff.patch` is the diff the reviewer read.
 - **For the next Verifier:**
+  - First re-prove the three clauses Phase 6 closed, from the Proof's own words: DoD 29 (`git grep -n 'reference/' -- settings.gradle.kts app` prints nothing; `ALLOWED` is `emptySet()`), DoD 2 (read `ThemeSwatchTest.choose`: seven roles for each of the three choices it taps), DoD 4 (the gradient test asserts the fill on the 600x400 photo). Then audit whether any other Proof clause is looser than its test, as Iteration 7's audit did.
   - Re-run every proof. Files are already on disk, but re-run them, never trust them: the `p7-*` logs, `expressive-scan.md`, `fixed-colours.md`, `head-*.txt`, `baseline-diffs/before` and `after`, `symbols/check.sh`.
   - The test-name awk is in `p7-verifier.md` (criterion 25); it reproduces `base-testnames.txt` exactly. After Phase 6, `head-testnames.txt` is unchanged unless a test is renamed.
   - Drive criteria 13, 20, 21 and 30 with `foreman-device.ps1` only when `-Op focus` names Kanso. The owner's phone `R58W1120QVA` was in use at both of Iteration 7's checks; if a person is using it, write "not driven".

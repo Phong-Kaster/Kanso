@@ -69,3 +69,9 @@
   - `TouchTargetCheck` also counts `node.size`.
   - The Settings icon check accepts any node that has no description.
   - "Inside the column" accepts any scrollable ancestor.
+
+### Iteration 8 - 2026-10-10 - Tier 1: the review of Phase 6 sends T-020 back for one more attempt (no PRD, DoD or architecture change)
+
+- **Why:** the fresh-context review (Capable) found nothing blocking, and one point that touches a Proof clause. `ThemeSwatchTest.choose` waited up to 10 s for the settings file and then up to another 10 s for the scheme, so a tap could take about 20 s to recolour the app and still pass, while DoD 2's Proof says "within 10 s of real time". The wait order is older than this run's edit (T-020 had told the Worker to keep both waits), but the Proof's words are literal, so the gap is closed now instead of waiting for the Verifier to find it.
+- **T-020, attempt 2 (Capable):** one real-time deadline of 10 s taken at the tap and shared by both waits; the KDoc of `choose` no longer says "the whole scheme" (it compares seven of roughly 36 roles) and no longer names the dark scheme as an example. Same file, same scope.
+- **Recorded, not a task:** `rolesOf` in `ThemeSwatchTest.kt` repeats the same seven-role list as `KansoBlueThemeTest.kt`. Sharing one function would need a new test-support file and an edit to `KansoBlueThemeTest.kt`, which no Proof asks for (listed in `ISSUES.md`).
