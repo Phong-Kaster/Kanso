@@ -153,9 +153,10 @@ for a person.
   - criterion 7 needs a "nothing moved" signature;
   - A-007, the namespaces given to four engine wrapper modules, needs the owner's agreement.
 - **Open, in Foreman rather than here:**
-  - the branch `loop/device-shade-and-verifier-tier` holds two commits that are not pushed:
-    `eccf05f` (the device wrapper refuses a dump of the notification shade) and `b3b6798` (the
-    Verifier runs at Capable for a PARTIAL-candidate);
+  - ~~two unpushed commits on `loop/device-shade-and-verifier-tier`~~ — **closed 2026-10-09:**
+    merged into Foreman's `main` as `8b6ec1e` (Phong-Kaster/Foreman#12, squash), and the branch is
+    deleted. The device wrapper refuses a dump of the notification shade, and the Verifier runs at
+    Capable for a PARTIAL-candidate. Kanso's `.harness/loop/` already carries this runtime (`76ecb97`);
   - the runtime's log names a quota window `'rejected'` where the CLI's event says `five_hour`;
   - a Run 4 engine transcript that still holds the shade dump is waiting for the owner's decision on
     deleting it.
