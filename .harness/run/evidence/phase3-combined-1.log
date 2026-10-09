@@ -1,0 +1,684 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:cleanTestDebugUnitTest
+> Task :opencv:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:colorpicker:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:common:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:editimage:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:gallery:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:imagecrop:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:imageprocessor:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:localml:cleanTestDebugUnitTest UP-TO-DATE
+> Task :core:overlaybrush:cleanTestDebugUnitTest UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preDebugBuild UP-TO-DATE
+> Task :opencv:processDebugNavigationResources UP-TO-DATE
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preDebugBuild UP-TO-DATE
+> Task :core:editimage:processDebugNavigationResources UP-TO-DATE
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preDebugBuild UP-TO-DATE
+> Task :core:gallery:processDebugNavigationResources UP-TO-DATE
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preDebugBuild UP-TO-DATE
+> Task :core:imagecrop:processDebugNavigationResources UP-TO-DATE
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:processDebugNavigationResources UP-TO-DATE
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preDebugBuild UP-TO-DATE
+> Task :core:localml:generateDebugEmptyResourceFiles UP-TO-DATE
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preDebugBuild UP-TO-DATE
+> Task :core:overlaybrush:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :opencv:generateDebugBuildConfig UP-TO-DATE
+> Task :opencv:generateDebugResources UP-TO-DATE
+> Task :opencv:packageDebugResources UP-TO-DATE
+> Task :opencv:parseDebugLocalResources UP-TO-DATE
+> Task :opencv:generateDebugRFile UP-TO-DATE
+> Task :opencv:compileDebugKotlin UP-TO-DATE
+> Task :opencv:javaPreCompileDebug UP-TO-DATE
+> Task :opencv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :opencv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:colorpicker:generateDebugResources UP-TO-DATE
+> Task :core:colorpicker:packageDebugResources UP-TO-DATE
+> Task :core:colorpicker:parseDebugLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateDebugRFile UP-TO-DATE
+> Task :core:colorpicker:compileDebugKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebug UP-TO-DATE
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:common:generateDebugResources UP-TO-DATE
+> Task :core:common:packageDebugResources UP-TO-DATE
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+> Task :core:common:generateDebugRFile UP-TO-DATE
+> Task :core:common:compileDebugKotlin UP-TO-DATE
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:generateDebugResources UP-TO-DATE
+> Task :core:editimage:packageDebugResources UP-TO-DATE
+> Task :core:editimage:parseDebugLocalResources UP-TO-DATE
+> Task :core:editimage:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:generateDebugResources UP-TO-DATE
+> Task :core:imageprocessor:packageDebugResources UP-TO-DATE
+> Task :core:imageprocessor:parseDebugLocalResources UP-TO-DATE
+> Task :core:imageprocessor:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:compileDebugKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileDebug UP-TO-DATE
+> Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:compileDebugKotlin NO-SOURCE
+> Task :core:editimage:javaPreCompileDebug UP-TO-DATE
+> Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:gallery:generateDebugResources UP-TO-DATE
+> Task :core:gallery:packageDebugResources UP-TO-DATE
+> Task :core:gallery:parseDebugLocalResources UP-TO-DATE
+> Task :core:gallery:generateDebugRFile UP-TO-DATE
+> Task :core:gallery:compileDebugKotlin UP-TO-DATE
+> Task :core:gallery:javaPreCompileDebug UP-TO-DATE
+> Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:imagecrop:generateDebugResources UP-TO-DATE
+> Task :core:imagecrop:packageDebugResources UP-TO-DATE
+> Task :core:imagecrop:parseDebugLocalResources UP-TO-DATE
+> Task :core:imagecrop:generateDebugRFile UP-TO-DATE
+> Task :core:imagecrop:compileDebugKotlin UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileDebug UP-TO-DATE
+> Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:localml:mergeDebugMlModels UP-TO-DATE
+> Task :core:localml:generateDebugMlModelClass UP-TO-DATE
+> Task :core:localml:compileDebugKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileDebug UP-TO-DATE
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:localml:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:overlaybrush:generateDebugResources UP-TO-DATE
+> Task :core:overlaybrush:packageDebugResources UP-TO-DATE
+> Task :core:overlaybrush:parseDebugLocalResources UP-TO-DATE
+> Task :core:overlaybrush:generateDebugRFile UP-TO-DATE
+> Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
+> Task :core:overlaybrush:javaPreCompileDebug UP-TO-DATE
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :opencv:writeDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
+> Task :core:common:writeDebugAarMetadata UP-TO-DATE
+> Task :core:editimage:writeDebugAarMetadata UP-TO-DATE
+> Task :core:gallery:writeDebugAarMetadata UP-TO-DATE
+> Task :core:imagecrop:writeDebugAarMetadata UP-TO-DATE
+> Task :core:imageprocessor:writeDebugAarMetadata UP-TO-DATE
+> Task :core:localml:writeDebugAarMetadata UP-TO-DATE
+> Task :core:overlaybrush:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :opencv:extractDeepLinksDebug UP-TO-DATE
+> Task :opencv:processDebugManifest UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksDebug UP-TO-DATE
+> Task :core:colorpicker:processDebugManifest UP-TO-DATE
+> Task :core:common:extractDeepLinksDebug UP-TO-DATE
+> Task :core:common:processDebugManifest UP-TO-DATE
+> Task :core:editimage:extractDeepLinksDebug UP-TO-DATE
+> Task :core:editimage:processDebugManifest UP-TO-DATE
+> Task :core:gallery:extractDeepLinksDebug UP-TO-DATE
+> Task :core:gallery:processDebugManifest UP-TO-DATE
+> Task :core:imagecrop:extractDeepLinksDebug UP-TO-DATE
+> Task :core:imagecrop:processDebugManifest UP-TO-DATE
+> Task :core:imageprocessor:extractDeepLinksDebug UP-TO-DATE
+> Task :core:imageprocessor:processDebugManifest UP-TO-DATE
+> Task :core:localml:processDebugManifest UP-TO-DATE
+> Task :core:overlaybrush:extractDeepLinksDebug UP-TO-DATE
+> Task :core:overlaybrush:processDebugManifest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :opencv:mapDebugSourceSetPaths UP-TO-DATE
+> Task :opencv:compileDebugLibraryResources UP-TO-DATE
+> Task :core:colorpicker:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:colorpicker:compileDebugLibraryResources UP-TO-DATE
+> Task :core:common:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:common:compileDebugLibraryResources UP-TO-DATE
+> Task :core:editimage:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:editimage:compileDebugLibraryResources UP-TO-DATE
+> Task :core:gallery:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:gallery:compileDebugLibraryResources UP-TO-DATE
+> Task :core:imagecrop:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:imagecrop:compileDebugLibraryResources UP-TO-DATE
+> Task :core:imageprocessor:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:imageprocessor:compileDebugLibraryResources UP-TO-DATE
+> Task :core:overlaybrush:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:overlaybrush:compileDebugLibraryResources UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :opencv:generateDebugAssets UP-TO-DATE
+> Task :opencv:mergeDebugAssets UP-TO-DATE
+> Task :core:colorpicker:generateDebugAssets UP-TO-DATE
+> Task :core:colorpicker:mergeDebugAssets UP-TO-DATE
+> Task :core:common:generateDebugAssets UP-TO-DATE
+> Task :core:common:mergeDebugAssets UP-TO-DATE
+> Task :core:editimage:generateDebugAssets UP-TO-DATE
+> Task :core:editimage:mergeDebugAssets UP-TO-DATE
+> Task :core:gallery:generateDebugAssets UP-TO-DATE
+> Task :core:gallery:mergeDebugAssets UP-TO-DATE
+> Task :core:imagecrop:generateDebugAssets UP-TO-DATE
+> Task :core:imagecrop:mergeDebugAssets UP-TO-DATE
+> Task :core:imageprocessor:generateDebugAssets UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugAssets UP-TO-DATE
+> Task :core:localml:generateDebugAssets UP-TO-DATE
+> Task :core:localml:mergeDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:generateDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:mergeDebugUnitTestManifest UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :opencv:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :opencv:processDebugJavaRes UP-TO-DATE
+> Task :core:colorpicker:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:colorpicker:processDebugJavaRes UP-TO-DATE
+> Task :core:common:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:common:processDebugJavaRes UP-TO-DATE
+> Task :core:editimage:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:editimage:processDebugJavaRes NO-SOURCE
+> Task :core:gallery:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:gallery:processDebugJavaRes UP-TO-DATE
+> Task :core:imagecrop:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:imagecrop:processDebugJavaRes UP-TO-DATE
+> Task :core:imageprocessor:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:imageprocessor:processDebugJavaRes NO-SOURCE
+> Task :core:localml:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:localml:processDebugJavaRes NO-SOURCE
+> Task :core:overlaybrush:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:overlaybrush:processDebugJavaRes NO-SOURCE
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.robolectric.nativeruntime.DefaultNativeRuntimeLoader in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :app:testDebugUnitTest
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: Please consider reporting this to the maintainers of class androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.robolectric.nativeruntime.DefaultNativeRuntimeLoader in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: Please consider reporting this to the maintainers of class androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
+WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
+Exception in thread "DefaultDispatcher-worker-1 @coroutine#961" Exception in thread "DefaultDispatcher-worker-1 @coroutine#962" Exception in thread "DefaultDispatcher-worker-1 @coroutine#1218" 
+> Task :app:finalizeTestRoborazziDebug
+> Task :opencv:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugUnitTestBuild UP-TO-DATE
+> Task :opencv:javaPreCompileDebugUnitTest
+> Task :opencv:generateDebugUnitTestStubRFile
+> Task :opencv:compileDebugUnitTestKotlin NO-SOURCE
+> Task :opencv:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :opencv:processDebugUnitTestJavaRes NO-SOURCE
+> Task :opencv:testDebugUnitTest NO-SOURCE
+> Task :core:common:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebugUnitTest
+> Task :core:colorpicker:generateDebugUnitTestStubRFile
+> Task :core:common:generateDebugUnitTestStubRFile
+> Task :core:editimage:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:common:javaPreCompileDebugUnitTest
+> Task :core:gallery:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:editimage:javaPreCompileDebugUnitTest
+> Task :core:imagecrop:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:gallery:javaPreCompileDebugUnitTest
+> Task :core:editimage:generateDebugUnitTestStubRFile
+> Task :core:gallery:generateDebugUnitTestStubRFile
+> Task :core:editimage:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:editimage:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:editimage:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:editimage:testDebugUnitTest NO-SOURCE
+> Task :core:gallery:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:gallery:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:gallery:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:gallery:testDebugUnitTest NO-SOURCE
+> Task :core:imageprocessor:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileDebugUnitTest
+> Task :core:imagecrop:generateDebugUnitTestStubRFile
+> Task :core:colorpicker:compileDebugUnitTestKotlin
+> Task :core:colorpicker:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:processDebugUnitTestJavaRes
+> Task :core:common:compileDebugUnitTestKotlin
+> Task :core:imageprocessor:generateDebugUnitTestStubRFile
+> Task :core:colorpicker:testDebugUnitTest
+> Task :core:common:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:common:processDebugUnitTestJavaRes
+> Task :core:common:testDebugUnitTest
+> Task :core:imageprocessor:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileDebugUnitTest
+> Task :core:imageprocessor:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:imageprocessor:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:testDebugUnitTest NO-SOURCE
+> Task :core:localml:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:localml:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileDebugUnitTest
+> Task :core:localml:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:localml:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:localml:testDebugUnitTest NO-SOURCE
+> Task :core:overlaybrush:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:verifyRoborazziDebug
+> Task :core:overlaybrush:javaPreCompileDebugUnitTest
+> Task :core:common:checkDebugAarMetadata
+> Task :core:overlaybrush:generateDebugUnitTestStubRFile
+> Task :core:common:extractDebugAnnotations
+> Task :core:overlaybrush:compileDebugUnitTestKotlin NO-SOURCE
+> Task :core:overlaybrush:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:processDebugUnitTestJavaRes NO-SOURCE
+> Task :core:overlaybrush:testDebugUnitTest NO-SOURCE
+> Task :core:common:extractDeepLinksForAarDebug
+> Task :core:common:mergeDebugGeneratedProguardFiles
+> Task :core:common:mergeDebugConsumerProguardFiles
+> Task :core:common:prepareDebugArtProfile
+> Task :core:common:prepareLintJarForPublish
+> Task :core:colorpicker:checkDebugAarMetadata
+> Task :core:colorpicker:extractDebugAnnotations
+> Task :core:colorpicker:extractDeepLinksForAarDebug
+> Task :core:colorpicker:mergeDebugGeneratedProguardFiles
+> Task :core:colorpicker:mergeDebugConsumerProguardFiles
+> Task :core:colorpicker:prepareDebugArtProfile
+> Task :core:colorpicker:prepareLintJarForPublish
+> Task :core:editimage:checkDebugAarMetadata
+> Task :core:editimage:extractDebugAnnotations
+> Task :core:editimage:extractDeepLinksForAarDebug
+> Task :core:editimage:mergeDebugGeneratedProguardFiles
+> Task :core:editimage:mergeDebugConsumerProguardFiles
+> Task :core:colorpicker:mergeDebugJavaResource
+> Task :core:editimage:prepareDebugArtProfile
+> Task :core:common:mergeDebugJavaResource
+> Task :core:colorpicker:syncDebugLibJars
+> Task :core:common:syncDebugLibJars
+> Task :core:common:bundleDebugLocalLintAar
+> Task :core:colorpicker:bundleDebugLocalLintAar
+> Task :core:editimage:prepareLintJarForPublish
+> Task :core:editimage:mergeDebugJavaResource
+> Task :core:editimage:syncDebugLibJars
+> Task :core:editimage:bundleDebugLocalLintAar
+> Task :core:gallery:checkDebugAarMetadata
+> Task :core:gallery:extractDebugAnnotations
+> Task :core:gallery:extractDeepLinksForAarDebug
+> Task :core:gallery:mergeDebugGeneratedProguardFiles
+> Task :core:gallery:mergeDebugConsumerProguardFiles
+> Task :core:gallery:prepareDebugArtProfile
+> Task :core:gallery:prepareLintJarForPublish
+> Task :core:gallery:mergeDebugJavaResource
+
+> Task :core:imagecrop:compileDebugUnitTestKotlin
+w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups is enabled by default and specifying this option explicitly is not necessary.
+
+> Task :core:imagecrop:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:checkDebugAarMetadata
+> Task :core:imagecrop:processDebugUnitTestJavaRes
+> Task :core:imagecrop:testDebugUnitTest
+> Task :core:gallery:syncDebugLibJars
+> Task :core:gallery:bundleDebugLocalLintAar
+> Task :core:imagecrop:extractDebugAnnotations
+> Task :core:imagecrop:extractDeepLinksForAarDebug
+> Task :core:imagecrop:mergeDebugGeneratedProguardFiles
+> Task :core:imagecrop:mergeDebugConsumerProguardFiles
+> Task :core:imagecrop:prepareDebugArtProfile
+> Task :core:imagecrop:prepareLintJarForPublish
+> Task :core:imagecrop:mergeDebugJavaResource
+> Task :core:imageprocessor:checkDebugAarMetadata
+> Task :core:imagecrop:syncDebugLibJars
+> Task :core:imagecrop:bundleDebugLocalLintAar
+> Task :core:imageprocessor:extractDebugAnnotations
+> Task :core:imageprocessor:extractDeepLinksForAarDebug
+> Task :core:imageprocessor:mergeDebugGeneratedProguardFiles
+> Task :core:imageprocessor:mergeDebugConsumerProguardFiles
+> Task :core:imageprocessor:prepareDebugArtProfile
+> Task :core:imageprocessor:prepareLintJarForPublish
+> Task :core:imageprocessor:mergeDebugJavaResource
+> Task :core:imageprocessor:syncDebugLibJars
+> Task :core:localml:checkDebugAarMetadata
+> Task :core:imageprocessor:bundleDebugLocalLintAar
+> Task :core:localml:extractDebugAnnotations
+> Task :core:localml:mergeDebugGeneratedProguardFiles
+> Task :core:localml:mergeDebugConsumerProguardFiles
+> Task :core:localml:prepareDebugArtProfile
+> Task :core:localml:prepareLintJarForPublish
+> Task :core:localml:mergeDebugJavaResource
+> Task :core:localml:syncDebugLibJars
+> Task :core:overlaybrush:checkDebugAarMetadata
+> Task :core:localml:bundleDebugLocalLintAar
+> Task :core:overlaybrush:extractDebugAnnotations
+> Task :core:overlaybrush:extractDeepLinksForAarDebug
+> Task :core:overlaybrush:mergeDebugGeneratedProguardFiles
+> Task :core:overlaybrush:mergeDebugConsumerProguardFiles
+> Task :core:overlaybrush:prepareDebugArtProfile
+> Task :core:overlaybrush:prepareLintJarForPublish
+> Task :opencv:checkDebugAarMetadata
+> Task :core:overlaybrush:mergeDebugJavaResource
+> Task :opencv:extractDebugAnnotations
+> Task :core:overlaybrush:syncDebugLibJars
+> Task :core:overlaybrush:bundleDebugLocalLintAar
+> Task :opencv:extractDeepLinksForAarDebug
+> Task :opencv:mergeDebugGeneratedProguardFiles
+> Task :opencv:mergeDebugConsumerProguardFiles
+> Task :opencv:configureCMakeDebug[arm64-v8a]
+> Task :opencv:buildCMakeDebug[arm64-v8a][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[armeabi-v7a]
+> Task :opencv:buildCMakeDebug[armeabi-v7a][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[x86]
+> Task :opencv:buildCMakeDebug[x86][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[x86_64]
+> Task :opencv:buildCMakeDebug[x86_64][opencv_jni_shared]
+> Task :opencv:externalNativeBuildDebug
+> Task :opencv:generateJsonModelDebug
+> Task :opencv:prefabDebugConfigurePackage
+> Task :opencv:prefabDebugPackage
+> Task :opencv:prepareDebugArtProfile
+> Task :opencv:prepareLintJarForPublish
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :opencv:createFullJarDebug
+> Task :opencv:writeDebugLintModelMetadata
+> Task :opencv:mergeDebugJavaResource
+> Task :core:colorpicker:createFullJarDebug
+> Task :opencv:syncDebugLibJars
+> Task :opencv:bundleDebugLocalLintAar
+> Task :core:colorpicker:writeDebugLintModelMetadata
+> Task :core:common:createFullJarDebug
+> Task :core:common:writeDebugLintModelMetadata
+> Task :core:editimage:createFullJarDebug
+> Task :core:editimage:writeDebugLintModelMetadata
+> Task :core:gallery:createFullJarDebug
+> Task :core:gallery:writeDebugLintModelMetadata
+> Task :core:imagecrop:createFullJarDebug
+> Task :core:imagecrop:writeDebugLintModelMetadata
+> Task :core:imageprocessor:createFullJarDebug
+> Task :core:imageprocessor:writeDebugLintModelMetadata
+> Task :core:localml:createFullJarDebug
+> Task :core:localml:writeDebugLintModelMetadata
+> Task :core:overlaybrush:createFullJarDebug
+> Task :core:overlaybrush:writeDebugLintModelMetadata
+> Task :app:extractProguardFiles
+> Task :opencv:extractProguardFiles
+> Task :opencv:generateDebugLintModel
+> Task :app:generateDebugAndroidTestLintModel
+> Task :core:colorpicker:extractProguardFiles
+> Task :core:colorpicker:generateDebugLintModel
+> Task :core:common:extractProguardFiles
+> Task :core:common:generateDebugLintModel
+> Task :core:editimage:extractProguardFiles
+> Task :core:imageprocessor:extractProguardFiles
+> Task :core:imageprocessor:generateDebugLintModel
+> Task :core:editimage:generateDebugLintModel
+> Task :core:gallery:extractProguardFiles
+> Task :core:gallery:generateDebugLintModel
+> Task :core:imagecrop:extractProguardFiles
+> Task :core:imagecrop:generateDebugLintModel
+> Task :core:localml:extractProguardFiles
+> Task :core:localml:generateDebugLintModel
+> Task :core:overlaybrush:extractProguardFiles
+> Task :core:overlaybrush:generateDebugLintModel
+> Task :app:generateDebugLintReportModel
+> Task :app:generateDebugUnitTestLintModel
+> Task :opencv:preDebugAndroidTestBuild UP-TO-DATE
+> Task :opencv:generateDebugAndroidTestLintModel
+> Task :opencv:generateDebugUnitTestLintModel
+> Task :core:colorpicker:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:colorpicker:generateDebugAndroidTestLintModel
+> Task :core:colorpicker:generateDebugUnitTestLintModel
+> Task :core:common:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:common:generateDebugAndroidTestLintModel
+> Task :core:common:generateDebugUnitTestLintModel
+> Task :core:editimage:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:editimage:generateDebugAndroidTestLintModel
+> Task :core:editimage:generateDebugUnitTestLintModel
+> Task :core:gallery:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:gallery:generateDebugAndroidTestLintModel
+> Task :core:gallery:generateDebugUnitTestLintModel
+> Task :core:imagecrop:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:imagecrop:generateDebugAndroidTestLintModel
+> Task :core:imagecrop:generateDebugUnitTestLintModel
+> Task :core:imageprocessor:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:imageprocessor:generateDebugAndroidTestLintModel
+> Task :core:imageprocessor:generateDebugUnitTestLintModel
+> Task :core:localml:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:localml:generateDebugAndroidTestLintModel
+> Task :core:localml:generateDebugUnitTestLintModel
+> Task :core:overlaybrush:preDebugAndroidTestBuild UP-TO-DATE
+> Task :core:overlaybrush:generateDebugAndroidTestLintModel
+> Task :core:overlaybrush:generateDebugUnitTestLintModel
+> Task :opencv:generateDebugLintReportModel
+> Task :core:colorpicker:generateDebugLintReportModel
+> Task :core:common:generateDebugLintReportModel
+> Task :core:editimage:generateDebugLintReportModel
+> Task :core:gallery:generateDebugLintReportModel
+> Task :core:imagecrop:generateDebugLintReportModel
+> Task :core:imageprocessor:generateDebugLintReportModel
+> Task :core:localml:generateDebugLintReportModel
+> Task :core:overlaybrush:generateDebugLintReportModel
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :core:imageprocessor:lintAnalyzeDebug
+> Task :app:generateDebugGlobalSynthetics
+> Task :core:gallery:lintAnalyzeDebug
+> Task :app:compressDebugAssets
+> Task :core:colorpicker:lintAnalyzeDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:desugarDebugFileDependencies
+> Task :app:checkDebugDuplicateClasses
+> Task :core:editimage:bundleLibRuntimeToDirDebug
+> Task :core:localml:bundleLibRuntimeToDirDebug
+> Task :core:imagecrop:lintAnalyzeDebug
+> Task :opencv:lintAnalyzeDebug
+> Task :app:lintAnalyzeDebugAndroidTest
+> Task :app:lintAnalyzeDebugUnitTest
+> Task :core:common:lintAnalyzeDebug
+> Task :opencv:lintAnalyzeDebugAndroidTest
+> Task :app:mergeExtDexDebug
+> Task :core:overlaybrush:bundleLibRuntimeToDirDebug
+> Task :core:colorpicker:bundleLibRuntimeToDirDebug
+> Task :core:gallery:bundleLibRuntimeToDirDebug
+> Task :core:imageprocessor:bundleLibRuntimeToDirDebug
+> Task :core:common:bundleLibRuntimeToDirDebug
+> Task :opencv:bundleLibRuntimeToDirDebug
+> Task :core:imagecrop:bundleLibRuntimeToDirDebug
+> Task :opencv:lintAnalyzeDebugUnitTest
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :core:editimage:lintAnalyzeDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeLibDexDebug
+> Task :core:localml:lintAnalyzeDebug
+> Task :core:overlaybrush:lintAnalyzeDebug
+> Task :core:colorpicker:lintAnalyzeDebugUnitTest
+> Task :core:colorpicker:lintAnalyzeDebugAndroidTest
+> Task :opencv:mergeDebugJniLibFolders
+> Task :core:colorpicker:mergeDebugJniLibFolders
+> Task :core:colorpicker:mergeDebugNativeLibs NO-SOURCE
+> Task :core:colorpicker:copyDebugJniLibsProjectOnly
+> Task :core:common:mergeDebugJniLibFolders
+> Task :core:common:mergeDebugNativeLibs NO-SOURCE
+> Task :core:common:copyDebugJniLibsProjectOnly
+> Task :core:editimage:mergeDebugJniLibFolders
+> Task :core:editimage:mergeDebugNativeLibs NO-SOURCE
+> Task :core:editimage:copyDebugJniLibsProjectOnly
+> Task :core:gallery:mergeDebugJniLibFolders
+> Task :core:gallery:mergeDebugNativeLibs NO-SOURCE
+> Task :core:gallery:copyDebugJniLibsProjectOnly
+> Task :core:imagecrop:mergeDebugJniLibFolders
+> Task :core:imagecrop:mergeDebugNativeLibs NO-SOURCE
+> Task :core:imagecrop:copyDebugJniLibsProjectOnly
+> Task :core:imageprocessor:mergeDebugJniLibFolders
+> Task :core:imageprocessor:mergeDebugNativeLibs NO-SOURCE
+> Task :core:imageprocessor:copyDebugJniLibsProjectOnly
+> Task :core:localml:mergeDebugJniLibFolders
+> Task :core:localml:mergeDebugNativeLibs NO-SOURCE
+> Task :core:localml:copyDebugJniLibsProjectOnly
+> Task :core:overlaybrush:mergeDebugJniLibFolders
+> Task :core:overlaybrush:mergeDebugNativeLibs NO-SOURCE
+> Task :core:overlaybrush:copyDebugJniLibsProjectOnly
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :core:colorpicker:stripDebugDebugSymbols NO-SOURCE
+> Task :core:colorpicker:copyDebugJniLibsProjectAndLocalJars
+> Task :core:common:stripDebugDebugSymbols NO-SOURCE
+> Task :core:colorpicker:bundleDebugAar
+> Task :core:colorpicker:assembleDebug
+> Task :core:editimage:stripDebugDebugSymbols NO-SOURCE
+> Task :core:common:copyDebugJniLibsProjectAndLocalJars
+> Task :core:editimage:copyDebugJniLibsProjectAndLocalJars
+> Task :core:common:bundleDebugAar
+> Task :core:common:assembleDebug
+> Task :core:editimage:bundleDebugAar
+> Task :core:editimage:assembleDebug
+> Task :core:gallery:stripDebugDebugSymbols NO-SOURCE
+> Task :core:gallery:copyDebugJniLibsProjectAndLocalJars
+> Task :core:imagecrop:stripDebugDebugSymbols NO-SOURCE
+> Task :core:gallery:bundleDebugAar
+> Task :core:gallery:assembleDebug
+> Task :core:imageprocessor:stripDebugDebugSymbols NO-SOURCE
+> Task :core:imagecrop:copyDebugJniLibsProjectAndLocalJars
+> Task :core:imagecrop:bundleDebugAar
+> Task :core:imagecrop:assembleDebug
+> Task :core:localml:stripDebugDebugSymbols NO-SOURCE
+> Task :core:imageprocessor:copyDebugJniLibsProjectAndLocalJars
+> Task :core:localml:copyDebugJniLibsProjectAndLocalJars
+> Task :core:imageprocessor:bundleDebugAar
+> Task :core:imageprocessor:assembleDebug
+> Task :core:localml:bundleDebugAar
+> Task :core:localml:assembleDebug
+> Task :core:overlaybrush:stripDebugDebugSymbols NO-SOURCE
+> Task :core:overlaybrush:copyDebugJniLibsProjectAndLocalJars
+> Task :opencv:mergeDebugNativeLibs
+> Task :core:overlaybrush:bundleDebugAar
+> Task :core:overlaybrush:assembleDebug
+> Task :core:gallery:lintAnalyzeDebugAndroidTest
+> Task :opencv:stripDebugDebugSymbols
+> Task :opencv:copyDebugJniLibsProjectOnly
+> Task :core:editimage:lintAnalyzeDebugUnitTest
+> Task :opencv:copyDebugJniLibsProjectAndLocalJars
+> Task :core:editimage:lintAnalyzeDebugAndroidTest
+> Task :core:gallery:lintAnalyzeDebugUnitTest
+> Task :core:imageprocessor:lintAnalyzeDebugAndroidTest
+> Task :app:mergeDebugNativeLibs
+> Task :core:imagecrop:lintAnalyzeDebugUnitTest
+> Task :core:imagecrop:lintAnalyzeDebugAndroidTest
+> Task :opencv:bundleDebugAar
+> Task :opencv:assembleDebug
+> Task :core:localml:lintAnalyzeDebugAndroidTest
+> Task :core:localml:lintAnalyzeDebugUnitTest
+> Task :core:imageprocessor:lintAnalyzeDebugUnitTest
+
+> Task :opencv:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/opencv/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/opencv/build/reports/lint-results-debug.sarif
+
+> Task :opencv:lintDebug
+> Task :app:stripDebugDebugSymbols
+
+> Task :core:colorpicker:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/colorpicker/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/colorpicker/build/reports/lint-results-debug.sarif
+
+> Task :core:colorpicker:lintDebug
+
+> Task :core:gallery:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/gallery/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/gallery/build/reports/lint-results-debug.sarif
+
+> Task :core:gallery:lintDebug
+
+> Task :core:imagecrop:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/imagecrop/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/imagecrop/build/reports/lint-results-debug.sarif
+
+> Task :core:imagecrop:lintDebug
+
+> Task :core:imageprocessor:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/imageprocessor/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/imageprocessor/build/reports/lint-results-debug.sarif
+
+> Task :core:imageprocessor:lintDebug
+> Task :core:overlaybrush:lintAnalyzeDebugAndroidTest
+> Task :core:overlaybrush:lintAnalyzeDebugUnitTest
+> Task :core:common:lintAnalyzeDebugAndroidTest
+> Task :core:common:lintAnalyzeDebugUnitTest
+
+> Task :core:editimage:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/editimage/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/editimage/build/reports/lint-results-debug.sarif
+
+> Task :core:editimage:lintDebug
+
+> Task :core:common:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/common/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/common/build/reports/lint-results-debug.sarif
+
+> Task :core:common:lintDebug
+
+> Task :core:overlaybrush:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/overlaybrush/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/overlaybrush/build/reports/lint-results-debug.sarif
+
+> Task :core:overlaybrush:lintDebug
+
+> Task :core:localml:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/core/localml/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/core/localml/build/reports/lint-results-debug.sarif
+
+> Task :core:localml:lintDebug
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+> Task :app:lintAnalyzeDebug
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///D:/Valve/Personal/Kanso/app/build/reports/lint-results-debug.html
+Wrote SARIF report to file:///D:/Valve/Personal/Kanso/app/build/reports/lint-results-debug.sarif
+
+> Task :app:lintDebug
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 5m 29s
+480 actionable tasks: 310 executed, 170 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

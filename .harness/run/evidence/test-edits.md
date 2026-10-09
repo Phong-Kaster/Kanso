@@ -15,3 +15,9 @@ and none edited because an edit is not forced and the guard tests are the Defini
   `ThemeColourLabelsTest.kt:74`. Six of those files are guard tests of criterion 17: if a later Kotlin
   turns this warning into an error they stop compiling, and the fix is a null-safe argument there.
 - 1 "Unnecessary non-null assertion" warning at `KansoThemeColourTest.kt:102`, new with Kotlin 2.4.21.
+
+Phase 3 (Material3 1.5.0-beta01): still no existing file under `app/src/test` was edited; the 231 tests compiled and passed unchanged
+(`evidence/phase3-combined-1.log`: 238 tests, the 231 plus the 7 new ones). One **new** file was added, not an edit:
+`app/src/test/java/com/phongkaster/kanso/ExpressiveApiTest.kt` (7 tests; DoD 12). It adds names to the test list, removes none, and carries no `@Ignore`
+or assumption. Compiler output of Phase 3 adds one warning outside the tests, in app code: `HomeScreen.kt:116` `ListItem(headlineContent = ...)` is deprecated in
+Material3 1.5.0-beta01 (a warning, left as is; PROJECT.md records it for the next run).

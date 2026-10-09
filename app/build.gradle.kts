@@ -108,7 +108,10 @@ dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
-    implementation(libs.compose.material3)
+    // The Compose BOM above would give Material3 1.4.0; the app asks for the newer one itself, so the
+    // Expressive components of 1.5.0-beta01 are available. Only the app does: the engine modules keep
+    // the older entry.
+    implementation(libs.compose.material3.app)
     // @Preview and @PreviewLightDark: the annotations that make a composable show up in Android
     // Studio's preview pane. Light enough to ship, because the annotations are not used at run time.
     implementation(libs.compose.ui.tooling.preview)

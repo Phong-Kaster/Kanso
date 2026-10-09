@@ -1,0 +1,304 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 1ea243d..dfd3117 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -108,7 +108,10 @@ dependencies {
+     implementation(platform(libs.compose.bom))
+     implementation(libs.compose.ui)
+     implementation(libs.compose.foundation)
+-    implementation(libs.compose.material3)
++    // The Compose BOM above would give Material3 1.4.0; the app asks for the newer one itself, so the
++    // Expressive components of 1.5.0-beta01 are available. Only the app does: the engine modules keep
++    // the older entry.
++    implementation(libs.compose.material3.app)
+     // @Preview and @PreviewLightDark: the annotations that make a composable show up in Android
+     // Studio's preview pane. Light enough to ship, because the annotations are not used at run time.
+     implementation(libs.compose.ui.tooling.preview)
+diff --git a/app/src/test/java/com/phongkaster/kanso/ExpressiveApiTest.kt b/app/src/test/java/com/phongkaster/kanso/ExpressiveApiTest.kt
+new file mode 100644
+index 0000000..f7e22ea
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/ExpressiveApiTest.kt
+@@ -0,0 +1,259 @@
++package com.phongkaster.kanso
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.ButtonGroup
++import androidx.compose.material3.CircularWavyProgressIndicator
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.HorizontalFloatingToolbar
++import androidx.compose.material3.LinearWavyProgressIndicator
++import androidx.compose.material3.LoadingIndicator
++import androidx.compose.material3.MaterialShapes
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.material3.toShape
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.test.assertIsDisplayed
++import androidx.compose.ui.test.junit4.createComposeRule
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.test.onNodeWithText
++import androidx.compose.ui.unit.dp
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.annotation.Config
++import org.robolectric.annotation.GraphicsMode
++
++/**
++ * Proves that the Material 3 Expressive components of Material3 1.5.0-beta01 compile in this app
++ * and really draw: a button group, a floating toolbar, a loading indicator, a shape from
++ * MaterialShapes and the two wavy progress indicators. Nothing in the app uses them yet (the new
++ * look comes in the next run), so this test is the evidence that the library is ready for it.
++ *
++ * Expressive is the newest style of Material 3: rounder shapes, springier motion and a few new
++ * components. Some of its parts are still marked experimental, and the library refuses to compile
++ * a call to them unless the caller opts in with ExperimentalMaterial3ExpressiveApi. The OptIn
++ * annotation on this class opts in once for everything inside it.
++ *
++ * Several of these components animate forever: the loading indicator morphs from shape to shape
++ * and the wavy indicators keep their wave moving. A Compose test normally waits until every
++ * animation has finished before it checks the screen, which here would never happen. So each test
++ * pauses the test clock before it shows anything, then moves the clock forward by hand.
++ */
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++@RunWith(AndroidJUnit4::class)
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++@Config(sdk = [35])
++class ExpressiveApiTest {
++
++    /** Hosts the composable under test in an empty activity. */
++    @get:Rule
++    val compose = createComposeRule()
++
++    /**
++     * A button group lays its buttons out in a row. This one holds two buttons, Edit and Share,
++     * and both labels are on screen. Its overflow indicator, the button that would open a menu
++     * of the buttons that do not fit, is left empty: two short buttons always fit.
++     */
++    @Test
++    fun button_group_shows_both_of_its_buttons() {
++        // Pause the clock so the test never waits for an animation to end; time moves by hand.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                // The trailing lambda lists the group's items; ButtonGroup builds a button for each.
++                ButtonGroup(overflowIndicator = { }) {
++                    clickableItem(onClick = { }, label = EDIT)
++                    clickableItem(onClick = { }, label = SHARE)
++                }
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithText(EDIT).assertIsDisplayed()
++        compose.onNodeWithText(SHARE).assertIsDisplayed()
++    }
++
++    /**
++     * A floating toolbar is a pill of actions that floats above the content. Expanded, it shows
++     * what it holds; here that is a single word, and the word is on screen.
++     */
++    @Test
++    fun floating_toolbar_shows_its_content() {
++        // Pause the clock so the test never waits for an animation to end; time moves by hand.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                HorizontalFloatingToolbar(expanded = true) {
++                    Text(TOOLBAR)
++                }
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithText(TOOLBAR).assertIsDisplayed()
++    }
++
++    /**
++     * The loading indicator, the Expressive replacement for a plain spinner, is on screen. With
++     * no progress given it is indeterminate: it morphs between shapes for as long as it is shown.
++     */
++    @Test
++    fun loading_indicator_is_displayed() {
++        // Pause the clock: this indicator animates forever, so waiting for it would never end.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                LoadingIndicator(modifier = Modifier.testTag(LOADING_TAG))
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithTag(LOADING_TAG).assertIsDisplayed()
++    }
++
++    /**
++     * A box clipped to one of the MaterialShapes is on screen. MaterialShapes holds the
++     * Expressive shape set (cookies, suns, pills and more) as polygons; toShape turns one into a
++     * Shape that clip can cut a box with.
++     */
++    @Test
++    fun material_shape_clips_a_box_that_is_displayed() {
++        // Pause the clock so the test never waits for an animation to end; time moves by hand.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                Box(
++                    Modifier
++                        .testTag(SHAPE_TAG)
++                        .size(48.dp)
++                        // A cookie with nine bumps: one of the shapes of the Expressive set.
++                        .clip(MaterialShapes.Cookie9Sided.toShape())
++                        .background(MaterialTheme.colorScheme.primary),
++                )
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithTag(SHAPE_TAG).assertIsDisplayed()
++    }
++
++    /**
++     * The linear wavy progress indicator, a progress bar whose filled part is a wave, is on
++     * screen at half progress. Progress is passed as a function, so the bar can read a changing
++     * value while it draws without the screen having to be composed again.
++     */
++    @Test
++    fun linear_wavy_progress_indicator_is_displayed() {
++        // Pause the clock: the wave keeps moving, so waiting for it to stop would never end.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                LinearWavyProgressIndicator(
++                    progress = { 0.5f },
++                    modifier = Modifier.testTag(LINEAR_WAVY_TAG),
++                )
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithTag(LINEAR_WAVY_TAG).assertIsDisplayed()
++    }
++
++    /** The circular wavy progress indicator, a ring drawn as a wave, is on screen at half progress. */
++    @Test
++    fun circular_wavy_progress_indicator_is_displayed() {
++        // Pause the clock: the wave keeps moving, so waiting for it to stop would never end.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                CircularWavyProgressIndicator(
++                    progress = { 0.5f },
++                    modifier = Modifier.testTag(CIRCULAR_WAVY_TAG),
++                )
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithTag(CIRCULAR_WAVY_TAG).assertIsDisplayed()
++    }
++
++    /**
++     * All the Expressive components shown together, stacked in one column: the button group,
++     * the floating toolbar, the loading indicator, the clipped shape and both wavy indicators are
++     * each on screen. This is the one place where every new name meets in a single screen.
++     */
++    @Test
++    fun all_expressive_components_draw_together() {
++        // Pause the clock: two of these animate forever, so waiting for them would never end.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            MaterialTheme {
++                // A Column stacks its children from top to bottom.
++                Column {
++                    ButtonGroup(overflowIndicator = { }) {
++                        clickableItem(onClick = { }, label = EDIT)
++                        clickableItem(onClick = { }, label = SHARE)
++                    }
++                    HorizontalFloatingToolbar(expanded = true) {
++                        Text(TOOLBAR)
++                    }
++                    LoadingIndicator(modifier = Modifier.testTag(LOADING_TAG))
++                    Box(
++                        Modifier
++                            .testTag(SHAPE_TAG)
++                            .size(48.dp)
++                            .clip(MaterialShapes.Cookie9Sided.toShape())
++                            .background(MaterialTheme.colorScheme.primary),
++                    )
++                    LinearWavyProgressIndicator(
++                        progress = { 0.5f },
++                        modifier = Modifier.testTag(LINEAR_WAVY_TAG),
++                    )
++                    CircularWavyProgressIndicator(
++                        progress = { 0.5f },
++                        modifier = Modifier.testTag(CIRCULAR_WAVY_TAG),
++                    )
++                }
++            }
++        }
++        compose.mainClock.advanceTimeBy(500)
++
++        compose.onNodeWithText(EDIT).assertIsDisplayed()
++        compose.onNodeWithText(SHARE).assertIsDisplayed()
++        compose.onNodeWithText(TOOLBAR).assertIsDisplayed()
++        compose.onNodeWithTag(LOADING_TAG).assertIsDisplayed()
++        compose.onNodeWithTag(SHAPE_TAG).assertIsDisplayed()
++        compose.onNodeWithTag(LINEAR_WAVY_TAG).assertIsDisplayed()
++        compose.onNodeWithTag(CIRCULAR_WAVY_TAG).assertIsDisplayed()
++    }
++
++    /** The labels and test tags the tests share. */
++    private companion object {
++        /** The first button of the button group. */
++        const val EDIT = "Edit"
++
++        /** The second button of the button group. */
++        const val SHARE = "Share"
++
++        /** The word shown inside the floating toolbar. */
++        const val TOOLBAR = "Toolbar"
++
++        /** Marks the loading indicator, which has no text to find it by. */
++        const val LOADING_TAG = "loading"
++
++        /** Marks the box clipped to a MaterialShapes shape. */
++        const val SHAPE_TAG = "shape"
++
++        /** Marks the linear wavy progress indicator. */
++        const val LINEAR_WAVY_TAG = "linearWavy"
++
++        /** Marks the circular wavy progress indicator. */
++        const val CIRCULAR_WAVY_TAG = "circularWavy"
++    }
++}
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index 06c0f19..6347dc9 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -12,6 +12,10 @@ composeUi = "1.8.2"
+ composeMaterialIcons = "1.7.8"
+ compose-bom = "2026.09.00"
+ compose-material3 = "1.3.2"
++# Above the Compose BOM on purpose: the stable BOMs (up to 2026.09.00) map Material3 to 1.4.0, and only the
++# beta BOM maps 1.5.0-beta01. Only the app uses this entry; the engine modules keep compose-material3 above,
++# because Material3 1.5.0-beta01 needs compileSdk 37 and they compile against 35 and 36.
++compose-material3-app = "1.5.0-beta01"
+ compose-shimmer = "1.3.2"
+ constraintlayout-compose = "1.1.1"
+ core-ktx = "1.16.0"
+@@ -98,6 +102,7 @@ compose-animation = { group = "androidx.compose.animation", name = "animation",
+ compose-viewbinding = { group = "androidx.compose.ui", name = "ui-viewbinding", version.ref = "composeUi" }
+ compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeMaterialIcons" }
+ compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "compose-material3" }
++compose-material3-app = { group = "androidx.compose.material3", name = "material3", version.ref = "compose-material3-app" }
+ compose-shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version.ref = "compose-shimmer" }
+ material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+ material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }

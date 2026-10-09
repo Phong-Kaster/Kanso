@@ -39,7 +39,7 @@ Option 1. It keeps the pre-release surface to the one library the PRD needs, add
 - **Tier:** Missing information (two sentences of the PRD pull in different directions)
 - **Iteration:** 1
 - **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
-- **Revert:** for Kotlin alone, set `kotlin = "2.3.20"` in `gradle/libs.versions.toml` (Phase 1 built and tested on it under AGP 9.4.1); the Gradle floor goes only with AGP itself, so `git revert d816bde` is sound for it only together with the later Phases, which need compileSdk 37 and Navigation 3 1.2.0
+- **Revert:** for Kotlin alone, set `kotlin = "2.3.20"` in `gradle/libs.versions.toml` (Phase 1 built and tested on it under AGP 9.4.1; the move to 2.4.21 is the Phase 2 checkpoint `58d6efb`, which changed only that catalog line among its four); the Gradle floor goes only with AGP itself, so `git revert d816bde` is sound for it only together with the later Phases, which need compileSdk 37 and Navigation 3 1.2.0
 - **Assumed DoD criteria:** none (DoD 9, R3)
 
 ### Question

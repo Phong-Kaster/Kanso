@@ -1,0 +1,623 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preDebugBuild UP-TO-DATE
+> Task :opencv:checkDebugAarMetadata UP-TO-DATE
+> Task :opencv:configureCMakeDebug[arm64-v8a]
+> Task :opencv:buildCMakeDebug[arm64-v8a][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[armeabi-v7a]
+> Task :opencv:buildCMakeDebug[armeabi-v7a][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[x86]
+> Task :opencv:buildCMakeDebug[x86][opencv_jni_shared]
+> Task :opencv:configureCMakeDebug[x86_64]
+> Task :opencv:buildCMakeDebug[x86_64][opencv_jni_shared]
+> Task :opencv:mergeDebugJniLibFolders UP-TO-DATE
+> Task :opencv:mergeDebugNativeLibs UP-TO-DATE
+> Task :opencv:stripDebugDebugSymbols UP-TO-DATE
+> Task :opencv:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :opencv:generateDebugBuildConfig UP-TO-DATE
+> Task :opencv:generateDebugResources UP-TO-DATE
+> Task :opencv:packageDebugResources UP-TO-DATE
+> Task :opencv:processDebugNavigationResources UP-TO-DATE
+> Task :opencv:parseDebugLocalResources UP-TO-DATE
+> Task :opencv:generateDebugRFile UP-TO-DATE
+> Task :opencv:extractDebugAnnotations UP-TO-DATE
+> Task :opencv:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :opencv:generateDebugAssets UP-TO-DATE
+> Task :opencv:mergeDebugAssets UP-TO-DATE
+> Task :opencv:compileDebugKotlin UP-TO-DATE
+> Task :opencv:javaPreCompileDebug UP-TO-DATE
+> Task :opencv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :opencv:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :opencv:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :opencv:externalNativeBuildDebug
+> Task :opencv:generateJsonModelDebug
+> Task :opencv:prefabDebugConfigurePackage UP-TO-DATE
+> Task :opencv:prefabDebugPackage UP-TO-DATE
+> Task :opencv:prepareDebugArtProfile UP-TO-DATE
+> Task :opencv:prepareLintJarForPublish UP-TO-DATE
+> Task :opencv:processDebugManifest UP-TO-DATE
+> Task :opencv:processDebugJavaRes UP-TO-DATE
+> Task :opencv:mergeDebugJavaResource UP-TO-DATE
+> Task :opencv:syncDebugLibJars UP-TO-DATE
+> Task :opencv:writeDebugAarMetadata UP-TO-DATE
+> Task :opencv:bundleDebugAar UP-TO-DATE
+> Task :opencv:assembleDebug UP-TO-DATE
+> Task :opencv:preReleaseBuild UP-TO-DATE
+> Task :opencv:checkReleaseAarMetadata
+> Task :opencv:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :opencv:buildCMakeRelWithDebInfo[arm64-v8a][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[armeabi-v7a]
+> Task :opencv:buildCMakeRelWithDebInfo[armeabi-v7a][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[x86]
+> Task :opencv:buildCMakeRelWithDebInfo[x86][opencv_jni_shared]
+> Task :opencv:configureCMakeRelWithDebInfo[x86_64]
+> Task :opencv:buildCMakeRelWithDebInfo[x86_64][opencv_jni_shared]
+> Task :opencv:mergeReleaseJniLibFolders
+> Task :opencv:extractDeepLinksForAarRelease
+> Task :opencv:generateReleaseBuildConfig
+> Task :opencv:generateReleaseResources
+> Task :opencv:packageReleaseResources
+> Task :opencv:processReleaseNavigationResources
+> Task :opencv:generateReleaseAssets UP-TO-DATE
+> Task :opencv:mergeReleaseAssets
+> Task :opencv:javaPreCompileRelease
+> Task :opencv:externalNativeBuildRelease
+> Task :opencv:generateJsonModelRelease
+> Task :opencv:prefabReleaseConfigurePackage
+> Task :opencv:parseReleaseLocalResources
+> Task :opencv:mergeReleaseNativeLibs
+> Task :opencv:prefabReleasePackage
+> Task :opencv:prepareReleaseArtProfile
+> Task :opencv:writeReleaseAarMetadata
+> Task :opencv:mapReleaseSourceSetPaths
+
+> Task :opencv:processReleaseManifest
+package="org.opencv" found in source AndroidManifest.xml: D:\Valve\Personal\Kanso\opencv\java\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="org.opencv" from the source AndroidManifest.xml: D:\Valve\Personal\Kanso\opencv\java\AndroidManifest.xml.
+
+> Task :opencv:generateReleaseRFile
+> Task :opencv:mergeReleaseResources
+> Task :opencv:extractReleaseAnnotations
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :opencv:stripReleaseDebugSymbols
+> Task :core:colorpicker:checkDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:colorpicker:mergeDebugNativeLibs NO-SOURCE
+> Task :core:colorpicker:stripDebugDebugSymbols NO-SOURCE
+> Task :core:colorpicker:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:colorpicker:generateDebugResources UP-TO-DATE
+> Task :core:colorpicker:packageDebugResources UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources UP-TO-DATE
+> Task :core:colorpicker:parseDebugLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateDebugRFile UP-TO-DATE
+> Task :core:colorpicker:extractDebugAnnotations UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:colorpicker:generateDebugAssets UP-TO-DATE
+> Task :core:colorpicker:mergeDebugAssets UP-TO-DATE
+> Task :opencv:verifyReleaseResources
+> Task :opencv:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:colorpicker:compileDebugKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebug UP-TO-DATE
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:colorpicker:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:prepareDebugArtProfile UP-TO-DATE
+> Task :core:colorpicker:prepareLintJarForPublish UP-TO-DATE
+> Task :core:colorpicker:processDebugManifest UP-TO-DATE
+> Task :core:colorpicker:processDebugJavaRes UP-TO-DATE
+> Task :core:colorpicker:mergeDebugJavaResource UP-TO-DATE
+> Task :core:colorpicker:syncDebugLibJars UP-TO-DATE
+> Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:bundleDebugAar UP-TO-DATE
+> Task :core:colorpicker:assembleDebug UP-TO-DATE
+> Task :core:colorpicker:preReleaseBuild UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseJniLibFolders
+> Task :core:colorpicker:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:colorpicker:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:colorpicker:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:colorpicker:extractDeepLinksForAarRelease
+> Task :core:colorpicker:checkReleaseAarMetadata
+> Task :core:colorpicker:generateReleaseResources
+> Task :core:colorpicker:packageReleaseResources
+> Task :core:colorpicker:processReleaseNavigationResources
+> Task :core:colorpicker:generateReleaseAssets UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseAssets
+> Task :core:colorpicker:javaPreCompileRelease
+> Task :core:colorpicker:prepareReleaseArtProfile
+> Task :core:colorpicker:parseReleaseLocalResources
+> Task :core:colorpicker:writeReleaseAarMetadata
+> Task :core:colorpicker:mapReleaseSourceSetPaths
+> Task :core:colorpicker:processReleaseManifest
+> Task :core:colorpicker:generateReleaseRFile
+> Task :opencv:compileReleaseKotlin
+> Task :core:colorpicker:mergeReleaseResources
+> Task :opencv:compileReleaseJavaWithJavac
+> Task :opencv:mergeReleaseGeneratedProguardFiles
+> Task :opencv:mergeReleaseConsumerProguardFiles
+> Task :opencv:processReleaseJavaRes
+> Task :opencv:mergeReleaseJavaResource
+> Task :core:colorpicker:extractReleaseAnnotations
+> Task :opencv:syncReleaseLibJars
+> Task :opencv:bundleReleaseAar
+> Task :opencv:assembleRelease
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:checkDebugAarMetadata UP-TO-DATE
+> Task :core:common:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:common:mergeDebugNativeLibs NO-SOURCE
+> Task :core:common:stripDebugDebugSymbols NO-SOURCE
+> Task :core:common:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:colorpicker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:common:generateDebugResources UP-TO-DATE
+> Task :core:common:packageDebugResources UP-TO-DATE
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+> Task :core:common:generateDebugRFile UP-TO-DATE
+> Task :core:common:extractDebugAnnotations UP-TO-DATE
+> Task :core:common:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:common:generateDebugAssets UP-TO-DATE
+> Task :core:common:mergeDebugAssets UP-TO-DATE
+> Task :core:common:compileDebugKotlin UP-TO-DATE
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:common:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:common:prepareDebugArtProfile UP-TO-DATE
+> Task :core:common:prepareLintJarForPublish UP-TO-DATE
+> Task :core:common:processDebugManifest UP-TO-DATE
+> Task :core:common:processDebugJavaRes UP-TO-DATE
+> Task :core:common:mergeDebugJavaResource UP-TO-DATE
+> Task :core:common:syncDebugLibJars UP-TO-DATE
+> Task :core:common:writeDebugAarMetadata UP-TO-DATE
+> Task :core:common:bundleDebugAar UP-TO-DATE
+> Task :core:common:assembleDebug UP-TO-DATE
+> Task :core:common:preReleaseBuild UP-TO-DATE
+> Task :core:common:mergeReleaseJniLibFolders
+> Task :core:common:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:common:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:common:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:common:extractDeepLinksForAarRelease
+> Task :core:common:checkReleaseAarMetadata
+> Task :core:common:generateReleaseResources
+> Task :core:common:packageReleaseResources
+> Task :core:common:processReleaseNavigationResources
+> Task :core:common:generateReleaseAssets UP-TO-DATE
+> Task :core:common:mergeReleaseAssets
+> Task :core:common:javaPreCompileRelease
+> Task :core:common:prepareReleaseArtProfile
+> Task :core:common:parseReleaseLocalResources
+> Task :core:colorpicker:compileReleaseLibraryResources
+> Task :core:common:writeReleaseAarMetadata
+> Task :core:common:processReleaseManifest
+> Task :core:common:mapReleaseSourceSetPaths
+> Task :core:common:generateReleaseRFile
+> Task :core:colorpicker:compileReleaseKotlin
+> Task :core:common:mergeReleaseResources
+> Task :core:colorpicker:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:mergeReleaseGeneratedProguardFiles
+> Task :core:colorpicker:mergeReleaseConsumerProguardFiles
+> Task :core:colorpicker:processReleaseJavaRes
+> Task :core:colorpicker:mergeReleaseJavaResource
+> Task :core:colorpicker:bundleLibCompileToJarRelease
+> Task :core:colorpicker:syncReleaseLibJars
+> Task :core:colorpicker:bundleReleaseAar
+> Task :core:common:extractReleaseAnnotations
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:writeDebugAarMetadata UP-TO-DATE
+> Task :core:editimage:checkDebugAarMetadata UP-TO-DATE
+> Task :core:editimage:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:editimage:mergeDebugNativeLibs NO-SOURCE
+> Task :core:editimage:stripDebugDebugSymbols NO-SOURCE
+> Task :core:editimage:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :opencv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:generateDebugResources UP-TO-DATE
+> Task :core:editimage:packageDebugResources UP-TO-DATE
+> Task :core:editimage:processDebugNavigationResources UP-TO-DATE
+> Task :core:editimage:parseDebugLocalResources UP-TO-DATE
+> Task :core:editimage:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:generateDebugResources UP-TO-DATE
+> Task :core:imageprocessor:packageDebugResources UP-TO-DATE
+> Task :core:imageprocessor:processDebugNavigationResources UP-TO-DATE
+> Task :core:imageprocessor:parseDebugLocalResources UP-TO-DATE
+> Task :core:imageprocessor:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:compileDebugKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileDebug UP-TO-DATE
+> Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:extractDebugAnnotations UP-TO-DATE
+> Task :core:editimage:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:editimage:generateDebugAssets UP-TO-DATE
+> Task :core:editimage:mergeDebugAssets UP-TO-DATE
+> Task :core:editimage:compileDebugKotlin NO-SOURCE
+> Task :core:editimage:javaPreCompileDebug UP-TO-DATE
+> Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:editimage:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:editimage:prepareDebugArtProfile UP-TO-DATE
+> Task :core:editimage:prepareLintJarForPublish UP-TO-DATE
+> Task :core:editimage:processDebugManifest UP-TO-DATE
+> Task :core:editimage:processDebugJavaRes NO-SOURCE
+> Task :core:editimage:mergeDebugJavaResource UP-TO-DATE
+> Task :core:editimage:syncDebugLibJars UP-TO-DATE
+> Task :core:editimage:writeDebugAarMetadata UP-TO-DATE
+> Task :core:editimage:bundleDebugAar UP-TO-DATE
+> Task :core:editimage:assembleDebug UP-TO-DATE
+> Task :core:editimage:preReleaseBuild UP-TO-DATE
+> Task :core:imageprocessor:preReleaseBuild UP-TO-DATE
+> Task :core:imageprocessor:writeReleaseAarMetadata
+> Task :core:editimage:mergeReleaseJniLibFolders
+> Task :core:editimage:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:editimage:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:editimage:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:editimage:extractDeepLinksForAarRelease
+> Task :core:editimage:generateReleaseResources
+> Task :core:editimage:checkReleaseAarMetadata
+> Task :core:editimage:packageReleaseResources
+> Task :core:editimage:processReleaseNavigationResources
+> Task :core:editimage:parseReleaseLocalResources
+> Task :core:imageprocessor:generateReleaseResources
+> Task :core:imageprocessor:packageReleaseResources
+> Task :core:imageprocessor:processReleaseNavigationResources
+> Task :core:editimage:generateReleaseRFile
+> Task :core:editimage:generateReleaseAssets UP-TO-DATE
+> Task :core:imageprocessor:javaPreCompileRelease
+> Task :core:editimage:mergeReleaseAssets
+> Task :core:imageprocessor:parseReleaseLocalResources
+> Task :core:editimage:javaPreCompileRelease
+> Task :core:editimage:prepareReleaseArtProfile
+> Task :core:editimage:processReleaseManifest
+> Task :core:imageprocessor:generateReleaseRFile
+> Task :core:imageprocessor:compileReleaseKotlin NO-SOURCE
+> Task :core:imageprocessor:compileReleaseJavaWithJavac NO-SOURCE
+> Task :opencv:exportReleaseConsumerProguardFiles
+> Task :core:imageprocessor:mergeReleaseGeneratedProguardFiles
+> Task :core:imageprocessor:bundleLibCompileToJarRelease
+> Task :core:imageprocessor:exportReleaseConsumerProguardFiles
+> Task :core:colorpicker:exportReleaseConsumerProguardFiles
+> Task :core:editimage:extractProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:processReleaseJavaRes NO-SOURCE
+> Task :core:editimage:writeReleaseAarMetadata
+> Task :core:editimage:generateReleaseLibraryProguardRules
+> Task :opencv:compileReleaseLibraryResources
+> Task :core:imageprocessor:bundleLibRuntimeToJarRelease
+> Task :core:editimage:mapReleaseSourceSetPaths
+> Task :core:colorpicker:bundleLibRuntimeToJarRelease
+> Task :opencv:bundleLibRuntimeToJarRelease
+> Task :opencv:bundleLibCompileToJarRelease
+> Task :core:common:compileReleaseLibraryResources
+> Task :core:colorpicker:verifyReleaseResources
+
+> Task :core:common:compileReleaseKotlin
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:18:83 Redundant call of conversion method.
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:19:85 Redundant call of conversion method.
+
+> Task :core:editimage:mergeReleaseResources
+> Task :core:colorpicker:assembleRelease
+> Task :core:common:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:common:mergeReleaseGeneratedProguardFiles
+> Task :core:common:mergeReleaseConsumerProguardFiles
+> Task :core:common:processReleaseJavaRes
+> Task :core:common:exportReleaseConsumerProguardFiles
+> Task :core:imageprocessor:mapReleaseSourceSetPaths
+> Task :core:common:mergeReleaseJavaResource
+> Task :core:imageprocessor:compileReleaseLibraryResources
+> Task :core:common:bundleLibRuntimeToJarRelease
+> Task :core:common:bundleLibCompileToJarRelease
+> Task :core:common:syncReleaseLibJars
+> Task :core:common:bundleReleaseAar
+> Task :core:editimage:extractReleaseAnnotations
+> Task :core:editimage:compileReleaseKotlin NO-SOURCE
+> Task :core:editimage:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:editimage:mergeReleaseGeneratedProguardFiles
+> Task :core:editimage:mergeReleaseConsumerProguardFiles
+> Task :core:editimage:processReleaseJavaRes NO-SOURCE
+> Task :core:editimage:mergeReleaseJavaResource
+> Task :core:common:verifyReleaseResources
+> Task :core:editimage:verifyReleaseResources
+> Task :core:common:assembleRelease
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preDebugBuild UP-TO-DATE
+> Task :core:gallery:checkDebugAarMetadata UP-TO-DATE
+> Task :core:gallery:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:gallery:mergeDebugNativeLibs NO-SOURCE
+> Task :core:gallery:stripDebugDebugSymbols NO-SOURCE
+> Task :core:gallery:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:gallery:generateDebugResources UP-TO-DATE
+> Task :core:gallery:packageDebugResources UP-TO-DATE
+> Task :core:gallery:processDebugNavigationResources UP-TO-DATE
+> Task :core:gallery:parseDebugLocalResources UP-TO-DATE
+> Task :core:gallery:generateDebugRFile UP-TO-DATE
+> Task :core:gallery:extractDebugAnnotations UP-TO-DATE
+> Task :core:gallery:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:gallery:generateDebugAssets UP-TO-DATE
+> Task :core:gallery:mergeDebugAssets UP-TO-DATE
+> Task :core:gallery:compileDebugKotlin UP-TO-DATE
+> Task :core:gallery:javaPreCompileDebug UP-TO-DATE
+> Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:gallery:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:gallery:prepareDebugArtProfile UP-TO-DATE
+> Task :core:gallery:prepareLintJarForPublish UP-TO-DATE
+> Task :core:gallery:processDebugManifest UP-TO-DATE
+> Task :core:gallery:processDebugJavaRes UP-TO-DATE
+> Task :core:gallery:mergeDebugJavaResource UP-TO-DATE
+> Task :core:gallery:syncDebugLibJars UP-TO-DATE
+> Task :core:gallery:writeDebugAarMetadata UP-TO-DATE
+> Task :core:gallery:bundleDebugAar UP-TO-DATE
+> Task :core:gallery:assembleDebug UP-TO-DATE
+> Task :core:gallery:preReleaseBuild UP-TO-DATE
+> Task :core:gallery:checkReleaseAarMetadata
+> Task :core:gallery:mergeReleaseJniLibFolders
+> Task :core:gallery:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:gallery:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:gallery:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:gallery:extractDeepLinksForAarRelease
+> Task :core:gallery:generateReleaseResources
+> Task :core:gallery:packageReleaseResources
+> Task :core:gallery:processReleaseNavigationResources
+> Task :core:gallery:generateReleaseAssets UP-TO-DATE
+> Task :core:gallery:mergeReleaseAssets
+> Task :core:gallery:javaPreCompileRelease
+> Task :core:gallery:prepareReleaseArtProfile
+> Task :core:gallery:extractProguardFiles UP-TO-DATE
+> Task :core:gallery:parseReleaseLocalResources
+> Task :core:gallery:writeReleaseAarMetadata
+> Task :core:gallery:mapReleaseSourceSetPaths
+> Task :core:gallery:processReleaseManifest
+> Task :core:gallery:generateReleaseRFile
+> Task :core:gallery:mergeReleaseResources
+> Task :core:gallery:extractReleaseAnnotations
+> Task :core:gallery:generateReleaseLibraryProguardRules
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preDebugBuild UP-TO-DATE
+> Task :core:imagecrop:checkDebugAarMetadata UP-TO-DATE
+> Task :core:imagecrop:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:imagecrop:mergeDebugNativeLibs NO-SOURCE
+> Task :core:imagecrop:stripDebugDebugSymbols NO-SOURCE
+> Task :core:imagecrop:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:imagecrop:generateDebugResources UP-TO-DATE
+> Task :core:imagecrop:packageDebugResources UP-TO-DATE
+> Task :core:imagecrop:processDebugNavigationResources UP-TO-DATE
+> Task :core:imagecrop:parseDebugLocalResources UP-TO-DATE
+> Task :core:imagecrop:generateDebugRFile UP-TO-DATE
+> Task :core:imagecrop:extractDebugAnnotations UP-TO-DATE
+> Task :core:imagecrop:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:imagecrop:generateDebugAssets UP-TO-DATE
+> Task :core:imagecrop:mergeDebugAssets UP-TO-DATE
+> Task :core:imagecrop:compileDebugKotlin UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileDebug UP-TO-DATE
+> Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:imagecrop:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:imagecrop:prepareDebugArtProfile UP-TO-DATE
+> Task :core:imagecrop:prepareLintJarForPublish UP-TO-DATE
+> Task :core:imagecrop:processDebugManifest UP-TO-DATE
+> Task :core:imagecrop:processDebugJavaRes UP-TO-DATE
+> Task :core:imagecrop:mergeDebugJavaResource UP-TO-DATE
+> Task :core:imagecrop:syncDebugLibJars UP-TO-DATE
+> Task :core:imagecrop:writeDebugAarMetadata UP-TO-DATE
+> Task :core:imagecrop:bundleDebugAar UP-TO-DATE
+> Task :core:imagecrop:assembleDebug UP-TO-DATE
+> Task :core:imagecrop:preReleaseBuild UP-TO-DATE
+> Task :core:imagecrop:mergeReleaseJniLibFolders
+> Task :core:imagecrop:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:imagecrop:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:imagecrop:checkReleaseAarMetadata
+> Task :core:imagecrop:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:imagecrop:extractDeepLinksForAarRelease
+> Task :core:imagecrop:generateReleaseResources
+> Task :core:imagecrop:packageReleaseResources
+> Task :core:imagecrop:processReleaseNavigationResources
+> Task :core:imagecrop:generateReleaseAssets UP-TO-DATE
+> Task :core:imagecrop:parseReleaseLocalResources
+> Task :core:imagecrop:mergeReleaseAssets
+> Task :core:imagecrop:prepareReleaseArtProfile
+> Task :core:imagecrop:javaPreCompileRelease
+> Task :core:imagecrop:mapReleaseSourceSetPaths
+> Task :core:imagecrop:writeReleaseAarMetadata
+> Task :core:imagecrop:generateReleaseRFile
+> Task :core:imagecrop:processReleaseManifest
+> Task :core:gallery:compileReleaseKotlin
+> Task :core:gallery:verifyReleaseResources
+> Task :core:editimage:minifyReleaseWithR8
+> Task :core:imagecrop:mergeReleaseResources
+> Task :core:editimage:syncReleaseLibJars
+> Task :core:editimage:bundleReleaseAar
+> Task :core:editimage:assembleRelease
+> Task :core:gallery:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:gallery:mergeReleaseGeneratedProguardFiles
+> Task :core:gallery:mergeReleaseConsumerProguardFiles
+> Task :core:gallery:processReleaseJavaRes
+> Task :core:imagecrop:extractReleaseAnnotations
+> Task :core:gallery:mergeReleaseJavaResource
+> Task :core:imageprocessor:checkDebugAarMetadata UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugNativeLibs NO-SOURCE
+> Task :core:imageprocessor:stripDebugDebugSymbols NO-SOURCE
+> Task :core:imageprocessor:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:imageprocessor:extractDebugAnnotations UP-TO-DATE
+> Task :core:imageprocessor:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:imageprocessor:generateDebugAssets UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugAssets UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:imageprocessor:prepareDebugArtProfile UP-TO-DATE
+> Task :core:imageprocessor:prepareLintJarForPublish UP-TO-DATE
+> Task :core:imageprocessor:processDebugManifest UP-TO-DATE
+> Task :core:imageprocessor:processDebugJavaRes NO-SOURCE
+> Task :core:imageprocessor:mergeDebugJavaResource UP-TO-DATE
+> Task :core:imageprocessor:syncDebugLibJars UP-TO-DATE
+> Task :core:imageprocessor:bundleDebugAar UP-TO-DATE
+> Task :core:imageprocessor:assembleDebug UP-TO-DATE
+> Task :core:imageprocessor:checkReleaseAarMetadata
+> Task :core:imageprocessor:mergeReleaseJniLibFolders
+> Task :core:imageprocessor:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:imageprocessor:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:imageprocessor:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:imageprocessor:extractDeepLinksForAarRelease
+> Task :core:imageprocessor:extractReleaseAnnotations
+> Task :core:imageprocessor:generateReleaseAssets UP-TO-DATE
+> Task :core:imageprocessor:mergeReleaseAssets
+> Task :core:imageprocessor:mergeReleaseConsumerProguardFiles
+> Task :core:imageprocessor:prepareReleaseArtProfile
+> Task :core:imageprocessor:mergeReleaseJavaResource
+> Task :core:imageprocessor:processReleaseManifest
+> Task :core:gallery:minifyReleaseWithR8
+
+> Task :core:imagecrop:compileReleaseKotlin
+w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups is enabled by default and specifying this option explicitly is not necessary.
+
+> Task :core:imagecrop:verifyReleaseResources
+> Task :core:imageprocessor:mergeReleaseResources
+> Task :core:gallery:syncReleaseLibJars
+> Task :core:gallery:bundleReleaseAar
+> Task :core:gallery:assembleRelease
+> Task :core:imagecrop:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:mergeReleaseGeneratedProguardFiles
+> Task :core:imagecrop:mergeReleaseConsumerProguardFiles
+> Task :core:imagecrop:processReleaseJavaRes
+> Task :core:imageprocessor:syncReleaseLibJars
+> Task :core:imageprocessor:bundleReleaseAar
+> Task :core:imagecrop:mergeReleaseJavaResource
+> Task :core:imagecrop:syncReleaseLibJars
+> Task :core:imagecrop:bundleReleaseAar
+> Task :core:imagecrop:assembleRelease
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preDebugBuild UP-TO-DATE
+> Task :core:localml:checkDebugAarMetadata UP-TO-DATE
+> Task :core:localml:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:localml:mergeDebugNativeLibs NO-SOURCE
+> Task :core:localml:stripDebugDebugSymbols NO-SOURCE
+> Task :core:localml:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:localml:mergeDebugMlModels UP-TO-DATE
+> Task :core:localml:generateDebugMlModelClass UP-TO-DATE
+> Task :core:localml:extractDebugAnnotations UP-TO-DATE
+> Task :core:localml:generateDebugEmptyResourceFiles UP-TO-DATE
+> Task :core:localml:generateDebugAssets UP-TO-DATE
+> Task :core:localml:mergeDebugAssets UP-TO-DATE
+> Task :core:localml:compileDebugKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileDebug UP-TO-DATE
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:localml:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:localml:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:localml:prepareDebugArtProfile UP-TO-DATE
+> Task :core:localml:prepareLintJarForPublish UP-TO-DATE
+> Task :core:localml:processDebugManifest UP-TO-DATE
+> Task :core:localml:processDebugJavaRes NO-SOURCE
+> Task :core:localml:mergeDebugJavaResource UP-TO-DATE
+> Task :core:localml:syncDebugLibJars UP-TO-DATE
+> Task :core:localml:writeDebugAarMetadata UP-TO-DATE
+> Task :core:localml:bundleDebugAar UP-TO-DATE
+> Task :core:localml:assembleDebug UP-TO-DATE
+> Task :core:localml:preReleaseBuild UP-TO-DATE
+> Task :core:localml:mergeReleaseJniLibFolders
+> Task :core:localml:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:localml:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:localml:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:localml:checkReleaseAarMetadata
+> Task :core:localml:mergeReleaseMlModels
+> Task :core:localml:generateReleaseMlModelClass
+> Task :core:localml:extractReleaseAnnotations
+> Task :core:localml:generateReleaseEmptyResourceFiles
+> Task :core:localml:generateReleaseAssets UP-TO-DATE
+> Task :core:localml:mergeReleaseAssets
+> Task :core:localml:compileReleaseKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileRelease
+> Task :core:localml:prepareReleaseArtProfile
+> Task :core:localml:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:localml:mergeReleaseGeneratedProguardFiles
+> Task :core:localml:mergeReleaseConsumerProguardFiles
+> Task :core:localml:extractProguardFiles UP-TO-DATE
+> Task :core:localml:processReleaseJavaRes NO-SOURCE
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preDebugBuild UP-TO-DATE
+> Task :core:localml:mergeReleaseJavaResource
+> Task :core:localml:writeReleaseAarMetadata
+> Task :core:overlaybrush:checkDebugAarMetadata UP-TO-DATE
+> Task :core:localml:processReleaseManifest
+> Task :core:overlaybrush:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:overlaybrush:mergeDebugNativeLibs NO-SOURCE
+> Task :core:overlaybrush:stripDebugDebugSymbols NO-SOURCE
+> Task :core:overlaybrush:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:overlaybrush:generateDebugResources UP-TO-DATE
+> Task :core:overlaybrush:packageDebugResources UP-TO-DATE
+> Task :core:overlaybrush:processDebugNavigationResources UP-TO-DATE
+> Task :core:overlaybrush:parseDebugLocalResources UP-TO-DATE
+> Task :core:overlaybrush:generateDebugRFile UP-TO-DATE
+> Task :core:overlaybrush:extractDebugAnnotations UP-TO-DATE
+> Task :core:overlaybrush:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:overlaybrush:generateDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:mergeDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
+> Task :core:overlaybrush:javaPreCompileDebug UP-TO-DATE
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:overlaybrush:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:overlaybrush:prepareDebugArtProfile UP-TO-DATE
+> Task :core:overlaybrush:prepareLintJarForPublish UP-TO-DATE
+> Task :core:overlaybrush:processDebugManifest UP-TO-DATE
+> Task :core:overlaybrush:processDebugJavaRes NO-SOURCE
+> Task :core:overlaybrush:mergeDebugJavaResource UP-TO-DATE
+> Task :core:overlaybrush:syncDebugLibJars UP-TO-DATE
+> Task :core:overlaybrush:writeDebugAarMetadata UP-TO-DATE
+> Task :core:overlaybrush:bundleDebugAar UP-TO-DATE
+> Task :core:overlaybrush:assembleDebug UP-TO-DATE
+> Task :core:overlaybrush:preReleaseBuild UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseJniLibFolders
+> Task :core:overlaybrush:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:overlaybrush:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:overlaybrush:copyReleaseJniLibsProjectAndLocalJars
+> Task :core:overlaybrush:extractDeepLinksForAarRelease
+> Task :core:overlaybrush:checkReleaseAarMetadata
+> Task :core:overlaybrush:generateReleaseResources
+> Task :core:overlaybrush:packageReleaseResources
+> Task :core:overlaybrush:processReleaseNavigationResources
+> Task :core:overlaybrush:generateReleaseAssets UP-TO-DATE
+> Task :core:overlaybrush:mergeReleaseAssets
+> Task :core:overlaybrush:javaPreCompileRelease
+> Task :core:overlaybrush:prepareReleaseArtProfile
+> Task :core:overlaybrush:parseReleaseLocalResources
+> Task :core:overlaybrush:writeReleaseAarMetadata
+> Task :core:overlaybrush:mapReleaseSourceSetPaths
+> Task :core:overlaybrush:generateReleaseRFile
+> Task :core:overlaybrush:processReleaseManifest
+> Task :core:overlaybrush:mergeReleaseResources
+> Task :core:overlaybrush:extractReleaseAnnotations
+> Task :core:overlaybrush:compileReleaseKotlin NO-SOURCE
+> Task :core:overlaybrush:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:mergeReleaseGeneratedProguardFiles
+> Task :core:overlaybrush:mergeReleaseConsumerProguardFiles
+> Task :core:overlaybrush:processReleaseJavaRes NO-SOURCE
+> Task :core:overlaybrush:mergeReleaseJavaResource
+> Task :core:imageprocessor:verifyReleaseResources
+> Task :core:localml:minifyReleaseWithR8
+> Task :core:imageprocessor:assembleRelease
+> Task :core:localml:syncReleaseLibJars
+> Task :core:localml:bundleReleaseAar
+> Task :core:localml:assembleRelease
+> Task :core:overlaybrush:syncReleaseLibJars
+> Task :core:overlaybrush:bundleReleaseAar
+> Task :core:overlaybrush:verifyReleaseResources
+> Task :core:overlaybrush:assembleRelease
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 44s
+465 actionable tasks: 256 executed, 209 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

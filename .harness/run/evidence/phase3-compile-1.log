@@ -1,0 +1,236 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preDebugBuild UP-TO-DATE
+> Task :opencv:processDebugNavigationResources
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:processDebugNavigationResources
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preDebugBuild UP-TO-DATE
+> Task :core:editimage:processDebugNavigationResources
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preDebugBuild UP-TO-DATE
+> Task :core:gallery:processDebugNavigationResources
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preDebugBuild UP-TO-DATE
+> Task :core:imagecrop:processDebugNavigationResources
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:processDebugNavigationResources
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preDebugBuild UP-TO-DATE
+> Task :core:localml:generateDebugEmptyResourceFiles
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preDebugBuild UP-TO-DATE
+> Task :core:overlaybrush:processDebugNavigationResources
+> Task :app:processDebugNavigationResources
+> Task :opencv:generateDebugBuildConfig
+> Task :opencv:generateDebugResources
+> Task :opencv:packageDebugResources
+> Task :opencv:javaPreCompileDebug
+> Task :core:colorpicker:generateDebugResources
+> Task :core:colorpicker:packageDebugResources
+> Task :core:colorpicker:javaPreCompileDebug
+> Task :core:common:generateDebugResources
+> Task :core:colorpicker:parseDebugLocalResources
+> Task :opencv:parseDebugLocalResources
+> Task :app:parseDebugLocalResources
+> Task :core:common:packageDebugResources
+> Task :core:common:javaPreCompileDebug
+> Task :core:editimage:generateDebugResources
+> Task :core:common:parseDebugLocalResources
+> Task :core:editimage:packageDebugResources
+> Task :core:editimage:parseDebugLocalResources
+> Task :core:imageprocessor:generateDebugResources
+> Task :core:common:generateDebugRFile
+> Task :core:colorpicker:generateDebugRFile
+> Task :core:editimage:generateDebugRFile
+> Task :core:imageprocessor:packageDebugResources
+> Task :opencv:generateDebugRFile
+> Task :app:generateDebugRFile
+> Task :core:imageprocessor:javaPreCompileDebug
+> Task :core:editimage:javaPreCompileDebug
+> Task :core:imageprocessor:parseDebugLocalResources
+> Task :core:gallery:generateDebugResources
+> Task :core:gallery:packageDebugResources
+> Task :core:gallery:javaPreCompileDebug
+> Task :core:imageprocessor:generateDebugRFile
+> Task :core:imagecrop:generateDebugResources
+> Task :core:imageprocessor:compileDebugKotlin NO-SOURCE
+> Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:parseDebugLocalResources
+> Task :core:gallery:generateDebugRFile
+> Task :core:imageprocessor:bundleLibCompileToJarDebug
+> Task :core:imagecrop:packageDebugResources
+> Task :core:imagecrop:javaPreCompileDebug
+> Task :core:localml:mergeDebugMlModels
+> Task :core:localml:generateDebugMlModelClass
+> Task :core:localml:javaPreCompileDebug
+> Task :core:imagecrop:parseDebugLocalResources
+> Task :core:overlaybrush:generateDebugResources
+> Task :core:imagecrop:generateDebugRFile
+> Task :core:overlaybrush:packageDebugResources
+> Task :core:overlaybrush:javaPreCompileDebug
+> Task :core:overlaybrush:parseDebugLocalResources
+> Task :app:javaPreCompileDebug
+> Task :opencv:writeDebugAarMetadata
+> Task :core:editimage:writeDebugAarMetadata
+> Task :core:overlaybrush:generateDebugRFile
+> Task :core:colorpicker:writeDebugAarMetadata
+> Task :core:imagecrop:writeDebugAarMetadata
+> Task :core:imageprocessor:writeDebugAarMetadata
+> Task :core:localml:writeDebugAarMetadata
+> Task :core:overlaybrush:writeDebugAarMetadata
+> Task :core:common:writeDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :core:gallery:writeDebugAarMetadata
+> Task :app:checkDebugAarMetadata
+> Task :app:compileDebugNavigationResources
+> Task :opencv:compileDebugKotlin
+> Task :core:gallery:compileDebugKotlin
+> Task :core:colorpicker:compileDebugKotlin
+
+> Task :core:imagecrop:compileDebugKotlin
+w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups is enabled by default and specifying this option explicitly is not necessary.
+
+> Task :app:mergeDebugResources
+> Task :opencv:compileDebugJavaWithJavac
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :opencv:extractDeepLinksDebug
+> Task :core:colorpicker:extractDeepLinksDebug
+> Task :core:colorpicker:bundleLibCompileToJarDebug
+> Task :core:common:extractDeepLinksDebug
+> Task :opencv:bundleLibCompileToJarDebug
+> Task :core:imagecrop:bundleLibCompileToJarDebug
+> Task :core:gallery:bundleLibCompileToJarDebug
+> Task :core:colorpicker:processDebugManifest
+
+> Task :opencv:processDebugManifest
+package="org.opencv" found in source AndroidManifest.xml: D:\Valve\Personal\Kanso\opencv\java\AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="org.opencv" from the source AndroidManifest.xml: D:\Valve\Personal\Kanso\opencv\java\AndroidManifest.xml.
+
+> Task :core:editimage:extractDeepLinksDebug
+> Task :core:gallery:extractDeepLinksDebug
+> Task :core:imagecrop:extractDeepLinksDebug
+> Task :core:common:processDebugManifest
+> Task :core:imageprocessor:extractDeepLinksDebug
+> Task :core:overlaybrush:extractDeepLinksDebug
+> Task :core:editimage:processDebugManifest
+> Task :core:imagecrop:processDebugManifest
+> Task :core:gallery:processDebugManifest
+> Task :opencv:mapDebugSourceSetPaths
+> Task :core:localml:processDebugManifest
+> Task :opencv:compileDebugLibraryResources
+> Task :core:imageprocessor:processDebugManifest
+> Task :core:overlaybrush:processDebugManifest
+> Task :core:colorpicker:mapDebugSourceSetPaths
+
+> Task :app:processDebugMainManifest
+D:\Valve\Personal\Kanso\app\src\main\AndroidManifest.xml:37:5-39:31 Warning:
+	uses-permission#android.permission.READ_PHONE_STATE was tagged at AndroidManifest.xml:37 to remove other declarations but no other declaration present
+
+> Task :app:processDebugManifest
+> Task :core:colorpicker:compileDebugLibraryResources
+> Task :core:common:mapDebugSourceSetPaths
+> Task :app:processDebugManifestForPackage
+> Task :core:editimage:mapDebugSourceSetPaths
+> Task :core:editimage:compileDebugLibraryResources
+> Task :core:gallery:mapDebugSourceSetPaths
+> Task :core:imagecrop:mapDebugSourceSetPaths
+> Task :core:gallery:compileDebugLibraryResources
+> Task :core:imagecrop:compileDebugLibraryResources
+> Task :core:common:compileDebugLibraryResources
+> Task :core:imageprocessor:mapDebugSourceSetPaths
+> Task :core:imageprocessor:compileDebugLibraryResources
+> Task :core:overlaybrush:mapDebugSourceSetPaths
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :core:overlaybrush:compileDebugLibraryResources
+
+> Task :core:common:compileDebugKotlin
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:18:83 Redundant call of conversion method.
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:19:85 Redundant call of conversion method.
+
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:bundleLibCompileToJarDebug
+> Task :core:editimage:compileDebugKotlin NO-SOURCE
+> Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:localml:compileDebugKotlin NO-SOURCE
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:bundleLibCompileToJarDebug
+> Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
+> Task :core:localml:bundleLibCompileToJarDebug
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:bundleLibCompileToJarDebug
+> Task :app:processDebugResources
+
+> Task :app:compileDebugKotlin
+w: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:116:5 'fun ListItem(headlineContent: ComposableFunction0<Unit>, modifier: Modifier = ..., overlineContent: ComposableFunction0<Unit>? = ..., supportingContent: ComposableFunction0<Unit>? = ..., leadingContent: ComposableFunction0<Unit>? = ..., trailingContent: ComposableFunction0<Unit>? = ..., colors: ListItemColors = ..., tonalElevation: Dp = ..., shadowElevation: Dp = ...): Unit' is deprecated. Use the overload where `headlineContent` is now a trailing `content` lambda.
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:bundleDebugClassesToCompileJar
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/KdocCoverageTest.kt:109:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/LaunchTest.kt:23:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/OneTypePerFileTest.kt:552:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/ScreenStateTest.kt:323:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/camera/CameraControlsTest.kt:63:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/camera/CameraFlowTest.kt:64:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/camera/CameraPermissionTest.kt:66:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/camera/CameraScreenTest.kt:51:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/gallery/GalleryGridTest.kt:64:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/gallery/GalleryPermissionTest.kt:69:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:55:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/PhotoToToolNavigationTest.kt:54:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/SavedNavigationTest.kt:64:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/previews/PreviewCoverageTest.kt:315:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/previews/PreviewHygieneTest.kt:393:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/previews/PreviewsRenderTest.kt:223:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/save/SaveButtonTest.kt:71:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:61:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/CameraRefusedScreenshotTest.kt:48:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryGridScreenshotTest.kt:63:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/GalleryRefusedScreenshotTest.kt:48:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/SavedScreenshotTest.kt:49:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/ScreenshotTest.kt:74:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt:49:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/PickerDefaultAlphaTest.kt:38:19 'fun createComposeRule(effectContext: CoroutineContext = ...): ComposeContentTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/PickerNoAlphaTest.kt:48:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/ThemeColourLabelsTest.kt:74:31 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/ThemeColourRestartTest.kt:56:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/ThemeColourSettingsTest.kt:62:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/ThemeModeRestartTest.kt:50:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/settings/ThemeModeSettingsTest.kt:51:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/KansoThemeColourTest.kt:37:19 'fun createComposeRule(effectContext: CoroutineContext = ...): ComposeContentTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/KansoThemeColourTest.kt:102:26 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ColorScheme'.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/KansoThemeTest.kt:29:19 'fun createComposeRule(effectContext: CoroutineContext = ...): ComposeContentTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/tool/ToolPhotoKeyTest.kt:76:19 'fun createEmptyComposeRule(effectContext: CoroutineContext = ...): ComposeTestRule' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createEmptyComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+w: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt:62:19 'fun <reified A : ComponentActivity> createAndroidComposeRule(effectContext: CoroutineContext = ...): AndroidComposeTestRule<ActivityScenarioRule<A>, A>' is deprecated. Use `androidx.compose.ui.test.junit4.v2.createAndroidComposeRule` instead. The v2 APIs use StandardTestDispatcher instead of UnconfinedTestDispatcher, which aligns with standard coroutine behavior by queuing tasks rather than executing them immediately. Tests relying on immediate execution may require explicit synchronization. Please refer to the migration guide for more details.
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 43s
+129 actionable tasks: 129 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html
