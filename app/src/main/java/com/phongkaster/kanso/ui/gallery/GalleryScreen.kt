@@ -123,12 +123,12 @@ private const val PHOTO_CELL_CONTENT_TYPE = "photo"
  *
  * Why the gallery is two composables. Like Home, it is split in two (state hoisting; see
  * `HomeScreen` for the full story). This function is the *stateful* part: it runs the permission
- * gate, reads the photos from [viewModel], asks it to read the library again each time the
- * screen comes back to the front, and hands all of that, as plain values and callbacks, to the
- * stateless [GalleryContent], which does all the drawing. A preview cannot show the system's
- * permission dialog, keep a ViewModel alive or read the phone's photos, but it can call
- * [GalleryContent] with made-up albums and photos, and that is what the previews at the bottom
- * of this file do.
+ * gate, reads the gallery's state (one [GalleryUiState]) from [viewModel], asks it to read the
+ * library again each time the screen comes back to the front, and hands all of that, as that
+ * state, the gate's answer and callbacks, to the stateless [GalleryContent], which does all the
+ * drawing. A preview cannot show the system's permission dialog, keep a ViewModel alive or read
+ * the phone's photos, but it can call [GalleryContent] with a [GalleryUiState] built from
+ * made-up albums and photos, and that is what the previews at the bottom of this file do.
  *
  * What is specific here: the gate itself stays in this part, because it needs the system's
  * permission dialog. For each answer the gate gives (full, partial, refused, still waiting) this
@@ -149,7 +149,6 @@ fun GalleryScreen(
     modifier: Modifier = Modifier,
     onOpenCamera: (Tool) -> Unit = {},
 ) {
-    val toolName = stringResource(viewModel.tool.labelRes)
     val context = LocalContext.current
     val sdkInt = Build.VERSION.SDK_INT
     // collectAsState turns the ViewModel's StateFlow into Compose state: when it changes, the
@@ -173,17 +172,13 @@ fun GalleryScreen(
                 }
             }
             GalleryContent(
-                toolName = toolName,
+                state = state,
                 access = access,
                 answered = answered,
-                albums = state.albums,
-                selectedAlbumId = state.selectedAlbumId,
-                photos = state.photos,
-                loading = state.loading,
                 onBack = onBack,
-                onOpenCamera = { onOpenCamera(viewModel.tool) },
+                onOpenCamera = { onOpenCamera(state.tool) },
                 onSelectAlbum = viewModel::selectAlbum,
-                onPhotoClick = { photo -> onPhotoChosen(viewModel.tool, photo.uri) },
+                onPhotoClick = { photo -> onPhotoChosen(state.tool, photo.uri) },
                 onShareMore = shareMore,
                 onOpenSettings = { context.openAppDetailsSettings() },
                 modifier = modifier,
@@ -203,19 +198,21 @@ fun GalleryScreen(
 
 /**
  * The stateless part of the gallery (see [GalleryScreen] for why there are two): the top bar
- * titled with [toolName], with its back arrow and camera button, and below it what fits the
- * photo access the person gave.
+ * titled with the name of [state]'s tool, with its back arrow and camera button, and below it
+ * what fits the photo access the person gave.
  *
  * The top bar stays on screen whatever the access. Below it, [access] and [answered] choose the
  * rest, the same way the permission gate does (see `PermissionGateContent`): with full access
  * the album switcher and the photos; with partial access the same under a notice whose button
  * calls [onShareMore]; after a refusal ([PermissionAccess.None] and [answered]) the explanation
  * with a button that calls [onOpenSettings]; and nothing while the question is still open.
+ * [access] and [answered] are not part of [state]: they are the permission gate's answer, which
+ * only the drawing side can get from the system.
  *
- * [albums], [selectedAlbumId] (null means "All photos") and [photos] are what the gallery shows;
- * [loading] is true while the library is being read. Taps are reported, never acted on here:
- * [onBack] for the back arrow, [onOpenCamera] for the camera button, [onSelectAlbum] for an
- * album chip and [onPhotoClick] for a photo.
+ * [state] is what the gallery shows (see [GalleryUiState]): the tool, the albums, the chosen
+ * album (null means "All photos"), its photos, and whether the library is still being read.
+ * Taps are reported, never acted on here: [onBack] for the back arrow, [onOpenCamera] for the
+ * camera button, [onSelectAlbum] for an album chip and [onPhotoClick] for a photo.
  *
  * [thumbnail] draws one photo cell's picture, given the photo, the cell's size in pixels and the
  * cell's modifier (size, background, tap and test tag, which it must use). The app keeps the
@@ -225,13 +222,9 @@ fun GalleryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryContent(
-    toolName: String,
+    state: GalleryUiState,
     access: PermissionAccess,
     answered: Boolean,
-    albums: List<Album>,
-    selectedAlbumId: Long?,
-    photos: List<Photo>,
-    loading: Boolean,
     onBack: () -> Unit,
     onOpenCamera: () -> Unit,
     onSelectAlbum: (Long?) -> Unit,
@@ -242,6 +235,10 @@ fun GalleryContent(
     thumbnail: @Composable (photo: Photo, sizePx: Int, modifier: Modifier) -> Unit =
         { photo, sizePx, cellModifier -> PhotoThumbnail(photo, sizePx, cellModifier) },
 ) {
+    // The state holds the tool itself; its label is looked up in the strings here, so the
+    // title follows the phone's language.
+    val toolName = stringResource(state.tool.labelRes)
+
     Scaffold(
         modifier = modifier.testTag(GALLERY_SCREEN_TAG),
         topBar = {
@@ -282,10 +279,10 @@ fun GalleryContent(
                 answered = answered,
                 granted = {
                     GalleryBody(
-                        albums = albums,
-                        selectedAlbumId = selectedAlbumId,
-                        photos = photos,
-                        loading = loading,
+                        albums = state.albums,
+                        selectedAlbumId = state.selectedAlbumId,
+                        photos = state.photos,
+                        loading = state.loading,
                         onSelectAlbum = onSelectAlbum,
                         onPhotoClick = onPhotoClick,
                         thumbnail = thumbnail,
@@ -296,10 +293,10 @@ fun GalleryContent(
                     Column(modifier = Modifier.fillMaxSize()) {
                         PartialAccessNotice(onShareMore = shareMore)
                         GalleryBody(
-                            albums = albums,
-                            selectedAlbumId = selectedAlbumId,
-                            photos = photos,
-                            loading = loading,
+                            albums = state.albums,
+                            selectedAlbumId = state.selectedAlbumId,
+                            photos = state.photos,
+                            loading = state.loading,
                             onSelectAlbum = onSelectAlbum,
                             onPhotoClick = onPhotoClick,
                             thumbnail = thumbnail,
@@ -640,8 +637,9 @@ private fun SampleThumbnail(photo: Photo, modifier: Modifier = Modifier) {
 
 /**
  * The gallery of the Edit tool for the previews below: [GalleryContent] with the given [access]
- * and [answered], showing [albums] and [photos] ("All photos" chosen, the read finished), and
- * [SampleThumbnail] in every cell. Every tap does nothing: a preview only draws.
+ * and [answered], and a [GalleryUiState] built by hand from [albums] and [photos] ("All photos"
+ * chosen, the read finished), with [SampleThumbnail] in every cell. Every tap does nothing: a
+ * preview only draws.
  */
 @Composable
 private fun SampleGallery(
@@ -651,13 +649,15 @@ private fun SampleGallery(
     photos: List<Photo> = samplePhotos,
 ) {
     GalleryContent(
-        toolName = stringResource(Tool.EDIT.labelRes),
+        state = GalleryUiState(
+            tool = Tool.EDIT,
+            albums = albums,
+            selectedAlbumId = null,
+            photos = photos,
+            loading = false,
+        ),
         access = access,
         answered = answered,
-        albums = albums,
-        selectedAlbumId = null,
-        photos = photos,
-        loading = false,
         onBack = {},
         onOpenCamera = {},
         onSelectAlbum = {},

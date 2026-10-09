@@ -94,7 +94,8 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * back stack is saved (every key is @Serializable), so when the phone rotates, or when Android
  * kills the app in the background and later restores it, the same key comes back and this screen
  * reopens on the same tool and photo with nothing else to restore. The navigation entry passes
- * the key's values to the [viewModel] it builds, which exposes them as `tool` and `photoUri`.
+ * the key's values to the [viewModel] it builds, which puts them in the screen's state as `tool`
+ * and `photoUri`.
  * Only small values belong in a key: the photo goes in as the text of its Uri, never as pixels.
  *
  * The photo is decoded to about twice the screen's longest edge (see [displayMaxEdgePx]), in the
@@ -140,8 +141,9 @@ fun ToolScreen(
         viewModel.load(maxEdgePx)
     }
 
+    // collectAsState turns the StateFlow into Compose state: when a new snapshot arrives, the
+    // screen is drawn again with it.
     val state by viewModel.state.collectAsState()
-    val saveState by viewModel.saveState.collectAsState()
 
     // Each saved photo is handed to the caller exactly once (the ViewModel sends it through a
     // Channel). rememberUpdatedState lets the long-running collector always call the latest
@@ -162,10 +164,7 @@ fun ToolScreen(
     }
 
     ToolContent(
-        tool = viewModel.tool,
-        photoUri = viewModel.photoUri,
         state = state,
-        saveState = saveState,
         onBack = onBack,
         onSave = {
             if (viewModel.needsWritePermission()) {
@@ -179,22 +178,20 @@ fun ToolScreen(
 }
 
 /**
- * The stateless part of the tool screen (see [ToolScreen] for why there are two): draws the top
- * bar with the back arrow, the name of [tool] and the Save action, and below it whatever [state]
- * says (nothing while loading, the photo when ready, a plain message when unreadable), plus the
- * message about the last save when [saveState] has one.
+ * The stateless part of the tool screen (see [ToolScreen] for why there are two): draws [state],
+ * the screen's one snapshot. At the top, the bar with the back arrow, the name of the tool and
+ * the Save action; below it whatever the photo part of [state] says (nothing while loading, the
+ * photo when ready, a plain message when unreadable), plus the message about the last save when
+ * the save part has one.
  *
- * [photoUri] only marks the image node for tests. Taps are reported through callbacks and nothing
- * is saved here: [onBack] for the back arrow and [onSave] for Save (the caller decides whether
- * the storage permission must be asked for first).
+ * The photo's Uri in [state] only marks the image node for tests. Taps are reported through
+ * callbacks and nothing is saved here: [onBack] for the back arrow and [onSave] for Save (the
+ * caller decides whether the storage permission must be asked for first).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolContent(
-    tool: Tool,
-    photoUri: String,
     state: ToolUiState,
-    saveState: SaveUiState,
     onBack: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
@@ -203,7 +200,7 @@ fun ToolContent(
         modifier = modifier.testTag(TOOL_SCREEN_TAG),
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(tool.labelRes)) },
+                title = { Text(stringResource(state.tool.labelRes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -213,12 +210,12 @@ fun ToolContent(
                     }
                 },
                 actions = {
-                    val saving = saveState == SaveUiState.Saving
+                    val saving = state.save == ToolUiState.SaveState.Saving
                     // Always visible, so the bar does not jump; tappable once the photo is shown
                     // and no save is running.
                     TextButton(
                         onClick = onSave,
-                        enabled = state is ToolUiState.Ready && !saving,
+                        enabled = state.photo is ToolUiState.PhotoState.Ready && !saving,
                         modifier = Modifier.testTag(TOOL_SAVE_TAG),
                     ) {
                         if (saving) {
@@ -246,14 +243,14 @@ fun ToolContent(
                 .testTag(TOOL_BODY_TAG),
             contentAlignment = Alignment.Center,
         ) {
-            when (val current = state) {
+            when (val current = state.photo) {
                 // Decoding takes a moment; the area simply stays empty meanwhile.
-                ToolUiState.Loading -> Unit
-                is ToolUiState.Ready -> PhotoView(
+                ToolUiState.PhotoState.Loading -> Unit
+                is ToolUiState.PhotoState.Ready -> PhotoView(
                     current = current,
-                    photoUri = photoUri,
+                    photoUri = state.photoUri,
                 )
-                ToolUiState.Unreadable -> Text(
+                ToolUiState.PhotoState.Unreadable -> Text(
                     text = stringResource(R.string.tool_photo_unreadable),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -263,7 +260,7 @@ fun ToolContent(
                         .testTag(TOOL_UNREADABLE_TAG),
                 )
             }
-            saveMessageRes(saveState)?.let { messageRes ->
+            saveMessageRes(state.save)?.let { messageRes ->
                 SaveMessage(
                     text = stringResource(messageRes),
                     modifier = Modifier.align(Alignment.BottomCenter),
@@ -274,14 +271,15 @@ fun ToolContent(
 }
 
 /**
- * Returns the message to show for [saveState], or null when there is nothing to say: a running
- * save shows its spinner in the Save action, and a normal successful save says nothing here.
+ * Returns the message to show for [save], or null when there is nothing to say: a running save
+ * shows its spinner in the Save action, and a normal successful save says nothing here.
  */
-private fun saveMessageRes(saveState: SaveUiState): Int? = when (saveState) {
-    is SaveUiState.Saved -> if (saveState.keptOriginalOrientation) R.string.save_kept_orientation else null
-    SaveUiState.Failed -> R.string.save_failed
-    SaveUiState.PermissionDenied -> R.string.save_permission_denied
-    SaveUiState.Idle, SaveUiState.Saving -> null
+private fun saveMessageRes(save: ToolUiState.SaveState): Int? = when (save) {
+    is ToolUiState.SaveState.Saved ->
+        if (save.keptOriginalOrientation) R.string.save_kept_orientation else null
+    ToolUiState.SaveState.Failed -> R.string.save_failed
+    ToolUiState.SaveState.PermissionDenied -> R.string.save_permission_denied
+    ToolUiState.SaveState.Idle, ToolUiState.SaveState.Saving -> null
 }
 
 /**
@@ -313,7 +311,7 @@ private fun SaveMessage(text: String, modifier: Modifier = Modifier) {
  * node with [photoUri] so tests can tell which photo is shown.
  */
 @Composable
-private fun PhotoView(current: ToolUiState.Ready, photoUri: String) {
+private fun PhotoView(current: ToolUiState.PhotoState.Ready, photoUri: String) {
     val bitmap = current.bitmap
     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and remember keeps the
     // wrapper between redraws.
@@ -360,17 +358,20 @@ private fun samplePhoto(): Bitmap {
 /**
  * The tool screen with a photo shown and nothing said about saving: the everyday look, drawn once
  * in light and once in dark. `ThemeMode.System` makes KansoTheme follow the preview's day or
- * night; the taps do nothing, a preview only draws.
+ * night; the state is a snapshot made up here from sample data, and the taps do nothing, a
+ * preview only draws.
  */
 @PreviewLightDark
 @Composable
 private fun ToolPhotoPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         ToolContent(
-            tool = Tool.EDIT,
-            photoUri = SAMPLE_PHOTO_URI,
-            state = ToolUiState.Ready(samplePhoto()),
-            saveState = SaveUiState.Idle,
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Idle,
+            ),
             onBack = {},
             onSave = {},
         )
@@ -386,10 +387,12 @@ private fun ToolPhotoPreview() {
 private fun ToolUnreadablePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         ToolContent(
-            tool = Tool.EDIT,
-            photoUri = SAMPLE_PHOTO_URI,
-            state = ToolUiState.Unreadable,
-            saveState = SaveUiState.Idle,
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Unreadable,
+                save = ToolUiState.SaveState.Idle,
+            ),
             onBack = {},
             onSave = {},
         )
@@ -405,10 +408,12 @@ private fun ToolUnreadablePreview() {
 private fun ToolSaveFailedPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         ToolContent(
-            tool = Tool.EDIT,
-            photoUri = SAMPLE_PHOTO_URI,
-            state = ToolUiState.Ready(samplePhoto()),
-            saveState = SaveUiState.Failed,
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Failed,
+            ),
             onBack = {},
             onSave = {},
         )

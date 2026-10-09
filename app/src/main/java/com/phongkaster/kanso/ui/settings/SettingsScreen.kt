@@ -77,12 +77,12 @@ private val PickerSurfaceColor = Color.White
  * "Appearance" section, where the user picks the theme mode and the theme colour.
  *
  * Like Home, this screen is split in two (state hoisting; see `HomeScreen` for the full story).
- * This function is the *stateful* part: it reads the saved theme mode and theme colour from
- * [viewModel], asks the phone whether wallpaper colours exist (Android 12 and later), and hands
- * all of that, with the ViewModel's functions as callbacks, to the stateless [SettingsContent],
- * which does all the drawing. What is specific here: the wallpaper check is also gathered here,
- * so a preview can choose either answer and show both the wallpaper row and the default-purple
- * row whatever Android version it is drawn on.
+ * This function is the *stateful* part: it reads Settings' state (the saved theme mode and theme
+ * colour, one [SettingsUiState]) from [viewModel], asks the phone whether wallpaper colours exist
+ * (Android 12 and later), and hands all of that, with the ViewModel's functions as callbacks, to
+ * the stateless [SettingsContent], which does all the drawing. What is specific here: the
+ * wallpaper check is also gathered here, so a preview can choose either answer and show both the
+ * wallpaper row and the default-purple row whatever Android version it is drawn on.
  *
  * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
  * The [viewModel] is passed in by the navigation entry, which owns it.
@@ -93,14 +93,12 @@ fun SettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // collectAsState reads the ViewModel's StateFlow as Compose state: when the saved mode
-    // changes, this screen re-draws with the new selection.
-    val themeMode by viewModel.themeMode.collectAsState()
-    val themeColour by viewModel.themeColour.collectAsState()
+    // collectAsState reads the ViewModel's StateFlow as Compose state: when the saved mode or
+    // colour changes, a new snapshot arrives and this screen re-draws with the new selection.
+    val state by viewModel.state.collectAsState()
 
     SettingsContent(
-        themeMode = themeMode,
-        themeColour = themeColour,
+        state = state,
         // The wallpaper colours exist only from Android 12 (API 31); older phones get
         // the baseline option in its place.
         wallpaperAvailable = isWallpaperColourAvailable(),
@@ -116,9 +114,10 @@ fun SettingsScreen(
 
 /**
  * The stateless part of Settings (see [SettingsScreen] for why there are two): draws the top bar
- * with its back arrow and the "Appearance" section, with [themeMode] and [themeColour] marked as
- * chosen. When [wallpaperAvailable] is true the colour list offers the wallpaper row, otherwise
- * the default-purple row.
+ * with its back arrow and the "Appearance" section, with the theme mode and theme colour of
+ * [state] marked as chosen. When [wallpaperAvailable] is true the colour list offers the
+ * wallpaper row, otherwise the default-purple row; it is a separate parameter, not part of
+ * [state], because it is a fact about the phone rather than a saved choice.
  *
  * Every tap is reported through a callback and nothing is saved here: [onBack] for the back
  * arrow, [onThemeModeSelected] for a mode row, [onWallpaperChosen], [onBaselineChosen] and
@@ -128,8 +127,7 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
-    themeMode: ThemeMode,
-    themeColour: ThemeColour,
+    state: SettingsUiState,
     wallpaperAvailable: Boolean,
     onBack: () -> Unit,
     onThemeModeSelected: (ThemeMode) -> Unit,
@@ -164,11 +162,11 @@ fun SettingsContent(
         ) {
             SectionHeader(text = stringResource(R.string.appearance))
             ThemeModeChoice(
-                selected = themeMode,
+                selected = state.themeMode,
                 onSelect = onThemeModeSelected,
             )
             ThemeColourChoice(
-                selected = themeColour,
+                selected = state.themeColour,
                 wallpaperAvailable = wallpaperAvailable,
                 onWallpaper = onWallpaperChosen,
                 onBaseline = onBaselineChosen,
@@ -362,8 +360,10 @@ private val sampleCustomColour = ThemeColour.Custom(seedArgb = 0xFF2E7D32.toInt(
 private fun SettingsSystemModePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         SettingsContent(
-            themeMode = ThemeMode.System,
-            themeColour = ThemeColour.Baseline,
+            state = SettingsUiState(
+                themeMode = ThemeMode.System,
+                themeColour = ThemeColour.Baseline,
+            ),
             wallpaperAvailable = true,
             onBack = {},
             onThemeModeSelected = {},
@@ -387,8 +387,10 @@ private fun SettingsSystemModePreview() {
 private fun SettingsLightModePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         SettingsContent(
-            themeMode = ThemeMode.Light,
-            themeColour = ThemeColour.Baseline,
+            state = SettingsUiState(
+                themeMode = ThemeMode.Light,
+                themeColour = ThemeColour.Baseline,
+            ),
             wallpaperAvailable = false,
             onBack = {},
             onThemeModeSelected = {},
@@ -409,8 +411,10 @@ private fun SettingsLightModePreview() {
 private fun SettingsDarkModePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         SettingsContent(
-            themeMode = ThemeMode.Dark,
-            themeColour = ThemeColour.Wallpaper,
+            state = SettingsUiState(
+                themeMode = ThemeMode.Dark,
+                themeColour = ThemeColour.Wallpaper,
+            ),
             wallpaperAvailable = true,
             onBack = {},
             onThemeModeSelected = {},
@@ -431,8 +435,10 @@ private fun SettingsDarkModePreview() {
 private fun SettingsWallpaperColourPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         SettingsContent(
-            themeMode = ThemeMode.System,
-            themeColour = ThemeColour.Wallpaper,
+            state = SettingsUiState(
+                themeMode = ThemeMode.System,
+                themeColour = ThemeColour.Wallpaper,
+            ),
             wallpaperAvailable = true,
             onBack = {},
             onThemeModeSelected = {},
@@ -455,8 +461,10 @@ private fun SettingsWallpaperColourPreview() {
 private fun SettingsCustomColourPreview() {
     KansoTheme(themeMode = ThemeMode.System, themeColour = sampleCustomColour) {
         SettingsContent(
-            themeMode = ThemeMode.System,
-            themeColour = sampleCustomColour,
+            state = SettingsUiState(
+                themeMode = ThemeMode.System,
+                themeColour = sampleCustomColour,
+            ),
             wallpaperAvailable = true,
             onBack = {},
             onThemeModeSelected = {},

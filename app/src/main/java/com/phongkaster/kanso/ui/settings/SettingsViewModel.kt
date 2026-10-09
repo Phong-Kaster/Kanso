@@ -15,15 +15,18 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Holds the Settings screen's state: the saved choices it shows and the actions that change them.
+ * Holds the Settings screen's state: the saved choices it shows, as one [SettingsUiState], and
+ * the actions that change them.
  *
  * Like every screen ViewModel in Kanso, Koin builds it and the Settings navigation entry owns it,
- * so it survives rotation and is cleared when the user leaves Settings. Further settings get one
- * StateFlow and one setter each here, beside the theme mode and theme colour.
+ * so it survives rotation and is cleared when the user leaves Settings. A further setting gets
+ * one field in [SettingsUiState] and one setter here, beside the theme mode and theme colour;
+ * the screen still reads them all through the one [state].
  *
  * [colourSettleMillis] is how long the custom colour must stay unchanged before it is saved, and
  * [colourWriteScope] is where that delayed save runs. Its default lives longer than this
@@ -46,26 +49,29 @@ class SettingsViewModel(
     private var pendingColourJob: Job? = null
 
     /**
-     * The saved theme mode, as state the screen can read at any moment.
+     * What Settings shows: the saved theme mode and theme colour together, as one snapshot the
+     * screen can read at any moment (see HomeUiState for what a UiState is).
      *
-     * A StateFlow is a Flow that always holds one current value. stateIn turns the repository's
-     * Flow into one: it collects the Flow in viewModelScope (a scope cancelled when this
-     * ViewModel is cleared), starts at once (Eagerly), and shows System until the file is read.
+     * The repository gives the two choices as two separate Flows. `combine` joins them into one:
+     * once each Flow has given its first value, and again every time either of them gives a new
+     * one, it calls the function it is given with the latest value of both. That function is
+     * `::SettingsUiState`, a reference to SettingsUiState's constructor, so each call builds a
+     * new snapshot holding the two choices side by side, and the screen has only one StateFlow
+     * to read instead of one per setting.
+     *
+     * A StateFlow is a Flow that always holds one current value. stateIn turns the combined Flow
+     * into one: it collects the Flow in viewModelScope (a scope cancelled when this ViewModel is
+     * cleared), starts at once (Eagerly), and shows System with this phone's default colour until
+     * the file is read.
      */
-    val themeMode: StateFlow<ThemeMode> = repository.themeMode.stateIn(
+    val state: StateFlow<SettingsUiState> = combine(
+        repository.themeMode,
+        repository.themeColour,
+        ::SettingsUiState,
+    ).stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = ThemeMode.System,
-    )
-
-    /**
-     * The saved theme colour (wallpaper, baseline or a custom seed), as state the screen can
-     * read at any moment; it shows this phone's default until the file is read.
-     */
-    val themeColour: StateFlow<ThemeColour> = repository.themeColour.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = repository.defaultThemeColour,
+        initialValue = SettingsUiState(ThemeMode.System, repository.defaultThemeColour),
     )
 
     /** Saves [mode] as the theme mode; the whole app re-themes as soon as it is written. */

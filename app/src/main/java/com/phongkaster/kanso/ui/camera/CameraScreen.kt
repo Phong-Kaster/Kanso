@@ -130,7 +130,7 @@ private val MIN_TOUCH = 48.dp
  *
  * Like Home, the camera is cut into a stateful part and a stateless part (the "state hoisting"
  * explained on `HomeScreen`). What is specific here: the stateful side is this function, which
- * asks for the permission, plus [CameraBody], which reads the camera's state from the
+ * asks for the permission, plus [CameraBody], which reads the screen's one state from the
  * [viewModel]; the stateless side is [CameraFrame] (the top bar) and [CameraContent] (the picture
  * area and the bottom bar). The live camera picture and the photo just taken are handed to
  * [CameraContent] as small composable "slots" (a piece of UI passed in as a parameter), so a
@@ -225,8 +225,8 @@ private fun CameraRefusedPanel(onOpenSettings: () -> Unit) {
 }
 
 /**
- * The stateful part of the screen once camera access is granted: it reads the camera's state and
- * the photo just taken from [viewModel] and hands them, as plain values, to [CameraContent].
+ * The stateful part of the screen once camera access is granted: it reads the screen's one state
+ * (the camera and the photo just taken) from [viewModel] and hands it to [CameraContent].
  *
  * It also decides which picture goes in the picture area: the live camera picture, connected
  * through the [viewModel], while no photo waits; the photo file once one does. Keep calls
@@ -238,19 +238,11 @@ private fun CameraBody(
     onKept: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // collectAsState turns each StateFlow into Compose state: when it changes, this body is
+    // collectAsState turns the StateFlow into Compose state: when it changes, this body is
     // drawn again with the new value.
-    val camera by viewModel.cameraState.collectAsState()
-    val ui by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val shot = ui.shot
-
-    val message = when {
-        ui.shotFailed -> stringResource(R.string.camera_shot_failed)
-        shot == null && camera.status == CameraStatus.Unavailable ->
-            stringResource(R.string.camera_unavailable)
-        else -> null
-    }
+    val shot = state.shot
 
     // A slot only while a photo waits; null means "show the live picture". The declared type
     // tells Kotlin that the lambda below is a composable taking the picture's modifier.
@@ -261,12 +253,7 @@ private fun CameraBody(
     }
 
     CameraContent(
-        status = camera.status,
-        taking = ui.taking,
-        flashMode = camera.flashMode,
-        hasFlash = camera.hasFlash,
-        canSwitchLens = camera.canSwitchLens,
-        message = message,
+        state = state,
         onShutter = { viewModel.takePicture(shotsDirectory(context)) },
         onKeep = { viewModel.keep()?.let(onKept) },
         onRetake = viewModel::retake,
@@ -283,17 +270,20 @@ private fun CameraBody(
 
 /**
  * The stateless part of the screen once camera access is granted: a black picture area above the
- * [CameraBottomBar].
+ * [CameraBottomBar], drawn from [state], the camera screen's one snapshot.
  *
  * While [shotPicture] is null the area shows [livePicture] with the pinch-to-zoom layer on top
  * (a pinch calls [onZoom]); once a photo waits, [shotPicture] is shown instead and the bar
  * offers Keep ([onKeep]) and Retake ([onRetake]). Both pictures are slots: each is called with
- * the modifier that sizes it, and draws whatever its caller chose.
+ * the modifier that sizes it, and draws whatever its caller chose. The real screen passes a
+ * [shotPicture] exactly when [state] holds a shot, so the slot is how this part knows a photo
+ * waits.
  *
- * The shutter and the lens switch work only when [status] is ready and no photo is being taken
- * ([taking]). The flash button shows [flashMode], and only when the lens [hasFlash]; the lens
- * switch shows only when the phone [canSwitchLens]. [message], when there is one, is shown in the
- * bar. [onShutter], [onFlash] and [onSwitchLens] are called by their buttons.
+ * The shutter and the lens switch work only when the camera in [state] is ready and no photo is
+ * being taken. The flash button shows the flash mode, and only when the lens has a flash; the lens
+ * switch shows only when the phone can switch lenses. A message is shown in the bar when the last
+ * shot failed, or when the camera is unavailable and no photo waits. [onShutter], [onFlash] and
+ * [onSwitchLens] are called by their buttons.
  *
  * The picture area is black because a camera picture rarely fills the space exactly, and black
  * edges look like a viewfinder in light and dark themes alike. Nothing readable is drawn on the
@@ -301,12 +291,7 @@ private fun CameraBody(
  */
 @Composable
 fun CameraContent(
-    status: CameraStatus,
-    taking: Boolean,
-    flashMode: FlashMode,
-    hasFlash: Boolean,
-    canSwitchLens: Boolean,
-    message: String?,
+    state: CameraUiState,
     onShutter: () -> Unit,
     onKeep: () -> Unit,
     onRetake: () -> Unit,
@@ -317,6 +302,16 @@ fun CameraContent(
     shotPicture: (@Composable (Modifier) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    val camera = state.camera
+    // A failed shot is the most important thing to say; "unavailable" only matters while the
+    // live picture would be on screen, not while a photo waits.
+    val message = when {
+        state.shotFailed -> stringResource(R.string.camera_shot_failed)
+        shotPicture == null && camera.status == CameraStatus.Unavailable ->
+            stringResource(R.string.camera_unavailable)
+        else -> null
+    }
+
     Column(modifier = modifier) {
         Box(
             modifier = Modifier
@@ -335,7 +330,7 @@ fun CameraContent(
             }
         }
 
-        val ready = status == CameraStatus.Ready && !taking
+        val ready = camera.status == CameraStatus.Ready && !state.taking
         CameraBottomBar(
             hasShot = shotPicture != null,
             shutterEnabled = ready,
@@ -343,9 +338,9 @@ fun CameraContent(
             onShutter = onShutter,
             onKeep = onKeep,
             onRetake = onRetake,
-            flashMode = flashMode.takeIf { hasFlash },
+            flashMode = camera.flashMode.takeIf { camera.hasFlash },
             onFlash = onFlash,
-            canSwitchLens = canSwitchLens,
+            canSwitchLens = camera.canSwitchLens,
             switchEnabled = ready,
             onSwitchLens = onSwitchLens,
         )
@@ -672,7 +667,8 @@ private fun sampleShotBitmap(): ImageBitmap {
  * auto, the shutter ready to press and the lens switch.
  *
  * `@PreviewLightDark` draws it twice, in day and in night mode, and `ThemeMode.System` makes
- * KansoTheme follow that. The taps do nothing in a preview.
+ * KansoTheme follow that. The state is a snapshot made up here, with no camera behind it. The
+ * taps do nothing in a preview.
  */
 @PreviewLightDark
 @Composable
@@ -680,12 +676,14 @@ private fun CameraLivePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         CameraFrame(onBack = {}) {
             CameraContent(
-                status = CameraStatus.Ready,
-                taking = false,
-                flashMode = FlashMode.Auto,
-                hasFlash = true,
-                canSwitchLens = true,
-                message = null,
+                state = CameraUiState(
+                    camera = CameraState(
+                        status = CameraStatus.Ready,
+                        canSwitchLens = true,
+                        flashMode = FlashMode.Auto,
+                        hasFlash = true,
+                    ),
+                ),
                 onShutter = {},
                 onKeep = {},
                 onRetake = {},
@@ -704,7 +702,8 @@ private fun CameraLivePreview() {
  * The camera right after a shot, in light and in dark: the photo just taken (a picture painted
  * by [sampleShotBitmap]) fitted into the black area, and the Retake and Keep buttons below it.
  *
- * `remember` paints the sample photo once, not on every re-draw of the preview.
+ * `remember` paints the sample photo once, not on every re-draw of the preview. The waiting photo
+ * reaches the screen through the shotPicture slot, so the sample state needs no file.
  */
 @PreviewLightDark
 @Composable
@@ -713,12 +712,14 @@ private fun CameraAfterShotPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         CameraFrame(onBack = {}) {
             CameraContent(
-                status = CameraStatus.Ready,
-                taking = false,
-                flashMode = FlashMode.Auto,
-                hasFlash = true,
-                canSwitchLens = true,
-                message = null,
+                state = CameraUiState(
+                    camera = CameraState(
+                        status = CameraStatus.Ready,
+                        canSwitchLens = true,
+                        flashMode = FlashMode.Auto,
+                        hasFlash = true,
+                    ),
+                ),
                 onShutter = {},
                 onKeep = {},
                 onRetake = {},
@@ -742,8 +743,9 @@ private fun CameraAfterShotPreview() {
 
 /**
  * The camera when it cannot be opened, in light and in dark: the picture area stays black, the
- * bar says the camera is unavailable, the shutter is greyed out, and the flash and lens buttons
- * are left out (their empty places keep the shutter centred).
+ * bar says the camera is unavailable (CameraContent picks that message from the status), the
+ * shutter is greyed out, and the flash and lens buttons are left out (their empty places keep the
+ * shutter centred).
  */
 @PreviewLightDark
 @Composable
@@ -751,12 +753,14 @@ private fun CameraUnavailablePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         CameraFrame(onBack = {}) {
             CameraContent(
-                status = CameraStatus.Unavailable,
-                taking = false,
-                flashMode = FlashMode.Off,
-                hasFlash = false,
-                canSwitchLens = false,
-                message = stringResource(R.string.camera_unavailable),
+                state = CameraUiState(
+                    camera = CameraState(
+                        status = CameraStatus.Unavailable,
+                        canSwitchLens = false,
+                        flashMode = FlashMode.Off,
+                        hasFlash = false,
+                    ),
+                ),
                 onShutter = {},
                 onKeep = {},
                 onRetake = {},

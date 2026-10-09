@@ -1,10 +1,7 @@
 package com.phongkaster.kanso.screenshots
 
 import android.app.Application
-import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.drawable.BitmapDrawable
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.ActivityResultRegistry
@@ -18,11 +15,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import coil.Coil
 import coil.ImageLoader
-import coil.decode.DataSource
-import coil.fetch.DrawableResult
-import coil.fetch.FetchResult
-import coil.fetch.Fetcher
-import coil.request.Options
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
@@ -36,7 +28,6 @@ import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertTrue
@@ -176,37 +167,10 @@ class GalleryGridScreenshotTest {
 }
 
 /**
- * Teaches Coil the test-only `fake` scheme: for `fake://color/AARRGGBB` it hands back a 64 x 64
- * bitmap filled with that colour. Coil crops and scales it to the cell like a real thumbnail.
- * [fetched] counts the bitmaps made, so a test can wait for them.
+ * The URI scheme of the fake photos; only [SolidColourFetcherFactory] can open it. It is internal,
+ * not private, because the factory lives in its own file and reads it from this package.
  */
-class SolidColourFetcherFactory : Fetcher.Factory<Uri> {
-
-    /** How many thumbnails have been made so far. */
-    val fetched = AtomicInteger()
-
-    /** Returns a fetcher for `fake` URIs, or null so Coil tries its own fetchers for others. */
-    override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
-        if (data.scheme != FAKE_SCHEME) return null
-        val colour = data.lastPathSegment.orEmpty().toLong(radix = 16).toInt()
-        return object : Fetcher {
-            /** Makes the solid-colour bitmap. */
-            override suspend fun fetch(): FetchResult {
-                val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(colour)
-                fetched.incrementAndGet()
-                return DrawableResult(
-                    drawable = BitmapDrawable(options.context.resources, bitmap),
-                    isSampled = false,
-                    dataSource = DataSource.MEMORY,
-                )
-            }
-        }
-    }
-}
-
-/** The URI scheme of the fake photos; only [SolidColourFetcherFactory] can open it. */
-private const val FAKE_SCHEME = "fake"
+internal const val FAKE_SCHEME = "fake"
 
 /**
  * The Robolectric screen the pictures are drawn on, the same as [ScreenshotTest]'s: 411 dp wide,

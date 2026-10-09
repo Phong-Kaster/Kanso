@@ -1,6 +1,7 @@
 package com.phongkaster.kanso.screenshots
 
 import android.content.Context
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
@@ -10,23 +11,22 @@ import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.settings.ThemeMode
-import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.saved.SAVED_HOME_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
 import com.phongkaster.kanso.ui.saved.SavedScreen
+import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.koin.core.context.loadKoinModules
 import org.koin.core.context.stopKoin
-import org.koin.dsl.module
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -34,10 +34,10 @@ import org.robolectric.annotation.GraphicsMode
  * Takes the reference pictures of the Saved screen showing a saved photo with its Share, Edit
  * another and Home actions, in light and in dark (pictures 18 and 19, DoD 26).
  *
- * The photo is a 600 x 400 gradient drawn in code and handed over by a [FakePhotoLoader], swapped
- * into Koin, so the pictures never depend on a file or on the decoder. The screen is hosted
- * directly in KansoTheme with the mode forced and the baseline colours, on Android 11 and the
- * same phone screen as [ScreenshotTest].
+ * The photo is a 600 x 400 gradient drawn in code and handed over by a [FakePhotoLoader], given
+ * to the screen's [SavedViewModel], so the pictures never depend on a file or on the decoder. The
+ * screen is hosted directly in KansoTheme with the mode forced and the baseline colours, on
+ * Android 11 and the same phone screen as [ScreenshotTest].
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -74,20 +74,25 @@ class SavedScreenshotTest {
     /** Shows the Saved screen on the gradient photo in [mode] and waits until the photo is drawn. */
     private fun showSaved(mode: ThemeMode) {
         val context: Context = ApplicationProvider.getApplicationContext()
-        // Koin lets a later module replace an earlier recipe with the same type.
-        loadKoinModules(module { single<PhotoLoader> { FakePhotoLoader(context, ToolFixtures.gradient(600, 400)) } })
+        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
+        val viewModel = SavedViewModel(
+            photoUri = "content://media/external/images/media/42",
+            loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400)),
+            probe = ViewModelClearedProbe(),
+        )
         compose.setContent {
             KansoTheme(themeMode = mode) {
                 SavedScreen(
-                    tool = Tool.EDIT,
-                    photoUri = "content://media/external/images/media/42",
+                    viewModel = viewModel,
                     onShare = {},
                     onEditAnother = {},
                     onHome = {},
                 )
             }
         }
+        // The ViewModel's load ends on the main thread, so its queue is run while waiting.
         compose.waitUntil(timeoutMillis = 10_000) {
+            shadowOf(Looper.getMainLooper()).idle()
             compose.onAllNodes(hasTestTag(SAVED_PHOTO_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag(SAVED_PHOTO_TAG).assertIsDisplayed()
