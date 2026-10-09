@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,7 +89,15 @@ fun AccessRefusedPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onOpenSettings, modifier = buttonModifier) {
+            // shapes lets the button morph while pressed, like the app's other buttons. That
+            // overload pads the label less by default, so the padding of the plain button is
+            // passed back to keep the button the size it was.
+            Button(
+                onClick = onOpenSettings,
+                shapes = ButtonDefaults.shapes(),
+                modifier = buttonModifier,
+                contentPadding = ButtonDefaults.ContentPadding,
+            ) {
                 Text(buttonLabel)
             }
         }

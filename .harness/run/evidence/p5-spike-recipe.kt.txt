@@ -1,0 +1,152 @@
+package com.phongkaster.kanso.navigation
+
+import android.os.Looper
+import androidx.activity.BackEventCompat
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.theme.KansoTheme
+import org.junit.After
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.koin.core.context.stopKoin
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+/** Throwaway probe: can the back gesture be driven through the activity's dispatcher? */
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [35])
+class PredictiveSpikeTest {
+
+    /** The host. */
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    /** Stops Koin. */
+    @After
+    fun stop() {
+        stopKoin()
+    }
+
+    /** Drives a gesture to some progress values and prints where the screens are. */
+    @Test
+    fun spike_gesture_then_cancel() {
+        val backStack = mutableStateListOf<NavKey>(Home, Settings)
+        show(backStack)
+        println("SPIKE start: settings left=${left(SETTINGS_TAG)} homeExists=${exists(HOME_TAG)}")
+        onDispatcher { it.dispatchOnBackStarted(BackEventCompat(0f, 0f, 0f, BackEventCompat.EDGE_LEFT)) }
+        repeat(3) { nextFrame() }
+        println("SPIKE after start: settings left=${left(SETTINGS_TAG)} homeExists=${exists(HOME_TAG)}")
+        for (p in listOf(0.05f, 0.1f, 0.2f, 0.3f, 0.5f, 0.8f)) {
+            onDispatcher { it.dispatchOnBackProgressed(BackEventCompat(p * 400f, 0f, p, BackEventCompat.EDGE_LEFT)) }
+            repeat(4) { nextFrame() }
+            println(
+                "SPIKE p=$p: settings left=${left(SETTINGS_TAG)} width=${width(SETTINGS_TAG)} " +
+                    "homeExists=${exists(HOME_TAG)} homeLeft=${if (exists(HOME_TAG)) left(HOME_TAG) else Float.NaN}",
+            )
+        }
+        onDispatcher { it.dispatchOnBackCancelled() }
+        for (i in 1..40) {
+            nextFrame()
+            nextFrame()
+            nextFrame()
+            println(
+                "SPIKE cancel +${i * 48}ms: settings left=${if (exists(SETTINGS_TAG)) left(SETTINGS_TAG) else Float.NaN} " +
+                    "homeExists=${exists(HOME_TAG)} homeLeft=${if (exists(HOME_TAG)) left(HOME_TAG) else Float.NaN}",
+            )
+        }
+        println(
+            "SPIKE cancelled: settings exists=${exists(SETTINGS_TAG)} homeExists=${exists(HOME_TAG)} " +
+                "backStack=${backStack.toList()}",
+        )
+    }
+
+    /** Drives a gesture and commits it. */
+    @Test
+    fun spike_gesture_then_commit() {
+        val backStack = mutableStateListOf<NavKey>(Home, Settings)
+        show(backStack)
+        onDispatcher { it.dispatchOnBackStarted(BackEventCompat(0f, 0f, 0f, BackEventCompat.EDGE_LEFT)) }
+        repeat(3) { nextFrame() }
+        onDispatcher { it.dispatchOnBackProgressed(BackEventCompat(120f, 0f, 0.3f, BackEventCompat.EDGE_LEFT)) }
+        repeat(4) { nextFrame() }
+        println("SPIKE commit pre: settings left=${left(SETTINGS_TAG)} homeExists=${exists(HOME_TAG)}")
+        onDispatcher { it.onBackPressed() }
+        repeat(2) { nextFrame() }
+        println("SPIKE commit +2 frames: settings left=${if (exists(SETTINGS_TAG)) left(SETTINGS_TAG) else Float.NaN} backStack=${backStack.toList()}")
+        for (ms in (1..24).map { 32L }) {
+            compose.mainClock.advanceTimeBy(ms)
+            shadowOf(Looper.getMainLooper()).idle()
+            println("SPIKE commit +${ms}ms: settings exists=${exists(SETTINGS_TAG)} left=${if (exists(SETTINGS_TAG)) left(SETTINGS_TAG) else Float.NaN} homeExists=${exists(HOME_TAG)}")
+        }
+    }
+
+    private fun onDispatcher(block: (androidx.activity.OnBackPressedDispatcher) -> Unit) {
+        compose.activityRule.scenario.onActivity { activity -> block(activity.onBackPressedDispatcher) }
+    }
+
+    private fun show(backStack: SnapshotStateList<NavKey>) {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            KansoTheme(themeMode = ThemeMode.Light) {
+                Nav(backStack)
+            }
+        }
+        compose.mainClock.advanceTimeBy(1000)
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun nextFrame() {
+        compose.mainClock.advanceTimeByFrame()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    private fun exists(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+
+    private fun left(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot.x
+
+    private fun width(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().size.width.toFloat()
+
+    @Composable
+    private fun Nav(backStack: SnapshotStateList<NavKey>) {
+        val motionScheme = MaterialTheme.motionScheme
+        NavDisplay(
+            backStack = backStack,
+            modifier = Modifier.fillMaxSize(),
+            onBack = { backStack.removeLastOrNull() },
+            transitionSpec = kansoPushTransition(motionScheme),
+            popTransitionSpec = kansoPopTransition(motionScheme),
+            predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
+            entryProvider = entryProvider<NavKey> {
+                entry<Home> { Screen(HOME_TAG, "Home") }
+                entry<Settings> { Screen(SETTINGS_TAG, "Settings") }
+            },
+        )
+    }
+
+    @Composable
+    private fun Screen(tag: String, label: String) {
+        Box(modifier = Modifier.fillMaxSize().testTag(tag)) { Text(text = label) }
+    }
+
+    private companion object {
+        const val HOME_TAG = "spike-home"
+        const val SETTINGS_TAG = "spike-settings"
+    }
+}

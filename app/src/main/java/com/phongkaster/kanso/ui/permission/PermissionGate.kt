@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -212,7 +213,9 @@ private fun SampleGateSlot(label: String, action: Pair<String, () -> Unit>? = nu
             textAlign = TextAlign.Center,
         )
         if (action != null) {
-            TextButton(onClick = action.second) { Text(action.first) }
+            TextButton(onClick = action.second, shapes = ButtonDefaults.shapes()) {
+                Text(action.first)
+            }
         }
     }
 }

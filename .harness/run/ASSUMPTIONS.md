@@ -127,7 +127,7 @@ Option 1; DoD 3, 7 and 23 pin the behaviour and leave the mechanism to the test.
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
 - **First dependent checkpoint:** `25b6c6b` (the Phase 3 checkpoint, Iteration 4)
-- **Revert:** `git revert <sha>` of the Phase 3 checkpoint (T-006, T-007)
+- **Revert:** `git revert 25b6c6b` (the Phase 3 checkpoint) (T-006, T-007)
 
 ### Question
 
@@ -237,8 +237,8 @@ Option 1; it is an enum entry, not a feature, and the dead-code rule applies.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** the Phase 4 checkpoint (Iteration 5), where the transition specs, the manifest flag and the "Remove animations" control assertion first depend on it; its SHA is written by the next Iteration (the bootstrap commit `9e2535a` only recorded it)
-- **Revert:** `git revert <sha>` of the Phase 4 checkpoint (T-008)
+- **First dependent checkpoint:** `aaeba85` (the Phase 4 checkpoint, Iteration 5), where the transition specs, the manifest flag and the "Remove animations" control assertion first depend on it
+- **Revert:** `git revert aaeba85` (the Phase 4 checkpoint) (T-008)
 
 ### Question
 
@@ -304,8 +304,8 @@ Option 1. It keeps the criterion provable by its own command and changes nothing
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 5
-- **First dependent checkpoint:** the Phase 4 checkpoint (Iteration 5); its SHA is written by the next Iteration, a commit cannot name itself
-- **Revert:** `git revert <sha>` of the Phase 4 checkpoint (T-008, T-011)
+- **First dependent checkpoint:** `aaeba85` (the Phase 4 checkpoint, Iteration 5)
+- **Revert:** `git revert aaeba85` (the Phase 4 checkpoint) (T-008, T-011)
 
 ### Question
 
@@ -321,3 +321,31 @@ DoD 14's Proof says "one frame after a push both screens are composed"; DoD 16's
 
 Option 1: the intent of both Proofs holds, and the differences are recorded so the Verifier can say them aloud ("did not fail ... two frames after").
 
+---
+
+## A-015 - The back gesture's preview slides the top screen in a straight line, not on a spring
+
+- **Tier:** 2 (plan/architecture), **with a Tier-3 reading: DoD 14's statement says "the expressive spring"**, and a straight-line slide is not a spring. Recorded as an assumption against criterion 14 (listed as assumed in `STATE.md`), found by the fresh-context review of Phase 5 (the second process of Iteration 6): the Proof of 14 still holds as written (the three specs are built from the motion scheme, and `NavTransitionTest` sees the predictive function ask it for exactly its two springs), but its statement does not hold for the one slide a finger drives, so a person confirms it in criterion 21, step 8
+- **Iteration:** 6
+- **First dependent checkpoint:** the Phase 5 checkpoint (Iteration 6); its SHA is written by the next Iteration, a commit cannot name itself
+- **Revert:** `git revert <sha>` of the Phase 5 checkpoint (T-014: put back `{ _ -> pop(this) }`, or accept the spring slide)
+
+### Question
+
+The PRD wants spring motion (the expressive scheme) and predictive back through `NavDisplay`. While a person swipes, `NavDisplay` seeks the transition: the gesture's progress picks a moment of its run (about 0.8 s, set by the slowest animation), not a point on the slide. A spring slide therefore runs ahead of the finger (worked out from the spring, not timed: about half the width at a tenth of the swipe, nine tenths at a fifth), and the person cannot peek at the screen underneath while the top one is still in sight. Review of Phase 4 (finding 3) and of Phase 5 (blocking 1 and 2) both found it.
+
+### Options Considered
+
+1. Keep both slides on the springs, drop only the top screen's fade (attempt 1 of T-014) - consequences: literal to "the expressive spring" and "the same two springs", but the top screen leaves the view within about a fifth of a slow swipe, so the preview does not keep pace; the task's own goal ("follows the gesture") is not met.
+2. Give the top screen's exit slide a one-second straight-line animation (`tween` with `LinearEasing`) and keep the springs for the screen underneath, which the scheme still supplies (attempt 2) - consequences: the top screen sits exactly at progress times its width (`PredictiveBackGestureTest`, T-016: 16, 32, 64, 96, 160, 256 px at 320 px for progress 0.05, 0.1, 0.2, 0.3, 0.5, 0.8); a committed gesture finishes the slide at that constant speed (about 0.7 s left after a release at 0.3), a cancel brings it back on NavDisplay's own tween; the Back button, a three-button Back and every push still play the springs; costs one departure from "spring motion", for the finger-driven preview only.
+3. Queue the question - consequences: Autonomous mode does not queue a question; the DoD does not fix this detail.
+
+### Taken, and why
+
+Option 2. The preview exists to follow the finger, and a spring cannot, because the seek maps progress to time. The screen underneath, every push, the Back button's pop and a three-button Back still use the expressive springs. **Two costs the person should judge in criterion 21, step 8:** (a) after the finger lifts and the gesture is committed, the top screen's slide carries on at the same constant speed, so a short swipe released early takes long to finish (a release at a tenth of the swipe leaves about 0.9 s; at 0.3 about 0.7 s, which `PredictiveBackGestureTest` pins as 30 to 60 frames); (b) the swipe's edge is ignored, so from the right edge the screen moves right while the finger moves left (the machine tests send the swipe from the left edge only: try both). If it feels wrong, the revert is one line.
+
+---
+
+## A-011 - Update (Iteration 6)
+
+The Iteration tried what A-011 assumed could not be done. Robolectric does deliver a gesture's progress to Navigation 3: `OnBackPressedDispatcher.dispatchOnBackStarted`, `dispatchOnBackProgressed` and `dispatchOnBackCancelled` (public, `@VisibleForTesting`) with a `BackEventCompat` move the screens (evidence: `evidence/p5-spike-recipe.kt.txt`, `evidence/p5-spike-output.txt`). So the gesture is now driven by `PredictiveBackGestureTest` (T-016); only how the preview *feels* with a real swipe on Android 14 or later stays with a person (criterion 21, step 8). "Remove animations" is still not carried into Compose by this host (`NavTransitionTest` and `ToolSelectionAnimationTest` print "not driven by machine"). A-011's choice (Option 1) stands; its reason for the gesture does not.

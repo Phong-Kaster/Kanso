@@ -67,8 +67,7 @@ import org.robolectric.annotation.Config
  *   so and checks that the push still runs as usual.
  *
  * The specs' springs settle in under a second, so 2 000 ms is ample. The preview the back gesture
- * shows while the finger moves (predictive back) is not driven here: Robolectric does not deliver
- * a gesture's progress to Navigation 3 (assumption A-011), so a person checks it on the phone.
+ * shows while the finger moves (predictive back) is driven in [PredictiveBackGestureTest].
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -151,8 +150,10 @@ class NavTransitionTest {
     /**
      * Each of the three spec functions takes its springs from the motion scheme it is given, and
      * exactly two of them: the default spatial spring for the slides and the default effects
-     * spring for the fades. A scheme that records what is asked of it stands in for the theme's,
-     * so this needs neither a screen nor a running transition.
+     * spring for the fades. (The back gesture's spec asks for both too, but moves its top screen
+     * on a straight-line slide, so this test says nothing about that slide: the gesture tests
+     * do.) A scheme that records what is asked of it stands in for the theme's, so this needs
+     * neither a screen nor a running transition.
      */
     @Test
     fun each_spec_takes_a_spatial_and_an_effects_spring_from_the_scheme_it_is_given() {

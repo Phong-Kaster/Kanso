@@ -206,8 +206,10 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
  *
  * How the screens move is set here too: the push, pop and back-gesture transitions come from
  * KansoTransitions.kt, built from the theme's motion scheme, so a screen slides and fades with the
- * Expressive spring. The manifest's `enableOnBackInvokedCallback` switches predictive back on, so
- * the back gesture drives the last of the three.
+ * Expressive springs. The manifest's `enableOnBackInvokedCallback` switches predictive back on, so
+ * the back gesture drives the last of the three; that one departs from the springs for the top
+ * screen's slide, which follows the swipe's progress along a straight line, to the right whichever
+ * edge the swipe starts from (the reason is in its KDoc).
  *
  * Because this function takes only plain values and lambdas, a preview can call it with a
  * one-key back stack and a sample screen, without Koin or a ViewModel.
@@ -220,10 +222,10 @@ fun KansoNavDisplay(
     entryProvider: (NavKey) -> NavEntry<NavKey>,
     modifier: Modifier = Modifier,
 ) {
-    // The theme's motion scheme (Expressive: springs) is read here, while Compose is drawing,
-    // because MaterialTheme.motionScheme only works inside a composable function and the spec
-    // lambdas NavDisplay calls later are not composable. The three functions below take the
-    // scheme and build the lambdas; see KansoTransitions.kt for what each one does.
+    // The theme's motion scheme (Expressive: springs, which the screens' moves use) is read here,
+    // while Compose is drawing, because MaterialTheme.motionScheme only works inside a composable
+    // function and the spec lambdas NavDisplay calls later are not composable. The three functions
+    // below take the scheme and build the lambdas; see KansoTransitions.kt for what each one does.
     val motionScheme = MaterialTheme.motionScheme
     NavDisplay(
         backStack = backStack,

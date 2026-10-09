@@ -119,3 +119,19 @@ At bootstrap the critique role checks the decomposition and the DoD's classes, a
 
 The checklist said "prove this in test A and test B". The plan only ever sent someone to write test A. A final read of "every test a proof names, and which task writes it" at planning time, and again at the end of each phase, would have caught it before the last step instead of during a review.
 
+
+## S-008 - Checkpoint a Phase as soon as its build is verified; a review's follow-up tasks are the next Phase, not more of this Iteration
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 6, Phase 5 (2026-10-10, Iteration 6): the Iteration dispatched three Workers, verified them, and then ran two fresh-context reviews, each of which produced more work (a spike, three new tasks, a one-off mutation proof, three more fresh full runs), all inside the same Iteration and with no commit in between. It ran about an hour and a half and ended by the Runtime at its 5400-second limit (telemetry row: CRASH, 5400 s) with six tasks' worth of finished work uncommitted, the task files still reading `pending, 0 attempts` and no HISTORY entry. The next process found the tree coherent and salvaged it, but had to re-verify everything (a 3 minute run, a review and the writing of every record) before it could checkpoint.
+- **Status:** open
+
+### What happened
+
+The engine's contract is one Iteration, one Phase, one atomic checkpoint at the end, with Phase size capped so the end comes soon. A review that adds tasks quietly lifts that cap: the Iteration kept going, each follow-up was small and each looked cheaper than stopping, and nothing in the contract says when the sum is too much for one process. Compare S-006, where the cost of an early stop was lost reports; here it is lost time and a longer recovery.
+
+### In plain words
+
+The engine is meant to do one bounded chunk of work and then save it. After the work passed its checks, the engine kept finding more things to fix and prove, and never saved in between, so when the clock ran out the saved copy was an hour and a half old. A rule such as "once the build is green and the records are written, save; anything the review finds becomes the next chunk" would make a cut-off cost minutes, not an hour.
+
+---

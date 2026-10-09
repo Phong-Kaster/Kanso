@@ -65,3 +65,14 @@ New files: `theme/KansoBlueThemeTest.kt`, `theme/KansoBlueContrastTest.kt`, `too
 | `settings/ThemeSwatchTest.kt` | M | DoD 2: one test added, `the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected` (pick Custom green, tap Kanso blue and wallpaper, read the swatch centre pixel each time; then Custom brings green back). No existing test changed. |
 
 New files in Phase 4: `navigation/NavTransitionTest.kt` (DoD 14 and the machine part of 13: push, pop, Back, the springs taken from the scheme, "Remove animations"; five tests), `a11y/AccessibilityWalkTest.kt` and `a11y/TouchTargetCheck.kt` (DoD 18; 22 tests), `theme/ThemeFollowTest.kt` (DoD 16; 14 tests). 363 `@Test` at the Phase 4 checkpoint (318 + 45).
+
+## Phase 5 (T-013 to T-017: fixes from the Phase 4 and Phase 5 reviews)
+
+No file here is `M` or `D` against the base `76522d7`: every test file Phase 5 touches was added earlier in this run (`tool/ToolSelectionAnimationTest.kt` in Phase 1, `navigation/NavTransitionTest.kt` and `a11y/AccessibilityWalkTest.kt` in Phase 4), so `git diff --name-status --no-renames <base> HEAD -- app/src/test/java` lists them as `A`. What changed, for the record:
+
+| File | What | Why |
+|---|---|---|
+| `tool/ToolSelectionAnimationTest.kt` | One test added (`with_animations_removed_a_tool_switch_settles_at_once_if_the_host_carries_the_setting`: the control assertion and the two-branch verdict of DoD 13, prints "not driven by machine" on this host); `showEditorOnEdit` gained an optional composable parameter (default empty); a second `@After` restores the animation scale. | DoD 13's Proof names this class. |
+| `a11y/AccessibilityWalkTest.kt` | The `camera refused` test now walks the real `CameraScreen` in the refused state (a denying `RecordingRegistry`, a `FakeCameraController`), keeping its name. | DoD 18 names the refused camera; the hand-drawn panel could not see a control added to the real one. |
+| `navigation/NavTransitionTest.kt` | KDoc only (the gesture is no longer "not driven"). | Assumption A-011 was corrected: Robolectric does deliver a gesture's progress. |
+| `navigation/PredictiveBackGestureTest.kt`, `navigation/PredictiveBackOpacityTest.kt` | New: the back gesture driven through the activity's back dispatcher (three tests); the top screen stays opaque and on top (one test, pixels). | DoD 14 and 21 (machine pre-check of the preview). |

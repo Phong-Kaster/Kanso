@@ -1,0 +1,566 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+index 496c962..2d1005f 100644
+--- a/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+@@ -117,7 +117,10 @@ fun kansoPopTransition(
+ 
+ /**
+  * Returns the `predictivePopTransitionSpec` Kanso gives NavDisplay: how the screens move while a
+- * person is making the back gesture, before they have let go.
++ * person is making the back gesture, before they have let go. The top screen slides towards the
++ * right edge as the gesture goes on and stays fully visible, with no fade; the screen underneath
++ * appears behind it, coming back from a quarter of the width on the left as it fades in, the way
++ * [kansoPopTransition] brings it back. Both move on the same two springs as the push and the pop.
+  *
+  * What predictive back is: with gesture navigation, a person goes back by swiping in from the left
+  * or the right edge of the screen. With predictive back the app shows where Back leads while the
+@@ -127,24 +130,64 @@ fun kansoPopTransition(
+  * it, and the top screen returns to its place. So a person can peek at the previous screen and
+  * change their mind. Android shows this inside apps from Android 14 on, for apps that switch it on
+  * with `android:enableOnBackInvokedCallback="true"` in their manifest, as Kanso does (the owner's
+- * phone runs Android 14). With three-button navigation there is no gesture: the Back button simply
+- * plays [kansoPopTransition].
++ * phone runs Android 14). Android 13 already hands Back to an app through the same callback that
++ * flag switches on, but it calls it only once Back is finished and sends no progress while the
++ * finger moves, so on Android 13 there is no preview: the pop simply plays [kansoPopTransition].
++ * With three-button navigation there is no gesture either: the Back button plays
++ * [kansoPopTransition] too.
+  *
+- * During the gesture NavDisplay does not play this transition against the clock: it seeks it,
+- * holding it at the point that matches how far the gesture has progressed, and moves it as the
+- * finger moves. Kanso uses its pop transition here, so the leaving screen slides to the right with
+- * the finger while the screen underneath comes in from the left, and letting go simply carries on
+- * the same movement to its end (or back to its start, when the gesture is cancelled).
++ * How NavDisplay plays it: during the gesture it does not run this transition against the clock;
++ * it seeks it. The gesture's progress, a number Android sends that grows from 0 towards 1 as the
++ * finger moves in from the edge, picks a moment of the transition's run: at 0.5 NavDisplay shows
++ * the screens as they would be halfway through it, and it moves them again each time the finger
++ * moves. How long that run is comes from its slowest animation, here the top screen's slide
++ * across the full width, which the spring takes roughly 0.8 s to settle. NavDisplay also decides
++ * which screen is drawn on top (it ignores any drawing order a spec asks for): during the gesture
++ * the leaving screen is on top, so it covers the screen underneath until it has moved aside.
++ *
++ * Why the top screen does not fade: [kansoPopTransition] fades the leaving screen out on the
++ * effects spring, which is nearly done within about a tenth of a second. Set against a run of
++ * about 0.8 s (worked out from the spring values, not timed on a phone), that fade would be almost over at a fifth of a slow swipe: the top screen would
++ * vanish at the start of the gesture and leave nothing to peek behind. So here it only slides. The
++ * screen underneath keeps its fade-in, which finishes just as early, but it is drawn behind the top
++ * screen and only shows where the top screen has moved aside. The slides keep the spring's shape
++ * as well: a spring moves fastest at its start, so the top screen covers most of its way in the
++ * first part of the swipe and moves less and less after that.
++ *
++ * Letting go: NavDisplay stops seeking and lets the clock finish the move from the point the
++ * finger left it. If Android judges that the gesture went far enough, it is committed: the top key
++ * is really removed from the back stack, as the Back button removes it, and the move runs on to
++ * its end, the top screen leaving by the right edge and the screen underneath settling in its
++ * place. If the person slid back before letting go, the gesture is cancelled: nothing is removed,
++ * and the move runs backwards to its start, so the top screen slides back over the one underneath.
++ *
++ * What no machine has run: Robolectric sends Navigation 3 no gesture progress (assumption A-011),
++ * so no test here can make the gesture. A person checks the preview on the phone, on Android 14 or
++ * later with Settings > Display > Navigation bar > Swipe gestures turned on, and judges how it
++ * feels.
+  *
+  * The lambda also receives the swipe edge, a number that says which edge of the screen the gesture
+  * started from. Kanso moves its screens the same way from either edge, so it ignores it (the `_`).
+- * Like the other two, this function takes the motion scheme as a parameter, because the spec
+- * lambda is not a composable function.
++ * Like the other two, this function takes the motion scheme as a parameter and reads its two
++ * springs at once, because the spec lambda is not a composable function and cannot read the theme
++ * itself.
+  */
+ fun kansoPredictivePopTransition(
+     motionScheme: MotionScheme,
+ ): AnimatedContentTransitionScope<Scene<NavKey>>.(Int) -> ContentTransform {
+-    val pop = kansoPopTransition(motionScheme)
+-    // `pop(this)` runs the pop lambda with this lambda's own receiver, the same transition scope.
+-    return { _ -> pop(this) }
++    // The same two springs as the push and the pop, read once here and captured by the lambda.
++    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
++    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
++    // The `_` is the swipe edge, which Kanso does not need.
++    return { _ ->
++        // The screen underneath comes back as the pop brings it: from a quarter of its width to the
++        // left, fading in. It is drawn behind the top screen, so it shows only where that one has
++        // moved aside.
++        val enter = slideInHorizontally(animationSpec = slide, initialOffsetX = { fullWidth -> -fullWidth / 4 }) +
++            fadeIn(animationSpec = fade)
++        // The top screen only slides towards the right edge. No fadeOut here: it stays fully
++        // visible for the whole gesture, so the person always sees what they would leave.
++        val exit = slideOutHorizontally(animationSpec = slide, targetOffsetX = { fullWidth -> fullWidth })
++        enter togetherWith exit
++    }
+ }
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+index c78d88a..271d8bc 100644
+--- a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+@@ -3,6 +3,9 @@ package com.phongkaster.kanso.a11y
+ import android.app.Application
+ import android.os.Looper
+ import androidx.activity.ComponentActivity
++import androidx.activity.compose.LocalActivityResultRegistryOwner
++import androidx.activity.result.ActivityResultRegistry
++import androidx.activity.result.ActivityResultRegistryOwner
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.Box
+@@ -26,6 +29,8 @@ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.Role
+ import androidx.compose.ui.semantics.SemanticsNode
+ import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.assertIsDisplayed
++import androidx.compose.ui.test.hasTestTag
+ import androidx.compose.ui.test.junit4.createAndroidComposeRule
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.unit.DpSize
+@@ -35,25 +40,31 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
+ import coil.Coil
+ import coil.ImageLoader
+ import com.phongkaster.kanso.R
++import com.phongkaster.kanso.camera.FakeCameraController
+ import com.phongkaster.kanso.data.media.Album
+ import com.phongkaster.kanso.data.media.Photo
+ import com.phongkaster.kanso.data.settings.ThemeColour
+ import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.di.ViewModelClearedProbe
++import com.phongkaster.kanso.gallery.RecordingRegistry
+ import com.phongkaster.kanso.navigation.Tool
+ import com.phongkaster.kanso.screenshots.FAKE_SCHEME
+ import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
+ import com.phongkaster.kanso.tool.ToolFixtures
++import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
++import com.phongkaster.kanso.ui.camera.CAMERA_SETTINGS_BUTTON_TAG
+ import com.phongkaster.kanso.ui.camera.CameraContent
+ import com.phongkaster.kanso.ui.camera.CameraFrame
++import com.phongkaster.kanso.ui.camera.CameraScreen
+ import com.phongkaster.kanso.ui.camera.CameraState
+ import com.phongkaster.kanso.ui.camera.CameraStatus
+ import com.phongkaster.kanso.ui.camera.CameraUiState
++import com.phongkaster.kanso.ui.camera.CameraViewModel
+ import com.phongkaster.kanso.ui.camera.FlashMode
+ import com.phongkaster.kanso.ui.gallery.GalleryContent
+ import com.phongkaster.kanso.ui.gallery.GalleryUiState
+ import com.phongkaster.kanso.ui.home.HomeContent
+ import com.phongkaster.kanso.ui.home.HomeUiState
+-import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
+ import com.phongkaster.kanso.ui.permission.PermissionAccess
+ import com.phongkaster.kanso.ui.saved.SavedContent
+ import com.phongkaster.kanso.ui.saved.SavedPhoto
+@@ -81,10 +92,11 @@ import org.robolectric.annotation.GraphicsMode
+  * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
+  * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
+  *
+- * How a state is checked. Each test draws one state in its own window: the screen's stateless
+- * part (the `...Content` composable, or the nearest public or internal part where that is
+- * private) inside KansoTheme in light mode, fed a UiState built here from sample values. No
+- * Koin, no ViewModel, no permission dialog and no camera is involved. Then the test reads the
++ * How a state is checked. Each test draws one state in its own window, inside KansoTheme in
++ * light mode: the screen's stateless part (the `...Content` composable, or the nearest public or
++ * internal part where that is private) fed a UiState built here from sample values, or, for the
++ * refused camera, the real screen (see below). No Koin, no permission dialog and no camera is
++ * involved, and no ViewModel apart from the refused camera's. Then the test reads the
+  * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
+  * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
+  * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
+@@ -101,8 +113,13 @@ import org.robolectric.annotation.GraphicsMode
+  * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
+  *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
+  *   description) take their places. Neither is a control, so the check sees the same controls;
+- * - the camera's refused panel is private (`CameraRefusedPanel`), so its two public parts are
+- *   drawn instead: `CameraFrame` around `AccessRefusedPanel`, with the camera's own wording;
++ * - the refused camera is the one state drawn from the real screen, `CameraScreen`, because its
++ *   refused panel (`CameraRefusedPanel`) is private and a hand-drawn copy would miss a control
++ *   later added to it. The screen reaches the state by itself, as in
++ *   `ThemeFollowTest.checkCameraRefused`: its ViewModel holds a [FakeCameraController] (the
++ *   computer has no camera, and with access refused the camera is never connected, so the fake
++ *   is never reached), and its one permission request goes to a [RecordingRegistry], which shows
++ *   no system dialog and answers "denied";
+  * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
+  *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
+  *   spoken name the app gives it.
+@@ -110,7 +127,8 @@ import org.robolectric.annotation.GraphicsMode
+  * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
+  * anything is drawn) and moved on by hand: the loading states show Material's loading
+  * indicator, which never stops moving, and with the clock running by itself every wait for the
+- * screen to settle would wait for it forever. Nothing is pressed.
++ * screen to settle would wait for it forever. Nothing is pressed: the refused camera's "denied"
++ * comes from the registry, and the clock is moved a frame at a time until the screen shows it.
+  *
+  * Two more tests check the check itself on a sample 40 dp icon button with no description (the
+  * DoD's "its own control"): it must be reported.
+@@ -337,21 +355,17 @@ class AccessibilityWalkTest {
+     }
+ 
+     /**
+-     * The camera after camera access was refused: back and the button to the settings. The
+-     * screen's own refused panel is private, so its public parts are drawn with its wording.
++     * The camera after camera access was refused: back and the button to the settings.
++     *
++     * Unlike the other states, this one is the real camera screen brought to the refused state
++     * by itself ([showRefusedCamera]), as `ThemeFollowTest.checkCameraRefused` does: the screen's
++     * refused panel is private, and walking the real screen means a control later added to that
++     * panel is walked too.
+      */
+     @Test
+     fun camera_refused() {
+-        walk("camera refused") {
+-            CameraFrame(onBack = {}) {
+-                AccessRefusedPanel(
+-                    title = stringResource(R.string.camera_refused_title),
+-                    message = stringResource(R.string.camera_refused_message),
+-                    buttonLabel = stringResource(R.string.camera_open_settings),
+-                    onOpenSettings = {},
+-                )
+-            }
+-        }
++        showRefusedCamera()
++        assertControlsPass("camera refused")
+     }
+ 
+     /** The camera when it cannot be opened: back and the switched-off shutter, still named. */
+@@ -566,6 +580,53 @@ class AccessibilityWalkTest {
+         }
+     }
+ 
++    /**
++     * Draws the real camera screen (see [show]) and lets it reach its "camera access is off"
++     * state, the way `ThemeFollowTest.checkCameraRefused` does:
++     *
++     * - the screen's ViewModel is built here around a [FakeCameraController], so no camera and no
++     *   Koin is involved. Access is never granted, so the screen never connects the camera and
++     *   the fake is never reached;
++     * - the screen asks for the camera through `rememberLauncherForActivityResult`, which finds
++     *   its registry in `LocalActivityResultRegistryOwner`. Providing a [RecordingRegistry] there
++     *   means the request is only recorded (no system dialog), and the test answers it "denied";
++     * - the screen learns the answer at once, but only shows it once the clock moves, and the
++     *   clock is paused (see the class comment). So the clock is moved one frame at a time, with
++     *   the main thread's queue run after each, until the refused panel is there, and then by
++     *   [SETTLE_MS], so every finite animation has ended before the walk.
++     *
++     * It fails if the screen did not ask exactly once, or if the refused panel and its settings
++     * button are not on screen, so the walk can never pass on the top bar's back button alone.
++     */
++    private fun showRefusedCamera() {
++        val registry = RecordingRegistry()
++        val owner = object : ActivityResultRegistryOwner {
++            override val activityResultRegistry: ActivityResultRegistry = registry
++        }
++        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
++        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
++        show {
++            // A CompositionLocalProvider hands a value down to everything drawn inside it; here,
++            // the registry the screen's permission request goes to.
++            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
++                CameraScreen(viewModel = viewModel, onBack = {}, onKept = {})
++            }
++        }
++        assertEquals("The camera screen must ask for the camera once", 1, registry.requests.size)
++        registry.answerLatest(registry.requests.single().associateWith { false })
++
++        compose.waitUntil(timeoutMillis = REFUSED_TIMEOUT_MS) {
++            compose.mainClock.advanceTimeByFrame()
++            shadowOf(Looper.getMainLooper()).idle()
++            compose.onAllNodes(hasTestTag(CAMERA_REFUSED_TAG)).fetchSemanticsNodes().isNotEmpty()
++        }
++        compose.mainClock.advanceTimeBy(SETTLE_MS)
++        shadowOf(Looper.getMainLooper()).idle()
++
++        compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
++        compose.onNodeWithTag(CAMERA_SETTINGS_BUTTON_TAG).assertIsDisplayed()
++    }
++
+     /**
+      * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
+      * runs every step on the calling thread, so the gallery's thumbnails load without files.
+@@ -645,6 +706,13 @@ class AccessibilityWalkTest {
+          */
+         const val SETTLE_MS = 1_000L
+ 
++        /**
++         * How long, in real milliseconds, the refused camera may take to show its refused panel
++         * after the "denied" answer before the test fails (the same ten seconds
++         * `ThemeFollowTest` gives the camera); it normally takes a frame or two.
++         */
++        const val REFUSED_TIMEOUT_MS = 10_000L
++
+         /** The made-up Uri the editor and Saved states say their photo came from. */
+         const val PHOTO_URI = "content://media/external/images/media/42"
+ 
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
+index 98fd5a4..fd45033 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
+@@ -4,8 +4,19 @@ import android.content.Context
+ import android.graphics.Bitmap
+ import android.graphics.Canvas
+ import android.os.Looper
++// The system settings class goes by another name here, as in NavTransitionTest, where the plain
++// name would hide Kanso's own Settings screen key.
++import android.provider.Settings as SystemSettings
+ import android.view.ViewGroup
+ import androidx.activity.ComponentActivity
++import androidx.compose.animation.core.LinearEasing
++import androidx.compose.animation.core.animateFloatAsState
++import androidx.compose.animation.core.tween
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.State
++import androidx.compose.runtime.mutableFloatStateOf
++import androidx.compose.ui.MotionDurationScale
+ import androidx.compose.ui.test.assertIsOff
+ import androidx.compose.ui.test.assertIsOn
+ import androidx.compose.ui.test.hasTestTag
+@@ -23,6 +34,7 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
+ import com.phongkaster.kanso.ui.tool.ToolViewModel
+ import com.phongkaster.kanso.ui.tool.editorToolTag
+ import org.junit.After
++import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertFalse
+ import org.junit.Assert.assertTrue
+ import org.junit.Rule
+@@ -46,6 +58,17 @@ import org.robolectric.annotation.GraphicsMode
+  * Retouch, as a person would, and once on Artistic with no touch at all, so that a tap's own
+  * ripple and pressed shape cannot pass for the selection's animation.
+  *
++ * A third test is the "Remove animations" pass of DoD 13 (machine part), built like the one in
++ * NavTransitionTest. The phone's "Remove animations" setting turns the system's animator duration
++ * scale to 0; the test sets it so before anything is shown, then switches to Artistic without a
++ * touch. Compose only honours the setting if the test's host hands it to Compose's coroutines as a
++ * `MotionDurationScale`, which a Robolectric host may not do. So a control runs next to the
++ * editor: a plain one-second animation of a number, started together with the switch. The control
++ * is what tells the test whether the host carries the setting. If it reaches its end within a few
++ * frames, the host does, and the toggle must have settled just as quickly. If it is still on its
++ * way, the host does not; the test prints that this check is "not driven by machine" and asserts
++ * that the toggle still animates like any other. Both branches assert something.
++ *
+  * It draws the activity's content view itself, as the settings tests do, because Compose's
+  * captureToImage waits for the window to redraw and that wait times out under Robolectric here.
+  * The screen runs in KansoTheme, so the toggle moves with the app's own expressive motion scheme.
+@@ -68,6 +91,16 @@ class ToolSelectionAnimationTest {
+         stopKoin()
+     }
+ 
++    /**
++     * Puts the system's animator duration scale back to 1, its normal value, so no later test
++     * starts with animations removed. Only the Remove-animations test changes it; for the two
++     * others this writes the normal value they already read, so it changes nothing for them.
++     */
++    @After
++    fun restoreAnimatorDurationScale() {
++        setAnimatorDurationScale(1f)
++    }
++
+     /**
+      * With Edit selected, a tap on Retouch turns its toggle on with a picture that is still
+      * changing 50 ms later (different from before the tap and from the end), and that has
+@@ -101,14 +134,145 @@ class ToolSelectionAnimationTest {
+         }
+     }
+ 
++    /**
++     * The "Remove animations" pass (DoD 13, machine part), with the same switch as the test
++     * above: Artistic selected through the ViewModel, with no touch. The phone's setting is the
++     * animator duration scale, set here to 0 before anything is shown. Compose honours it only if
++     * the host hands it to Compose's coroutines as a `MotionDurationScale`; a Compose test builds
++     * its own host, which may not.
++     *
++     * So a control runs inside the same composition as the editor: a plain one-second animation
++     * of a number, started together with the switch. The control is what tells the test whether
++     * the host carries the setting. If it has reached its end a few frames after the switch, the
++     * host does, and the Artistic toggle must have settled as quickly: its picture then is the
++     * same as 1 s later, and different from before the switch. If the control is still on its
++     * way, the host does not; the test prints that this check is "not driven by machine" (which
++     * DoD 13 does not count as a failure) and asserts what that implies, that the selection is
++     * still animating like any other: a few frames in, the toggle has started to change and has
++     * not yet reached its picture of 1 s later. Either way the outcome is asserted, so a host that
++     * starts carrying the setting changes which branch runs, and what the printed line says.
++     */
++    @Test
++    fun with_animations_removed_a_tool_switch_settles_at_once_if_the_host_carries_the_setting() {
++        // Remove animations before anything is shown, as the phone's setting would have, and
++        // check the system really holds the new value.
++        setAnimatorDurationScale(0f)
++        assertEquals(
++            "The test could not set the system's animation scale to 0",
++            0f,
++            SystemSettings.Global.getFloat(
++                ApplicationProvider.getApplicationContext<Context>().contentResolver,
++                SystemSettings.Global.ANIMATOR_DURATION_SCALE,
++                1f,
++            ),
++            0f,
++        )
++
++        // A state the test writes to start the control: its animation runs towards this value.
++        val controlTarget = mutableFloatStateOf(0f)
++        // Set while Compose draws: the control's current value, readable by the test afterwards.
++        lateinit var control: State<Float>
++        var effectRan = false
++        var effectScale: Float? = null
++
++        val viewModel = showEditorOnEdit {
++            // The control: a one-second animation of a plain number, in the same composition and
++            // on the same paused clock as the editor. It draws nothing, so it adds nothing on
++            // screen and changes no picture of the toggle.
++            control = animateFloatAsState(
++                targetValue = controlTarget.floatValue,
++                animationSpec = tween(durationMillis = CONTROL_MS, easing = LinearEasing),
++                label = "control",
++            )
++            // Reads the scale Compose's animations see: they run in coroutines like this one, and
++            // read it from their context (none at all means a scale of 1).
++            LaunchedEffect(Unit) {
++                effectScale = coroutineContext[MotionDurationScale]?.scaleFactor
++                effectRan = true
++            }
++        }
++        assertTrue("The effect that reads the animation scale never ran", effectRan)
++
++        val toggle = compose.onNodeWithTag(editorToolTag(Tool.ARTISTIC))
++        toggle.assertIsOff()
++        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOn()
++        val before = pictureOf(Tool.ARTISTIC)
++
++        // Start the control and the switch together, in one go on the UI thread, as the test
++        // without a touch selects the tool.
++        compose.runOnUiThread {
++            controlTarget.floatValue = 1f
++            viewModel.selectTool(Tool.ARTISTIC)
++        }
++        repeat(REMOVED_ANIMATION_FRAMES) { nextFrame() }
++        // Read the control and draw the toggle at the same moment, before any more time passes.
++        val controlAfterFrames = control.value
++        val afterFrames = pictureOf(Tool.ARTISTIC)
++        advance(SETTLED_MS)
++        val settled = pictureOf(Tool.ARTISTIC)
++
++        val controlFinishedAtOnce = controlAfterFrames == 1f
++        assertEquals(
++            "The scale in Compose's coroutines ($effectScale) does not match what the control did",
++            effectScale == 0f,
++            controlFinishedAtOnce,
++        )
++        if (controlFinishedAtOnce) {
++            println(
++                "ToolSelectionAnimationTest: the host carries ANIMATOR_DURATION_SCALE into Compose " +
++                    "(MotionDurationScale $effectScale): the tool switch was checked with animations removed",
++            )
++            assertTrue(
++                "With animations removed the toggle should have settled at once, yet its picture " +
++                    "$REMOVED_ANIMATION_FRAMES frames after the switch differs from its picture 1 s later",
++                afterFrames.contentEquals(settled),
++            )
++            assertFalse(
++                "With animations removed the toggle should look selected at once, yet " +
++                    "$REMOVED_ANIMATION_FRAMES frames after the switch it looks as it did before",
++                before.contentEquals(afterFrames),
++            )
++        } else {
++            println(
++                "ToolSelectionAnimationTest: not driven by machine. This Robolectric host does not carry " +
++                    "ANIMATOR_DURATION_SCALE into Compose (MotionDurationScale ${effectScale ?: "absent"}, " +
++                    "the control animation was at $controlAfterFrames after the switch), so the " +
++                    "Remove-animations pass of DoD 13 is left to the person on the phone",
++            )
++            assertFalse(
++                "The host does not carry the animation setting, so the toggle should be animating " +
++                    "like any other, yet nothing changed in the first $REMOVED_ANIMATION_FRAMES frames",
++                before.contentEquals(afterFrames),
++            )
++            assertFalse(
++                "The host does not carry the animation setting, so the toggle should still be " +
++                    "animating like any other, yet $REMOVED_ANIMATION_FRAMES frames after the switch " +
++                    "it already looks as it does 1 s later",
++                afterFrames.contentEquals(settled),
++            )
++        }
++
++        // Whatever the host, both moves end: the control at its target, Artistic on and Edit
++        // off, and the Artistic toggle looking selected.
++        assertEquals("The control animation never reached its target", 1f, control.value, 0.001f)
++        toggle.assertIsOn()
++        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOff()
++        assertFalse("The selected toggle looks as it did before the switch", before.contentEquals(settled))
++    }
++
+     // --- Helpers -----------------------------------------------------------------------------
+ 
+     /**
+      * Builds the editor's ViewModel on Edit (outside any composable: lint forbids constructing a
+      * ViewModel while drawing), pauses the clock, shows the editor in KansoTheme, waits for the
+      * photo and lets everything that started with the screen finish. Returns the ViewModel.
++     *
++     * [alongside] is composed next to the editor, inside the same theme and composition, so it
++     * runs on the same clock: the Remove-animations test puts its control there. It must draw
++     * nothing, so that the screen and the toggle's pictures stay exactly the editor's. By default
++     * it is empty, and the editor is shown alone.
+      */
+-    private fun showEditorOnEdit(): ToolViewModel {
++    private fun showEditorOnEdit(alongside: @Composable () -> Unit = {}): ToolViewModel {
+         val context: Context = ApplicationProvider.getApplicationContext()
+         val viewModel = ToolViewModel(
+             tool = Tool.EDIT,
+@@ -122,6 +286,8 @@ class ToolSelectionAnimationTest {
+         compose.mainClock.autoAdvance = false
+         compose.setContent {
+             KansoTheme(themeMode = ThemeMode.Light) {
++                // What the test asked to run next to the editor; nothing unless it asked.
++                alongside()
+                 ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+             }
+         }
+@@ -168,6 +334,25 @@ class ToolSelectionAnimationTest {
+         shadowOf(Looper.getMainLooper()).idle()
+     }
+ 
++    /**
++     * Moves the paused clock forward by exactly one frame (16 ms) and runs whatever the main
++     * thread was asked to do meanwhile (under Robolectric the test runs on the main thread, so its
++     * queue only moves when the test runs it).
++     */
++    private fun nextFrame() {
++        compose.mainClock.advanceTimeByFrame()
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /**
++     * Sets the system's animator duration scale, the value the phone's "Remove animations"
++     * setting turns to 0, through the app context's settings store.
++     */
++    private fun setAnimatorDurationScale(scale: Float) {
++        val context: Context = ApplicationProvider.getApplicationContext()
++        SystemSettings.Global.putFloat(context.contentResolver, SystemSettings.Global.ANIMATOR_DURATION_SCALE, scale)
++    }
++
+     /**
+      * Moves the paused clock forward until the photo is on screen, so the picture of the toggle
+      * is never taken while the photo area is still changing. Gives up after about ten seconds of
+@@ -217,5 +402,27 @@ class ToolSelectionAnimationTest {
+ 
+         /** How long the screen is left to settle before the first picture, in milliseconds. */
+         const val SETTLE_MS = 2_000L
++
++        /**
++         * How long the control animation of the Remove-animations test takes at normal speed, in
++         * milliseconds. The control is what tells the test whether the host carries the setting:
++         * at a scale of 0 it ends in its first frame; at normal speed it is far from its end a
++         * few frames in.
++         */
++        const val CONTROL_MS = 1_000
++
++        /**
++         * How many frames after the switch the Remove-animations test looks: 6 frames, about
++         * 100 ms. That is enough for the switch to reach the screen and, with animations removed,
++         * for the toggle to settle; at normal speed the selection, about 0.3 s on the Expressive
++         * springs, is still on its way.
++         */
++        const val REMOVED_ANIMATION_FRAMES = 6
++
++        /**
++         * How long after the switch the Remove-animations test takes the toggle's settled
++         * picture, in milliseconds: the toggle's springs end well within a second.
++         */
++        const val SETTLED_MS = 1_000L
+     }
+ }

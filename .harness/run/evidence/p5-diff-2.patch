@@ -1,0 +1,1131 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+index 496c962..7f5bc0d 100644
+--- a/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
++++ b/app/src/main/java/com/phongkaster/kanso/navigation/KansoTransitions.kt
+@@ -3,6 +3,8 @@ package com.phongkaster.kanso.navigation
+ import androidx.compose.animation.AnimatedContentTransitionScope
+ import androidx.compose.animation.ContentTransform
+ import androidx.compose.animation.core.FiniteAnimationSpec
++import androidx.compose.animation.core.LinearEasing
++import androidx.compose.animation.core.tween
+ import androidx.compose.animation.fadeIn
+ import androidx.compose.animation.fadeOut
+ import androidx.compose.animation.slideInHorizontally
+@@ -115,36 +117,127 @@ fun kansoPopTransition(
+     }
+ }
+ 
++/**
++ * How long, in milliseconds, the top screen's straight-line slide lasts during the back gesture
++ * ([kansoPredictivePopTransition]): the only animation in this file that is not a spring.
++ *
++ * Why one second: during the back gesture NavDisplay turns the gesture's progress into a moment of
++ * the transition's running time, and that running time is the length of the transition's longest
++ * animation. The other animations of that transition are the screen underneath's slide and fade,
++ * on springs that settle in less than 0.8 s (worked out from their stiffness and damping, not
++ * timed on a phone). A one-second slide is therefore the longest, so the running time is exactly
++ * this slide's length: progress 0.2 is 0.2 s into it, which puts the top screen a fifth of its
++ * width along, and progress 1 puts it at the right edge. The number is chosen, not measured: any
++ * length a little longer than every spring of the transition would do. If one of those springs
++ * ever took longer, the running time would become that spring's length and the slide would reach
++ * the edge before the gesture's end.
++ */
++private const val PREDICTIVE_SLIDE_MILLIS = 1_000
++
+ /**
+  * Returns the `predictivePopTransitionSpec` Kanso gives NavDisplay: how the screens move while a
+- * person is making the back gesture, before they have let go.
++ * person is making the back gesture, before they have let go. The top screen slides towards the
++ * right edge in step with the gesture, at a constant speed instead of on a spring, and does not
++ * fade; the screen underneath appears behind it, coming back from a quarter of the width on the
++ * left as it fades in, on the same two springs [kansoPopTransition] uses to bring it back.
+  *
+  * What predictive back is: with gesture navigation, a person goes back by swiping in from the left
+  * or the right edge of the screen. With predictive back the app shows where Back leads while the
+- * finger is still moving: the top screen follows the finger and the screen underneath appears
+- * behind it. Letting go once the gesture has gone far enough completes the Back (the top key is
+- * popped, exactly as with the Back button); sliding back towards the edge and letting go cancels
+- * it, and the top screen returns to its place. So a person can peek at the previous screen and
+- * change their mind. Android shows this inside apps from Android 14 on, for apps that switch it on
+- * with `android:enableOnBackInvokedCallback="true"` in their manifest, as Kanso does (the owner's
+- * phone runs Android 14). With three-button navigation there is no gesture: the Back button simply
+- * plays [kansoPopTransition].
++ * finger is still moving: the top screen moves aside and the screen underneath appears behind it.
++ * Letting go once the gesture has gone far enough completes the Back (the top key is popped,
++ * exactly as with the Back button); sliding back towards the edge and letting go cancels it, and
++ * the top screen returns to its place. So a person can peek at the previous screen and change
++ * their mind. Android shows this inside apps from Android 14 on, for apps that switch it on with
++ * `android:enableOnBackInvokedCallback="true"` in their manifest, as Kanso does (the owner's phone
++ * runs Android 14). Android 13 already hands Back to an app through the same callback that flag
++ * switches on, but it calls it only once Back is finished and sends no progress while the finger
++ * moves, so on Android 13 there is no preview: the pop simply plays [kansoPopTransition]. With
++ * three-button navigation there is no gesture either: the Back button plays [kansoPopTransition]
++ * too, on its springs.
++ *
++ * How NavDisplay plays it: during the gesture it does not run this transition against the clock;
++ * it seeks it. The gesture's progress is a number Android sends that grows from 0 towards 1 as the
++ * finger moves in from the edge. NavDisplay hands it to the transition as the fraction of its
++ * running time to show (`seekTo`), so progress 0.5 shows the screens as they would be halfway
++ * through that time, and it does this again each time the finger moves. The running time is the
++ * length of the transition's longest animation. So a seek maps progress to time, not to distance:
++ * how far a screen has moved at a given progress depends on how its animation moves over time.
++ * NavDisplay also decides which screen is drawn on top (it replaces any drawing order a spec asks
++ * for): during the gesture the leaving screen is on top, so it covers the screen underneath until
++ * it has moved aside.
++ *
++ * Why the top screen's slide is not a spring: here, and only for this one slide, Kanso departs on
++ * purpose from the motion scheme's springs. A spring that starts at rest has no speed at the first
++ * instant, is at its fastest about 0.05 s in, and covers most of its way early. If the top screen
++ * slid on the expressive scheme's default spatial spring (damping 0.8, stiffness 380), as in
++ * [kansoPopTransition], that full-width slide would be the longest animation, the running time
++ * would be roughly 0.8 s, and a seek would put the top screen about half its width along at a
++ * tenth of the swipe and about nine tenths along at a fifth (worked out from the spring, not timed
++ * on a phone): it would run far ahead of the finger and be gone before the person had decided
++ * anything. So the slide is a tween instead: an animation that runs for a fixed time,
++ * [PREDICTIVE_SLIDE_MILLIS], along an easing curve, the curve that says how far along the
++ * animation is at each moment. With [LinearEasing] that curve is a straight line, a constant
++ * speed, and because this slide is the longest animation, the top screen has moved the same
++ * fraction of its width as the gesture's progress: at progress 0.2 it is a fifth of its width to
++ * the right. So it is drawn at the finger's pace, but it only ever moves to the right: the swipe
++ * edge is ignored, so in a swipe from the right edge the finger goes left while the screen still
++ * goes right.
++ *
++ * Why the top screen does not fade: [kansoPopTransition] fades the leaving screen out on the
++ * effects spring, which is about nine tenths done after a tenth of a second. Seeked over a running
++ * time of one second, that fade would be about nine tenths done at a tenth of the swipe, and the
++ * top screen would vanish while the person was still deciding. So here it has no fade: it stays
++ * opaque while it slides, and the person sees less and less of it as it leaves by the right edge.
++ * The screen underneath keeps the two springs: its slide and its fade-in are nearly finished by a
++ * fifth of the swipe, but it is drawn behind the top screen and only shows where the top screen
++ * has moved aside.
+  *
+- * During the gesture NavDisplay does not play this transition against the clock: it seeks it,
+- * holding it at the point that matches how far the gesture has progressed, and moves it as the
+- * finger moves. Kanso uses its pop transition here, so the leaving screen slides to the right with
+- * the finger while the screen underneath comes in from the left, and letting go simply carries on
+- * the same movement to its end (or back to its start, when the gesture is cancelled).
++ * Letting go: NavDisplay stops seeking. If Android judges that the gesture went far enough, it is
++ * committed: the top key is really removed from the back stack, as the Back button removes it,
++ * and NavDisplay calls `animateTo` on the transition it was seeking, giving it no animation of its
++ * own. The rest of the move then continues from where the finger left it, on the animations the
++ * seek was set up with: the top screen finishes its straight-line slide off the right edge while
++ * the screen underneath finishes its springs. If the person slid back before letting go, the
++ * gesture is cancelled: nothing is removed, and NavDisplay seeks the move back to its start over
++ * a time in proportion to how far it had gone (the fraction reached times the running time), so
++ * the top screen slides back over the one underneath.
++ *
++ * What a machine checks, and what it cannot: the unit test PredictiveBackGestureTest drives the
++ * gesture through the activity's back dispatcher, the way Android hands a gesture to the app, and
++ * checks that the top screen sits at the gesture's progress times its width, that a cancel brings
++ * it back and leaves only it, and that letting go pops the back stack and carries the top screen
++ * out of the right edge. What a machine cannot say is how the preview feels with a real swipe,
++ * which needs Android 14 or later: a person checks it on the phone, with Settings > Display >
++ * Navigation bar > Swipe gestures turned on, and judges whether the top screen keeps pace with
++ * the finger.
+  *
+  * The lambda also receives the swipe edge, a number that says which edge of the screen the gesture
+  * started from. Kanso moves its screens the same way from either edge, so it ignores it (the `_`).
+- * Like the other two, this function takes the motion scheme as a parameter, because the spec
+- * lambda is not a composable function.
++ * Like the other two, this function takes the motion scheme as a parameter and reads its two
++ * springs at once, because the spec lambda is not a composable function and cannot read the theme
++ * itself. It builds the straight-line slide at once too, so every call of the lambda shares it.
+  */
+ fun kansoPredictivePopTransition(
+     motionScheme: MotionScheme,
+ ): AnimatedContentTransitionScope<Scene<NavKey>>.(Int) -> ContentTransform {
+-    val pop = kansoPopTransition(motionScheme)
+-    // `pop(this)` runs the pop lambda with this lambda's own receiver, the same transition scope.
+-    return { _ -> pop(this) }
++    // The same two springs as the pop, read once here and captured by the lambda. Only the screen
++    // underneath moves on them.
++    val slide: FiniteAnimationSpec<IntOffset> = motionScheme.defaultSpatialSpec()
++    val fade: FiniteAnimationSpec<Float> = motionScheme.defaultEffectsSpec()
++    // The top screen's slide: a fixed one-second run at a constant speed, so a seek to a given
++    // progress puts the screen that fraction of its width along (see PREDICTIVE_SLIDE_MILLIS).
++    val followSlide: FiniteAnimationSpec<IntOffset> =
++        tween(durationMillis = PREDICTIVE_SLIDE_MILLIS, easing = LinearEasing)
++    // The `_` is the swipe edge, which Kanso does not need.
++    return { _ ->
++        // The screen underneath comes back as the pop brings it: from a quarter of its width to the
++        // left, fading in. It is drawn behind the top screen, so it shows only where that one has
++        // moved aside.
++        val enter = slideInHorizontally(animationSpec = slide, initialOffsetX = { fullWidth -> -fullWidth / 4 }) +
++            fadeIn(animationSpec = fade)
++        // The top screen slides out of the right edge at the gesture's pace. No fadeOut here: it
++        // stays opaque while it slides, so the person sees what they would leave.
++        val exit = slideOutHorizontally(animationSpec = followSlide, targetOffsetX = { fullWidth -> fullWidth })
++        enter togetherWith exit
++    }
+ }
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+index c78d88a..271d8bc 100644
+--- a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+@@ -3,6 +3,9 @@ package com.phongkaster.kanso.a11y
+ import android.app.Application
+ import android.os.Looper
+ import androidx.activity.ComponentActivity
++import androidx.activity.compose.LocalActivityResultRegistryOwner
++import androidx.activity.result.ActivityResultRegistry
++import androidx.activity.result.ActivityResultRegistryOwner
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.Box
+@@ -26,6 +29,8 @@ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.Role
+ import androidx.compose.ui.semantics.SemanticsNode
+ import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.assertIsDisplayed
++import androidx.compose.ui.test.hasTestTag
+ import androidx.compose.ui.test.junit4.createAndroidComposeRule
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.unit.DpSize
+@@ -35,25 +40,31 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
+ import coil.Coil
+ import coil.ImageLoader
+ import com.phongkaster.kanso.R
++import com.phongkaster.kanso.camera.FakeCameraController
+ import com.phongkaster.kanso.data.media.Album
+ import com.phongkaster.kanso.data.media.Photo
+ import com.phongkaster.kanso.data.settings.ThemeColour
+ import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.di.ViewModelClearedProbe
++import com.phongkaster.kanso.gallery.RecordingRegistry
+ import com.phongkaster.kanso.navigation.Tool
+ import com.phongkaster.kanso.screenshots.FAKE_SCHEME
+ import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
+ import com.phongkaster.kanso.tool.ToolFixtures
++import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
++import com.phongkaster.kanso.ui.camera.CAMERA_SETTINGS_BUTTON_TAG
+ import com.phongkaster.kanso.ui.camera.CameraContent
+ import com.phongkaster.kanso.ui.camera.CameraFrame
++import com.phongkaster.kanso.ui.camera.CameraScreen
+ import com.phongkaster.kanso.ui.camera.CameraState
+ import com.phongkaster.kanso.ui.camera.CameraStatus
+ import com.phongkaster.kanso.ui.camera.CameraUiState
++import com.phongkaster.kanso.ui.camera.CameraViewModel
+ import com.phongkaster.kanso.ui.camera.FlashMode
+ import com.phongkaster.kanso.ui.gallery.GalleryContent
+ import com.phongkaster.kanso.ui.gallery.GalleryUiState
+ import com.phongkaster.kanso.ui.home.HomeContent
+ import com.phongkaster.kanso.ui.home.HomeUiState
+-import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
+ import com.phongkaster.kanso.ui.permission.PermissionAccess
+ import com.phongkaster.kanso.ui.saved.SavedContent
+ import com.phongkaster.kanso.ui.saved.SavedPhoto
+@@ -81,10 +92,11 @@ import org.robolectric.annotation.GraphicsMode
+  * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
+  * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
+  *
+- * How a state is checked. Each test draws one state in its own window: the screen's stateless
+- * part (the `...Content` composable, or the nearest public or internal part where that is
+- * private) inside KansoTheme in light mode, fed a UiState built here from sample values. No
+- * Koin, no ViewModel, no permission dialog and no camera is involved. Then the test reads the
++ * How a state is checked. Each test draws one state in its own window, inside KansoTheme in
++ * light mode: the screen's stateless part (the `...Content` composable, or the nearest public or
++ * internal part where that is private) fed a UiState built here from sample values, or, for the
++ * refused camera, the real screen (see below). No Koin, no permission dialog and no camera is
++ * involved, and no ViewModel apart from the refused camera's. Then the test reads the
+  * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
+  * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
+  * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
+@@ -101,8 +113,13 @@ import org.robolectric.annotation.GraphicsMode
+  * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
+  *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
+  *   description) take their places. Neither is a control, so the check sees the same controls;
+- * - the camera's refused panel is private (`CameraRefusedPanel`), so its two public parts are
+- *   drawn instead: `CameraFrame` around `AccessRefusedPanel`, with the camera's own wording;
++ * - the refused camera is the one state drawn from the real screen, `CameraScreen`, because its
++ *   refused panel (`CameraRefusedPanel`) is private and a hand-drawn copy would miss a control
++ *   later added to it. The screen reaches the state by itself, as in
++ *   `ThemeFollowTest.checkCameraRefused`: its ViewModel holds a [FakeCameraController] (the
++ *   computer has no camera, and with access refused the camera is never connected, so the fake
++ *   is never reached), and its one permission request goes to a [RecordingRegistry], which shows
++ *   no system dialog and answers "denied";
+  * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
+  *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
+  *   spoken name the app gives it.
+@@ -110,7 +127,8 @@ import org.robolectric.annotation.GraphicsMode
+  * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
+  * anything is drawn) and moved on by hand: the loading states show Material's loading
+  * indicator, which never stops moving, and with the clock running by itself every wait for the
+- * screen to settle would wait for it forever. Nothing is pressed.
++ * screen to settle would wait for it forever. Nothing is pressed: the refused camera's "denied"
++ * comes from the registry, and the clock is moved a frame at a time until the screen shows it.
+  *
+  * Two more tests check the check itself on a sample 40 dp icon button with no description (the
+  * DoD's "its own control"): it must be reported.
+@@ -337,21 +355,17 @@ class AccessibilityWalkTest {
+     }
+ 
+     /**
+-     * The camera after camera access was refused: back and the button to the settings. The
+-     * screen's own refused panel is private, so its public parts are drawn with its wording.
++     * The camera after camera access was refused: back and the button to the settings.
++     *
++     * Unlike the other states, this one is the real camera screen brought to the refused state
++     * by itself ([showRefusedCamera]), as `ThemeFollowTest.checkCameraRefused` does: the screen's
++     * refused panel is private, and walking the real screen means a control later added to that
++     * panel is walked too.
+      */
+     @Test
+     fun camera_refused() {
+-        walk("camera refused") {
+-            CameraFrame(onBack = {}) {
+-                AccessRefusedPanel(
+-                    title = stringResource(R.string.camera_refused_title),
+-                    message = stringResource(R.string.camera_refused_message),
+-                    buttonLabel = stringResource(R.string.camera_open_settings),
+-                    onOpenSettings = {},
+-                )
+-            }
+-        }
++        showRefusedCamera()
++        assertControlsPass("camera refused")
+     }
+ 
+     /** The camera when it cannot be opened: back and the switched-off shutter, still named. */
+@@ -566,6 +580,53 @@ class AccessibilityWalkTest {
+         }
+     }
+ 
++    /**
++     * Draws the real camera screen (see [show]) and lets it reach its "camera access is off"
++     * state, the way `ThemeFollowTest.checkCameraRefused` does:
++     *
++     * - the screen's ViewModel is built here around a [FakeCameraController], so no camera and no
++     *   Koin is involved. Access is never granted, so the screen never connects the camera and
++     *   the fake is never reached;
++     * - the screen asks for the camera through `rememberLauncherForActivityResult`, which finds
++     *   its registry in `LocalActivityResultRegistryOwner`. Providing a [RecordingRegistry] there
++     *   means the request is only recorded (no system dialog), and the test answers it "denied";
++     * - the screen learns the answer at once, but only shows it once the clock moves, and the
++     *   clock is paused (see the class comment). So the clock is moved one frame at a time, with
++     *   the main thread's queue run after each, until the refused panel is there, and then by
++     *   [SETTLE_MS], so every finite animation has ended before the walk.
++     *
++     * It fails if the screen did not ask exactly once, or if the refused panel and its settings
++     * button are not on screen, so the walk can never pass on the top bar's back button alone.
++     */
++    private fun showRefusedCamera() {
++        val registry = RecordingRegistry()
++        val owner = object : ActivityResultRegistryOwner {
++            override val activityResultRegistry: ActivityResultRegistry = registry
++        }
++        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
++        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
++        show {
++            // A CompositionLocalProvider hands a value down to everything drawn inside it; here,
++            // the registry the screen's permission request goes to.
++            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
++                CameraScreen(viewModel = viewModel, onBack = {}, onKept = {})
++            }
++        }
++        assertEquals("The camera screen must ask for the camera once", 1, registry.requests.size)
++        registry.answerLatest(registry.requests.single().associateWith { false })
++
++        compose.waitUntil(timeoutMillis = REFUSED_TIMEOUT_MS) {
++            compose.mainClock.advanceTimeByFrame()
++            shadowOf(Looper.getMainLooper()).idle()
++            compose.onAllNodes(hasTestTag(CAMERA_REFUSED_TAG)).fetchSemanticsNodes().isNotEmpty()
++        }
++        compose.mainClock.advanceTimeBy(SETTLE_MS)
++        shadowOf(Looper.getMainLooper()).idle()
++
++        compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
++        compose.onNodeWithTag(CAMERA_SETTINGS_BUTTON_TAG).assertIsDisplayed()
++    }
++
+     /**
+      * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
+      * runs every step on the calling thread, so the gallery's thumbnails load without files.
+@@ -645,6 +706,13 @@ class AccessibilityWalkTest {
+          */
+         const val SETTLE_MS = 1_000L
+ 
++        /**
++         * How long, in real milliseconds, the refused camera may take to show its refused panel
++         * after the "denied" answer before the test fails (the same ten seconds
++         * `ThemeFollowTest` gives the camera); it normally takes a frame or two.
++         */
++        const val REFUSED_TIMEOUT_MS = 10_000L
++
+         /** The made-up Uri the editor and Saved states say their photo came from. */
+         const val PHOTO_URI = "content://media/external/images/media/42"
+ 
+diff --git a/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt b/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt
+index 083eb30..33c73ca 100644
+--- a/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/navigation/NavTransitionTest.kt
+@@ -67,8 +67,7 @@ import org.robolectric.annotation.Config
+  *   so and checks that the push still runs as usual.
+  *
+  * The specs' springs settle in under a second, so 2 000 ms is ample. The preview the back gesture
+- * shows while the finger moves (predictive back) is not driven here: Robolectric does not deliver
+- * a gesture's progress to Navigation 3 (assumption A-011), so a person checks it on the phone.
++ * shows while the finger moves (predictive back) is driven in [PredictiveBackGestureTest].
+  */
+ @RunWith(AndroidJUnit4::class)
+ @Config(sdk = [35])
+diff --git a/app/src/test/java/com/phongkaster/kanso/navigation/PredictiveBackGestureTest.kt b/app/src/test/java/com/phongkaster/kanso/navigation/PredictiveBackGestureTest.kt
+new file mode 100644
+index 0000000..6c61b88
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/navigation/PredictiveBackGestureTest.kt
+@@ -0,0 +1,478 @@
++package com.phongkaster.kanso.navigation
++
++import android.os.Looper
++import androidx.activity.BackEventCompat
++import androidx.activity.ComponentActivity
++import androidx.activity.OnBackPressedDispatcher
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.mutableStateListOf
++import androidx.compose.runtime.snapshots.SnapshotStateList
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.compose.ui.test.onAllNodesWithTag
++import androidx.compose.ui.test.onNodeWithTag
++import androidx.navigation3.runtime.NavKey
++import androidx.navigation3.runtime.entryProvider
++import androidx.navigation3.ui.NavDisplay
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.koin.core.context.stopKoin
++import org.robolectric.Shadows.shadowOf
++import org.robolectric.annotation.Config
++
++/**
++ * Drives the back gesture (predictive back) through Kanso's screen transitions and checks what
++ * the screens do while the finger moves, when the gesture is called off and when the person lets
++ * go. It extends the machine part of DoD 14: [NavTransitionTest] checks the push, the pop and a
++ * plain Back press; this test checks the preview the back gesture shows, which is the spec that
++ * kansoPredictivePopTransition in KansoTransitions.kt builds.
++ *
++ * How a test makes the gesture: on a phone, Android turns a swipe in from the edge into a series
++ * of back events and hands them to the activity's back dispatcher (`OnBackPressedDispatcher`),
++ * which passes them on to whatever registered for Back, here NavDisplay. Each event is a
++ * `BackEventCompat`: where the finger is (x and y), the gesture's progress (a number that grows
++ * from 0, the finger has just landed, towards 1, the finger has crossed the screen) and the edge
++ * the swipe started from. The dispatcher has public functions made for tests that send those
++ * events by hand: `dispatchOnBackStarted` (the finger lands and starts to move),
++ * `dispatchOnBackProgressed` (the finger has moved; sent again at each new position) and
++ * `dispatchOnBackCancelled` (the person slid back and let go, so Back is called off). Letting go
++ * after a far enough swipe is the dispatcher's ordinary `onBackPressed`, the same call that
++ * completes a press of the Back button. The test sends them through the very activity that hosts
++ * NavDisplay, so from the dispatcher on they travel the same road as a real gesture.
++ *
++ * The host is the same as NavTransitionTest's: NavDisplay with Kanso's three transition specs,
++ * two plain screens (Home under Settings, each a tagged box with its name) and a back stack the
++ * test owns, with no MainActivity, no Koin and no ViewModel, so the test depends only on the specs.
++ *
++ * Why every wait steps one frame at a time: the test pauses Compose's clock before anything is
++ * shown, so time moves only when the test moves it. When the gesture was first driven, in a
++ * throwaway probe written before this test, moving the clock by three seconds in one step after a
++ * cancel left the screen underneath composed, while stepping one frame (16 ms) at a time, and
++ * running the main thread's queue after each frame, finished the cancel in about 0.85 s. So every
++ * wait here is a loop of single frames with a generous limit, and fails naming what it waited for.
++ *
++ * What a machine cannot say: whether the preview feels right under a real finger. Android shows
++ * it only from Android 14 on, with gesture navigation; how a real swipe feels (the pace, the
++ * moment the finger lifts) is judged by a person on the phone (DoD 21, step 8). This test proves
++ * where the screens are; the person judges how it feels.
++ */
++@RunWith(AndroidJUnit4::class)
++@Config(sdk = [35])
++class PredictiveBackGestureTest {
++
++    /**
++     * Starts an empty activity to host NavDisplay. Unlike the plain compose rule, this one hands
++     * the test that activity, whose back dispatcher the test sends the gesture's events through.
++     */
++    @get:Rule
++    val compose = createAndroidComposeRule<ComponentActivity>()
++
++    /**
++     * Stops Koin after each test: the test does not use Koin, but KansoApplication starts it for
++     * every Robolectric test, and its state outlives the test inside the same JVM.
++     */
++    @After
++    fun stopKoinAfterTheTest() {
++        stopKoin()
++    }
++
++    /**
++     * While the finger moves, the top screen follows it and the screen underneath shows. Once the
++     * gesture starts, Home is composed behind Settings within a few frames while Settings stays
++     * composed. Then, at progress 0.1, 0.2, 0.5 and 0.8, the top screen's left edge sits at that
++     * share of its width (the straight-line slide of kansoPredictivePopTransition: progress 0.2 is
++     * a fifth of the width), it never moves back left from one step to the next, Home is composed
++     * at every step, and from progress 0.5 on Home rests at the left edge. That is what keeps the
++     * preview at the finger's pace instead of running ahead of it. At the end the gesture is
++     * called off, so the test leaves no gesture in progress.
++     */
++    @Test
++    fun the_back_gesture_moves_the_top_screen_with_the_finger_and_shows_the_screen_underneath() {
++        val backStack = mutableStateListOf<NavKey>(Home, Settings)
++        show(backStack)
++        assertOnlyScreen(shown = SETTINGS_TAG, gone = HOME_TAG)
++        val windowWidth = width(SETTINGS_TAG)
++
++        val frames = startGesture()
++        println("PredictiveBackGestureTest: the screen underneath was composed $frames frame(s) after the gesture started")
++        compose.onNodeWithTag(SETTINGS_TAG).assertExists()
++
++        var previousLeft = left(SETTINGS_TAG)
++        for (progress in PROGRESS_STEPS) {
++            moveFingerTo(progress, windowWidth)
++            val topLeft = left(SETTINGS_TAG)
++            val topWidth = width(SETTINGS_TAG)
++            println("PredictiveBackGestureTest: progress $progress: top screen at x $topLeft of $topWidth")
++
++            assertTrue("At progress $progress the screen underneath is not composed", exists(HOME_TAG))
++            assertEquals(
++                "At progress $progress the top screen should be that share of its width ($topWidth) along",
++                progress * topWidth,
++                topLeft,
++                POSITION_TOLERANCE_PX,
++            )
++            assertTrue(
++                "The top screen moved left between steps, from $previousLeft to $topLeft at progress $progress",
++                topLeft >= previousLeft,
++            )
++            if (progress >= UNDERNEATH_RESTS_FROM_PROGRESS) {
++                assertEquals(
++                    "At progress $progress the screen underneath should rest at the left edge",
++                    0f,
++                    left(HOME_TAG),
++                    POSITION_TOLERANCE_PX,
++                )
++            }
++            previousLeft = topLeft
++        }
++
++        // Call the gesture off and let the cancel finish, so the activity closes with no gesture
++        // in progress. The cancel itself is checked by the next test.
++        onDispatcher { it.dispatchOnBackCancelled() }
++        stepUntil("the screen underneath to be gone after the cancel", FINISH_FRAMES) { !exists(HOME_TAG) }
++    }
++
++    /**
++     * Calling the gesture off undoes the preview: after the top screen was dragged 0.6 of its
++     * width along and the gesture is cancelled, the top screen slides back towards the left edge,
++     * never moving right by more than a pixel from one frame to the next, until Home is gone.
++     * Then Settings rests at the left edge, Home is no longer composed and the back stack still
++     * holds Home and Settings: a person who peeks at the previous screen and changes their mind
++     * loses nothing.
++     */
++    @Test
++    fun cancelling_the_back_gesture_brings_the_top_screen_back_and_leaves_only_it() {
++        val backStack = mutableStateListOf<NavKey>(Home, Settings)
++        show(backStack)
++        val windowWidth = width(SETTINGS_TAG)
++        startGesture()
++        moveFingerTo(CANCEL_PROGRESS, windowWidth)
++        val leftWhenCancelled = left(SETTINGS_TAG)
++        // The premise: the gesture really moved the top screen before it is called off.
++        assertEquals(
++            "Before the cancel the top screen should be $CANCEL_PROGRESS of its width along",
++            CANCEL_PROGRESS * windowWidth,
++            leftWhenCancelled,
++            POSITION_TOLERANCE_PX,
++        )
++
++        onDispatcher { it.dispatchOnBackCancelled() }
++
++        // After every frame of the return: the top screen is still there and has not moved right.
++        var previousLeft = leftWhenCancelled
++        val frames = stepUntil(
++            what = "the screen underneath to be gone after the cancel",
++            maxFrames = FINISH_FRAMES,
++            afterEachFrame = {
++                assertTrue("The top screen vanished while it came back", exists(SETTINGS_TAG))
++                val topLeft = left(SETTINGS_TAG)
++                assertTrue(
++                    "While it came back the top screen moved right, from $previousLeft to $topLeft in one frame",
++                    topLeft <= previousLeft + MAX_RIGHTWARD_STEP_WHILE_RETURNING_PX,
++                )
++                previousLeft = topLeft
++            },
++        ) { !exists(HOME_TAG) }
++        println(
++            "PredictiveBackGestureTest: the cancel from x $leftWhenCancelled left only the top screen " +
++                "$frames frame(s) after it was sent",
++        )
++
++        compose.onNodeWithTag(SETTINGS_TAG).assertExists()
++        compose.onNodeWithTag(HOME_TAG).assertDoesNotExist()
++        assertEquals(
++            "After the cancel the top screen did not come to rest at the left edge",
++            0f,
++            left(SETTINGS_TAG),
++            REST_TOLERANCE_PX,
++        )
++        assertEquals("The cancel changed the back stack", listOf<NavKey>(Home, Settings), backStack.toList())
++    }
++
++    /**
++     * Letting go after a far enough gesture completes Back: after the top screen was dragged 0.3
++     * of its width along, the dispatcher's onBackPressed (what Android sends when the finger lifts
++     * after a far enough swipe) pops Settings off the back stack. The top screen neither vanishes
++     * nor jumps back: within a few frames it is still composed and to the right of where the
++     * finger left it, it only ever moves right until it has left by the right edge, and then only
++     * Home is left, resting at the left edge.
++     */
++    @Test
++    fun letting_go_after_a_far_enough_gesture_pops_the_screen_and_carries_it_out_of_the_right_edge() {
++        val backStack = mutableStateListOf<NavKey>(Home, Settings)
++        show(backStack)
++        val windowWidth = width(SETTINGS_TAG)
++        startGesture()
++        moveFingerTo(COMMIT_PROGRESS, windowWidth)
++        val leftWhenLetGo = left(SETTINGS_TAG)
++        // The premise: the gesture really moved the top screen before the finger lifts.
++        assertEquals(
++            "Before letting go the top screen should be $COMMIT_PROGRESS of its width along",
++            COMMIT_PROGRESS * windowWidth,
++            leftWhenLetGo,
++            POSITION_TOLERANCE_PX,
++        )
++
++        // Letting go: Android sends the ordinary Back, which completes the gesture.
++        onDispatcher { it.onBackPressed() }
++        val popFrames = stepUntil("letting go to pop Settings off the back stack", START_FRAMES) {
++            backStack.toList() == listOf<NavKey>(Home)
++        }
++
++        // From here on, checked after every frame: the top screen, while it is there, only ever
++        // moves right, starting from where the finger left it.
++        var previousLeft = leftWhenLetGo
++        val onlyMovesRight: () -> Unit = {
++            if (exists(SETTINGS_TAG)) {
++                val topLeft = left(SETTINGS_TAG)
++                assertTrue(
++                    "After letting go the top screen moved left, from $previousLeft to $topLeft in one frame",
++                    topLeft >= previousLeft,
++                )
++                previousLeft = topLeft
++            }
++        }
++
++        // Right after letting go: still composed, and carrying on past where the finger left it.
++        val moveOnFrames = stepUntil(
++            what = "the top screen to carry on to the right of where the finger left it (x $leftWhenLetGo)",
++            maxFrames = START_FRAMES,
++            afterEachFrame = {
++                assertTrue("The top screen vanished right after letting go instead of sliding on", exists(SETTINGS_TAG))
++                onlyMovesRight()
++            },
++        ) { exists(SETTINGS_TAG) && left(SETTINGS_TAG) > leftWhenLetGo }
++        val leftJustAfter = left(SETTINGS_TAG)
++
++        // Then on until it has left by the right edge.
++        val leaveFrames = stepUntil(
++            what = "the popped screen to leave by the right edge",
++            maxFrames = FINISH_FRAMES,
++            afterEachFrame = onlyMovesRight,
++        ) { !exists(SETTINGS_TAG) }
++        println(
++            "PredictiveBackGestureTest: letting go at x $leftWhenLetGo popped the back stack after $popFrames " +
++                "frame(s); the top screen was at x $leftJustAfter $moveOnFrames frame(s) later and gone " +
++                "$leaveFrames frame(s) after that",
++        )
++
++        compose.onNodeWithTag(HOME_TAG).assertExists()
++        compose.onNodeWithTag(SETTINGS_TAG).assertDoesNotExist()
++        assertEquals(
++            "After letting go the screen underneath did not come to rest at the left edge",
++            0f,
++            left(HOME_TAG),
++            REST_TOLERANCE_PX,
++        )
++        assertEquals("Letting go did not leave Home alone on the back stack", listOf<NavKey>(Home), backStack.toList())
++    }
++
++    // --- Helpers -----------------------------------------------------------------------------
++
++    /**
++     * Pauses the clock, shows NavDisplay over [backStack] inside Kanso's theme, and steps the
++     * clock frame by frame for about a second, so each test begins from a resting screen.
++     */
++    private fun show(backStack: SnapshotStateList<NavKey>) {
++        // Pause the clock before anything is shown: from here on, time moves only by hand.
++        compose.mainClock.autoAdvance = false
++        compose.setContent {
++            KansoTheme(themeMode = ThemeMode.Light) {
++                TwoScreenNavDisplay(backStack)
++            }
++        }
++        repeat(SETTLE_FRAMES) { nextFrame() }
++    }
++
++    /**
++     * Starts the back gesture at the left edge, as Android does when a finger lands there and
++     * starts to move: sends `dispatchOnBackStarted` with progress 0, steps the clock until the
++     * screen underneath is composed behind the top one (failing after [START_FRAMES] frames) and
++     * returns how many frames that took. It then waits [FRAMES_PER_STEP] more frames, as after
++     * every move of the finger, so the gesture goes on from a settled screen.
++     */
++    private fun startGesture(): Int {
++        // The finger's position (x, y), the progress, and the edge the swipe starts from.
++        onDispatcher { it.dispatchOnBackStarted(BackEventCompat(0f, 0f, 0f, BackEventCompat.EDGE_LEFT)) }
++        val frames = stepUntil("the screen underneath to be composed after the gesture started", START_FRAMES) {
++            exists(HOME_TAG)
++        }
++        repeat(FRAMES_PER_STEP) { nextFrame() }
++        return frames
++    }
++
++    /**
++     * Moves the finger to [progress] of the gesture: sends `dispatchOnBackProgressed` with that
++     * progress, and a finger at the same share of [windowWidth] as in a swipe from the left edge,
++     * then steps [FRAMES_PER_STEP] frames, by which time NavDisplay has moved the screens to it.
++     */
++    private fun moveFingerTo(progress: Float, windowWidth: Float) {
++        onDispatcher {
++            it.dispatchOnBackProgressed(
++                BackEventCompat(progress * windowWidth, 0f, progress, BackEventCompat.EDGE_LEFT),
++            )
++        }
++        repeat(FRAMES_PER_STEP) { nextFrame() }
++    }
++
++    /**
++     * Hands [send] the back dispatcher of the activity that hosts NavDisplay, on the main thread,
++     * which is where Android delivers a gesture's events too.
++     */
++    private fun onDispatcher(send: (OnBackPressedDispatcher) -> Unit) {
++        compose.activityRule.scenario.onActivity { activity -> send(activity.onBackPressedDispatcher) }
++    }
++
++    /**
++     * Moves the paused clock one frame at a time until [condition] holds, checking it before the
++     * first step too, and returns the number of frames that took. After every frame, before
++     * [condition] is checked again, it runs [afterEachFrame], where a test checks what must hold
++     * on every frame of a move. Fails after [maxFrames] frames, naming [what] it was waiting for.
++     */
++    private fun stepUntil(
++        what: String,
++        maxFrames: Int,
++        afterEachFrame: () -> Unit = {},
++        condition: () -> Boolean,
++    ): Int {
++        var frames = 0
++        while (!condition()) {
++            if (frames == maxFrames) {
++                throw AssertionError("Waited $maxFrames frames for $what")
++            }
++            nextFrame()
++            frames++
++            afterEachFrame()
++        }
++        return frames
++    }
++
++    /**
++     * Moves the paused clock forward by one frame and runs whatever the main thread was asked to
++     * do meanwhile (under Robolectric the test runs on the main thread, so its queue only moves
++     * when the test runs it).
++     */
++    private fun nextFrame() {
++        compose.mainClock.advanceTimeByFrame()
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /** Fails unless the screen tagged [shown] is composed and the one tagged [gone] is not. */
++    private fun assertOnlyScreen(shown: String, gone: String) {
++        compose.onNodeWithTag(shown).assertExists()
++        compose.onNodeWithTag(gone).assertDoesNotExist()
++    }
++
++    /** Tells whether a screen tagged [tag] is composed, wherever it is drawn. */
++    private fun exists(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
++
++    /**
++     * Returns the left edge of the screen tagged [tag], in pixels from the left of the window. A
++     * slide moves where a screen is placed, so this follows the gesture as it goes.
++     */
++    private fun left(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot.x
++
++    /** Returns the width of the screen tagged [tag], in pixels: the window's width. */
++    private fun width(tag: String): Float = compose.onNodeWithTag(tag).fetchSemanticsNode().size.width.toFloat()
++
++    /**
++     * NavDisplay over [backStack] with Kanso's three transition specs, built the way the app
++     * builds them: the theme's motion scheme is read here, while Compose draws, and handed to the
++     * spec functions, whose lambdas NavDisplay calls later. Back removes the top key, so letting
++     * go of the gesture pops it. Home and Settings are each drawn as a [PlainScreen].
++     */
++    @Composable
++    private fun TwoScreenNavDisplay(backStack: SnapshotStateList<NavKey>) {
++        val motionScheme = MaterialTheme.motionScheme
++        NavDisplay(
++            backStack = backStack,
++            modifier = Modifier.fillMaxSize(),
++            onBack = { backStack.removeLastOrNull() },
++            transitionSpec = kansoPushTransition(motionScheme),
++            popTransitionSpec = kansoPopTransition(motionScheme),
++            predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
++            entryProvider = entryProvider<NavKey> {
++                entry<Home> { PlainScreen(tag = HOME_TAG, label = "Home") }
++                entry<Settings> { PlainScreen(tag = SETTINGS_TAG, label = "Settings") }
++            },
++        )
++    }
++
++    /** A screen that fills the window, tagged [tag] so the test can find it, showing [label]. */
++    @Composable
++    private fun PlainScreen(tag: String, label: String) {
++        Box(modifier = Modifier.fillMaxSize().testTag(tag)) {
++            Text(text = label)
++        }
++    }
++
++    /** Tags, gesture positions, frame counts and tolerances the tests share. */
++    private companion object {
++        /** Marks the Home screen, the one underneath. */
++        const val HOME_TAG = "back-gesture-test-home"
++
++        /** Marks the Settings screen, the top one that the gesture moves. */
++        const val SETTINGS_TAG = "back-gesture-test-settings"
++
++        /** How many frames a freshly shown screen is left to settle: 60 frames, about a second. */
++        const val SETTLE_FRAMES = 60
++
++        /**
++         * The most frames a short wait takes, for the screen underneath to appear once the gesture
++         * starts, for the back stack to pop and for the top screen to slide on once the finger
++         * lifts: 10 frames, 160 ms (the probe written before this test saw each happen within
++         * about four).
++         */
++        const val START_FRAMES = 10
++
++        /** How many frames after each move of the finger the test looks: 4 frames, 64 ms. */
++        const val FRAMES_PER_STEP = 4
++
++        /**
++         * The most frames a move that ends the gesture takes: 120 frames, about 1.9 s. A cancel
++         * from far along took about 0.85 s and a commit about 0.7 s in the probe written before
++         * this test.
++         */
++        const val FINISH_FRAMES = 120
++
++        /** The progress the top screen is dragged to before the gesture is called off. */
++        const val CANCEL_PROGRESS = 0.6f
++
++        /** The progress the top screen is dragged to before the finger lifts and Back completes. */
++        const val COMMIT_PROGRESS = 0.3f
++
++        /** From this progress on, the screen underneath has finished coming in and rests at 0. */
++        const val UNDERNEATH_RESTS_FROM_PROGRESS = 0.5f
++
++        /**
++         * How far, in pixels, a screen may be from where the gesture should have put it: screens
++         * are placed on whole pixels, and the top screen was exactly on its mark in the probe
++         * written before this test.
++         */
++        const val POSITION_TOLERANCE_PX = 2f
++
++        /** How far, in pixels, a screen may be from the left edge once a move has ended. */
++        const val REST_TOLERANCE_PX = 0.5f
++
++        /**
++         * The most, in pixels, the top screen may move right in one frame while a cancel brings
++         * it back: rounding to whole pixels may wobble by one, a real step the wrong way is more.
++         */
++        const val MAX_RIGHTWARD_STEP_WHILE_RETURNING_PX = 1f
++
++        /** The progress values the finger moves through, from early in the swipe to far along. */
++        val PROGRESS_STEPS = listOf(0.1f, 0.2f, 0.5f, 0.8f)
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
+index 98fd5a4..fd45033 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/ToolSelectionAnimationTest.kt
+@@ -4,8 +4,19 @@ import android.content.Context
+ import android.graphics.Bitmap
+ import android.graphics.Canvas
+ import android.os.Looper
++// The system settings class goes by another name here, as in NavTransitionTest, where the plain
++// name would hide Kanso's own Settings screen key.
++import android.provider.Settings as SystemSettings
+ import android.view.ViewGroup
+ import androidx.activity.ComponentActivity
++import androidx.compose.animation.core.LinearEasing
++import androidx.compose.animation.core.animateFloatAsState
++import androidx.compose.animation.core.tween
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.State
++import androidx.compose.runtime.mutableFloatStateOf
++import androidx.compose.ui.MotionDurationScale
+ import androidx.compose.ui.test.assertIsOff
+ import androidx.compose.ui.test.assertIsOn
+ import androidx.compose.ui.test.hasTestTag
+@@ -23,6 +34,7 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
+ import com.phongkaster.kanso.ui.tool.ToolViewModel
+ import com.phongkaster.kanso.ui.tool.editorToolTag
+ import org.junit.After
++import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertFalse
+ import org.junit.Assert.assertTrue
+ import org.junit.Rule
+@@ -46,6 +58,17 @@ import org.robolectric.annotation.GraphicsMode
+  * Retouch, as a person would, and once on Artistic with no touch at all, so that a tap's own
+  * ripple and pressed shape cannot pass for the selection's animation.
+  *
++ * A third test is the "Remove animations" pass of DoD 13 (machine part), built like the one in
++ * NavTransitionTest. The phone's "Remove animations" setting turns the system's animator duration
++ * scale to 0; the test sets it so before anything is shown, then switches to Artistic without a
++ * touch. Compose only honours the setting if the test's host hands it to Compose's coroutines as a
++ * `MotionDurationScale`, which a Robolectric host may not do. So a control runs next to the
++ * editor: a plain one-second animation of a number, started together with the switch. The control
++ * is what tells the test whether the host carries the setting. If it reaches its end within a few
++ * frames, the host does, and the toggle must have settled just as quickly. If it is still on its
++ * way, the host does not; the test prints that this check is "not driven by machine" and asserts
++ * that the toggle still animates like any other. Both branches assert something.
++ *
+  * It draws the activity's content view itself, as the settings tests do, because Compose's
+  * captureToImage waits for the window to redraw and that wait times out under Robolectric here.
+  * The screen runs in KansoTheme, so the toggle moves with the app's own expressive motion scheme.
+@@ -68,6 +91,16 @@ class ToolSelectionAnimationTest {
+         stopKoin()
+     }
+ 
++    /**
++     * Puts the system's animator duration scale back to 1, its normal value, so no later test
++     * starts with animations removed. Only the Remove-animations test changes it; for the two
++     * others this writes the normal value they already read, so it changes nothing for them.
++     */
++    @After
++    fun restoreAnimatorDurationScale() {
++        setAnimatorDurationScale(1f)
++    }
++
+     /**
+      * With Edit selected, a tap on Retouch turns its toggle on with a picture that is still
+      * changing 50 ms later (different from before the tap and from the end), and that has
+@@ -101,14 +134,145 @@ class ToolSelectionAnimationTest {
+         }
+     }
+ 
++    /**
++     * The "Remove animations" pass (DoD 13, machine part), with the same switch as the test
++     * above: Artistic selected through the ViewModel, with no touch. The phone's setting is the
++     * animator duration scale, set here to 0 before anything is shown. Compose honours it only if
++     * the host hands it to Compose's coroutines as a `MotionDurationScale`; a Compose test builds
++     * its own host, which may not.
++     *
++     * So a control runs inside the same composition as the editor: a plain one-second animation
++     * of a number, started together with the switch. The control is what tells the test whether
++     * the host carries the setting. If it has reached its end a few frames after the switch, the
++     * host does, and the Artistic toggle must have settled as quickly: its picture then is the
++     * same as 1 s later, and different from before the switch. If the control is still on its
++     * way, the host does not; the test prints that this check is "not driven by machine" (which
++     * DoD 13 does not count as a failure) and asserts what that implies, that the selection is
++     * still animating like any other: a few frames in, the toggle has started to change and has
++     * not yet reached its picture of 1 s later. Either way the outcome is asserted, so a host that
++     * starts carrying the setting changes which branch runs, and what the printed line says.
++     */
++    @Test
++    fun with_animations_removed_a_tool_switch_settles_at_once_if_the_host_carries_the_setting() {
++        // Remove animations before anything is shown, as the phone's setting would have, and
++        // check the system really holds the new value.
++        setAnimatorDurationScale(0f)
++        assertEquals(
++            "The test could not set the system's animation scale to 0",
++            0f,
++            SystemSettings.Global.getFloat(
++                ApplicationProvider.getApplicationContext<Context>().contentResolver,
++                SystemSettings.Global.ANIMATOR_DURATION_SCALE,
++                1f,
++            ),
++            0f,
++        )
++
++        // A state the test writes to start the control: its animation runs towards this value.
++        val controlTarget = mutableFloatStateOf(0f)
++        // Set while Compose draws: the control's current value, readable by the test afterwards.
++        lateinit var control: State<Float>
++        var effectRan = false
++        var effectScale: Float? = null
++
++        val viewModel = showEditorOnEdit {
++            // The control: a one-second animation of a plain number, in the same composition and
++            // on the same paused clock as the editor. It draws nothing, so it adds nothing on
++            // screen and changes no picture of the toggle.
++            control = animateFloatAsState(
++                targetValue = controlTarget.floatValue,
++                animationSpec = tween(durationMillis = CONTROL_MS, easing = LinearEasing),
++                label = "control",
++            )
++            // Reads the scale Compose's animations see: they run in coroutines like this one, and
++            // read it from their context (none at all means a scale of 1).
++            LaunchedEffect(Unit) {
++                effectScale = coroutineContext[MotionDurationScale]?.scaleFactor
++                effectRan = true
++            }
++        }
++        assertTrue("The effect that reads the animation scale never ran", effectRan)
++
++        val toggle = compose.onNodeWithTag(editorToolTag(Tool.ARTISTIC))
++        toggle.assertIsOff()
++        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOn()
++        val before = pictureOf(Tool.ARTISTIC)
++
++        // Start the control and the switch together, in one go on the UI thread, as the test
++        // without a touch selects the tool.
++        compose.runOnUiThread {
++            controlTarget.floatValue = 1f
++            viewModel.selectTool(Tool.ARTISTIC)
++        }
++        repeat(REMOVED_ANIMATION_FRAMES) { nextFrame() }
++        // Read the control and draw the toggle at the same moment, before any more time passes.
++        val controlAfterFrames = control.value
++        val afterFrames = pictureOf(Tool.ARTISTIC)
++        advance(SETTLED_MS)
++        val settled = pictureOf(Tool.ARTISTIC)
++
++        val controlFinishedAtOnce = controlAfterFrames == 1f
++        assertEquals(
++            "The scale in Compose's coroutines ($effectScale) does not match what the control did",
++            effectScale == 0f,
++            controlFinishedAtOnce,
++        )
++        if (controlFinishedAtOnce) {
++            println(
++                "ToolSelectionAnimationTest: the host carries ANIMATOR_DURATION_SCALE into Compose " +
++                    "(MotionDurationScale $effectScale): the tool switch was checked with animations removed",
++            )
++            assertTrue(
++                "With animations removed the toggle should have settled at once, yet its picture " +
++                    "$REMOVED_ANIMATION_FRAMES frames after the switch differs from its picture 1 s later",
++                afterFrames.contentEquals(settled),
++            )
++            assertFalse(
++                "With animations removed the toggle should look selected at once, yet " +
++                    "$REMOVED_ANIMATION_FRAMES frames after the switch it looks as it did before",
++                before.contentEquals(afterFrames),
++            )
++        } else {
++            println(
++                "ToolSelectionAnimationTest: not driven by machine. This Robolectric host does not carry " +
++                    "ANIMATOR_DURATION_SCALE into Compose (MotionDurationScale ${effectScale ?: "absent"}, " +
++                    "the control animation was at $controlAfterFrames after the switch), so the " +
++                    "Remove-animations pass of DoD 13 is left to the person on the phone",
++            )
++            assertFalse(
++                "The host does not carry the animation setting, so the toggle should be animating " +
++                    "like any other, yet nothing changed in the first $REMOVED_ANIMATION_FRAMES frames",
++                before.contentEquals(afterFrames),
++            )
++            assertFalse(
++                "The host does not carry the animation setting, so the toggle should still be " +
++                    "animating like any other, yet $REMOVED_ANIMATION_FRAMES frames after the switch " +
++                    "it already looks as it does 1 s later",
++                afterFrames.contentEquals(settled),
++            )
++        }
++
++        // Whatever the host, both moves end: the control at its target, Artistic on and Edit
++        // off, and the Artistic toggle looking selected.
++        assertEquals("The control animation never reached its target", 1f, control.value, 0.001f)
++        toggle.assertIsOn()
++        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOff()
++        assertFalse("The selected toggle looks as it did before the switch", before.contentEquals(settled))
++    }
++
+     // --- Helpers -----------------------------------------------------------------------------
+ 
+     /**
+      * Builds the editor's ViewModel on Edit (outside any composable: lint forbids constructing a
+      * ViewModel while drawing), pauses the clock, shows the editor in KansoTheme, waits for the
+      * photo and lets everything that started with the screen finish. Returns the ViewModel.
++     *
++     * [alongside] is composed next to the editor, inside the same theme and composition, so it
++     * runs on the same clock: the Remove-animations test puts its control there. It must draw
++     * nothing, so that the screen and the toggle's pictures stay exactly the editor's. By default
++     * it is empty, and the editor is shown alone.
+      */
+-    private fun showEditorOnEdit(): ToolViewModel {
++    private fun showEditorOnEdit(alongside: @Composable () -> Unit = {}): ToolViewModel {
+         val context: Context = ApplicationProvider.getApplicationContext()
+         val viewModel = ToolViewModel(
+             tool = Tool.EDIT,
+@@ -122,6 +286,8 @@ class ToolSelectionAnimationTest {
+         compose.mainClock.autoAdvance = false
+         compose.setContent {
+             KansoTheme(themeMode = ThemeMode.Light) {
++                // What the test asked to run next to the editor; nothing unless it asked.
++                alongside()
+                 ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+             }
+         }
+@@ -168,6 +334,25 @@ class ToolSelectionAnimationTest {
+         shadowOf(Looper.getMainLooper()).idle()
+     }
+ 
++    /**
++     * Moves the paused clock forward by exactly one frame (16 ms) and runs whatever the main
++     * thread was asked to do meanwhile (under Robolectric the test runs on the main thread, so its
++     * queue only moves when the test runs it).
++     */
++    private fun nextFrame() {
++        compose.mainClock.advanceTimeByFrame()
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /**
++     * Sets the system's animator duration scale, the value the phone's "Remove animations"
++     * setting turns to 0, through the app context's settings store.
++     */
++    private fun setAnimatorDurationScale(scale: Float) {
++        val context: Context = ApplicationProvider.getApplicationContext()
++        SystemSettings.Global.putFloat(context.contentResolver, SystemSettings.Global.ANIMATOR_DURATION_SCALE, scale)
++    }
++
+     /**
+      * Moves the paused clock forward until the photo is on screen, so the picture of the toggle
+      * is never taken while the photo area is still changing. Gives up after about ten seconds of
+@@ -217,5 +402,27 @@ class ToolSelectionAnimationTest {
+ 
+         /** How long the screen is left to settle before the first picture, in milliseconds. */
+         const val SETTLE_MS = 2_000L
++
++        /**
++         * How long the control animation of the Remove-animations test takes at normal speed, in
++         * milliseconds. The control is what tells the test whether the host carries the setting:
++         * at a scale of 0 it ends in its first frame; at normal speed it is far from its end a
++         * few frames in.
++         */
++        const val CONTROL_MS = 1_000
++
++        /**
++         * How many frames after the switch the Remove-animations test looks: 6 frames, about
++         * 100 ms. That is enough for the switch to reach the screen and, with animations removed,
++         * for the toggle to settle; at normal speed the selection, about 0.3 s on the Expressive
++         * springs, is still on its way.
++         */
++        const val REMOVED_ANIMATION_FRAMES = 6
++
++        /**
++         * How long after the switch the Remove-animations test takes the toggle's settled
++         * picture, in milliseconds: the toggle's springs end well within a second.
++         */
++        const val SETTLED_MS = 1_000L
+     }
+ }

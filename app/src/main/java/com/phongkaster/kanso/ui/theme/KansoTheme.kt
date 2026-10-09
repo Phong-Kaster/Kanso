@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -259,8 +260,8 @@ private fun KansoThemePreview() {
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {}) { Text("Save") }
-                    OutlinedButton(onClick = {}) { Text("Retake") }
+                    Button(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Save") }
+                    OutlinedButton(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Retake") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Switch(checked = true, onCheckedChange = {})

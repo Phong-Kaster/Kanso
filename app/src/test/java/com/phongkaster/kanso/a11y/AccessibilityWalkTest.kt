@@ -3,6 +3,9 @@ package com.phongkaster.kanso.a11y
 import android.app.Application
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.DpSize
@@ -35,25 +40,31 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import coil.Coil
 import coil.ImageLoader
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.camera.FakeCameraController
 import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.di.ViewModelClearedProbe
+import com.phongkaster.kanso.gallery.RecordingRegistry
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.screenshots.FAKE_SCHEME
 import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
 import com.phongkaster.kanso.tool.ToolFixtures
+import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
+import com.phongkaster.kanso.ui.camera.CAMERA_SETTINGS_BUTTON_TAG
 import com.phongkaster.kanso.ui.camera.CameraContent
 import com.phongkaster.kanso.ui.camera.CameraFrame
+import com.phongkaster.kanso.ui.camera.CameraScreen
 import com.phongkaster.kanso.ui.camera.CameraState
 import com.phongkaster.kanso.ui.camera.CameraStatus
 import com.phongkaster.kanso.ui.camera.CameraUiState
+import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.FlashMode
 import com.phongkaster.kanso.ui.gallery.GalleryContent
 import com.phongkaster.kanso.ui.gallery.GalleryUiState
 import com.phongkaster.kanso.ui.home.HomeContent
 import com.phongkaster.kanso.ui.home.HomeUiState
-import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
 import com.phongkaster.kanso.ui.permission.PermissionAccess
 import com.phongkaster.kanso.ui.saved.SavedContent
 import com.phongkaster.kanso.ui.saved.SavedPhoto
@@ -81,10 +92,11 @@ import org.robolectric.annotation.GraphicsMode
  * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
  * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
  *
- * How a state is checked. Each test draws one state in its own window: the screen's stateless
- * part (the `...Content` composable, or the nearest public or internal part where that is
- * private) inside KansoTheme in light mode, fed a UiState built here from sample values. No
- * Koin, no ViewModel, no permission dialog and no camera is involved. Then the test reads the
+ * How a state is checked. Each test draws one state in its own window, inside KansoTheme in
+ * light mode: the screen's stateless part (the `...Content` composable, or the nearest public or
+ * internal part where that is private) fed a UiState built here from sample values, or, for the
+ * refused camera, the real screen (see below). No Koin, no permission dialog and no camera is
+ * involved, and no ViewModel apart from the refused camera's. Then the test reads the
  * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
  * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
  * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
@@ -101,8 +113,13 @@ import org.robolectric.annotation.GraphicsMode
  * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
  *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
  *   description) take their places. Neither is a control, so the check sees the same controls;
- * - the camera's refused panel is private (`CameraRefusedPanel`), so its two public parts are
- *   drawn instead: `CameraFrame` around `AccessRefusedPanel`, with the camera's own wording;
+ * - the refused camera is the one state drawn from the real screen, `CameraScreen`, because its
+ *   refused panel (`CameraRefusedPanel`) is private and a hand-drawn copy would miss a control
+ *   later added to it. The screen reaches the state by itself, as in
+ *   `ThemeFollowTest.checkCameraRefused`: its ViewModel holds a [FakeCameraController] (the
+ *   computer has no camera, and with access refused the camera is never connected, so the fake
+ *   is never reached), and its one permission request goes to a [RecordingRegistry], which shows
+ *   no system dialog and answers "denied";
  * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
  *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
  *   spoken name the app gives it.
@@ -110,7 +127,8 @@ import org.robolectric.annotation.GraphicsMode
  * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
  * anything is drawn) and moved on by hand: the loading states show Material's loading
  * indicator, which never stops moving, and with the clock running by itself every wait for the
- * screen to settle would wait for it forever. Nothing is pressed.
+ * screen to settle would wait for it forever. Nothing is pressed: the refused camera's "denied"
+ * comes from the registry, and the clock is moved a frame at a time until the screen shows it.
  *
  * Two more tests check the check itself on a sample 40 dp icon button with no description (the
  * DoD's "its own control"): it must be reported.
@@ -337,21 +355,17 @@ class AccessibilityWalkTest {
     }
 
     /**
-     * The camera after camera access was refused: back and the button to the settings. The
-     * screen's own refused panel is private, so its public parts are drawn with its wording.
+     * The camera after camera access was refused: back and the button to the settings.
+     *
+     * Unlike the other states, this one is the real camera screen brought to the refused state
+     * by itself ([showRefusedCamera]), as `ThemeFollowTest.checkCameraRefused` does: the screen's
+     * refused panel is private, and walking the real screen means a control later added to that
+     * panel is walked too.
      */
     @Test
     fun camera_refused() {
-        walk("camera refused") {
-            CameraFrame(onBack = {}) {
-                AccessRefusedPanel(
-                    title = stringResource(R.string.camera_refused_title),
-                    message = stringResource(R.string.camera_refused_message),
-                    buttonLabel = stringResource(R.string.camera_open_settings),
-                    onOpenSettings = {},
-                )
-            }
-        }
+        showRefusedCamera()
+        assertControlsPass("camera refused")
     }
 
     /** The camera when it cannot be opened: back and the switched-off shutter, still named. */
@@ -567,6 +581,53 @@ class AccessibilityWalkTest {
     }
 
     /**
+     * Draws the real camera screen (see [show]) and lets it reach its "camera access is off"
+     * state, the way `ThemeFollowTest.checkCameraRefused` does:
+     *
+     * - the screen's ViewModel is built here around a [FakeCameraController], so no camera and no
+     *   Koin is involved. Access is never granted, so the screen never connects the camera and
+     *   the fake is never reached;
+     * - the screen asks for the camera through `rememberLauncherForActivityResult`, which finds
+     *   its registry in `LocalActivityResultRegistryOwner`. Providing a [RecordingRegistry] there
+     *   means the request is only recorded (no system dialog), and the test answers it "denied";
+     * - the screen learns the answer at once, but only shows it once the clock moves, and the
+     *   clock is paused (see the class comment). So the clock is moved one frame at a time, with
+     *   the main thread's queue run after each, until the refused panel is there, and then by
+     *   [SETTLE_MS], so every finite animation has ended before the walk.
+     *
+     * It fails if the screen did not ask exactly once, or if the refused panel and its settings
+     * button are not on screen, so the walk can never pass on the top bar's back button alone.
+     */
+    private fun showRefusedCamera() {
+        val registry = RecordingRegistry()
+        val owner = object : ActivityResultRegistryOwner {
+            override val activityResultRegistry: ActivityResultRegistry = registry
+        }
+        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
+        val viewModel = CameraViewModel(FakeCameraController(), ViewModelClearedProbe())
+        show {
+            // A CompositionLocalProvider hands a value down to everything drawn inside it; here,
+            // the registry the screen's permission request goes to.
+            CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
+                CameraScreen(viewModel = viewModel, onBack = {}, onKept = {})
+            }
+        }
+        assertEquals("The camera screen must ask for the camera once", 1, registry.requests.size)
+        registry.answerLatest(registry.requests.single().associateWith { false })
+
+        compose.waitUntil(timeoutMillis = REFUSED_TIMEOUT_MS) {
+            compose.mainClock.advanceTimeByFrame()
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodes(hasTestTag(CAMERA_REFUSED_TAG)).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.mainClock.advanceTimeBy(SETTLE_MS)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(CAMERA_SETTINGS_BUTTON_TAG).assertIsDisplayed()
+    }
+
+    /**
      * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
      * runs every step on the calling thread, so the gallery's thumbnails load without files.
      */
@@ -644,6 +705,13 @@ class AccessibilityWalkTest {
          * enough for every finite animation (a colour fade, the Saved mark) to end.
          */
         const val SETTLE_MS = 1_000L
+
+        /**
+         * How long, in real milliseconds, the refused camera may take to show its refused panel
+         * after the "denied" answer before the test fails (the same ten seconds
+         * `ThemeFollowTest` gives the camera); it normally takes a frame or two.
+         */
+        const val REFUSED_TIMEOUT_MS = 10_000L
 
         /** The made-up Uri the editor and Saved states say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"

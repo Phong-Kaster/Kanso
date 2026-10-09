@@ -4,8 +4,19 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Looper
+// The system settings class goes by another name here, as in NavTransitionTest, where the plain
+// name would hide Kanso's own Settings screen key.
+import android.provider.Settings as SystemSettings
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasTestTag
@@ -23,6 +34,7 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.editorToolTag
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -46,6 +58,17 @@ import org.robolectric.annotation.GraphicsMode
  * Retouch, as a person would, and once on Artistic with no touch at all, so that a tap's own
  * ripple and pressed shape cannot pass for the selection's animation.
  *
+ * A third test is the "Remove animations" pass of DoD 13 (machine part), built like the one in
+ * NavTransitionTest. The phone's "Remove animations" setting turns the system's animator duration
+ * scale to 0; the test sets it so before anything is shown, then switches to Artistic without a
+ * touch. Compose only honours the setting if the test's host hands it to Compose's coroutines as a
+ * `MotionDurationScale`, which a Robolectric host may not do. So a control runs next to the
+ * editor: a plain one-second animation of a number, started together with the switch. The control
+ * is what tells the test whether the host carries the setting. If it reaches its end within a few
+ * frames, the host does, and the toggle must have settled just as quickly. If it is still on its
+ * way, the host does not; the test prints that this check is "not driven by machine" and asserts
+ * that the toggle still animates like any other. Both branches assert something.
+ *
  * It draws the activity's content view itself, as the settings tests do, because Compose's
  * captureToImage waits for the window to redraw and that wait times out under Robolectric here.
  * The screen runs in KansoTheme, so the toggle moves with the app's own expressive motion scheme.
@@ -66,6 +89,16 @@ class ToolSelectionAnimationTest {
     @After
     fun stopKoinAfterTest() {
         stopKoin()
+    }
+
+    /**
+     * Puts the system's animator duration scale back to 1, its normal value, so no later test
+     * starts with animations removed. Only the Remove-animations test changes it; for the two
+     * others this writes the normal value they already read, so it changes nothing for them.
+     */
+    @After
+    fun restoreAnimatorDurationScale() {
+        setAnimatorDurationScale(1f)
     }
 
     /**
@@ -101,14 +134,145 @@ class ToolSelectionAnimationTest {
         }
     }
 
+    /**
+     * The "Remove animations" pass (DoD 13, machine part), with the same switch as the test
+     * above: Artistic selected through the ViewModel, with no touch. The phone's setting is the
+     * animator duration scale, set here to 0 before anything is shown. Compose honours it only if
+     * the host hands it to Compose's coroutines as a `MotionDurationScale`; a Compose test builds
+     * its own host, which may not.
+     *
+     * So a control runs inside the same composition as the editor: a plain one-second animation
+     * of a number, started together with the switch. The control is what tells the test whether
+     * the host carries the setting. If it has reached its end a few frames after the switch, the
+     * host does, and the Artistic toggle must have settled as quickly: its picture then is the
+     * same as 1 s later, and different from before the switch. If the control is still on its
+     * way, the host does not; the test prints that this check is "not driven by machine" (which
+     * DoD 13 does not count as a failure) and asserts what that implies, that the selection is
+     * still animating like any other: a few frames in, the toggle has started to change and has
+     * not yet reached its picture of 1 s later. Either way the outcome is asserted, so a host that
+     * starts carrying the setting changes which branch runs, and what the printed line says.
+     */
+    @Test
+    fun with_animations_removed_a_tool_switch_settles_at_once_if_the_host_carries_the_setting() {
+        // Remove animations before anything is shown, as the phone's setting would have, and
+        // check the system really holds the new value.
+        setAnimatorDurationScale(0f)
+        assertEquals(
+            "The test could not set the system's animation scale to 0",
+            0f,
+            SystemSettings.Global.getFloat(
+                ApplicationProvider.getApplicationContext<Context>().contentResolver,
+                SystemSettings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            ),
+            0f,
+        )
+
+        // A state the test writes to start the control: its animation runs towards this value.
+        val controlTarget = mutableFloatStateOf(0f)
+        // Set while Compose draws: the control's current value, readable by the test afterwards.
+        lateinit var control: State<Float>
+        var effectRan = false
+        var effectScale: Float? = null
+
+        val viewModel = showEditorOnEdit {
+            // The control: a one-second animation of a plain number, in the same composition and
+            // on the same paused clock as the editor. It draws nothing, so it adds nothing on
+            // screen and changes no picture of the toggle.
+            control = animateFloatAsState(
+                targetValue = controlTarget.floatValue,
+                animationSpec = tween(durationMillis = CONTROL_MS, easing = LinearEasing),
+                label = "control",
+            )
+            // Reads the scale Compose's animations see: they run in coroutines like this one, and
+            // read it from their context (none at all means a scale of 1).
+            LaunchedEffect(Unit) {
+                effectScale = coroutineContext[MotionDurationScale]?.scaleFactor
+                effectRan = true
+            }
+        }
+        assertTrue("The effect that reads the animation scale never ran", effectRan)
+
+        val toggle = compose.onNodeWithTag(editorToolTag(Tool.ARTISTIC))
+        toggle.assertIsOff()
+        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOn()
+        val before = pictureOf(Tool.ARTISTIC)
+
+        // Start the control and the switch together, in one go on the UI thread, as the test
+        // without a touch selects the tool.
+        compose.runOnUiThread {
+            controlTarget.floatValue = 1f
+            viewModel.selectTool(Tool.ARTISTIC)
+        }
+        repeat(REMOVED_ANIMATION_FRAMES) { nextFrame() }
+        // Read the control and draw the toggle at the same moment, before any more time passes.
+        val controlAfterFrames = control.value
+        val afterFrames = pictureOf(Tool.ARTISTIC)
+        advance(SETTLED_MS)
+        val settled = pictureOf(Tool.ARTISTIC)
+
+        val controlFinishedAtOnce = controlAfterFrames == 1f
+        assertEquals(
+            "The scale in Compose's coroutines ($effectScale) does not match what the control did",
+            effectScale == 0f,
+            controlFinishedAtOnce,
+        )
+        if (controlFinishedAtOnce) {
+            println(
+                "ToolSelectionAnimationTest: the host carries ANIMATOR_DURATION_SCALE into Compose " +
+                    "(MotionDurationScale $effectScale): the tool switch was checked with animations removed",
+            )
+            assertTrue(
+                "With animations removed the toggle should have settled at once, yet its picture " +
+                    "$REMOVED_ANIMATION_FRAMES frames after the switch differs from its picture 1 s later",
+                afterFrames.contentEquals(settled),
+            )
+            assertFalse(
+                "With animations removed the toggle should look selected at once, yet " +
+                    "$REMOVED_ANIMATION_FRAMES frames after the switch it looks as it did before",
+                before.contentEquals(afterFrames),
+            )
+        } else {
+            println(
+                "ToolSelectionAnimationTest: not driven by machine. This Robolectric host does not carry " +
+                    "ANIMATOR_DURATION_SCALE into Compose (MotionDurationScale ${effectScale ?: "absent"}, " +
+                    "the control animation was at $controlAfterFrames after the switch), so the " +
+                    "Remove-animations pass of DoD 13 is left to the person on the phone",
+            )
+            assertFalse(
+                "The host does not carry the animation setting, so the toggle should be animating " +
+                    "like any other, yet nothing changed in the first $REMOVED_ANIMATION_FRAMES frames",
+                before.contentEquals(afterFrames),
+            )
+            assertFalse(
+                "The host does not carry the animation setting, so the toggle should still be " +
+                    "animating like any other, yet $REMOVED_ANIMATION_FRAMES frames after the switch " +
+                    "it already looks as it does 1 s later",
+                afterFrames.contentEquals(settled),
+            )
+        }
+
+        // Whatever the host, both moves end: the control at its target, Artistic on and Edit
+        // off, and the Artistic toggle looking selected.
+        assertEquals("The control animation never reached its target", 1f, control.value, 0.001f)
+        toggle.assertIsOn()
+        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOff()
+        assertFalse("The selected toggle looks as it did before the switch", before.contentEquals(settled))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
      * Builds the editor's ViewModel on Edit (outside any composable: lint forbids constructing a
      * ViewModel while drawing), pauses the clock, shows the editor in KansoTheme, waits for the
      * photo and lets everything that started with the screen finish. Returns the ViewModel.
+     *
+     * [alongside] is composed next to the editor, inside the same theme and composition, so it
+     * runs on the same clock: the Remove-animations test puts its control there. It must draw
+     * nothing, so that the screen and the toggle's pictures stay exactly the editor's. By default
+     * it is empty, and the editor is shown alone.
      */
-    private fun showEditorOnEdit(): ToolViewModel {
+    private fun showEditorOnEdit(alongside: @Composable () -> Unit = {}): ToolViewModel {
         val context: Context = ApplicationProvider.getApplicationContext()
         val viewModel = ToolViewModel(
             tool = Tool.EDIT,
@@ -122,6 +286,8 @@ class ToolSelectionAnimationTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             KansoTheme(themeMode = ThemeMode.Light) {
+                // What the test asked to run next to the editor; nothing unless it asked.
+                alongside()
                 ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
             }
         }
@@ -166,6 +332,25 @@ class ToolSelectionAnimationTest {
     private fun advance(millis: Long) {
         compose.mainClock.advanceTimeBy(millis)
         shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    /**
+     * Moves the paused clock forward by exactly one frame (16 ms) and runs whatever the main
+     * thread was asked to do meanwhile (under Robolectric the test runs on the main thread, so its
+     * queue only moves when the test runs it).
+     */
+    private fun nextFrame() {
+        compose.mainClock.advanceTimeByFrame()
+        shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    /**
+     * Sets the system's animator duration scale, the value the phone's "Remove animations"
+     * setting turns to 0, through the app context's settings store.
+     */
+    private fun setAnimatorDurationScale(scale: Float) {
+        val context: Context = ApplicationProvider.getApplicationContext()
+        SystemSettings.Global.putFloat(context.contentResolver, SystemSettings.Global.ANIMATOR_DURATION_SCALE, scale)
     }
 
     /**
@@ -217,5 +402,27 @@ class ToolSelectionAnimationTest {
 
         /** How long the screen is left to settle before the first picture, in milliseconds. */
         const val SETTLE_MS = 2_000L
+
+        /**
+         * How long the control animation of the Remove-animations test takes at normal speed, in
+         * milliseconds. The control is what tells the test whether the host carries the setting:
+         * at a scale of 0 it ends in its first frame; at normal speed it is far from its end a
+         * few frames in.
+         */
+        const val CONTROL_MS = 1_000
+
+        /**
+         * How many frames after the switch the Remove-animations test looks: 6 frames, about
+         * 100 ms. That is enough for the switch to reach the screen and, with animations removed,
+         * for the toggle to settle; at normal speed the selection, about 0.3 s on the Expressive
+         * springs, is still on its way.
+         */
+        const val REMOVED_ANIMATION_FRAMES = 6
+
+        /**
+         * How long after the switch the Remove-animations test takes the toggle's settled
+         * picture, in milliseconds: the toggle's springs end well within a second.
+         */
+        const val SETTLED_MS = 1_000L
     }
 }
