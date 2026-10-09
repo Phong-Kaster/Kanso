@@ -15,7 +15,7 @@
 - **Tier:** Missing information (the PRD's wording "a Compose BOM that resolves Material3 1.5.0" can be met only by a beta BOM, which has a price; the choice is put to the human in D-001)
 - **Iteration:** 1
 - **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
-- **Revert:** `git revert <sha>` (of the Phase 3 checkpoint, once it exists)
+- **Revert:** `git revert c0871f31036e598238fcfec1aa1f051a33077e4b` (the Phase 3 checkpoint, which carries the effect; it also reverts that Iteration's notes under `.harness/`). For Material3 alone, by hand: point `app/build.gradle.kts` back at `implementation(libs.compose.material3)` (the app then takes the BOM's Material3 1.4.0, as after Phase 2), delete the `compose-material3-app` version and alias from `gradle/libs.versions.toml`, and delete `app/src/test/java/com/phongkaster/kanso/ExpressiveApiTest.kt`, whose components need 1.5.0
 - **Assumed DoD criteria:** none (DoD 12 states the delivered outcome in these words, and you approve it at the gate)
 
 ### Question
@@ -127,7 +127,7 @@ A version whose name carries none of `alpha`, `beta`, `rc`, `dev`: Navigation 3 
 - **Tier:** Missing information
 - **Iteration:** 1
 - **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
-- **Revert:** `git revert <sha>` (of the checkpoint that re-recorded)
+- **Revert:** not needed: no baseline was re-recorded in any Phase (`git diff 76ecb97 c0871f3 -- app/src/test/screenshots` is empty; checked again by the Verifier, Iteration 5)
 - **Assumed DoD criteria:** none (DoD 5, 6, 7 and "Approval requested")
 
 ### Question

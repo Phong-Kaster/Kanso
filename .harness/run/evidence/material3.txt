@@ -3,12 +3,6 @@
 Configure OpenCV with Kotlin
 OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 
-> Configure project :core:imagecrop
-w: file:///D:/Valve/Personal/Kanso/core/imagecrop/build.gradle.kts:66:28: 'val OptimizeNonSkippingGroups: ComposeFeatureFlag' is deprecated. This flag should be enabled by default and will be removed in the future versions.
-
-> Configure project :core:localml
-w: file:///D:/Valve/Personal/Kanso/core/localml/build.gradle.kts:37:9: 'var androidResources: Boolean?' is deprecated. Use android.androidResources.enable = true/false instead to enable or disable android resource processing. This API will be removed in AGP 10.0.
-
 > Task :app:dependencyInsight
 androidx.compose.material3:material3:1.5.0-beta01
   Variant androidRuntimeElements-published:
@@ -4469,6 +4463,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 19s
+BUILD SUCCESSFUL in 3s
 1 actionable task: 1 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

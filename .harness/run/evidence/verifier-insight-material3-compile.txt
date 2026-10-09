@@ -1,0 +1,70 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:dependencyInsight
+androidx.compose.material3:material3:1.5.0-beta01
+  Variant androidApiElements-published:
+    | Attribute Name                                  | Provided   | Requested  |
+    |-------------------------------------------------|------------|------------|
+    | org.gradle.libraryelements                      | aar        |            |
+    | org.gradle.status                               | release    |            |
+    | org.gradle.category                             | library    | library    |
+    | org.gradle.jvm.environment                      | android    | android    |
+    | org.gradle.usage                                | java-api   | java-api   |
+    | org.jetbrains.kotlin.platform.type              | androidJvm | androidJvm |
+    | com.android.build.api.attributes.AgpVersionAttr |            | 9.4.1      |
+    | com.android.build.api.attributes.BuildTypeAttr  |            | debug      |
+   Selection reasons:
+      - By constraint
+      - By conflict resolution: between versions 1.5.0-beta01 and 1.4.0
+
+androidx.compose.material3:material3:1.5.0-beta01
+\--- debugCompileClasspath
+
+androidx.compose.material3:material3:1.4.0 -> 1.5.0-beta01
+\--- androidx.compose:compose-bom:2026.09.00
+     \--- debugCompileClasspath
+
+androidx.compose.material3:material3-android:1.5.0-beta01
+  Variant androidApiElements-published:
+    | Attribute Name                                  | Provided   | Requested  |
+    |-------------------------------------------------|------------|------------|
+    | org.gradle.libraryelements                      | aar        |            |
+    | org.gradle.status                               | release    |            |
+    | org.gradle.category                             | library    | library    |
+    | org.gradle.jvm.environment                      | android    | android    |
+    | org.gradle.usage                                | java-api   | java-api   |
+    | org.jetbrains.kotlin.platform.type              | androidJvm | androidJvm |
+    | com.android.build.api.attributes.AgpVersionAttr |            | 9.4.1      |
+    | com.android.build.api.attributes.BuildTypeAttr  |            | debug      |
+   Selection reasons:
+      - By constraint
+      - By conflict resolution: between versions 1.5.0-beta01 and 1.4.0
+
+androidx.compose.material3:material3-android:1.5.0-beta01
+\--- androidx.compose.material3:material3:1.5.0-beta01
+     +--- debugCompileClasspath
+     \--- androidx.compose:compose-bom:2026.09.00 (requested androidx.compose.material3:material3:1.4.0)
+          \--- debugCompileClasspath
+
+androidx.compose.material3:material3-android:1.4.0 -> 1.5.0-beta01
+\--- androidx.compose:compose-bom:2026.09.00
+     \--- debugCompileClasspath
+
+(*) - Indicates repeated occurrences of a transitive dependency subtree. Gradle expands transitive dependency subtrees only once per project; repeat occurrences only display the root of the subtree, followed by this annotation.
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2s
+1 actionable task: 1 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** verifying (Phases 1, 2 and 3 complete; no executable task remains; the Verifier is next)
+- **Stage:** ended `DONE_PARTIAL` (Verifier, Iteration 5, 2026-10-09). Phases 1, 2 and 3 complete; no executable task remains.
 - **Loop Branch:** loop/kanso-agp9-toolchain (started from `76ecb97`)
-- **Next Phase:** none. The next invocation is the Verifier (ENGINE section 14.4): it re-proves every `machine` criterion, drives criterion 3 and reports `DONE_PARTIAL`.
+- **Next Phase:** none.
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes (Autonomous mode, ENGINE section 14.4; recorded in Iteration 4). What stops `DONE`: criterion 11 is assumed (A-007), and criteria 3 and 7 await a person's signature.
+- **PARTIAL-candidate:** yes, verified (Iteration 5): every `machine` criterion re-proved by fresh runs on the tree of `c0871f3` (`evidence/verifier.md`); no gap found, no task filed. What stops `DONE`: criterion 11 is assumed (A-007), and criteria 3 and 7 await a person's signature. Criterion 3 was **not driven**: the Galaxy A13 was in use by a person throughout (`-Op focus`: other apps, 18:34-18:39). No Cleanup Commit: `.harness/run/` stays.
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -22,7 +22,7 @@
 
 ## Signed off
 
-None yet. Criteria 3 and 7 need a person (criterion 7 will be "nothing moved": no baseline moved in any Phase); Runs 1-4's unsigned items stay in `.harness/ISSUES.md`.
+None yet. Criteria 3 (not driven) and 7 ("nothing moved": no baseline moved in any Phase) are unsigned items in `.harness/ISSUES.md` under "Awaiting a person, Run 5"; Runs 1-4's unsigned items stay there too.
 
 ## Assumptions
 

@@ -1,0 +1,13 @@
+test rc=0 secs=110
+roborazzi rc=0 secs=111
+buildlint rc=0 secs=6
+release rc=0 secs=123
+modules rc=0 secs=6
+buildenv rc=0 secs=4
+material3 rc=0 secs=3
+m3compile rc=0 secs=4
+ui rc=0 secs=4
+nav3 rc=0 secs=3
+lnav3 rc=0 secs=3
+camera rc=0 secs=3
+version rc=0 secs=1
