@@ -1,43 +1,46 @@
-# Kanso — Run 3: a preview for every composable
+# Kanso — Run 4: one class per file, one UiState per screen
 
-After Run 2 the app has 36 composables in 10 files and not one `@Preview`. I learn Compose by opening
-a file and seeing what it draws; without previews I have to build, install and click through the app
-on a slow phone to see any of it. This run adds the previews, and the small restructuring that some
-screens need before they can have one. **It changes nothing the person using the app can see.**
-
-The rule itself now lives in `CLAUDE.md` ("Every composable has a preview"); this run brings the
-existing code up to it.
+`CLAUDE.md` now says every class lives in its own file and every screen has a ViewModel and a UiState
+in their own files ("One class per file, one UiState per screen"). The code from Runs 1-3 predates
+that rule. This run brings it up to the rule. **It changes nothing the person using the app can see.**
 
 ## What this run delivers
 
-1. **Every composable in `app/` has a preview** in light and in dark, in the same file, built from
-   sample data that looks like the real thing: a gallery with a few albums and a grid of photos, a
-   tool screen with a photo on it, the access-refused panels, the camera's controls, the Saved
-   screen, Settings with each theme choice, Home.
-2. **Screens are split where a preview needs it.** A composable that reaches for Koin, a ViewModel,
-   `MediaStore`, the camera or a permission launcher is split into a stateful part that gathers the
-   state and a stateless `…Content` part that takes the state and callbacks. The preview shows the
-   stateless part. Explain this split — state hoisting — where it is first used, for a reader who has
-   never met it.
-3. **Previews that matter show their interesting states**, not only the default: for example the
-   gallery with photo access refused and with only some photos shared, the camera after a shot
-   (Keep and Retake), Settings with a custom colour picked.
-4. **Every preview renders.** A preview that throws when drawn is a defect, so prove on the host that
-   all of them draw without an exception.
-5. **Previews open in Android Studio**: the preview annotations are available to the main code and
-   the tooling to debug builds only.
+1. **One top-level type per file**, in `app/src/main` and in `app/src/test`. Today 8 main files and 6
+   test files hold more than one, for example:
+   - `PhotoSource.kt`: `Photo`, `Album`, `PhotoSource`;
+   - `CameraController.kt`: five types;
+   - `ToolViewModel.kt`: `ToolUiState`, `SaveUiState`, `ToolViewModel`;
+   - `GalleryGridTest.kt`: the test and its `FakePhotoSource`.
+
+   Types nested inside another stay with it; the navigation keys may live as cases of one sealed
+   type.
+2. **Every screen has `…Screen.kt`, `…ViewModel.kt` and `…UiState.kt`.** That covers Home, Gallery,
+   Camera, Tool, Saved and Settings. Specifically:
+   - the UiStates now inside ViewModel files move out to their own files;
+   - Settings gets one `SettingsUiState` in place of its two separate flows;
+   - Home gets a `HomeUiState` even though its content is fixed;
+   - Saved gets a `SavedViewModel` and `SavedUiState`, and the loading it does in the composable
+     today moves into the ViewModel.
+3. **Each ViewModel exposes exactly one `StateFlow<…UiState>`**, and each screen's stateless
+   `…Content` takes that UiState and its callbacks. The previews from Run 3 keep working: they build
+   a UiState from sample data.
+4. **The rule is checked by a test**, so a later run that puts two classes in one file fails the
+   build instead of slipping through.
 
 ## Constraints
 
-- `CLAUDE.md` applies: KDoc in plain English on every class, function and composable, previews
-  included; no ads, analytics, accounts or network; `reference/` unchanged.
-- **Behaviour and pixels stay the same.** The app's tests pass unchanged, and every existing Roborazzi
-  baseline stays byte-for-byte as it is: this run restructures, so a baseline that moves means
-  something the person sees has changed, which is a defect here, not an approval to ask for.
-- Preview-only sample data never ships in a code path the app runs.
-- Keep Navigation 3 at 1.1.7, AGP 8.x and the three debug ABIs.
+- `CLAUDE.md` applies in full: a preview for every composable, KDoc in plain English (moved and new
+  files included), no ads, analytics, accounts or network, `reference/` unchanged, and the three
+  debug ABIs.
+- **Behaviour and pixels stay the same.** Every existing Roborazzi baseline stays byte for byte, and
+  every test keeps asserting what it asserts today. A test may move to a new file or follow a type to
+  its new package, but none is weakened or deleted.
+- Explain the UiState pattern where it is first used — one immutable snapshot of what a screen shows,
+  produced by its ViewModel — for a reader who has never met it.
+- Keep Navigation 3 at 1.1.7 and AGP at 8.x.
 
 ## Out of scope for this run
 
-The speed problems found on my Galaxy A13 (`.harness/ISSUES.md`, "Driven on a Galaxy A13"), the white
-colour-picker card in dark mode, new features, and the human checks still waiting in `ISSUES.md`.
+Any new look or motion (that is the next run), the speed problems found on the Galaxy A13, and the
+human checks waiting in `.harness/ISSUES.md`.
