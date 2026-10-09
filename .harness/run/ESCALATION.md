@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 6 (Material 3 Expressive, Kanso blue), and the screenshot pictures it may re-record
 
-- **Status:** pending
+- **Status:** answered (Iteration 2, 2026-10-09)
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-09

@@ -14,7 +14,7 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the bootstrap commit; the next Iteration writes its SHA here)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 2 checkpoint that built Home (T-004)
 
 ### Question
@@ -36,7 +36,7 @@ Option 1: Kanso's own README makes the same split, and DoD 5 states it.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
 
 ### Question
@@ -58,7 +58,7 @@ Option 1: smallest change, the existing function already does it, and the pictur
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
 
 ### Question
@@ -81,7 +81,7 @@ Option 1. The stored key names and the file never change, a new stored value `"K
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 2 checkpoint (T-004)
 
 ### Question
@@ -103,7 +103,7 @@ Option 1, to keep existing behaviour and tests stable (PRD: existing tests keep 
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-002)
 
 ### Question
@@ -126,7 +126,7 @@ Option 1; DoD 3, 7 and 23 pin the behaviour and leave the mechanism to the test.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 3 checkpoint (T-006, T-007)
 
 ### Question
@@ -149,7 +149,7 @@ Option 1, written into the DoD itself so the person approving it sees the except
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 2 checkpoint (T-005, T-009)
 
 ### Question
@@ -171,7 +171,7 @@ Option 1; the DoD lists it under Questions so the person sees it.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint that added the drawables
 
 ### Question
@@ -193,7 +193,7 @@ Option 1. In Autonomous mode network access is not gated; provenance (URL and SH
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
 
 ### Question
@@ -215,7 +215,7 @@ Option 1; DoD 10 checks the styles are used, DoD 20 and 21 let a person judge th
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 2 checkpoint (Home, T-004)
 
 ### Question
@@ -237,7 +237,7 @@ Option 1; it is an enum entry, not a feature, and the dead-code rule applies.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** `9e2535a` (the bootstrap commit, which only recorded it; the code that depends on it comes in the phase named under Revert)
 - **Revert:** `git revert <sha>` of the Phase 4 checkpoint (T-008)
 
 ### Question
@@ -259,7 +259,7 @@ Option 1 (POLICIES: classify for a signature when a command cannot drive it).
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1
-- **First dependent checkpoint:** Iteration 1 (the next Iteration writes the SHA)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
 - **Revert:** `git revert <sha>` of the Phase 1 checkpoint (T-001)
 
 ### Question
@@ -274,3 +274,26 @@ The PRD pins Material3 1.5.0-beta01 and allows a newer pre-release only if the D
 ### Taken, and why
 
 Option 1.
+
+---
+
+## A-013 - The Kanso blue seed is declared through a Long constant
+
+- **Tier:** 2 (plan/architecture)
+- **Iteration:** 2 (review finding of Phase 1)
+- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (the next Iteration writes its SHA here)
+- **Revert:** `git revert <sha>` of the Phase 1 checkpoint (`SeedColorScheme.kt` only: put `Color(0xFF1A73E8)` back on the declaration)
+
+### Question
+
+DoD 16 greps `app/src/main` for `Color(0x` and allows only the colour picker's card, `sample...` declarations and `@Preview` functions, yet the DoD's own header requires the constant `KANSO_BLUE_SEED = 0xFF1A73E8`, which that grep also finds if it is written `Color(0xFF1A73E8)`. The seed is the input of the colour generator, not a colour a screen paints.
+
+### Options Considered
+
+1. Write the hex as `private const val KANSO_BLUE_SEED_ARGB = 0xFF1A73E8` and define `val KANSO_BLUE_SEED: Color = Color(KANSO_BLUE_SEED_ARGB)` - consequences: same name, type and value for every user and test; the grep of DoD 16 reports only real paint calls; costs one extra declaration.
+2. Keep `Color(0xFF1A73E8)` and list the line in `fixed-colours.md` as an exception - consequences: the DoD's wording "only that one line" is then literally false, so criterion 16 would have to be read as assumed (Tier 3) and could never end `DONE`.
+
+### Taken, and why
+
+Option 1. It keeps the criterion provable by its own command and changes nothing a user or a test can observe. `fixed-colours.md` (the Verifier's) names the constant anyway.
+

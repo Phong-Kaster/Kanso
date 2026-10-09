@@ -244,6 +244,7 @@ class PreviewsRenderTest {
             "CameraAfterShotPreview",
             "CameraRefusedPreview",
             "ToolPhotoPreview",
+            "ToolEnhancePreview",
             "ToolUnreadablePreview",
             "SavedPreview",
             "SettingsSystemModePreview",

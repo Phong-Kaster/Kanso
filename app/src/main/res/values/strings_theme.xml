@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme colour setting: the option for Kanso's own blue colours, the first in the list. -->
+    <string name="theme_colour_kanso_blue">Kanso blue</string>
+</resources>

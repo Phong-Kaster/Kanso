@@ -15,9 +15,9 @@ import org.koin.core.context.stopKoin
 import org.robolectric.annotation.Config
 
 /**
- * Checks that the four theme colour labels live in `strings.xml` with the exact wording the
- * screen has always shown, and that no Kotlin source under `app/src/main/java` still carries
- * them as hard-coded text.
+ * Checks that the four theme colour labels live in the app's string resources (`strings.xml`,
+ * and `strings_theme.xml` for "Kanso blue") with the exact wording the screen shows, and that no
+ * Kotlin source under `app/src/main/java` carries them as hard-coded text.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], qualifiers = "notnight")
@@ -29,13 +29,13 @@ class ThemeColourLabelsTest {
         stopKoin()
     }
 
-    /** The four string resources read exactly as the on-screen labels did before. */
+    /** The four string resources read exactly as the on-screen labels should. */
     @Test
     fun resourceStringsHaveTheExpectedWording() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("Theme colour", context.getString(R.string.theme_colour_title))
         assertEquals("From wallpaper", context.getString(R.string.theme_colour_wallpaper))
-        assertEquals("Default purple", context.getString(R.string.theme_colour_default))
+        assertEquals("Kanso blue", context.getString(R.string.theme_colour_kanso_blue))
         assertEquals("Custom colour", context.getString(R.string.theme_colour_custom))
     }
 
@@ -45,7 +45,7 @@ class ThemeColourLabelsTest {
         val literals = listOf(
             "\"Theme colour\"",
             "\"From wallpaper\"",
-            "\"Default purple\"",
+            "\"Kanso blue\"",
             "\"Custom colour\"",
         )
         val files = findAppSourceRoot().walkTopDown()

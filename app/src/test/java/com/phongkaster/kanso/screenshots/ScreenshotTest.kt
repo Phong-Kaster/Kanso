@@ -1,7 +1,6 @@
 package com.phongkaster.kanso.screenshots
 
 import android.content.Context
-import android.os.Build
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsSelected
@@ -27,9 +26,9 @@ import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_LIGHT_TAG
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
 import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
-import com.phongkaster.kanso.ui.theme.baselineColorScheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
 import com.github.takahirom.roborazzi.captureRoboImage
 import kotlinx.coroutines.flow.first
@@ -167,21 +166,20 @@ class ScreenshotTest {
 
     /**
      * Taps the Light or Dark row of Settings -> Theme mode (only those two are used), waits in
-     * real time until the choice is saved, then waits until the theme hands out the baseline
-     * scheme of that mode. On Android 11 the baseline is the colour source, so its background is
-     * exactly what the app must show; on Android 15 the wallpaper scheme is in use, so only the
-     * saved mode is waited for there and the custom colour check follows.
+     * real time until the choice is saved, then waits until the theme hands out Kanso blue in
+     * that mode (`seedColorScheme(KANSO_BLUE_SEED, dark)`). Every test calls this on a fresh
+     * install, before any custom colour is picked, and a fresh install is in Kanso blue on every
+     * Android version, so its background is exactly what the app must show on Android 11 and 15
+     * alike; the custom colour pictures then wait for their own colour in chooseCustomColour.
      */
     private fun chooseThemeMode(mode: ThemeMode) {
         val tag = if (mode == ThemeMode.Dark) THEME_MODE_DARK_TAG else THEME_MODE_LIGHT_TAG
         compose.onNodeWithTag(tag).performScrollTo().performClick()
         awaitSaved("theme mode $mode") { savedThemeMode() == mode }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            val expected = baselineColorScheme(dark = mode == ThemeMode.Dark)
-            compose.waitUntil(timeoutMillis = 10_000) {
-                appliedScheme().background == expected.background &&
-                    appliedScheme().primary == expected.primary
-            }
+        val expected = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
+        compose.waitUntil(timeoutMillis = 10_000) {
+            appliedScheme().background == expected.background &&
+                appliedScheme().primary == expected.primary
         }
     }
 

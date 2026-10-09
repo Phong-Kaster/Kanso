@@ -2,21 +2,39 @@ package com.phongkaster.kanso.ui.saved
 
 import android.content.ActivityNotFoundException
 import android.graphics.Bitmap
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemGestures
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ButtonGroupMenuState
+import androidx.compose.material3.ButtonGroupScope
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,10 +56,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
@@ -56,6 +76,12 @@ const val SAVED_SCREEN_TAG = "saved-screen"
 /** The test tag on the saved photo. */
 const val SAVED_PHOTO_TAG = "saved-photo"
 
+/**
+ * The test tag on the button group that holds the three actions. The Share, Edit another and Home
+ * buttons are its descendants in the semantics tree (the tree tests and screen readers read).
+ */
+const val SAVED_ACTIONS_TAG = "saved-actions"
+
 /** The test tag on the Share button. */
 const val SAVED_SHARE_TAG = "saved-share"
 
@@ -66,14 +92,48 @@ const val SAVED_EDIT_ANOTHER_TAG = "saved-edit-another"
 const val SAVED_HOME_TAG = "saved-home"
 
 /**
+ * The test tag on the icon inside the Share button. The icon has no content description (the
+ * label beside it names the action), so without a tag of its own a test could not find it; the
+ * tag is read in the unmerged semantics tree, because a button merges what is inside it into one
+ * node (see [ActionLabel]).
+ */
+const val SAVED_SHARE_ICON_TAG = "saved-share-icon"
+
+/** The test tag on the icon inside the Edit another button (see [SAVED_SHARE_ICON_TAG]). */
+const val SAVED_EDIT_ANOTHER_ICON_TAG = "saved-edit-another-icon"
+
+/** The test tag on the icon inside the Home button (see [SAVED_SHARE_ICON_TAG]). */
+const val SAVED_HOME_ICON_TAG = "saved-home-icon"
+
+/**
  * A semantics property carrying the Uri (as text) of the photo the Saved screen shows, so a test
  * can check which photo is on screen without comparing pixels. People and screen readers never
  * see it.
  */
 val SAVED_PHOTO_URI_KEY = SemanticsPropertyKey<String>("SavedPhotoUriKey")
 
-/** The smallest height of the action buttons: Android's smallest touch target. */
-private val MIN_TOUCH = 48.dp
+/**
+ * The smallest height of an action button: Material 3's medium button height, 56 dp, which clears
+ * Android's smallest touch target (48 dp). It is also exactly what a label of two lines needs
+ * (2 x 20 dp of text plus 2 x 8 dp of padding, see [ACTION_PADDING]), so a button whose label
+ * wraps is no taller than its neighbours at the normal font size.
+ */
+private val ACTION_MIN_HEIGHT = ButtonDefaults.MediumContainerHeight
+
+/**
+ * The space inside an action button, around its icon and label: 12 dp on each side and 8 dp above
+ * and below. The Material default is wider (16 dp on each side) and taller (10 dp); three buttons
+ * share one row of a phone, so every dp given to the padding is taken from the label.
+ */
+private val ACTION_PADDING = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+
+/**
+ * How far a pressed action button may squeeze its neighbours, and so how far it grows. Unless told
+ * otherwise the group allows as much as a Material button's end padding, 24 dp, which would squeeze
+ * a neighbour's label onto an extra line while a finger is down; a few dp still shows the press
+ * without moving any text.
+ */
+private val PRESS_COMPRESSION = 4.dp
 
 /**
  * The screen shown after a photo is saved: a top bar titled "Saved", the saved photo upright,
@@ -195,7 +255,17 @@ internal fun SavedContent(
     Scaffold(
         modifier = modifier.testTag(SAVED_SCREEN_TAG),
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.saved_title)) })
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.saved_title),
+                        // headlineSmallEmphasized is one of the "Emphasized" text styles that Material 3
+                        // Expressive adds: the same size family as headlineSmall, but bolder, so the
+                        // title stands out from the body text.
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+            )
         },
         bottomBar = {
             SavedActions(
@@ -244,12 +314,46 @@ private fun PhotoView(bitmap: Bitmap, photoUri: String) {
 }
 
 /**
- * The bottom of the screen: the "saved" message, then Share across the full width, and Edit
- * another and Home side by side below it.
+ * The bottom of the screen: the "saved" message, and under it the three actions, Share, Edit
+ * another and Home, side by side in one row.
  *
- * It sits on the theme's surface colour with the theme's text and button colours, so it reads
- * well in light and dark. navigationBarsPadding keeps the buttons clear of the gesture bar, and
- * every button is at least 48 dp tall. [shareEnabled] is false while a share is being prepared.
+ * The row is a [ButtonGroup], a layout that Material 3 Expressive adds for a few related buttons.
+ * Next to a plain Row it does two extra things: the button under a finger grows a little and
+ * squeezes its neighbours (see [PRESS_COMPRESSION]), which makes a press feel physical; and
+ * buttons that do not fit the row move into a menu behind a "more" button instead of being cut
+ * off. Three details are worth knowing, because each one is a trap the first time:
+ *
+ * - The braces after `ButtonGroup(...)` are not composable code. They only list the items, and
+ *   the group draws them later. So the three labels are read with `stringResource` here, above the
+ *   group, where a composable call is allowed.
+ * - Every item has a weight (see [ActionButton]). An item without one is as wide as its label,
+ *   and when the labels together are wider than the row (a big font on a small phone) the last
+ *   buttons slide into the overflow menu. With a weight on every item, the three buttons always
+ *   split the whole row between them, so all three are always on screen, and a label that is too
+ *   long wraps onto a second line instead of making a button disappear.
+ * - `clickableItem`, the short way to add an item, builds its own button, so there is no place to
+ *   attach a test tag. `customItem` takes the button as a composable, so each tag goes on a button
+ *   built in this file, and the group carries its own tag, [SAVED_ACTIONS_TAG]. The buttons are
+ *   then children of the group in the semantics tree (the tree of nodes that tests and screen
+ *   readers read instead of looking at pixels).
+ *
+ * `verticalAlignment = Alignment.CenterVertically` keeps the buttons centred on one line even if
+ * one label wraps and its button gets taller than the others. The bar sits on the theme's surface
+ * colour with the theme's text and button colours, so it reads well in light and dark.
+ *
+ * The bar is at the very bottom of the screen, where the system keeps two strips for itself, and
+ * the buttons are lifted clear of both (the comment on the Column below shows how):
+ *
+ * - the navigation bar, which holds the back, home and recents buttons or the thin gesture hint,
+ *   and which the system draws on top of the app;
+ * - the bottom gesture zone, where a swipe up means "go home". The system reads a touch there as
+ *   the start of a gesture, so a button inside it can bring up the phone's own navigation instead
+ *   of being tapped. It is not always as tall as the navigation bar: with the navigation bar
+ *   hidden, or with swipe gestures on and the gesture hint turned off (as One UI allows on the
+ *   owner's Galaxy A13), the navigation bar is 0 dp tall but the gesture zone is still there.
+ *   Padding by the navigation bar alone would then leave the buttons inside the gesture zone.
+ *
+ * Every button is at least 56 dp tall. [shareEnabled] is false while a share is being prepared.
  */
 @Composable
 private fun SavedActions(
@@ -258,6 +362,10 @@ private fun SavedActions(
     onEditAnother: () -> Unit,
     onHome: () -> Unit,
 ) {
+    val shareLabel = stringResource(R.string.saved_share)
+    val editAnotherLabel = stringResource(R.string.saved_edit_another)
+    val homeLabel = stringResource(R.string.saved_home)
+
     Surface(
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -265,7 +373,17 @@ private fun SavedActions(
     ) {
         Column(
             modifier = Modifier
-                .navigationBarsPadding()
+                // Window insets are the strips along the screen's edges that the system draws on
+                // (the navigation bar) or listens on (the gesture zones). `only(Bottom)` keeps just
+                // the bottom gesture zone: the left and right ones are where the back swipe
+                // starts, and padding them would only narrow the row. `union` then takes, on each
+                // side, the larger of the two insets, so the bottom padding is the navigation
+                // bar's height or the gesture zone's, whichever is taller, never the two added
+                // together. The padding sits inside the Surface, so the Surface's colour still
+                // runs down behind the navigation bar while the buttons stay above both strips.
+                .windowInsetsPadding(
+                    WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+                )
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -276,41 +394,212 @@ private fun SavedActions(
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-            Button(
-                onClick = onShare,
-                enabled = shareEnabled,
+            ButtonGroup(
+                // The "more" button the group shows if its items ever did not fit; it opens a menu
+                // with the items that did not. With the weights below nothing overflows, but an
+                // empty indicator would make an overflowing item impossible to reach.
+                overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = MIN_TOUCH)
-                    .testTag(SAVED_SHARE_TAG),
+                    .testTag(SAVED_ACTIONS_TAG),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(stringResource(R.string.saved_share))
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onEditAnother,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = MIN_TOUCH)
-                        .testTag(SAVED_EDIT_ANOTHER_TAG),
-                ) {
-                    Text(stringResource(R.string.saved_edit_another), textAlign = TextAlign.Center)
-                }
-                OutlinedButton(
-                    onClick = onHome,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = MIN_TOUCH)
-                        .testTag(SAVED_HOME_TAG),
-                ) {
-                    Text(stringResource(R.string.saved_home), textAlign = TextAlign.Center)
-                }
+                // Each customItem is one button in the row (buttonGroupContent) plus the line the
+                // same action would have in the overflow menu (menuContent). The relative widths
+                // are 1 : 1.3 : 1: "Edit another" is the longest label, so on a phone it gets a
+                // little more of the row and still fits on one line, while Share and Home keep
+                // theirs on one line too.
+                customItem(
+                    buttonGroupContent = {
+                        ActionButton(
+                            label = shareLabel,
+                            icon = R.drawable.ic_share,
+                            onClick = onShare,
+                            tag = SAVED_SHARE_TAG,
+                            iconTag = SAVED_SHARE_ICON_TAG,
+                            relativeWidth = 1f,
+                            primary = true,
+                            enabled = shareEnabled,
+                        )
+                    },
+                    menuContent = { menu ->
+                        ActionMenuItem(
+                            label = shareLabel,
+                            icon = R.drawable.ic_share,
+                            onClick = onShare,
+                            enabled = shareEnabled,
+                            menu = menu,
+                        )
+                    },
+                )
+                customItem(
+                    buttonGroupContent = {
+                        ActionButton(
+                            label = editAnotherLabel,
+                            icon = R.drawable.ic_edit,
+                            onClick = onEditAnother,
+                            tag = SAVED_EDIT_ANOTHER_TAG,
+                            iconTag = SAVED_EDIT_ANOTHER_ICON_TAG,
+                            relativeWidth = 1.3f,
+                        )
+                    },
+                    menuContent = { menu ->
+                        ActionMenuItem(
+                            label = editAnotherLabel,
+                            icon = R.drawable.ic_edit,
+                            onClick = onEditAnother,
+                            menu = menu,
+                        )
+                    },
+                )
+                customItem(
+                    buttonGroupContent = {
+                        ActionButton(
+                            label = homeLabel,
+                            icon = R.drawable.ic_home,
+                            onClick = onHome,
+                            tag = SAVED_HOME_TAG,
+                            iconTag = SAVED_HOME_ICON_TAG,
+                            relativeWidth = 1f,
+                        )
+                    },
+                    menuContent = { menu ->
+                        ActionMenuItem(
+                            label = homeLabel,
+                            icon = R.drawable.ic_home,
+                            onClick = onHome,
+                            menu = menu,
+                        )
+                    },
+                )
             }
         }
     }
+}
+
+/**
+ * One button of the action row: an icon and a label, in the group's filled style when [primary]
+ * and in its softer tonal style otherwise (Share is the main action of this screen; Edit another
+ * and Home are the ways out of it).
+ *
+ * This is an extension of [ButtonGroupScope], the receiver of the braces after `ButtonGroup(...)`,
+ * and that is on purpose: the two modifiers below that only a group understands, `weight` and
+ * `animateWidth`, are members of that scope, so they can only be called with it in hand.
+ *
+ * - `weight(relativeWidth)` gives the button a share of the row proportional to [relativeWidth],
+ *   as `weight` does inside a Row, so the buttons always fill the row and none is pushed out.
+ * - `animateWidth(interactionSource, ...)` lets the group watch this button's presses, and widen
+ *   the pressed button while it narrows the others. The button must be given the same
+ *   interaction source, which is what reports the presses.
+ * - `heightIn(min = ACTION_MIN_HEIGHT)` and `testTag(tag)` are the usual size floor and test tag.
+ *
+ * `shapes = ButtonDefaults.shapes()` is what makes the button morph: it holds two shapes, a pill
+ * at rest and a squarer one while pressed, and the button animates between them. [onClick] runs
+ * when the button is tapped; [enabled] is false while a share is being prepared. The label may
+ * take two lines, which is why [ActionLabel] allows them. [iconTag] is handed to [ActionLabel],
+ * which puts it on the icon, so a test can check the icon is there.
+ */
+@Composable
+private fun ButtonGroupScope.ActionButton(
+    label: String,
+    @DrawableRes icon: Int,
+    onClick: () -> Unit,
+    tag: String,
+    iconTag: String,
+    relativeWidth: Float,
+    primary: Boolean = false,
+    enabled: Boolean = true,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val modifier = Modifier
+        .weight(relativeWidth)
+        .animateWidth(interactionSource, PRESS_COMPRESSION)
+        .heightIn(min = ACTION_MIN_HEIGHT)
+        .testTag(tag)
+    val shapes = ButtonDefaults.shapes()
+
+    if (primary) {
+        Button(
+            onClick = onClick,
+            shapes = shapes,
+            modifier = modifier,
+            enabled = enabled,
+            contentPadding = ACTION_PADDING,
+            interactionSource = interactionSource,
+        ) {
+            ActionLabel(icon = icon, label = label, iconTag = iconTag)
+        }
+    } else {
+        FilledTonalButton(
+            onClick = onClick,
+            shapes = shapes,
+            modifier = modifier,
+            enabled = enabled,
+            contentPadding = ACTION_PADDING,
+            interactionSource = interactionSource,
+        ) {
+            ActionLabel(icon = icon, label = label, iconTag = iconTag)
+        }
+    }
+}
+
+/**
+ * What goes inside an action button: the Material Symbols icon, a gap, and the label.
+ *
+ * The icon is drawn with `Icon(painterResource(...))`, which tints it with the button's content
+ * colour (so it is readable on a filled button and on a tonal one, in light and in dark); it has
+ * no content description because the label next to it already says what the button does. Its size
+ * and the gap come from [ButtonDefaults] for the small button size, the size whose 14 sp label
+ * text fits three to a row. The label may wrap to two lines, centred, and ends with an ellipsis if
+ * a very large font needs more: a long label never hides the button.
+ *
+ * The icon carries the test tag [iconTag]. A button merges everything inside it into one node of
+ * the semantics tree (the tree tests and screen readers read), and an icon with no description
+ * adds nothing to that node, so the merged tree cannot tell a button with an icon from one
+ * without. The unmerged tree keeps every tagged node inside the button as a node of its own, and
+ * that is where a test looks for the icon by this tag. A test tag is never read aloud.
+ */
+@Composable
+private fun ActionLabel(@DrawableRes icon: Int, label: String, iconTag: String) {
+    val sizeClass = ButtonDefaults.MinHeight
+    Icon(
+        painter = painterResource(icon),
+        contentDescription = null,
+        modifier = Modifier
+            .size(ButtonDefaults.iconSizeFor(sizeClass))
+            .testTag(iconTag),
+    )
+    Spacer(Modifier.size(ButtonDefaults.iconSpacingFor(sizeClass)))
+    Text(
+        text = label,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+    )
+}
+
+/**
+ * The line an action has in the group's overflow menu: the icon and the same label, and the same
+ * action as the button. It only ever shows if the group runs out of room. [menu] is the menu's
+ * state, used to close the menu once an action is chosen.
+ */
+@Composable
+private fun ActionMenuItem(
+    label: String,
+    @DrawableRes icon: Int,
+    onClick: () -> Unit,
+    menu: ButtonGroupMenuState,
+    enabled: Boolean = true,
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = {
+            onClick()
+            menu.dismiss()
+        },
+        leadingIcon = { Icon(painter = painterResource(icon), contentDescription = null) },
+        enabled = enabled,
+    )
 }
 
 /**
@@ -339,9 +628,11 @@ private fun samplePhoto(): SavedPhoto = SavedPhoto.Ready(sampleBitmap())
 /**
  * The Saved screen with a photo on show and every button ready, drawn once in light and once in
  * dark, from a [SavedUiState] built out of sample data. [SavedContent] draws the photo
- * ([PhotoView]) and the bottom buttons ([SavedActions]), so this one picture covers them all.
- * `ThemeMode.System` makes KansoTheme follow the preview's own light or dark picture; the taps do
- * nothing.
+ * ([PhotoView]) and the bottom row of three buttons in their button group ([SavedActions], whose
+ * parts are [ActionButton] and [ActionLabel]), so this one picture covers them all. The overflow
+ * menu's lines, [ActionMenuItem], never show here (the row always fits), so they have a preview
+ * of their own, [ActionMenuItemPreview]. `ThemeMode.System` makes KansoTheme follow the preview's
+ * own light or dark picture; the taps do nothing.
  */
 @PreviewLightDark
 @Composable
@@ -357,5 +648,46 @@ private fun SavedPreview() {
             onEditAnother = {},
             onHome = {},
         )
+    }
+}
+
+/**
+ * The lines of the button group's overflow menu, drawn once in light and once in dark.
+ * [SavedPreview] never shows them: every button in the row has a weight, so the row always fits,
+ * the "more" menu stays closed and its [ActionMenuItem]s are never drawn. This preview draws the
+ * three lines the menu would hold (Share, Edit another and Home, each with its label and its icon
+ * from the app's drawables) one under the other, on the colour a Material drop-down menu sits on.
+ * The menu state is a fresh, closed one made here, and the taps do nothing.
+ */
+@PreviewLightDark
+@Composable
+private fun ActionMenuItemPreview() {
+    // ActionMenuItem only needs a menu state to close the menu after a tap; a closed one will do.
+    val menu = remember { ButtonGroupMenuState() }
+    KansoTheme(themeMode = ThemeMode.System) {
+        // MenuDefaults.containerColor is the background of a real drop-down menu, so the lines are
+        // seen on the colour they would have on a phone.
+        Surface(color = MenuDefaults.containerColor) {
+            Column {
+                ActionMenuItem(
+                    label = stringResource(R.string.saved_share),
+                    icon = R.drawable.ic_share,
+                    onClick = {},
+                    menu = menu,
+                )
+                ActionMenuItem(
+                    label = stringResource(R.string.saved_edit_another),
+                    icon = R.drawable.ic_edit,
+                    onClick = {},
+                    menu = menu,
+                )
+                ActionMenuItem(
+                    label = stringResource(R.string.saved_home),
+                    icon = R.drawable.ic_home,
+                    onClick = {},
+                    menu = menu,
+                )
+            }
+        }
     }
 }

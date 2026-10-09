@@ -141,11 +141,14 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     onBack = goBack,
                     // A saved photo replaces everything above Home with the Saved screen, so
                     // Back from Saved goes to Home, not to the tool screen. Only act while the
-                    // tool screen is on top.
+                    // tool screen is on top. The editor can switch tools in place, so the Saved
+                    // key carries the tool selected when the person saved (read from the
+                    // ViewModel's state, not the key's first tool): "Edit another" then opens
+                    // that tool's gallery.
                     onSaved = { photoUri ->
                         if (backStack.last() == key) {
                             while (backStack.size > 1) backStack.removeLastOrNull()
-                            backStack.add(Saved(key.tool, photoUri))
+                            backStack.add(Saved(viewModel.state.value.tool, photoUri))
                         }
                     },
                 )

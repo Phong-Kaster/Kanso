@@ -67,3 +67,20 @@ AGP 8 only warned about two modules or libraries declaring one namespace; AGP 9 
 ### In plain words
 
 The new Android build tool no longer tolerates two parts of an app claiming the same name. This project had four empty shell modules that copied the name of the ready-made library they wrap, and one Google library that does the same with its own twin. The cure is giving the shell a different name, which changes nothing the person using the app sees. The lesson for the planner is smaller: before writing "this failure will need a source change, so report it", open the folder and look.
+
+---
+
+## S-005 - A criterion's proof command should name the test classes that hold its assertions, and the bootstrap critique should check that they do
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 6, Phase 1 (2026-10-09): the Fresh-Context Reviewer found that DoD 3 ran `--tests '*ToolScreenTest*' --tests '*ToolViewModelTest*'` while the whole-app walk it describes lived in `SavedNavigationTest`, and that DoD 22 asked for a wallpaper restart in two classes that no longer reached the wallpaper once the default colour changed.
+- **Status:** open
+
+### What happened
+
+A criterion said which test classes prove it, but the tests that really contain its assertions were written (correctly, as it happens) in other files, because those files already had the harness for driving the whole app. The command in the DoD would pass without ever running the walk. A second criterion named two tests that used to cover a case only because the default happened to be that case; the default moved and the cover went with it. Both were found by the reviewer, not by a test, and fixed by adding tests to the named classes.
+
+### In plain words
+
+The checklist said "to prove this, run these tests", but the real check was written in a different test file, so running the named tests would have passed without proving anything. Reading a criterion's proof against where its assertions actually live, at the bootstrap critique and again in review, would catch it before a Verifier trusts a green line.
+

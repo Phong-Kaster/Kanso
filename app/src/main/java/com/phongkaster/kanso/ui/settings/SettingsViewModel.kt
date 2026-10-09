@@ -96,23 +96,23 @@ class SettingsViewModel(
     }
 
     /**
-     * Uses the built-in baseline purple colours (offered below Android 12 instead of wallpaper).
-     * A custom colour still waiting to be saved is dropped first, so it cannot overwrite this.
+     * Uses Kanso blue, the app's own colours (offered on every Android version). A custom
+     * colour still waiting to be saved is dropped first, so it cannot overwrite this choice.
      */
-    fun onBaselineChosen() {
+    fun onKansoBlueChosen() {
         val pending = dropPendingColour()
         // Runs in colourWriteScope, not viewModelScope, so leaving Settings at once cannot
         // cancel it.
         colourWriteScope.launch {
             // Wait until the dropped save has really stopped before writing the new choice.
             pending?.cancelAndJoin()
-            repository.setThemeColour(ThemeColour.Baseline)
+            repository.setThemeColour(ThemeColour.KansoBlue)
         }
     }
 
     /**
-     * Selects the Custom option with the last picked colour (or the baseline purple), which
-     * also shows the colour picker.
+     * Selects the Custom option with the last picked colour (or Kanso blue's seed, when none was
+     * ever picked), which also shows the colour picker.
      */
     fun onCustomChosen() {
         viewModelScope.launch { repository.chooseCustomThemeColour() }

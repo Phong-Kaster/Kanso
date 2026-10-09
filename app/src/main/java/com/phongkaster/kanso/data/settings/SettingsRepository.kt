@@ -1,12 +1,14 @@
 package com.phongkaster.kanso.data.settings
 
 import android.os.Build
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -19,8 +21,9 @@ import kotlinx.coroutines.flow.map
  * It is the only class that knows how settings are stored, so screens deal in plain values such
  * as [ThemeMode] and never in DataStore keys. New settings get a key and a Flow/setter pair here.
  *
- * [sdkInt] is the phone's Android API level, which decides the default theme colour; tests
- * pass one in to act as an older or newer phone.
+ * [sdkInt] is the phone's Android API level, which decides whether a saved wallpaper choice can
+ * be honoured (and where the default theme colour is decided); tests pass one in to act as an
+ * older or newer phone.
  */
 class SettingsRepository(
     private val dataStore: DataStore<Preferences>,
@@ -54,9 +57,10 @@ class SettingsRepository(
     /**
      * The saved theme colour, emitted once at first and again every time it changes.
      *
-     * Nothing saved, or a value that cannot be read, gives [defaultThemeColour]. A saved
-     * Wallpaper choice on a phone older than Android 12 (possible only through a restored
-     * backup) reads as [ThemeColour.Baseline], since the wallpaper colours do not exist there.
+     * Nothing saved, or a value that cannot be read, gives [defaultThemeColour] (Kanso blue).
+     * A saved Wallpaper choice on a phone older than Android 12 (possible only through a
+     * restored backup) reads as [ThemeColour.KansoBlue], since the wallpaper colours do not
+     * exist there; so does the first default colour an older Kanso saved, which is gone.
      */
     val themeColour: Flow<ThemeColour> = dataStore.data
         .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
@@ -78,8 +82,8 @@ class SettingsRepository(
                 ThemeColour.Wallpaper -> {
                     preferences[THEME_COLOUR_SOURCE_KEY] = SOURCE_WALLPAPER
                 }
-                ThemeColour.Baseline -> {
-                    preferences[THEME_COLOUR_SOURCE_KEY] = SOURCE_BASELINE
+                ThemeColour.KansoBlue -> {
+                    preferences[THEME_COLOUR_SOURCE_KEY] = SOURCE_KANSO_BLUE
                 }
                 is ThemeColour.Custom -> {
                     preferences[THEME_COLOUR_SOURCE_KEY] = SOURCE_CUSTOM
@@ -90,15 +94,17 @@ class SettingsRepository(
     }
 
     /**
-     * Switches the theme colour to Custom with the last picked seed colour, or the baseline
-     * purple when none was ever picked. Used when the person selects the Custom option before
-     * touching the picker.
+     * Switches the theme colour to Custom with the last picked seed colour, or Kanso blue's
+     * seed when none was ever picked, so the picker opens on the colour the app already shows.
+     * Used when the person selects the Custom option before touching the picker.
      */
     suspend fun chooseCustomThemeColour() {
         dataStore.edit { preferences ->
             preferences[THEME_COLOUR_SOURCE_KEY] = SOURCE_CUSTOM
             if (preferences[THEME_COLOUR_SEED_KEY] == null) {
-                preferences[THEME_COLOUR_SEED_KEY] = ThemeColour.BASELINE_SEED_ARGB
+                // The settings file keeps colours as ARGB integers; toArgb() turns the Compose
+                // colour into one.
+                preferences[THEME_COLOUR_SEED_KEY] = KANSO_BLUE_SEED.toArgb()
             }
         }
     }
@@ -108,9 +114,11 @@ class SettingsRepository(
      * to [defaultThemeColour] when they are missing or do not make sense together.
      */
     private fun parseThemeColour(source: String?, seed: Int?): ThemeColour = when (source) {
+        SOURCE_KANSO_BLUE -> ThemeColour.KansoBlue
+        // The first default colour of an older Kanso no longer exists; Kanso blue replaces it.
+        SOURCE_BASELINE -> ThemeColour.KansoBlue
         SOURCE_WALLPAPER ->
-            if (sdkInt >= Build.VERSION_CODES.S) ThemeColour.Wallpaper else ThemeColour.Baseline
-        SOURCE_BASELINE -> ThemeColour.Baseline
+            if (sdkInt >= Build.VERSION_CODES.S) ThemeColour.Wallpaper else ThemeColour.KansoBlue
         SOURCE_CUSTOM -> if (seed != null) ThemeColour.Custom(seed) else defaultThemeColour
         else -> defaultThemeColour
     }
@@ -129,7 +137,13 @@ class SettingsRepository(
         /** The stored name of [ThemeColour.Wallpaper]; never change it, it is on disk. */
         const val SOURCE_WALLPAPER = "Wallpaper"
 
-        /** The stored name of [ThemeColour.Baseline]; never change it, it is on disk. */
+        /** The stored name of [ThemeColour.KansoBlue]; never change it, it is on disk. */
+        const val SOURCE_KANSO_BLUE = "KansoBlue"
+
+        /**
+         * The name an older Kanso stored for its first default colour. It is never written any
+         * more, only read, as Kanso blue; keep it so those settings files still open in blue.
+         */
         const val SOURCE_BASELINE = "Baseline"
 
         /** The stored name of [ThemeColour.Custom]; never change it, it is on disk. */
