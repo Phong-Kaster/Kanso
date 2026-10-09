@@ -1,5 +1,12 @@
 # ISSUES
 
+## Run 6 (Material 3 Expressive, Kanso blue): planned at Iteration 1, nothing built yet
+
+- **Queued decision D-001 (blocks every task):** approve `.harness/run/DoD.md` (30 criteria, 6 removals) and list the pictures that may be re-recorded under `## Baselines` in `.harness/run/DECISIONS.md` (the 16 existing and 8 new, named in D-001). Until it is answered no task runs.
+- **Assumptions recorded:** A-001 to A-012 in `.harness/run/ASSUMPTIONS.md`, all Tier 2; the ones to read first are A-001 (which tools are "AI tools"), A-002 (the blue seed `#1A73E8`), A-003 (an install that never chose a colour, your Galaxy A13 included, turns from wallpaper colours to blue), A-006 (every screen follows the theme except the engine colour picker's light card) and A-011 (the back gesture's preview and "Remove animations" are checked by a person).
+- **Will need a person (unsigned items are added when the run reaches them):** DoD criteria 20 (every screen picture, old beside new), 21 (the new look on the Galaxy A13, light and dark, motion, back gesture, Remove animations), 30 (the explanations in four files), and the machine-then-human part of 13.
+- No unsigned item from this run exists yet. Every earlier unsigned item below stays as it is.
+
 ## Run 5 (AGP 9 and the current Compose libraries): ended DONE_PARTIAL, Verifier Iteration 5
 
 The Verifier re-proved every `machine` criterion on the tree of `c0871f3` with fresh runs (2026-10-09): 238 unit tests (0 failed, 0 errors, 0 skipped; all 231 earlier test names still there, no test file edited), `verifyRoborazziDebug` 16 total / 0 changed, lint 0 errors (analysis forced to rerun), `assembleDebug`, `assembleRelease` and the nine modules in debug and release all exit 0; the debug APK asks for the same permissions, targets the same SDK levels and holds the same three ABIs and 34 native libraries as before the run; the catalog's versions are still the newest on Google Maven and Maven Central today. Per criterion: `.harness/run/evidence/verifier.md`. Nothing is abandoned or unreachable. The run is not `DONE` because criterion 11 is assumed (A-007, below) and criteria 3 and 7 need a person.
