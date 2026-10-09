@@ -39,7 +39,7 @@ Option 1. It keeps the pre-release surface to the one library the PRD needs, add
 - **Tier:** Missing information (two sentences of the PRD pull in different directions)
 - **Iteration:** 1
 - **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
-- **Revert:** `git revert <sha>` (of the Phase 1 checkpoint for Gradle, of the Phase 2 checkpoint for Kotlin)
+- **Revert:** for Kotlin alone, set `kotlin = "2.3.20"` in `gradle/libs.versions.toml` (Phase 1 built and tested on it under AGP 9.4.1); the Gradle floor goes only with AGP itself, so `git revert d816bde` is sound for it only together with the later Phases, which need compileSdk 37 and Navigation 3 1.2.0
 - **Assumed DoD criteria:** none (DoD 9, R3)
 
 ### Question
@@ -63,7 +63,7 @@ Option 1. DoD 9 asks PROJECT.md to record each version and why it is not older o
 - **Tier:** Missing information
 - **Iteration:** 1
 - **First dependent checkpoint:** `a1e76b5` (Iteration 1: the Definition of Done and the plan; `git revert a1e76b5` would undo the whole plan, the Revert line below names the checkpoint that carries the effect)
-- **Revert:** `git revert <sha>` (of the Phase 1 checkpoint)
+- **Revert:** to undo only this, raise `compileSdk` to 37 in the `core/*` and `opencv` build scripts (option 2 below); `git revert d816bde` would put the app back on compileSdk 36, which Navigation 3 1.2.0 (Phase 2) refuses, so it is sound only together with the later Phases
 - **Assumed DoD criteria:** none (DoD 10 and Questions Q1, Q3)
 
 ### Question
@@ -149,8 +149,8 @@ Option 1. D-001 carries the exact text to paste so one answer covers both the Do
 
 - **Tier:** 3 (it touches how the approved DoD 11 reads; taken as the reading closest to the PRD's literal text, item 4: adapt the build scripts "only as far as the build requires", source code not changed)
 - **Iteration:** 2
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (a later Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <Phase 1 sha>` undoes the whole toolchain move; to undo only this, put the four `namespace` lines of `core/editimage`, `overlaybrush`, `imageprocessor` and `localml` back to the AAR's namespace, which makes AGP 9 refuse the app's manifest merge again
+- **First dependent checkpoint:** `d816bde` (the Phase 1 checkpoint, `d816bde17db519bfc545f268ef75966368ebaed1`)
+- **Revert:** `git revert d816bde` undoes the whole toolchain move; to undo only this, put the four `namespace` lines of `core/editimage`, `overlaybrush`, `imageprocessor` and `localml` back to the AAR's namespace, which makes AGP 9 refuse the app's manifest merge again
 - **Assumed DoD criteria:** 11 (its sentence "a change AGP 9 forces on an engine source file (for example a namespace shared by a prebuilt library and its module) makes this criterion unmet and is reported"); listed as **assumed** in `STATE.md`
 
 ### Question
@@ -173,8 +173,8 @@ Option 1. It is a build-script adaptation the PRD allows ("only as far as the bu
 
 - **Tier:** 2
 - **Iteration:** 2
-- **First dependent checkpoint:** Iteration 2, the Phase 1 checkpoint (a later Iteration replaces this with its commit SHA)
-- **Revert:** `git revert <Phase 1 sha>`; to undo only this, restore `implementation(libs.litert.support)` in `core/localml/build.gradle.kts`, which makes AGP 9 refuse the manifest merge again
+- **First dependent checkpoint:** `d816bde` (the Phase 1 checkpoint, `d816bde17db519bfc545f268ef75966368ebaed1`)
+- **Revert:** `git revert d816bde`; to undo only this, restore `implementation(libs.litert.support)` in `core/localml/build.gradle.kts`, which makes AGP 9 refuse the manifest merge again
 - **Assumed DoD criteria:** none (DoD 14's coordinate-set check still passes; its sentence "No library was added" is read as "no library that was not already resolved")
 
 ### Question

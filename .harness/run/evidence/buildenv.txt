@@ -219,44 +219,43 @@ classpath
 |         |    +--- org.jdom:jdom2:2.0.6
 |         |    \--- org.jetbrains.kotlin:kotlin-stdlib:1.3.71 -> 2.3.21 (*)
 |         +--- com.squareup:javapoet:1.13.0
-|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.10 -> 2.3.20
-|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:kotlin-native-utils:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:fus-statistics-gradle-plugin:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20 (c)
-|         |    |    +--- org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.3.20 (c)
-|         |    |    \--- org.jetbrains.kotlin:kotlin-serialization:2.3.20 (c)
-|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.3.20 (*)
-|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-native-utils:2.3.20
-|         |    |    |    +--- org.jetbrains.kotlin:kotlin-util-io:2.3.20
-|         |    |    |    \--- org.jetbrains.kotlin:kotlin-util-klib:2.3.20
-|         |    |    |         \--- org.jetbrains.kotlin:kotlin-util-io:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-build-tools-api:2.3.20
-|         |    +--- org.jetbrains.kotlin:fus-statistics-gradle-plugin:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.20 (*)
-|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.3.20
-|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea-proto:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea:2.3.20 (*)
-|         |    +--- org.jetbrains.kotlin:kotlin-klib-commonizer-api:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-native-utils:2.3.20 (*)
-|         |    +--- org.jetbrains.kotlin:kotlin-build-statistics:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-build-tools-api:2.3.20
+|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.10 -> 2.4.21
+|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:kotlin-native-utils:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:fus-statistics-gradle-plugin:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21 (c)
+|         |    |    +--- org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.21 (c)
+|         |    |    \--- org.jetbrains.kotlin:kotlin-serialization:2.4.21 (c)
+|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.4.21 (*)
+|         |    |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-native-utils:2.4.21
+|         |    |    |    +--- org.jetbrains.kotlin:kotlin-util-io:2.4.21
+|         |    |    |    \--- org.jetbrains.kotlin:kotlin-util-klib:2.4.21
+|         |    |    |         \--- org.jetbrains.kotlin:kotlin-util-io:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-build-tools-api:2.4.21
+|         |    +--- org.jetbrains.kotlin:fus-statistics-gradle-plugin:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.4.21 (*)
+|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-annotations:2.4.21
+|         |    +--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea-proto:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-tooling-core:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-gradle-plugin-idea:2.4.21 (*)
+|         |    +--- org.jetbrains.kotlin:kotlin-klib-commonizer-api:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-native-utils:2.4.21 (*)
+|         |    +--- org.jetbrains.kotlin:kotlin-build-statistics:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-build-tools-api:2.4.21
 |         |    |    \--- com.google.code.gson:gson:2.11.0 (*)
-|         |    +--- org.jetbrains.kotlin:kotlin-util-klib-metadata:2.3.20
-|         |    |    +--- org.jetbrains.kotlin:kotlin-util-io:2.3.20
-|         |    |    \--- org.jetbrains.kotlin:kotlin-util-klib:2.3.20 (*)
-|         |    +--- org.jetbrains.kotlin:abi-tools-api:2.3.20
-|         |    \--- org.jetbrains.kotlin:kotlin-compiler-runner:2.3.20
-|         |         +--- org.jetbrains.kotlin:kotlin-daemon-client:2.3.20
+|         |    +--- org.jetbrains.kotlin:kotlin-util-klib-metadata:2.4.21
+|         |    |    +--- org.jetbrains.kotlin:kotlin-util-io:2.4.21
+|         |    |    \--- org.jetbrains.kotlin:kotlin-util-klib:2.4.21 (*)
+|         |    \--- org.jetbrains.kotlin:kotlin-compiler-runner:2.4.21
+|         |         +--- org.jetbrains.kotlin:kotlin-daemon-client:2.4.21
 |         |         \--- org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0 -> 1.9.0 (*)
 |         +--- com.google.protobuf:protobuf-java:3.25.5
 |         +--- com.google.protobuf:protobuf-java-util:3.25.5 (*)
@@ -318,19 +317,19 @@ classpath
 |              +--- org.jetbrains.kotlin:kotlin-stdlib:2.2.10 -> 2.3.21 (*)
 |              +--- com.android.tools.build:gradle-common-api:9.4.1 (*)
 |              +--- org.ow2.asm:asm:9.9
-|              +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.2.10 -> 2.3.20 (*)
+|              +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.2.10 -> 2.4.21 (*)
 |              \--- com.android.tools.build:gradle:9.4.1 (*)
 +--- com.android.library:com.android.library.gradle.plugin:9.4.1
 |    \--- com.android.tools.build:gradle:9.4.1 (*)
-+--- org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.3.20
-|    \--- org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.3.20
-|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.20 (*)
-|         +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.3.20 (*)
-|         \--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20 (*)
-+--- org.jetbrains.kotlin.plugin.serialization:org.jetbrains.kotlin.plugin.serialization.gradle.plugin:2.3.20
-|    \--- org.jetbrains.kotlin:kotlin-serialization:2.3.20
-|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.3.20 (*)
-|         \--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.3.20 (*)
++--- org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin:2.4.21
+|    \--- org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.21
+|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.4.21 (*)
+|         +--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.4.21 (*)
+|         \--- org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21 (*)
++--- org.jetbrains.kotlin.plugin.serialization:org.jetbrains.kotlin.plugin.serialization.gradle.plugin:2.4.21
+|    \--- org.jetbrains.kotlin:kotlin-serialization:2.4.21
+|         +--- org.jetbrains.kotlin:kotlin-gradle-plugin-api:2.4.21 (*)
+|         \--- org.jetbrains.kotlin:kotlin-gradle-plugins-bom:2.4.21 (*)
 +--- io.github.takahirom.roborazzi:io.github.takahirom.roborazzi.gradle.plugin:1.76.0
 |    \--- io.github.takahirom.roborazzi:roborazzi-gradle-plugin:1.76.0
 |         +--- org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3

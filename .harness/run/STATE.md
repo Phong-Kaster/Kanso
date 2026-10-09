@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** executing (Phase 1 complete; D-001 answered in Iteration 2)
+- **Stage:** executing (Phases 1 and 2 complete; Phase 3 next)
 - **Loop Branch:** loop/kanso-agp9-toolchain (started from `76ecb97`)
-- **Next Phase:** 2 - T-002 (Compose 1.12.1, Navigation 3 1.2.0, lifecycle 2.11.0, Kotlin 2.4.21)
+- **Next Phase:** 3 - T-003 (Material3 1.5.0-beta01 above the stable BOM, `ExpressiveApiTest`)
 - **DONE-candidate:** no
 - **Run Mode:** Autonomous
 
@@ -16,8 +16,8 @@
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
 | T-001 | complete (Iteration 2, `loop(phase-1)`; 2 of 3 attempts: attempt 1 failed at the app's manifest merge) | wrapper, catalog, root/app/`core/*`/`opencv` build scripts, `gradle.properties` | `evidence/phase1-*.log`, `phase1-apk-vs-base.txt`; 231 tests, 16/16 pictures unchanged, lint, debug and release green, native libraries identical to base |
-| T-002 | pending (executable; next Phase) | catalog, `app/build.gradle.kts`, `app/src` only as forced, baselines through the wrapper | - |
-| T-003 | pending (after T-002) | catalog, `app/build.gradle.kts`, new `ExpressiveApiTest.kt`, baselines through the wrapper | - |
+| T-002 | complete (Iteration 3, `loop(phase-2)`; 1 of 3 attempts) | catalog (four version lines); no app source, test, module script or baseline edited | `evidence/phase2-*`, `buildenv.txt`; 231 tests, 16/16 pictures unchanged (nothing re-recorded), lint, debug and the nine modules in both variants green on Kotlin 2.4.21 |
+| T-003 | pending (executable; next Phase) | catalog, `app/build.gradle.kts`, new `ExpressiveApiTest.kt`, baselines through the wrapper | - |
 
 ## Signed off
 

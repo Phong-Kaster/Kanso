@@ -1,0 +1,42 @@
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+androidx.navigation3:navigation3-runtime:1.2.0
+  Variant androidRuntimeElements-published:
+    | Attribute Name                                  | Provided     | Requested    |
+    |-------------------------------------------------|--------------|--------------|
+    | org.gradle.libraryelements                      | aar          |              |
+    | org.gradle.status                               | release      |              |
+    | org.gradle.category                             | library      | library      |
+    | org.gradle.jvm.environment                      | android      | android      |
+    | org.gradle.usage                                | java-runtime | java-runtime |
+    | org.jetbrains.kotlin.platform.type              | androidJvm   | androidJvm   |
+    | com.android.build.api.attributes.AgpVersionAttr |              | 9.4.1        |
+    | com.android.build.api.attributes.BuildTypeAttr  |              | debug        |
+   Selection reasons:
+      - By constraint: navigation3-ui is in atomic group androidx.navigation3
+      - By conflict resolution: between versions 1.2.0 and 1.0.1
+
+androidx.navigation3:navigation3-runtime:1.2.0
++--- debugRuntimeClasspath
++--- androidx.navigation3:navigation3-ui-android:1.2.0
+|    \--- androidx.navigation3:navigation3-ui:1.2.0
+|         +--- debugRuntimeClasspath
+|         \--- androidx.navigation3:navigation3-runtime-android:1.2.0
+|              \--- androidx.navigation3:navigation3-runtime:1.2.0 (*)
+\--- androidx.navigation3:navigation3-ui-android:1.2.0 (*)
+
+androidx.navigation3:navigation3-runtime:1.0.1 -> 1.2.0
++--- androidx.lifecycle:lifecycle-viewmodel-navigation3-android:2.11.0
+|    \--- androidx.lifecycle:lifecycle-viewmodel-navigation3:2.11.0
+|         +--- debugRuntimeClasspath
+|         +--- androidx.lifecycle:lifecycle-service:2.11.0
+|         |    +--- androidx.work:work-runtime:2.7.0 (requested androidx.lifecycle:lifecycle-service:2.1.0)
+|         |    |    +--- com.google.mlkit:acceleration:16.0.0-beta2
+|         |    |    |    \--- com.google.mlkit:pose-detection-common:18.0.0-beta5
+|         |    |    |         \--- com.google.mlkit:pose-detection:18.0.0-beta5
+|         |    |    |              \--- project ':core:localml'
+|         |    |    |                   \--- debugRuntimeClasspath
+|         |    |    \--- androidx.work:work-runtime-ktx:2.7.0
+|         |    |         \--- androidx.work:work-multiprocess:2.7.0
+
+[trimmed to the first 40 lines: the full dependencyInsight tree of this coordinate is large; the resolved version is at the top]
