@@ -171,3 +171,20 @@ The wrapper checks for a debug APK the repository built before it runs any opera
 Before touching the phone, the engine asks "is someone using it?". The helper refused to answer until the app had been built, even though answering does not touch the app. Letting that one question through, while every other operation still needs a built app, would let the check happen alongside the build instead of after it.
 
 ---
+
+---
+
+## S-011 - Make the S-005 / S-007 check a script the bootstrap runs on its own draft, not advice the critique role has to remember
+
+- **Destination:** loop (`.harness/loop/ENGINE.md` section 5, step 3, and `POLICIES.md`)
+- **Earned by:** Kanso Run 7, bootstrap (Iteration 1, 2026-10-12). S-005 and S-007 (both still open) say that a DoD proof naming a test class needs a task that writes it. The first draft of Run 7's DoD and plan broke that rule in eight places (a `NavTransitionTest` tab case, `KansoBlueContrastTest` pairs, `GalleryTopBarTest`, the `NavigationTest` permission clauses, the viewer clause of criterion 1, the last bullet of the edits-source proof, the preview names of criterion 36, the KDoc clauses of criterion 37). The independent critique role found all of them, after about 19 minutes and 310 thousand tokens, and the conflict analysis found the same class again on its own.
+- **Status:** open
+
+### What happened
+
+The check is mechanical: take every backticked name ending in `Test`, `Tag` or `Preview` and every file path in the DoD's Proofs, and look for it in the task files' Declared File Scopes and descriptions. The bootstrap authors the DoD and the tasks in the same invocation, so a one-line script (`grep -o` over `DoD.md`, then `grep -c` over `TASKS/`) can print every name no task mentions before the critique role is dispatched. Left to the critique role, the same gaps cost a full analysis round and then a rewrite of the plan.
+
+### In plain words
+
+The plan is a list of jobs and the definition of done is a list of exams. Every exam that names a test has to have a job that writes that test, and a computer can check that in a second. Doing the check before asking a reviewer saves the reviewer's time for the problems only a person can see.
+

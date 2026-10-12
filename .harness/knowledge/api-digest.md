@@ -302,3 +302,135 @@ The MotionScheme specs are springs and CANNOT go into `rememberInfiniteTransitio
 ## Not confirmed
 
 Full Compose animation signatures (section I); whether `Typography()` yields distinct Emphasized styles (see A); whether a Compose test's `InfiniteAnimationPolicy` cancels an indeterminate `LoadingIndicator` when the clock auto-advances (use `autoAdvance = false`); whether overflowed `ButtonGroup` items appear in the semantics tree; Robolectric's default width and so whether a group overflows in a test (the tests run at `w411dp`).
+
+
+---
+
+# Run 7 additions (sections J to Q), 2026-10-12
+
+Read from the same sources jars (`C:/Users/MAC_PC/AppData/Local/Temp/kanso-src/{m3,nav3ui,nav3rt}/`, `M3/` = `commonMain/androidx/compose/material3/`, `NAV3UI/` = `nav3ui/commonMain/androidx/navigation3/ui/`, `NAV3RT/` = `nav3rt/commonMain/androidx/navigation3/runtime/`) by the Run 7 feasibility analyst; **none of the components below needs an opt-in** except where a line says so. Signatures are copied from the sources. Compose test, foundation, animation-core and Coil sources are NOT in the scratch folder: anything about them is marked "memory".
+
+## J. ShortNavigationBar (the tab bar; no opt-in)
+
+```kotlin
+// M3/ShortNavigationBar.kt:96
+fun ShortNavigationBar(modifier: Modifier = Modifier, containerColor: Color = ShortNavigationBarDefaults.containerColor,
+    contentColor: Color = ShortNavigationBarDefaults.contentColor, windowInsets: WindowInsets = ShortNavigationBarDefaults.windowInsets,
+    arrangement: ShortNavigationBarArrangement = ShortNavigationBarDefaults.arrangement, content: @Composable () -> Unit)
+// :251
+fun ShortNavigationBarItem(selected: Boolean, onClick: () -> Unit, icon: @Composable () -> Unit, label: @Composable (() -> Unit)?,
+    modifier: Modifier = Modifier, enabled: Boolean = true, iconPosition: NavigationItemIconPosition = NavigationItemIconPosition.Top,
+    colors: NavigationItemColors = ShortNavigationBarItemDefaults.colors(), interactionSource: MutableInteractionSource? = null)
+// :415 ShortNavigationBarItemDefaults.colors(selectedIconColor, selectedTextColorTopIconPosition, selectedTextColorStartIconPosition,
+//        selectedIndicatorColor, unselectedIconColor, unselectedTextColor, disabledIconColor, disabledTextColor)  -- all defaulted
+//      the overload with `selectedTextColor` is DeprecationLevel.HIDDEN (:438): writing selectedTextColor = does not compile
+// NavigationItem.kt:119 class NavigationItemColors(...same eight...); copy(...) :192
+// NavigationItem.kt:85 NavigationItemIconPosition.Top / .Start ; ShortNavigationBarArrangement.EqualWeight / .Centered (:188-205)
+```
+
+- Body: `Surface(color, contentColor, modifier) { Layout(windowInsetsPadding(windowInsets).defaultMinSize(64.dp).selectableGroup()) }` (:163-168). It has **no `shape` parameter**: make it a pill with `Modifier.shadow(elevation, CircleShape)` then `Modifier.clip(CircleShape)` in `modifier`.
+- Default `windowInsets` = `systemBarsForVisualComponents.only(Horizontal + Bottom)` (:381-386), padded INSIDE the bar: pass `WindowInsets(0, 0, 0, 0)` for a floating bar and pad the outer Row with `WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))` through `windowInsetsPadding`.
+- `EqualWeight`: every item is width/count wide, all as tall as the tallest (:487-533). Needs a bounded width (a Row `weight(1f)`).
+- Item: `Box(modifier.selectable(role = Role.Tab, indication = null).defaultMinSize(48.dp))` (`NavigationItem.kt:377-393`): a `testTag` in the item's `modifier` is on the Tab node; `assertIsSelected()` works; the label merges in. The icon's semantics are NOT cleared (:356-358): give the `Icon` `contentDescription = null`.
+- Top position: the indicator is a flat 56x32 full pill behind the ICON only (`NavigationBarVerticalItemTokens.kt:24-34`, `NavigationItem.kt:1241-1254`), animated on the DefaultSpatial spring (:1224-1230, finite: tests go idle, `captureRoboImage` is fine).
+- Default tokens (`NavigationBarTokens.kt`): container `SurfaceContainer`, height 64, indicator `SecondaryContainer`, active icon `OnSecondaryContainer`, active label `Secondary`, inactive `OnSurfaceVariant`, label `LabelMedium`.
+- Roles that exist: `ColorScheme.inversePrimary` :155, `inverseSurface` :171, `inverseOnSurface` :172, `scrim` :179. Kanso's schemes come from MaterialKolor's `dynamicColorScheme`, which fills every role (`ui/theme/SeedColorScheme.kt:41-42`).
+- `NavigationBar` (`NavigationBar.kt:109`) is the older 80 dp bar (`TallContainerHeight` :731), `Row.fillMaxWidth`; its `NavigationBarItem` (:171) clears the icon's semantics when a label shows (:194-198).
+- Run 7's bar: `ShortNavigationBar(Modifier.weight(1f).shadow(6.dp, CircleShape).clip(CircleShape), containerColor = inverseSurface, contentColor = inverseOnSurface, windowInsets = WindowInsets(0, 0, 0, 0))` plus a separate round `FilledIconButton` beside it, both in one Row padded 16 dp.
+
+## K. Carousel (`androidx.compose.material3.carousel`; no opt-in)
+
+```kotlin
+// carousel/Carousel.kt:178
+fun HorizontalUncontainedCarousel(state: CarouselState, itemWidth: Dp, modifier: Modifier = Modifier, itemSpacing: Dp = CarouselDefaults.ItemSpacing,
+    flingBehavior: TargetedFlingBehavior = CarouselDefaults.noSnapFlingBehavior(), userScrollEnabled: Boolean = true,
+    contentPadding: PaddingValues = CarouselDefaults.ContentPadding, content: @Composable CarouselItemScope.(itemIndex: Int) -> Unit)
+// :107 HorizontalMultiBrowseCarousel(state, preferredItemWidth: Dp, modifier, itemSpacing, flingBehavior = singleAdvanceFlingBehavior(state),
+//        userScrollEnabled, minSmallItemWidth = MinSmallItemSize, maxSmallItemWidth = MaxSmallItemSize, contentPadding, content)
+// :260 HorizontalCenteredHeroCarousel(state, modifier, preferredItemWidth: Dp = Dp.Unspecified, itemSpacing, flingBehavior = singleAdvance..., userScrollEnabled,
+//        minSmallItemWidth, maxSmallItemWidth, contentPadding, content)
+// CarouselState.kt:50 class CarouselState(currentItem: Int = 0, currentItemOffsetFraction: Float = 0f, itemCount: () -> Int) : ScrollableState
+//   val currentItem: Int (:67, observable); suspend scrollToItem(item) (:86); suspend animateScrollToItem(item, animationSpec = spring()) (:99)
+// CarouselState.kt:150 @Composable fun rememberCarouselState(initialItem: Int = 0, itemCount: () -> Int): CarouselState  (rememberSaveable)
+// CarouselDefaults (Carousel.kt:723): @Composable singleAdvanceFlingBehavior(state, snapAnimationSpec = spring(StiffnessMediumLow)) :737,
+//   multiBrowseFlingBehavior :769, noSnapFlingBehavior :802, MinSmallItemSize 40.dp :813, MaxSmallItemSize 56.dp :816, ItemSpacing 0.dp :819
+// CarouselItemScope.kt:41 val carouselItemDrawInfo; :49 @Composable Modifier.maskClip(shape: Shape); :58 @Composable Modifier.maskBorder(border, shape)
+```
+
+- Each carousel is a `HorizontalPager` (`Carousel.kt:354`) with `Role.Carousel` (:368); `beyondViewportPageCount` is 2 for multi-browse (:141) and hero (:296) and **0 for uncontained (:206)**: uncontained composes only the pages in view, so a test must swipe (`performTouchInput { swipeLeft() }` on the carousel node; the snap is a finite spring) to reach banners 3 and 4.
+- Items are laid out at full size and clipped (graphics layer, `clip = true`) to a mask CENTRED on the item (:609-625, :643-655): a shrunk or cut-off item shows its middle slice, never its leading edge. Uncontained keeps full-size items and masks only the cut-off one; at 360 dp with `itemWidth = 296.dp` and `itemSpacing = 8.dp` about 40-50 dp of the next banner shows (`Keylines.kt:158-195`; the effect of `contentPadding` was not traced).
+- **Uncontained defaults to `noSnapFlingBehavior()` (:184)**: pass `CarouselDefaults.singleAdvanceFlingBehavior(state)` so a banner never rests half-way (then the dots mean something).
+- Give the carousel a `Modifier.height(...)` inside a `verticalScroll` column: without it the items' cross axis is unbounded (:569-575).
+- `Modifier.carouselParallaxScrollEffect` IS `@ExperimentalMaterial3Api` (`CarouselParallaxScrollEffect.kt:75`): do not use it.
+- Page dots: there is no Material 3 page indicator; draw them from `state.currentItem` in composition (it recomposes as the carousel moves); the dots show position only and are not tappable.
+
+## L. Chips (no opt-in)
+
+```kotlin
+// Chip.kt:135 AssistChip(onClick, label: @Composable () -> Unit, modifier, enabled = true, leadingIcon = null, trailingIcon = null,
+//   shape = AssistChipDefaults.shape, colors = AssistChipDefaults.assistChipColors(), elevation = assistChipElevation(), border = assistChipBorder(enabled),
+//   horizontalArrangement = horizontalArrangement(), contentPadding = ContentPadding, interactionSource = null)
+// Chip.kt:377 ElevatedAssistChip(same list; colors = elevatedAssistChipColors(), elevation = elevatedAssistChipElevation(), border = null)
+// Chip.kt:635 FilterChip(selected, onClick, label, modifier, enabled, leadingIcon, trailingIcon, shape, colors = filterChipColors(), elevation, border, ...)
+// Chip.kt:730 FilterChip(selected, onClick, label, shapes: ChipShapes, modifier, enabled, leadingIcon, trailingIcon,
+//   colors = FilterChipDefaults.tonalFilterChipColors(), elevation, border, horizontalArrangement, contentPadding, interactionSource)
+// FilterChipDefaults.shapes() :2590; shapes(shape = null, selectedShape = null, pressedShape = null) :2601; class ChipShapes(shape, selectedShape, pressedShape = selectedShape) :4217
+// AssistChipDefaults: Height 32 dp :1950, IconSize 18 dp :1953, HorizontalSpacing 8 dp :1956, ContentPadding horizontal 8 dp :1962
+```
+
+- A flat `AssistChip` container is `Color.Transparent` (:2024): unreadable over a photo. `ElevatedAssistChip` uses `SurfaceContainerLow` (`AssistChipTokens.kt:40-41`). The default shape is `CornerSmall`: pass `shape = CircleShape` for a pill. There is no `shapes` overload for assist chips.
+- Chips sit on `Surface(onClick)` (`Role.Button` :3209; a `FilterChip` is `Role.Checkbox` :3258); the touch target is at least 48 dp.
+
+## M. Cards and ListItem (no opt-in)
+
+```kotlin
+// Card.kt:136 Card(onClick, modifier, enabled = true, shape = CardDefaults.shape, colors = CardDefaults.cardColors(), elevation = CardDefaults.cardElevation(),
+//   border = null, interactionSource = null, content: @Composable ColumnScope.() -> Unit)
+// Card.kt:80 Card(modifier, shape, colors, elevation, border, content); ElevatedCard(...) :191; ElevatedCard(onClick, ...) :241
+// ListItem.kt:121-149 ListItem(headlineContent, ...) is @Deprecated; use the trailing-`content` overloads:
+// ListItem.kt:260 ListItem(modifier, enabled = true, leadingContent, trailingContent, overlineContent, supportingContent, verticalAlignment, shapes, colors, elevation, contentPadding, content)
+// ListItem.kt:341 ListItem(onClick, modifier, enabled, leadingContent, ..., onLongClick = null, ..., content);  :421 ListItem(selected: Boolean, onClick, ...)
+```
+
+## N. FAB and the floating toolbar with a FAB (not used for the tab bar)
+
+```kotlin
+// FloatingActionButton.kt:131 FloatingActionButton(onClick, modifier, shape = FloatingActionButtonDefaults.shape, containerColor, contentColor, elevation, interactionSource, content)
+// FloatingToolbar.kt:278 HorizontalFloatingToolbar(expanded, floatingActionButton: @Composable () -> Unit, modifier, colors, contentPadding, scrollBehavior, shape,
+//   floatingActionButtonPosition = FloatingToolbarHorizontalFabPosition.End, animationSpec = FloatingToolbarDefaults.animationSpec(),
+//   expandedShadowElevation, collapsedShadowElevation, content: RowScope.() -> Unit)
+// class FloatingToolbarColors(toolbarContainerColor, toolbarContentColor, fabContainerColor, fabContentColor) :1172
+```
+
+- With a FAB the toolbar's Row is `horizontalScroll` (:1591) and as wide as its content (:1658-1661); the FAB is measured 56 dp expanded to 80 dp collapsed (`FabSizeRange` :1153); its box gets "expand/collapse toolbar" accessibility actions (:1598-1616); there is no `selectableGroup` and no Tab role. It is for actions, not for a tab bar.
+- `FloatingToolbarDefaults.ContainerSize` = 64 dp, `ScreenOffset` = 16 dp (`FloatingToolbarTokens.kt:27-31`): Run 7's round Camera button is a `FilledIconButton` of `ContainerSize`.
+
+## O. Button size buckets (extends D)
+
+- `Button.kt`: `MinWidth` 58 :1053, `ExtraSmallContainerHeight` 32 :1068, `MinHeight` 40 (small), `MediumContainerHeight` 56 :1071, `LargeContainerHeight` 96 :1074, `ExtraLargeContainerHeight` 136 :1077; icon sizes :1081-1096, `MediumIconSpacing` :1111. There is no `SmallContainerHeight`.
+- `contentPaddingFor` (:1578): below 40 extra-small, below 56 small, below 96 medium (24/24 dp), below 136 large. `textStyleFor` (:1640): below 56 `labelLarge`, below 96 `titleMedium`, below 136 `headlineSmall`. `shapesFor` (:1547) by midpoints. Layout is at least 48 dp because buttons sit on `Surface(onClick)`.
+- `IconButtonDefaults` container sizes: extraSmall :1078, small :1105, medium :1131 (56 dp), large :1158, extraLarge :1184; a smaller button needs `minimumInteractiveComponentSize()` first (section C).
+- Run 7 uses: "Try now" and the two Home pills = small `Button(shapes = ...)`; Save and "Edit another" = `MediumContainerHeight` with `fillMaxWidth()` / `weight(1f)`.
+
+## P. Navigation 3: tabs, per-entry transitions, pop clean-up
+
+```kotlin
+// NAV3UI/NavDisplay.kt:156 NavDisplay.transitionSpec(spec: AnimatedContentTransitionScope<Scene<*>>.() -> ContentTransform?): Map<String, Any>
+//   :173 popTransitionSpec(... -> ContentTransform?) ; :191 predictivePopTransitionSpec(... (swipeEdge: Int) -> ContentTransform?)  -- null = use NavDisplay's own
+// NAV3RT/EntryProvider.kt:204 entry<K>(clazzContentKey = { defaultContentKey(it) }, metadata: Map<String, Any> = emptyMap(), content)
+//   :223 entry<K>(clazzContentKey, metadata: (K) -> Map<String, Any>, content)
+```
+
+- `isPop` (`NavDisplay.kt:898-909`): same first key, a shorter list that is a prefix of the old one. **Replacing the top key (`[Home, MyEdits]` to `[Home, Settings]`) is a push.** The spec for a push comes from the incoming scene's metadata, for a pop from the outgoing scene's (:792-807). So a tab-to-tab fade is `NavDisplay.transitionSpec { ... } + NavDisplay.popTransitionSpec { ... }` as the entries' `metadata`, returning a fade only when both scenes are tab keys and `null` otherwise.
+- A key removed from the back stack: once its entry leaves composition, every decorator's `onPop` runs (`NAV3RT/DecoratedNavEntries.kt:206-221, 258-272`); the saveable-state decorator's `onPop` is `removeState` (`SaveableStateHolderNavEntryDecorator.kt:55`), so that tab's `rememberSaveable` state (scroll position) is gone, and the project's `ViewModelClearedProbe` proves the ViewModel is cleared. Run 7 accepts this for My edits (re-reads the photos) and Settings (back to the top); Home stays at the bottom of the stack and keeps its place.
+- The bar lives OUTSIDE `NavDisplay` (in `KansoTabShell`), so the slides never move it; during the predictive back gesture from a non-tab screen to a tab the bar is absent until the gesture is committed (the back stack changes only then).
+
+## Q. Infinite animations and tests
+
+- `LoadingIndicator.kt:440-450` reads `coroutineContext[InfiniteAnimationPolicy]` and wraps its loops in `policy.onInfiniteOperation { }`; `CircularProgressIndicator` uses a plain `rememberInfiniteTransition()` (`ProgressIndicator.kt:630-645`), and `PROJECT.md` records that it does go idle under the Compose test rule. What `ComposeUiTest`'s policy does to `rememberInfiniteTransition` with `autoAdvance` true or false is NOT confirmed (the ui-test sources are not in the scratch folder): the Run 7 spike settles it.
+- Repository fact: a spinner hung `PreviewsRenderTest` in Run 3 (previews are drawn in a plain activity with no Compose test rule, `PreviewsRenderTest.kt:141-157`). Never let an infinite animation run in a `@Preview`: read an animated value only from the stateful wrapper, default to a still frame (`LocalSkeletonPhase`, `ProvideSkeletonPulse(pulsing = false)`).
+- "Remove animations": a still phase when `ValueAnimator.areAnimatorsEnabled()` is false (API 26+; memory, not confirmed). `PROJECT.md` already says Robolectric cannot drive that setting, so a person checks it on the phone.
+
+## R. Blur and the backdrop (memory, not from source)
+
+- `Modifier.blur(radius)` needs API 31 (RenderEffect) and does nothing below; under Robolectric's software capture it is very likely ignored on every SDK. The Run 7 backdrop therefore draws a tiny scaled-down copy stretched back up (halve with `Bitmap.createScaledBitmap(..., filter = true)` until both sides are at most 64 px; copy a `HARDWARE` bitmap to a software config first) and puts `Modifier.blur` on top. Coil's transformations library is not in the build (`gradle/libs.versions.toml` has only `coil-compose` and `coil-gif`), and the Tool and Saved screens draw a `Bitmap` from the ViewModel, not through Coil.

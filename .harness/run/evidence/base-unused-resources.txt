@@ -1,0 +1,2 @@
+The resource `R.string.gallery_album_label` appears to be unused
+The resource `R.string.gallery_body_placeholder` appears to be unused
