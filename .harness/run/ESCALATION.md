@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 7 (the InFlux layout, in Kanso's own colours), and the screenshot pictures it may re-record
 
-- **Status:** pending
+- **Status:** answered (2026-10-12, Iteration 2): approved with one edit - every tool one tap from Home, five round shortcuts (A-001 reversed); the 41 pictures under `## Baselines` approved as listed. Applied in `DoD.md`, `PLAN.md` and the task files; see `AMENDMENTS.md`.
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-12
@@ -103,4 +103,4 @@ None. Autonomous mode runs under the Deny List; the Material Symbols fetch uses 
 
 ### Decision
 
-<!-- Answered in `.harness/run/DECISIONS.md`, under a heading `## D-001` - never here. -->
+Answered in `.harness/run/DECISIONS.md` (`## D-001`): see the Status line above and `AMENDMENTS.md`, Iteration 2.

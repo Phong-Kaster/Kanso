@@ -12,18 +12,19 @@
 > - **the edits source**: the new source of the photos in `Pictures/Kanso`. Whole-app tests swap it BEFORE `ActivityScenario.launch` with `loadKoinModules` (the Application has started Koin by then; Home's ViewModel is built when Home first draws, so a swap after launch never reaches it) and use `createEmptyComposeRule()`; they draw solid-colour thumbnails through `SolidColourFetcherFactory`.
 > - **one test per Android version**: each Android version a proof names is its own `@Test` (as `LaunchTest` does); no test is run under a multi-version `@Config`, because criterion 35 compares the number of tests run with the number of `@Test` lines.
 > - **a tab**: Home, My edits or Settings. **the five tools**: Edit, Remove background, Enhance, Retouch, Artistic; **the AI tools** are the last four.
-> - Test tags that do not exist at `<base>` (`nav-bar`, `home-pill-EDIT`, ...) are this DoD's names for new nodes; the plan (`PLAN.md`, "Names fixed by the plan") fixes each one before any task starts.
+> - Test tags that do not exist at `<base>` (`nav-bar`, `home-shortcut-EDIT`, ...) are this DoD's names for new nodes; the plan (`PLAN.md`, "Names fixed by the plan") fixes each one before any task starts.
+> - **The owner's edit at the gate (D-001, 2026-10-12), applied here word for word:** every tool is one tap from Home with no swipe, so Home's two pill buttons became a row of five round tool shortcuts (criteria 4, 5, 6, 7(e), 19, 21's "Edit button", 30, R5 and Q1). Everything else is as drafted.
 > Out of scope, as in the PRD: the tools themselves (their options strips stay the "coming in a later run" message), credits, a paywall, rewards and anything else from InFlux beyond its layout, the speed problems on the Galaxy A13, and Run 6's checks waiting in `.harness/ISSUES.md`.
 > **The engine edit is authorised by the PRD.** PRD item 9 asks for the hex fix inside `core/colorpicker`. Two PROJECT.md Constraints predate this PRD: "never type into or rely on the `HSVColorPicker` hex field" (the thing this run fixes) and "never edit an engine module's source apart from `AnalyticsUtil.kt`" (it gains exactly one exception, the hex handling in `HSVColorPicker.kt`, criterion 39). The bootstrap rewrote both lines. Likewise the owner reversed ADR-001's one-editor decision on 2026-10-12 (PRD item 4), and PROJECT.md's Constraints about Home's single scrolling column, the "Settings" text on Home and the editor's toolbar describe screens this run replaces; the bootstrap marked them superseded.
-> Where a proof rests on a reading the PRD leaves open, it names the reading (Q1 ... Q24, listed after the Removals). Approving without editing a reading accepts it as an assumption (`ASSUMPTIONS.md`, A-001 ...). **Q1 and Q5 are the two worth your eye.**
+> Where a proof rests on a reading the PRD leaves open, it names the reading (Q1 ... Q24, listed after the Removals). Approving without editing a reading accepts it as an assumption (`ASSUMPTIONS.md`, A-001 ...). Q1 was decided by the owner at the gate; Q5 was approved as written.
 
 ## Status
 
-- [ ] APPROVED — approve via the pending `.harness/run/ESCALATION.md` (D-001); edit criteria freely before approving.
+- [x] APPROVED — by the owner in `.harness/run/DECISIONS.md` (D-001, 2026-10-12), with one edit (Q1: every tool one tap, five round shortcuts), applied below.
       Approval covers the Verification Class of each criterion, not only its wording. It also covers:
       - the re-recording of the 24 existing screen pictures and the recording of the 17 new ones listed under `## Baselines` in D-001 (criterion 29);
       - the one engine edit of criterion 39;
-      - the readings Q2 to Q24 unless edited, and the answer to Q1 and Q5.
+      - the readings Q2 to Q24 as written (A-005, whole photo over a blurred copy on Saved, and A-004 named by the owner), and the owner's answer to Q1.
       No new dependency is requested.
 
 ## Acceptance Criteria
@@ -54,26 +55,26 @@
    - Shutter then Keep shows the Edit tool screen on the kept photo (title "Edit", `TOOL_PHOTO_URI_KEY` the kept Uri); one Back returns to the starting tab.
    - A double tap on `nav-camera` opens one camera: one Back leaves it.
 
-4. [machine] Home shows, from top to bottom: "Kanso" as a large title with the greeting "What will you edit today?" under it; a carousel of the four AI tools, each banner with the tool's name, a one-line description, its icon drawn large and a "Try now" button, with page dots under it; two buttons, "Edit" and "Remove background", side by side; and the "Recent edits" strip with a round arrow button.
+4. [machine] Home shows, from top to bottom: "Kanso" as a large title with the greeting "What will you edit today?" under it; a carousel of the four AI tools, each banner with the tool's name, a one-line description, its icon drawn large and a "Try now" button, with page dots under it; a row of five round tool shortcuts directly under the dots, in this order: Edit, Remove background, Enhance, Retouch, Artistic, each a round icon button with its name under it; and the "Recent edits" strip with a round arrow button.
    Proof: `HomeScreenTest` (new) at SDK 35 on the phone, hosting `HomeContent` with a sample state of 3 recent photos, plus `HomeViewModelTest`.
-   - The `positionInRoot` tops increase strictly in this order: (1) the text "Kanso", with heading semantics; (2) the text "What will you edit today?" (exact); (3) `home-carousel`; (4) `home-pill-EDIT` and `home-pill-REMOVE_BACKGROUND` (texts "Edit" and "Remove background", vertical centres within 1 dp, Edit on the left); (5) the text "Recent edits", with `home-recent-more` on its row (round, with a content description, centres within 4 dp); (6) `home-recent`.
+   - The `positionInRoot` tops increase strictly in this order: (1) the text "Kanso", with heading semantics; (2) the text "What will you edit today?" (exact); (3) `home-carousel`; (4) `home-shortcuts`, the row of the five `home-shortcut-<TOOL>` buttons; (5) the text "Recent edits", with `home-recent-more` on its row (round, with a content description, centres within 4 dp); (6) `home-recent`.
+   - The five shortcuts, left to right in the order `home-shortcut-EDIT`, `-REMOVE_BACKGROUND`, `-ENHANCE`, `-RETOUCH`, `-ARTISTIC`, have their tops within 1 dp of one another and are all in view at once (no scrolling of the row: it is not a scrolling container). Each is round, has a click action and the tool's name as its content description, and has its name as visible text (`home-shortcut-<TOOL>-label`, tagged text equal to `Tool.labelRes`) under it, the label's horizontal centre within 1 dp of the button's and its top at or below the button's bottom. The five centres are evenly spaced within 1 dp.
    - `home-carousel` holds four banners in this order: `home-banner-REMOVE_BACKGROUND`, `-ENHANCE`, `-RETOUCH`, `-ARTISTIC`. Each banner, reached by swiping, shows the tool's label, a description of its own (non-empty, different for each tool, `maxLines = 1`), an icon node `<banner>-icon` with the tool's `iconRes` and at least 64 dp square, and a button with the text "Try now" (`home-try-<TOOL>`).
    - `home-carousel-dots` holds four dots, with the first marked current (`stateDescription` or selected) at launch.
-   - Home's state lists the carousel tools in that order and the pill tools `[EDIT, REMOVE_BACKGROUND]`.
+   - Home's state lists the carousel tools in that order and the shortcut tools `[EDIT, REMOVE_BACKGROUND, ENHANCE, RETOUCH, ARTISTIC]`.
 
-5. [machine] Every "Try now", every banner and both buttons open the photo gallery for their tool at once, with no screen in between, and the photo picked there opens in that tool.
+5. [machine] Every "Try now", every banner and every tool shortcut open the photo gallery for their tool at once, with no screen in between, and the photo picked there opens in that tool.
    Proof: `PhotoToToolNavigationTest` at SDK 35, photo access granted, `FakePhotoSource`.
    - For each AI tool, each of these puts the gallery titled "<tool>: choose a photo" on top: a tap on its "Try now" after swiping to it, and separately a tap on the banner outside the button (Q12). One Back then reaches Home, so the stack was `[Home, Gallery(tool)]`. Choosing photo 1 then shows that tool's screen on photo 1.
-   - The same holds for `home-pill-EDIT` and `home-pill-REMOVE_BACKGROUND`.
+   - The same holds for each of the five `home-shortcut-<TOOL>`: one tap on it, with no swipe and nothing else, puts the gallery titled "<tool>: choose a photo" on top; one Back reaches Home; choosing photo 1 shows that tool's screen on photo 1.
    - A double tap opens one gallery.
 
-6. [machine] On a small phone, right after launch and with nothing scrolled, these are all fully on screen and each is one tap from where it leads: the Edit and Remove background buttons; the first AI tool's "Try now"; the Camera button and the three tabs; the recent-edits arrow and the newest recent photo. Enhance, Retouch and Artistic are one tap each once the carousel is swiped to them. (Q1)
+6. [machine] On a small phone, right after launch and with nothing scrolled, all five tool shortcuts, the first banner's "Try now", the Camera button, the recent-edits arrow and the newest recent photo are fully on screen, and each is one tap from where it leads. (Q1, as the owner decided it: every tool is one tap, no swipe.)
    Proof: `HomeReachTest` (new) at SDK 35, portrait, font scale 1.0, Kanso blue light.
    - It runs on the small phone and on the phone, each with a 24 dp status bar and a 48 dp three-button navigation bar sent as insets, and again with a 0 dp navigation bar and a 32 dp bottom gesture inset. Two starting states: (i) fresh install with an empty edits source; (ii) an edits source with 5 photos.
-   - Right after Home is idle, with no scroll and no swipe (Home's scroll value 0, carousel on banner 1), each of these has a click action, a touch target of at least 48 dp, `boundsInRoot` wholly inside the window and below the status bar, and (if outside the bar) a bottom at or above the tops of `nav-bar` and `nav-camera`: `home-pill-EDIT`, `home-pill-REMOVE_BACKGROUND`, `home-try-REMOVE_BACKGROUND`, `nav-camera`, `home-recent-more`, the three tabs, and in state (ii) `home-recent-0`. In state (i) `home-recent-empty` is likewise wholly on screen and above the bar.
-   - From a fresh launch for each target, exactly one `performClick()` and nothing else gives: Edit → the Edit gallery; Remove background (button, and separately "Try now") → its gallery; Camera → `camera-screen`; arrow → My edits selected; `home-recent-0` → the Edit tool screen on the newest photo's Uri; each tab → its screen.
-   - Enhance, Retouch, Artistic: with Home's column still unscrolled, 1, 2 and 3 left swipes on `home-carousel` bring that banner's "Try now" wholly on screen above the bar, and one tap opens its gallery. The test prints a table of the gestures used per target (1 tap; or n swipes + 1 tap) to its log, and the Verifier copies it into `.harness/run/evidence/home-reach.md`.
-   - Under Q1's other reading (every tool one tap, no swipe) the last three rows must read "1 tap" and this criterion is rewritten before approval.
+   - Right after Home is idle, with no scroll and no swipe (Home's scroll value 0, carousel on banner 1), each of these has a click action, a touch target of at least 48 dp, `boundsInRoot` wholly inside the window and below the status bar, and (if outside the bar) a bottom at or above the tops of `nav-bar` and `nav-camera`: the five `home-shortcut-<TOOL>` (`EDIT`, `REMOVE_BACKGROUND`, `ENHANCE`, `RETOUCH`, `ARTISTIC`), `home-try-REMOVE_BACKGROUND`, `nav-camera`, `home-recent-more`, the three tabs, and in state (ii) `home-recent-0`. In state (i) `home-recent-empty` is likewise wholly on screen and above the bar. The five shortcuts are also wholly inside the window's width and not clipped by a scrolling container.
+   - From a fresh launch for each target, exactly one `performClick()` and nothing else gives: each of the five shortcuts → that tool's gallery (titled "<tool>: choose a photo"); Remove background's "Try now" → its gallery; Camera → `camera-screen`; arrow → My edits selected; `home-recent-0` → the Edit tool screen on the newest photo's Uri; each tab → its screen.
+   - The test prints a table of the gestures used per target to its log, one row each, and every row for a tool shortcut reads "1 tap" (no swipe, no scroll); the Verifier copies it into `.harness/run/evidence/home-reach.md`. The banners of Enhance, Retouch and Artistic stay reachable by swiping the carousel (criteria 5 and 28), but no promise of this criterion rests on that swipe.
 
 7. [machine] The "Recent edits" strip shows Kanso's saved photos, newest first, as tall rounded cards that scroll sideways. Tapping a card opens that photo in the Edit tool, and the arrow opens My edits. A fresh install shows a short message instead. A photo just saved is first in the strip when the person comes back to Home.
    Proof: `HomeRecentTest` (new) at SDK 35, MainActivity, edits source swapped.
@@ -81,7 +82,7 @@
    - (b) Tap `home-recent-0`: the Edit tool screen on that photo's Uri; one Back gives Home.
    - (c) `home-recent-more` selects My edits.
    - (d) With an empty source, `home-recent-empty` shows the empty message string (exact text). No `home-recent-<i>` and no placeholder exists.
-   - (e) Edit button → photo 1 → Save, where `FakePhotoSaver` returns Uri X and the fake source adds X as newest → Saved → `saved-close`. Within 10 s of real time, `home-recent-0` carries X.
+   - (e) `home-shortcut-EDIT` → photo 1 → Save, where `FakePhotoSaver` returns Uri X and the fake source adds X as newest → Saved → `saved-close`. Within 10 s of real time, `home-recent-0` carries X.
 
 8. [machine] While the recent photos and My edits load, soft placeholders in the shape of the cards and tiles show instead of a spinner. They give way to the photos once loaded.
    Proof: `EditsLoadingTest` (new) at SDK 35 on the phone, MainActivity, with an edits source whose read waits on a gate. The clock is paused, or the test waits with `waitUntil` while stepping frames (PROJECT.md, loading-indicator trap).
@@ -178,7 +179,7 @@
     Proof: `.harness/run/evidence/m3-scan.md`, from a scan of `app/src/main` only, names the call that draws each piece:
     - the floating bar, its tabs and the Camera button;
     - the carousel (a Material 3 carousel from material3 1.5.0-beta01: `HorizontalMultiBrowseCarousel`, `HorizontalUncontainedCarousel` or `HorizontalCenteredHeroCarousel`);
-    - the "Try now", "Edit" and "Remove background" buttons;
+    - the "Try now" buttons and the five round tool shortcuts on Home (round icon buttons: `FilledTonalIconButton` or the nearest Material 3 icon button, with `shapes =`);
     - the round Back, close, Share and arrow buttons, and the "Replace" chip;
     - the full-width Save and "Edit another" buttons, and the album chips;
     - the Settings cards and rows (no `ListItem(headlineContent =` call);
@@ -203,7 +204,7 @@
 21. [machine] The redesign asks for nothing new. Launching, Home, the recent strip and My edits ask for no permission; the gallery and the camera ask as before; and there is still no internet access. (Q11)
     Proof: after criterion 34's `assembleDebug`, run `aapt2 dump badging app/build/outputs/apk/debug/app-debug.apk | tr -d '\r' | grep -E '^(uses-permission|uses-feature)' > .harness/run/evidence/head-badging.txt`.
     - `diff <(tr -d '\r' < .harness/run/evidence/base-badging.txt) <(tr -d '\r' < .harness/run/evidence/head-badging.txt)` prints nothing (a checkout may turn line ends into CRLF), and `grep -c -E 'INTERNET|ACCESS_NETWORK_STATE' .harness/run/evidence/head-badging.txt` prints 0.
-    - `NavigationTest`, at SDK 35 and at SDK 27, with no permission granted (`RecordingRegistry`): launching, showing Home with its strip, and tapping `home-recent-more`, `nav-tab-MY_EDITS` and `nav-tab-SETTINGS` record no request; at SDK 27 Home and My edits show their empty messages and nothing throws; the Edit button and each "Try now" record only the photo set; `nav-camera` records only CAMERA.
+    - `NavigationTest`, at SDK 35 and at SDK 27, with no permission granted (`RecordingRegistry`): launching, showing Home with its strip, and tapping `home-recent-more`, `nav-tab-MY_EDITS` and `nav-tab-SETTINGS` record no request; at SDK 27 Home and My edits show their empty messages and nothing throws; each tool shortcut and each "Try now" record only the photo set; `nav-camera` records only CAMERA.
     - `GalleryPermissionTest`, `CameraPermissionTest` and the SDK 27 and 28 cases of `SaveButtonTest` pass.
 
 ### Appearance and reachability
@@ -276,8 +277,8 @@
     - `-Op start` reaches Home, and the crash buffer has no `FATAL EXCEPTION`.
     - One `-Op dump` of Home is checked to name only `com.phongkaster.kanso` and read outside the repository (PROJECT.md: never commit a raw dump). It holds "Home", "My edits", "Settings" and "What will you edit today?", and not "Open a photo". Only a written summary goes into `evidence/`.
     A person then walks:
-    1. Home in light: the title, greeting, carousel, two buttons, Recent edits with real photos and the arrow, the dark bar with Home on its pill, and the round Camera button are all visible without scrolling, and none sits under the bar or the phone's navigation.
-    2. Swipe the carousel. Tap each "Try now" and both buttons: the right gallery opens at once.
+    1. Home in light: the title, greeting, carousel, the row of five round tool shortcuts, Recent edits with real photos and the arrow, the dark bar with Home on its pill, and the round Camera button are all visible without scrolling, and none sits under the bar or the phone's navigation.
+    2. Tap each of the five tool shortcuts: that tool's gallery opens at once, with no swipe. Swipe the carousel and tap each "Try now": the right gallery opens at once.
     3. Tap a recent photo: the Edit screen opens. Tap the arrow: My edits opens.
     4. My edits: the grid is newest first, with placeholders while it loads after a cold start. Open a photo: it shows whole over a blurred copy; Share opens the share sheet; Edit opens the Edit screen; close goes Home.
     5. Each tool screen: a round Back, the name centred, the rounded card, a soft blur beside a portrait photo, Replace returning to the gallery, and a full-width Save above the phone's navigation.
@@ -378,7 +379,7 @@ R3. [machine] Home's Settings row is gone; Settings is reached only from the bar
 R4. [machine] The big "Open a photo" button is gone, with its words, and with its icon if nothing else uses it. Home's own Camera shortcut is gone too (the round Camera button replaces it).
     Proof: `git grep -n -w -E 'OpenPhotoButton|OPEN_PHOTO_HEIGHT|HOME_OPEN_PHOTO_TAG|onOpenPhoto|home_open_photo|CameraButton|onCameraClick' -- app/src/main/java/com/phongkaster/kanso/ui/home app/src/test` prints nothing, and `git grep -n -E 'home-open-photo|Open a photo' -- app/src` prints nothing. `app/src/main/res/drawable/ic_add_photo_alternate.xml` is either absent or referenced as `R.drawable.ic_add_photo_alternate` in `app/src/main/java`.
 
-R5. [machine] Home's two lists of tool cards, under "AI tools" and "Edit", are gone, replaced by the carousel and the two buttons.
+R5. [machine] Home's two lists of tool cards, under "AI tools" and "Edit", are gone, replaced by the carousel and a row of five tool shortcuts.
     Proof: `git grep -n -w -E 'ToolGroup|GroupHeader|ToolCard|CARD_MIN_HEIGHT|PRESSED_CARD_SCALE' -- app/src/main/java/com/phongkaster/kanso/ui/home` prints nothing. `git grep -n -w -E 'aiTools|editTools|homeToolTag|home_header_ai_tools|home_header_edit' -- app/src` prints nothing, and `git grep -n 'home-tool-' -- app/src` prints nothing.
 
 R6. [machine] Settings has no Back button and no back callback any more.
@@ -412,7 +413,7 @@ Questions (product repository: a person decides, none is a removal):
 
 Each is an assumption in `ASSUMPTIONS.md` (A-001 ...). Edit this DoD (or answer in `DECISIONS.md`) to change one.
 
-- **Q1. "Every tool in one tap" against a carousel (decide at the gate).** The goal sentence says every tool, recent edits and the Camera are one tap from Home without scrolling. Item 2 puts four AI tools in a carousel and says the two buttons are there "so both are on screen ... without scrolling the carousel", which implies the other banners need a swipe. (A) One tap covers Edit, Remove background, Camera, the recent-edits arrow and the newest recent photo; Enhance, Retouch and Artistic take 1, 2 and 3 swipes plus a tap. (B) Literally every tool is one tap at launch: that needs a carousel showing all four banners at once, or another one-tap entry. **Taken: (A)**, item 2's own wording; (B) rewrites criterion 6.
+- **Q1. "Every tool in one tap" against a carousel (decided by the owner at the gate, 2026-10-12, D-001).** The draft read item 2's two pill buttons as the only one-tap tools and left Enhance, Retouch and Artistic behind 1 to 3 swipes. **The owner reversed that:** the goal of this run is speed to the popular features, so every tool is one tap from Home with no swipe. Home carries a row of five round tool shortcuts (Edit, Remove background, Enhance, Retouch, Artistic, each with its name under it, all visible at once on a 360 x 780 dp phone without scrolling the row or the screen) directly under the carousel's dots; each opens that tool's gallery at once, as the pills would have. The hero carousel of the four AI tools stays, "Try now" on each banner. Criteria 4, 5 and 6, R5 and the walk in criterion 30 read this way.
 - **Q2. Back from the tabs.** Taken: Back from My edits or Settings returns to Home; tabs never stack (today's "Back from Settings goes Home").
 - **Q3. The Camera button.** Taken: a kept shot opens the Edit tool, and Back returns to the tab the camera was opened from.
 - **Q4. Close on a photo opened from My edits.** PRD item 6 says the close button goes "back to Home". Taken, literally: close goes Home for both Saved and a My edits photo; system Back returns to My edits. (The other reading: close returns to My edits.)
@@ -464,7 +465,7 @@ Each is an assumption in `ASSUMPTIONS.md` (A-001 ...). Edit this DoD (or answer 
 | 3 | machine | `NavigationTest`, `CameraFlowTest` green | n/a |
 | 4 | machine | `HomeScreenTest`, `HomeViewModelTest` green | n/a |
 | 5 | machine | `PhotoToToolNavigationTest` green | n/a |
-| 6 | machine | `HomeReachTest` green; `home-reach.md` gesture table | n/a |
+| 6 | machine | `HomeReachTest` green; `home-reach.md` gesture table (every tool "1 tap") | n/a |
 | 7 | machine | `HomeRecentTest` green | n/a |
 | 8 | machine | `EditsLoadingTest` green; grep; pictures 32, 33, 36, 37 | n/a |
 | 9 | machine | `MyEditsTest`, `MyEditsViewModelTest`, `MyEditsViewerNavigationTest` green | n/a |

@@ -410,7 +410,7 @@ fun HorizontalUncontainedCarousel(state: CarouselState, itemWidth: Dp, modifier:
 - `Button.kt`: `MinWidth` 58 :1053, `ExtraSmallContainerHeight` 32 :1068, `MinHeight` 40 (small), `MediumContainerHeight` 56 :1071, `LargeContainerHeight` 96 :1074, `ExtraLargeContainerHeight` 136 :1077; icon sizes :1081-1096, `MediumIconSpacing` :1111. There is no `SmallContainerHeight`.
 - `contentPaddingFor` (:1578): below 40 extra-small, below 56 small, below 96 medium (24/24 dp), below 136 large. `textStyleFor` (:1640): below 56 `labelLarge`, below 96 `titleMedium`, below 136 `headlineSmall`. `shapesFor` (:1547) by midpoints. Layout is at least 48 dp because buttons sit on `Surface(onClick)`.
 - `IconButtonDefaults` container sizes: extraSmall :1078, small :1105, medium :1131 (56 dp), large :1158, extraLarge :1184; a smaller button needs `minimumInteractiveComponentSize()` first (section C).
-- Run 7 uses: "Try now" and the two Home pills = small `Button(shapes = ...)`; Save and "Edit another" = `MediumContainerHeight` with `fillMaxWidth()` / `weight(1f)`.
+- Run 7 uses: "Try now" = small `Button(shapes = ...)`, and the five Home tool shortcuts = round `RoundIconButton`s (48 dp circles, D-001); Save and "Edit another" = `MediumContainerHeight` with `fillMaxWidth()` / `weight(1f)`.
 
 ## P. Navigation 3: tabs, per-entry transitions, pop clean-up
 

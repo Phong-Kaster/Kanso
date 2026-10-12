@@ -188,3 +188,19 @@ The check is mechanical: take every backticked name ending in `Test`, `Tag` or `
 
 The plan is a list of jobs and the definition of done is a list of exams. Every exam that names a test has to have a job that writes that test, and a computer can check that in a second. Doing the check before asking a reviewer saves the reviewer's time for the problems only a person can see.
 
+---
+
+## S-012 - When a PRD's goal sentence and one of its details disagree, bootstrap takes the goal, and a gate answer that edits a criterion needs a mechanical sweep before the checkpoint
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 7, Iterations 1 and 2 (2026-10-12): the PRD's goal sentence said every tool, the recent edits and the Camera are one tap from Home; item 2 put two pill buttons and a carousel there. The bootstrap read item 2 as the limit (three tools behind 1 to 3 carousel swipes, assumption A-001) and flagged it for the owner's eye; the owner reversed it at the gate (D-001). Re-cutting meant a new Home row, a changed height budget and edits to the DoD, the plan, two tasks and three knowledge files, and a fresh-context review of the re-cut still found nine leftovers (a stale 192 dp carousel, a proof that named the old Edit button, a test that still tapped the old control, a clipped-bounds proof).
+- **Status:** open
+
+### What happened
+
+Two things. First, the bootstrap's rule for an ambiguous PRD is to take the reading it would recommend and record it; here the ambiguity was a goal sentence (stated first, in bold, with a date) against a detail further down, and the engine let the detail narrow the goal. A goal sentence the owner dated and bolded is the stronger evidence of intent; the detail was the thing to ask about. The cheap rule: when a goal and a detail conflict, build to the goal, state the detail as the assumption to confirm, and put it first in the approval question. Second, ENGINE.md section 6.2 says to apply a human's answer and log it, and section 6.3 says the Orient step reads the DoD only as Verifier, so nothing tells the Iteration to sweep the whole run directory for the old wording. The sweep that worked: grep the old terms (`home-pill`, `pill`, `swipe`, `192`, the old assumption id) across the DoD, the plan, every task file and the knowledge files, then have a read-only Capable reviewer look for contradictions and unowned proofs, then re-grep.
+
+### In plain words
+
+The owner's one-line goal said "every tool in one tap" and a detail lower down could be read as "two tools in one tap, the rest after a swipe". The engine chose the detail and asked the owner about it; the owner said the goal was what they meant. When the stated goal and a detail disagree, the safer default is to follow the goal and ask about the detail. And when the owner's answer changes a requirement, the engine should check every place that still repeats the old requirement, not only the ones it remembers.
+

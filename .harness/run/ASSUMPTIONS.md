@@ -11,7 +11,7 @@
 > Run 7 (the InFlux layout, Kanso's own colours). A-001 to A-024 are the readings Q1 to Q24 listed in
 > `DoD.md` ("Readings the PRD leaves open"); each carries the same number as its Q. They were taken at
 > the bootstrap (Iteration 1) so the DoD could be written; approving the DoD without editing a reading
-> accepts it. **A-001 and A-005 are the two worth your eye.** The first checkpoint that depends on each
+> accepts it. **A-001 was reversed by the owner at the gate (D-001); the owner approved A-005 and A-004 as written.** The first checkpoint that depends on each
 > is the Phase named in its entry; the Iteration after it replaces "Iteration N" with the commit SHA.
 
 
@@ -19,10 +19,10 @@
 
 ## A-001 - Every tool in one tap, against a carousel of four
 
-- **Tier:** Missing information
-- **Iteration:** 1
-- **First dependent checkpoint:** Iteration N (filled in with the commit SHA by the Iteration after it)
-- **Revert:** `git revert <sha>` (after the SHA is filled in)
+- **Tier:** Missing information - **reversed by the owner (D-001, 2026-10-12); no longer an assumption**
+- **Iteration:** 1 (taken); 2 (reversed)
+- **First dependent checkpoint:** none: the reading was reversed before any task started, so no checkpoint ever depended on it
+- **Revert:** nothing to revert (the plan and the DoD were re-cut in Iteration 2's checkpoint, before Phase 1)
 
 ### Question
 
@@ -35,7 +35,7 @@ The PRD's goal says every tool, the recent edits and the Camera are one tap from
 
 ### Taken, and why
 
-(A). Item 2's sentence about the pills only makes sense if the other banners need a swipe. DoD 6 is written to (A), prints the gesture count per tool, and says how it changes under (B). DoD 6 is the criterion it shapes; first checkpoint: Phase 3 (T-008, `HomeReachTest`).
+The engine took (A) at the bootstrap. **The owner answered the other way at the approval gate (D-001):** the goal of the run is speed to the popular features, and three AI tools behind carousel swipes misses it. Home now has a row of five round tool shortcuts (Edit, Remove background, Enhance, Retouch, Artistic, each with its name under it, all visible at once on a 360 x 780 dp phone) directly under the carousel's dots; each opens that tool's gallery at once. The carousel stays, with "Try now" on each banner. DoD 4, 5, 6 and R5 were rewritten to say so (`AMENDMENTS.md`, Iteration 2), T-005 builds the row and T-008 proves it fits.
 
 
 ---
