@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** Phase 1a (T-001, T-002) complete and checkpointed (Iteration 5). Next: Phase 1b = T-003.
+- **Stage:** Phase 2 (T-004, T-005, T-006) complete and checkpointed (Iteration 7). Next: Phase 3 = T-007, T-008, T-009.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** Phase 1b = T-003 (then Phase 2)
+- **Next Phase:** Phase 1b = T-003 
 - **DONE-candidate:** no
 - **Run Mode:** Autonomous
 
@@ -17,10 +17,10 @@
 |---|---|---|---|
 | T-001 | complete (1a) | tab shell, tests | commit of Iteration 5; evidence/p1a-run5.log |
 | T-002 | complete (1a) | `data/media/*Saved*`, `ui/myedits/*`, `ui/common/SkeletonBlock.kt`, `PhotoThumbnail` visibility, `myedits/*` tests | - |
-| T-003 | pending (Phase 1) | `ui/tool/*`, `ui/common/{BlurredBackdrop,RoundIconButton}.kt`, tool tests, `HomeTaps.kt`, `ReplaceNavigationTest` case (a) | - |
-| T-004 | pending (Phase 2) | `ui/saved/*`, `navigation/EditedPhoto.kt`, saved tests, `MyEditsViewerNavigationTest` | - |
-| T-005 | pending (Phase 2) | `ui/home/*` (title, carousel, the five tool shortcuts), Home-facing tests, `HomeTaps.kt` body | - |
-| T-006 | pending (Phase 2) | `ui/gallery/GalleryScreen.kt`, `ui/camera/CameraScreen.kt`, their tests | - |
+| T-003 | complete | `ui/tool/*`, `ui/common/{BlurredBackdrop,RoundIconButton}.kt`, tool tests, `HomeTaps.kt`, `ReplaceNavigationTest` case (a) | - |
+| T-004 | complete | `ui/saved/*`, `navigation/EditedPhoto.kt`, saved tests, `MyEditsViewerNavigationTest` | - |
+| T-005 | complete | `ui/home/*` (title, carousel, the five tool shortcuts), Home-facing tests, `HomeTaps.kt` body | - |
+| T-006 | complete | `ui/gallery/GalleryScreen.kt`, `ui/camera/CameraScreen.kt`, their tests | - |
 | T-007 | pending (Phase 3) | `ui/settings/SettingsScreen.kt`, settings tests | - |
 | T-008 | pending (Phase 3) | `ui/home/*` (Recent edits), Home reach/recent/loading tests | - |
 | T-009 | pending (Phase 3) | `core/colorpicker/.../HSVColorPicker.kt` (hex handling), picker tests | - |

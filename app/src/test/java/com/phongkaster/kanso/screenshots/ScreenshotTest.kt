@@ -4,6 +4,9 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -17,9 +20,14 @@ import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
+import com.phongkaster.kanso.ui.home.HOME_SHORTCUTS_TAG
+import com.phongkaster.kanso.ui.home.homeCarouselDotTag
+import com.phongkaster.kanso.ui.home.homeShortcutTag
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -97,6 +105,7 @@ class ScreenshotTest {
         openSettings()
         chooseThemeMode(ThemeMode.Light)
         backToHome()
+        assertNewHomeAtRest()
         capture("1_home_light.png")
     }
 
@@ -107,6 +116,7 @@ class ScreenshotTest {
         openSettings()
         chooseThemeMode(ThemeMode.Dark)
         backToHome()
+        assertNewHomeAtRest()
         capture("2_home_dark.png")
     }
 
@@ -119,6 +129,7 @@ class ScreenshotTest {
         chooseThemeMode(ThemeMode.Light)
         chooseCustomColour()
         backToHome()
+        assertNewHomeAtRest()
         capture("3_home_custom_colour.png")
     }
 
@@ -300,6 +311,21 @@ class ScreenshotTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    /**
+     * Fails unless Home is the redesigned one (Run 7) and at rest before its picture is taken: the
+     * hero carousel and the row of five tool shortcuts are there, and the carousel shows its first
+     * banner (the first page dot is the selected one), so pictures 1, 2 and 3 always show the same
+     * banner in front.
+     */
+    private fun assertNewHomeAtRest() {
+        compose.waitForIdle()
+        compose.onNodeWithTag(HOME_CAROUSEL_TAG).assertExists()
+        compose.onNodeWithTag(HOME_SHORTCUTS_TAG).assertExists()
+        Tool.entries.forEach { tool -> compose.onNodeWithTag(homeShortcutTag(tool)).assertExists() }
+        compose.onNodeWithTag(homeCarouselDotTag(0))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.StateDescription))
     }
 
     /** Waits until Home is shown and the Settings screen has left the screen. */

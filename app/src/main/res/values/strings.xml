@@ -54,7 +54,6 @@
     <string name="saved_message">Your photo is saved in Pictures/Kanso.</string>
     <string name="saved_share">Share</string>
     <string name="saved_edit_another">Edit another</string>
-    <string name="saved_home">Home</string>
     <string name="saved_share_chooser">Share photo</string>
 
     <!-- Camera controls: lens switch, flash and the gallery's camera button. -->

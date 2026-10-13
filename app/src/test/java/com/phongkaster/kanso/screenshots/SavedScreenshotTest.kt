@@ -3,9 +3,11 @@ package com.phongkaster.kanso.screenshots
 import android.content.Context
 import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
@@ -15,9 +17,12 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
-import com.phongkaster.kanso.ui.saved.SAVED_HOME_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_BACKDROP_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_CLOSE_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_SCRIM_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
 import com.phongkaster.kanso.ui.saved.SavedScreen
 import com.phongkaster.kanso.ui.saved.SavedViewModel
@@ -32,14 +37,18 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the reference pictures of the Saved screen showing a saved photo with its Share, Edit
- * another and Home actions, in light and in dark (pictures 18 and 19, DoD 26), with the success
- * mark above the photo at rest (DoD 7).
+ * Takes the reference pictures of the Saved screen, in light and in dark: right after a save
+ * (pictures 18 and 19, re-recorded for Run 7's layout, with the success mark over the top of the
+ * photo at rest) and as the photo viewer, a photo opened from My edits (pictures 43 and 44, new in
+ * Run 7: the title "My edits", "Edit", no mark). Both show the whole photo over its blurred copy,
+ * the shade at the top behind the round close button and the title, and the round Share button
+ * beside the wide button at the bottom (DoD 14, DoD 9, criterion 29).
  *
  * The photo is a 600 x 400 gradient drawn in code and handed over by a [FakePhotoLoader], given
  * to the screen's [SavedViewModel], so the pictures never depend on a file or on the decoder. The
  * screen is hosted directly in KansoTheme with the mode forced and the baseline colours, on
- * Android 11 and the same phone screen as [ScreenshotTest].
+ * Android 11 and the same phone screen as [ScreenshotTest]. On Android 11 Compose's blur draws
+ * nothing, so the backdrop in the pictures is the stretched tiny copy alone, the same on every run.
  *
  * The test clock is paused before anything is drawn (`mainClock.autoAdvance = false`) and moved
  * only by hand, for two reasons. While the photo is decoded the screen shows a loading indicator
@@ -66,31 +75,48 @@ class SavedScreenshotTest {
         stopKoin()
     }
 
-    /** Picture 18: the Saved screen, in light mode. */
+    /** Picture 18: the Saved screen after a save, in light mode. */
     @Test
     fun saved_light() {
-        showSaved(ThemeMode.Light)
+        showSaved(ThemeMode.Light, viewer = false)
         capture("18_saved_light.png")
     }
 
-    /** Picture 19: the Saved screen, in dark mode. */
+    /** Picture 19: the Saved screen after a save, in dark mode. */
     @Test
     fun saved_dark() {
-        showSaved(ThemeMode.Dark)
+        showSaved(ThemeMode.Dark, viewer = false)
         capture("19_saved_dark.png")
     }
 
+    /** Picture 43: the photo viewer (a photo opened from My edits), in light mode. */
+    @Test
+    fun photo_viewer_light() {
+        showSaved(ThemeMode.Light, viewer = true)
+        capture("43_photo_viewer_light.png")
+    }
+
+    /** Picture 44: the photo viewer (a photo opened from My edits), in dark mode. */
+    @Test
+    fun photo_viewer_dark() {
+        showSaved(ThemeMode.Dark, viewer = true)
+        capture("44_photo_viewer_dark.png")
+    }
+
     /**
-     * Shows the Saved screen on the gradient photo in [mode] with the clock paused, moves the
-     * clock on until the photo is drawn, then on by [MARK_AT_REST_MS] so the mark is at rest.
+     * Shows the Saved screen on the gradient photo in [mode], as the photo viewer when [viewer],
+     * with the clock paused, moves the clock on until the photo is drawn, then on by
+     * [MARK_AT_REST_MS] so the mark (after a save) is at rest. Checks the parts each picture must
+     * hold, so a picture of a half-built screen is never recorded.
      */
-    private fun showSaved(mode: ThemeMode) {
+    private fun showSaved(mode: ThemeMode, viewer: Boolean) {
         val context: Context = ApplicationProvider.getApplicationContext()
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
         val viewModel = SavedViewModel(
             photoUri = "content://media/external/images/media/42",
             loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400)),
             probe = ViewModelClearedProbe(),
+            viewer = viewer,
         )
         // Paused before setContent, so the first frame is already under the test's control (see
         // the class comment).
@@ -101,7 +127,7 @@ class SavedScreenshotTest {
                     viewModel = viewModel,
                     onShare = {},
                     onEditAnother = {},
-                    onHome = {},
+                    onClose = {},
                 )
             }
         }
@@ -109,9 +135,16 @@ class SavedScreenshotTest {
         advance(MARK_AT_REST_MS)
 
         compose.onNodeWithTag(SAVED_PHOTO_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(SAVED_MARK_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SAVED_BACKDROP_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SAVED_SCRIM_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SAVED_CLOSE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(SAVED_SHARE_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(SAVED_HOME_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).assertIsDisplayed()
+        if (viewer) {
+            compose.onAllNodesWithTag(SAVED_MARK_TAG).assertCountEquals(0)
+        } else {
+            compose.onNodeWithTag(SAVED_MARK_TAG).assertIsDisplayed()
+        }
     }
 
     /**

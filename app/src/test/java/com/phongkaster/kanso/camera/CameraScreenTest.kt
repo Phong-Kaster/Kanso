@@ -7,8 +7,11 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -20,6 +23,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.di.ViewModelClearedProbe
+import com.phongkaster.kanso.ui.camera.CAMERA_BACK_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_KEEP_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_RETAKE_TAG
@@ -63,6 +67,9 @@ class CameraScreenTest {
 
     /** Every Uri the screen handed to onKept, oldest first. */
     private val keptUris = mutableListOf<String>()
+
+    /** How many times the screen called onBack. */
+    private var backTaps = 0
 
     /** Grants camera access, so the screen shows the camera straight away. */
     @Before
@@ -157,6 +164,25 @@ class CameraScreenTest {
             }
     }
 
+    /**
+     * The top bar's round Back button (tag `camera-back`) is named "Back", is a 48 dp by 48 dp
+     * square box drawn as a circle by the shared round button, and a tap calls onBack once.
+     */
+    @Test
+    fun the_round_back_button_is_named_48_dp_and_calls_back() {
+        showCamera()
+
+        compose.onNodeWithTag(CAMERA_BACK_TAG)
+            .assertContentDescriptionEquals(app.getString(R.string.back))
+            .assertHasClickAction()
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+            .performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, backTaps)
+    }
+
     /** Shows the camera screen, with the fake camera, and waits until the shutter can be used. */
     private fun showCamera() {
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
@@ -165,7 +191,7 @@ class CameraScreenTest {
             MaterialTheme {
                 CameraScreen(
                     viewModel = viewModel,
-                    onBack = {},
+                    onBack = { backTaps++ },
                     onKept = { keptUris += it },
                 )
             }

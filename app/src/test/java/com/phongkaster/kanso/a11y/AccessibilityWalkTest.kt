@@ -161,13 +161,12 @@ class AccessibilityWalkTest {
 
     // --- Home ------------------------------------------------------------------------------
 
-    /** Home: "Open a photo", the Camera shortcut, the five tool cards and Settings. */
+    /** Home: the carousel of four AI tools and the row of five round tool shortcuts. */
     @Test
     fun home() {
         walk("home") {
             HomeContent(
                 state = HOME_STATE,
-                onOpenPhoto = {},
                 onToolClick = {},
             )
         }
@@ -333,7 +332,7 @@ class AccessibilityWalkTest {
     fun saved() {
         val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
         walk("saved") {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onHome = {})
+            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
         }
     }
 
@@ -728,10 +727,10 @@ class AccessibilityWalkTest {
         /** Matches a node that can be tapped, toggled or selected (see [TouchTargetCheck.isControl]). */
         val IS_CONTROL = SemanticsMatcher("can be tapped, toggled or selected") { TouchTargetCheck.isControl(it) }
 
-        /** Home's two groups of tools, as `HomeViewModel` builds them. */
+        /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them. */
         val HOME_STATE = HomeUiState(
-            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-            editTools = listOf(Tool.EDIT),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            shortcutTools = Tool.entries,
         )
 
         /** The tools the five editor tests walk, one each; see `every_tool_has_its_own_editor_state`. */

@@ -1,0 +1,27 @@
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:124:21 No parameter with name 'onOpenPhoto' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:216:21 No parameter with name 'onHome' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:292:31 No value passed for parameter 'carouselTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:292:31 No value passed for parameter 'shortcutTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:293:5 No parameter with name 'aiTools' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:294:5 No parameter with name 'editTools' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt:317:25 No parameter with name 'onOpenPhoto' found.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: NAMED_PARAMETER_NOT_FOUND
+       Kotlin compiler error
+         No parameter with name 'onOpenPhoto' found.
+         Location: D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt line 124
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 9s

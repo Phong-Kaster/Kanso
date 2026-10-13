@@ -37,3 +37,9 @@
 - **Phase:** 1b (T-003). Worker (Capable) rewrote the tool screen; Iteration wired Replace and the Saved key in KansoNavHost, removed `Tool.editingTools`, deleted ToolSelectionAnimationTest, fixed two `onSelectTool` call sites and ThemeFollowTest's editor premise (now reads background left of the card).
 - Evidence: unit suite, compare, verify, lint, assemble green (`evidence/p1b-*.log`); baselines 16, 17, 22, 23 re-recorded, 40-42 new.
 - Not done: fresh-context review skipped for time.
+
+### Iteration 7 - 2026-10-13 (Phase 2: recover, finish, checkpoint)
+- **Phase:** 2 (T-004 Saved/viewer, T-005 Home hero + five shortcuts, T-006 gallery/camera). Recovery: the previous Iteration was killed with the main code and wiring written but the tests uncompilable (SavedScreenTest, HomeScreenTest, NavigationTest, PhotoToToolNavigationTest, ThemeFollowTest); the debris was coherent and was salvaged.
+- Did: two Capable Workers wrote SavedScreenTest and HomeScreenTest + the two navigation tests (the read guard refused them the evidence drafts, so HomeScreenTest was written afresh); Iteration fixed ThemeFollowTest (Saved premise: a photo in the theme's background colour), AccessibilityWalk (dots carry `stateDescription`, not `selected`), a Saved message assertion, HomeScreenTest's banner checks, ScreenshotTest's dot check; removed `strings_home.xml` and `saved_home`; recorded pictures 1-3, 10-15, 18-21, 26, 27 and new 43, 44 (judged 1, 10, 43).
+- Evidence: whole set green (`evidence/p2-run4.log`: tests, verifyRoborazziDebug, lint, assembleDebug).
+- Not done: fresh-context review of Phases 1 and 2 skipped for time; the Verifier re-proves everything.

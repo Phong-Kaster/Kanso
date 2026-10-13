@@ -1,0 +1,140 @@
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:170:17 No parameter with name 'onOpenPhoto' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:336:92 No parameter with name 'onHome' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:732:26 No value passed for parameter 'carouselTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:732:26 No value passed for parameter 'shortcutTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:733:13 No parameter with name 'aiTools' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt:734:13 No parameter with name 'editTools' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:49:38 Unresolved reference 'HOME_OPEN_PHOTO_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:52:38 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:171:35 Unresolved reference 'HOME_OPEN_PHOTO_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:201:39 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:213:46 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:219:32 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:279:35 Unresolved reference 'HOME_OPEN_PHOTO_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:641:31 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/NavigationTest.kt:726:36 Unresolved reference 'homeToolTag'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/PhotoToToolNavigationTest.kt:30:38 Unresolved reference 'HOME_OPEN_PHOTO_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/navigation/PhotoToToolNavigationTest.kt:124:35 Unresolved reference 'HOME_OPEN_PHOTO_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:50:39 Unresolved reference 'SAVED_ACTIONS_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:53:39 Unresolved reference 'SAVED_HOME_ICON_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:54:39 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:60:39 Unresolved reference 'SAVED_SHARE_ICON_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:133:57 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:150:31 Unresolved reference 'SAVED_ACTIONS_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:152:23 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:152:23 Inapplicable candidate(s): fun <T> listOf(vararg elements: T): List<T>
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:155:13 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:155:28 Cannot infer type for type parameter 'A'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:155:28 Cannot infer type for type parameter 'B'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:157:30 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:157:30 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:157:36 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:157:36 Operator call 'component1()' is ambiguous for destructuring of type 'uninferred ??? (Unknown type for type parameter T)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:157:36 Operator call 'component2()' is ambiguous for destructuring of type 'uninferred ??? (Unknown type for type parameter T)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:163:47 Unresolved reference 'SAVED_ACTIONS_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:171:30 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:171:30 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:171:34 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:171:40 Unresolved reference 'top'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:171:49 Unresolved reference 'bottom'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:173:100 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:176:16 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:176:30 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:176:40 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:176:40 Operator call 'component1()' is ambiguous for destructuring of type 'uninferred ??? (Unknown type for type parameter T)'. Applicable candidates:
+fun <T> Array<out T>.component1(): T
+fun ByteArray.component1(): Byte
+fun ShortArray.component1(): Short
+fun IntArray.component1(): Int
+fun LongArray.component1(): Long
+fun FloatArray.component1(): Float
+fun DoubleArray.component1(): Double
+fun BooleanArray.component1(): Boolean
+fun CharArray.component1(): Char
+fun <T> List<T>.component1(): T
+fun <K, V> Map.Entry<K, V>.component1(): K
+fun UIntArray.component1(): UInt
+fun ULongArray.component1(): ULong
+fun UByteArray.component1(): UByte
+fun UShortArray.component1(): UShort
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:176:40 Operator call 'component2()' is ambiguous for destructuring of type 'uninferred ??? (Unknown type for type parameter T)'. Applicable candidates:
+fun <T> Array<out T>.component2(): T
+fun ByteArray.component2(): Byte
+fun ShortArray.component2(): Short
+fun IntArray.component2(): Int
+fun LongArray.component2(): Long
+fun FloatArray.component2(): Float
+fun DoubleArray.component2(): Double
+fun BooleanArray.component2(): Boolean
+fun CharArray.component2(): Char
+fun <T> List<T>.component2(): T
+fun <K, V> Map.Entry<K, V>.component2(): V
+fun UIntArray.component2(): UInt
+fun ULongArray.component2(): ULong
+fun UByteArray.component2(): UByte
+fun UShortArray.component2(): UShort
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:177:81 Unresolved reference 'right'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:177:96 Unresolved reference 'left'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:200:37 Unresolved reference 'SAVED_SHARE_ICON_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:202:20 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:202:36 Unresolved reference 'SAVED_HOME_ICON_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:293:57 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:355:31 Unresolved reference 'SAVED_HOME_TAG'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:470:21 No parameter with name 'onHome' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt:499:21 No parameter with name 'onHome' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:242:17 No parameter with name 'onOpenPhoto' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:343:92 No parameter with name 'onHome' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:735:26 No value passed for parameter 'carouselTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:735:26 No value passed for parameter 'shortcutTools'.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:736:13 No parameter with name 'aiTools' found.
+e: file:///D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt:737:13 No parameter with name 'editTools' found.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugUnitTestKotlin' (registered by plugin 'com.android.internal.application').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Kotlin compiler: NAMED_PARAMETER_NOT_FOUND
+       Kotlin compiler error
+         No parameter with name 'onOpenPhoto' found.
+         Location: D:/Valve/Personal/Kanso/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt line 170
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 13s

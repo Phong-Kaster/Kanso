@@ -5,7 +5,7 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
-import com.phongkaster.kanso.ui.home.homeToolTag
+import com.phongkaster.kanso.ui.home.homeShortcutTag
 import org.robolectric.Shadows.shadowOf
 
 // How whole-app tests leave Home for a tool's photo gallery, and how they wait for Home.
@@ -33,13 +33,15 @@ fun waitForHome(compose: ComposeTestRule) {
  * From Home, opens [tool]'s photo gallery as a person would, with one tap. The caller waits for
  * the gallery.
  *
- * Today's Home lists each tool as a card tagged `homeToolTag(tool)`. Home scrolls and the floating
- * bar covers its bottom, so the card is scrolled into view and tapped through its click action
- * ([tapAboveBar]), never with a touch that could land on the bar.
+ * Home has a round shortcut for every tool, tagged `homeShortcutTag(tool)` (`home-shortcut-<TOOL>`),
+ * in a row that never scrolls sideways, so no swipe of the carousel is needed for any tool. Home
+ * scrolls up and down and the floating bar covers its bottom, so the shortcut is scrolled into
+ * view and tapped through its click action ([tapAboveBar]), never with a touch that could land on
+ * the bar.
  */
 fun openToolGallery(compose: ComposeTestRule, tool: Tool) {
     waitForHome(compose)
-    val tag = homeToolTag(tool)
+    val tag = homeShortcutTag(tool)
     compose.waitUntil(timeoutMillis = HOME_TIMEOUT_MS) {
         shadowOf(Looper.getMainLooper()).idle()
         compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()

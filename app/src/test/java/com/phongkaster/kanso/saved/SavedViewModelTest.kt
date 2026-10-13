@@ -12,6 +12,7 @@ import com.phongkaster.kanso.ui.saved.SavedUiState
 import com.phongkaster.kanso.ui.saved.SavedViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,7 +24,8 @@ import org.robolectric.annotation.Config
 /**
  * Checks the Saved screen's ViewModel on its own, with no screen drawn (DoD 4): its state starts
  * as loading, becomes the picture when the loader returns one, becomes unreadable when the loader
- * returns nothing, and a second request for the same size does not load again.
+ * returns nothing, and a second request for the same size does not load again. Since Run 7 it
+ * also checks the viewer flag, which tells the screen after a save from the photo viewer.
  *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
@@ -111,14 +113,55 @@ class SavedViewModelTest {
         assertEquals(listOf(MAX_EDGE_PX, 2 * MAX_EDGE_PX), loader.requestedEdges.toList())
     }
 
+    /**
+     * Run 7, DoD 9 and 14: a ViewModel built without the viewer flag is the screen after a save,
+     * and says so in its state from the start to after the photo is decoded.
+     */
+    @Test
+    fun without_the_viewer_flag_the_state_is_the_screen_after_a_save() {
+        val viewModel = savedViewModel(FakePhotoLoader(app, ToolFixtures.gradient(600, 400)))
+
+        assertFalse("The state says viewer before the load", viewModel.state.value.viewer)
+        viewModel.load(MAX_EDGE_PX)
+        runMainThread()
+        assertFalse("The state says viewer after the load", viewModel.state.value.viewer)
+        assertTrue(viewModel.state.value.photo is SavedPhoto.Ready)
+    }
+
+    /**
+     * Run 7, DoD 9: a ViewModel built with the viewer flag (a photo opened from My edits) carries
+     * it in its state, keeps it once the photo is decoded, and decodes the photo as usual.
+     */
+    @Test
+    fun the_viewer_flag_reaches_the_state_and_stays_after_the_load() {
+        val bitmap = ToolFixtures.gradient(600, 400)
+        val viewModel = savedViewModel(FakePhotoLoader(app, bitmap), viewer = true)
+
+        assertEquals(
+            SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Loading, viewer = true),
+            viewModel.state.value,
+        )
+        viewModel.load(MAX_EDGE_PX)
+        runMainThread()
+
+        val state = viewModel.state.value
+        assertTrue("The viewer flag was lost by the load", state.viewer)
+        assertSame(bitmap, (state.photo as SavedPhoto.Ready).bitmap)
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
      * Builds the ViewModel for [PHOTO_URI] with [loader], the way the app's Koin recipe does but
-     * by hand, with a probe nobody reads.
+     * by hand, with a probe nobody reads; [viewer] is passed only when a test asks for it, so the
+     * other tests build it exactly as the Saved key does, with the constructor's default.
      */
-    private fun savedViewModel(loader: FakePhotoLoader): SavedViewModel =
-        SavedViewModel(photoUri = PHOTO_URI, loader = loader, probe = ViewModelClearedProbe())
+    private fun savedViewModel(loader: FakePhotoLoader, viewer: Boolean? = null): SavedViewModel =
+        if (viewer == null) {
+            SavedViewModel(photoUri = PHOTO_URI, loader = loader, probe = ViewModelClearedProbe())
+        } else {
+            SavedViewModel(photoUri = PHOTO_URI, loader = loader, probe = ViewModelClearedProbe(), viewer = viewer)
+        }
 
     /** Runs everything waiting in the main thread's queue, where the ViewModel's load ends. */
     private fun runMainThread() {

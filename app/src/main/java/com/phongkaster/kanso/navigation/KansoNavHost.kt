@@ -119,11 +119,9 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    // "Open a photo" is the main action: it opens the gallery to pick from, and the
-                    // photo picked there opens in the editor with the Edit tool selected.
-                    onOpenPhoto = { if (backStack.last() == Home) backStack.add(Gallery(Tool.EDIT)) },
-                    // Every tool card opens the photo gallery, and the photo picked there opens
-                    // in the editor with that tool selected.
+                    // Every banner, "Try now" button and round tool shortcut opens that tool's
+                    // photo gallery, and the photo picked there opens in the editor with that
+                    // tool selected.
                     onToolClick = { tool ->
                         if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },
@@ -134,8 +132,11 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<MyEditsViewModel>()
                 MyEditsScreen(
                     viewModel = viewModel,
-                    // Opening one of the edited photos arrives with the photo viewer (T-004).
-                    onPhotoClick = {},
+                    // A tapped photo opens full screen in the viewer, above the grid: Back
+                    // returns to My edits. Only act while My edits is still on top.
+                    onPhotoClick = { photoUri ->
+                        if (backStack.last() == MyEdits) backStack.add(EditedPhoto(photoUri))
+                    },
                     contentPadding = tabPadding,
                 )
             }
@@ -213,7 +214,25 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                             backStack.add(Gallery(key.tool))
                         }
                     },
-                    onHome = { if (backStack.last() == key) backStack.removeLastOrNull() },
+                    onClose = { if (backStack.last() == key) backStack.closeToHome() },
+                )
+            }
+            entry<EditedPhoto> { key ->
+                // The viewer is the Saved screen in its viewer form: the same layout, the title
+                // "My edits" and "Edit" instead of "Edit another". The `viewer` Koin parameter
+                // tells the ViewModel which form to show.
+                val viewModel = koinViewModel<SavedViewModel>(
+                    parameters = { parametersOf(key.photoUri, true) },
+                )
+                SavedScreen(
+                    viewModel = viewModel,
+                    onShare = {},
+                    // Edit opens this photo in the Edit tool, above the viewer.
+                    onEditAnother = {
+                        if (backStack.last() == key) backStack.add(ToolPhoto(Tool.EDIT, key.photoUri))
+                    },
+                    // Close goes Home; system Back (goBack) pops to the My edits grid.
+                    onClose = { if (backStack.last() == key) backStack.closeToHome() },
                 )
             }
             // Settings is a tab: no Back arrow, the bar's Home tab (or system Back) leaves it.
@@ -286,12 +305,12 @@ fun KansoNavDisplay(
 }
 
 /**
- * Sample data for the preview: the two groups of cards the real Home shows, the AI tools and then
- * Edit.
+ * Sample data for the preview: the four carousel tools and the five shortcut tools the real Home
+ * shows.
  */
 private val sampleHomeState = HomeUiState(
-    aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-    editTools = listOf(Tool.EDIT),
+    carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+    shortcutTools = Tool.entries,
 )
 
 /**
@@ -314,7 +333,6 @@ private fun KansoNavHostPreview() {
                 entry<Home> {
                     HomeContent(
                         state = sampleHomeState,
-                        onOpenPhoto = {},
                         onToolClick = {},
                     )
                 }

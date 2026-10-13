@@ -33,12 +33,13 @@ import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
 import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_HOME_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_CLOSE_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,7 +53,8 @@ import org.robolectric.annotation.Config
  * DoD 6 (gallery path) and DoD 15 (back stack), through the app's real navigation: from Home,
  * Retouch opens its gallery; the gallery's camera button opens the camera; Keep opens the
  * Retouch tool screen; Save replaces everything above Home with the Saved screen; Edit another
- * leaves the Retouch gallery above Home; Home and system Back both leave only Home.
+ * leaves the Retouch gallery above Home; the round close button and system Back both leave only
+ * Home.
  *
  * Run 7, DoD 12: each tool has a screen of its own, so the tool saved from is the screen's own
  * tool, and "Edit another" opens the gallery titled "Retouch: choose a photo". Home's tool
@@ -107,15 +109,25 @@ class SavedNavigationTest {
         }
     }
 
-    /** Home leaves [Home]: no Saved, tool or gallery screen below it. */
+    /**
+     * Run 7, DoD 12 and R7: the round close button at the top left leaves [Home] alone. No Saved,
+     * tool or gallery screen is left below it: Home is shown, and one further Back finishes the
+     * activity, which it only does when Home is the last key.
+     */
     @Test
-    fun home_leaves_only_home() {
-        launchToSaved {
-            compose.onNodeWithTag(SAVED_HOME_TAG).performClick()
-            waitFor { count(SAVED_SCREEN_TAG) == 0 }
+    fun close_leaves_only_home() {
+        launchToSaved { scenario ->
+            compose.onNodeWithTag(SAVED_CLOSE_TAG).performClick()
+            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
             assertEquals(0, count(GALLERY_SCREEN_TAG))
             compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
+
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            shadowOf(Looper.getMainLooper()).idle()
+            var finishing = false
+            scenario.onActivity { finishing = it.isFinishing }
+            assertTrue("One Back after close did not finish the activity: something is left above Home", finishing)
         }
     }
 

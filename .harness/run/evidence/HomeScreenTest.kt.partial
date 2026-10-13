@@ -1,0 +1,516 @@
+package com.phongkaster.kanso.home
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.ViewGroup
+import androidx.activity.ComponentActivity
+import androidx.compose.material3.ColorScheme
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.percentOffset
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_DOTS_TAG
+import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+import com.phongkaster.kanso.ui.home.HOME_SHORTCUTS_TAG
+import com.phongkaster.kanso.ui.home.HomeContent
+import com.phongkaster.kanso.ui.home.HomeUiState
+import com.phongkaster.kanso.ui.home.homeBannerIconTag
+import com.phongkaster.kanso.ui.home.homeBannerTag
+import com.phongkaster.kanso.ui.home.homeCarouselDotTag
+import com.phongkaster.kanso.ui.home.homeShortcutLabelTag
+import com.phongkaster.kanso.ui.home.homeShortcutTag
+import com.phongkaster.kanso.ui.home.homeTryTag
+import com.phongkaster.kanso.ui.theme.KANSO_THEME_TAG
+import com.phongkaster.kanso.ui.theme.KansoColorSchemeKey
+import com.phongkaster.kanso.ui.theme.KansoTheme
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.koin.core.context.stopKoin
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * Checks Home's stateless part, hosted on its own on the phone (DoD 4 items 1 to 4, and the
+ * machine part of DoD 28): from top to bottom the title "Kanso", the greeting, the hero carousel
+ * and the row of five round tool shortcuts; the four banners in order, each with its tool's name,
+ * a description of its own on one line, a large icon and "Try now"; the page dots; how a swipe
+ * settles; and that the carousel never moves by itself.
+ *
+ * The carousel is Material 3's uncontained carousel, a pager that composes only the banners in
+ * view, so a banner further along is reached by swiping, as a person would. Positions are read
+ * with `positionInRoot` (where a node is laid out, unclipped); `boundsInRoot` is clipped to what
+ * is visible, which is what "wholly on screen" compares against.
+ *
+ * The pixels of the shortcuts' circles are drawn for real (`GraphicsMode.NATIVE`) and read from a
+ * bitmap of the activity's content view, never with `captureToImage` (PROJECT.md).
+ */
+@RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "w411dp-h891dp-xxhdpi")
+class HomeScreenTest {
+
+    /** Starts an empty activity to host Home. */
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    /**
+     * Stops Koin after each test: KansoApplication starts it for every Robolectric test, and its
+     * state outlives the test inside the same JVM.
+     */
+    @After
+    fun stopKoinAfterTest() {
+        stopKoin()
+    }
+
+    /**
+     * DoD 4: the tops increase strictly in this order: the text "Kanso", marked as a heading; the
+     * greeting "What will you edit today?" (exact); `home-carousel`; the page dots; and
+     * `home-shortcuts`, the row holding the five shortcuts.
+     */
+    @Test
+    fun home_shows_the_title_the_greeting_the_carousel_and_the_shortcuts_from_top_to_bottom() {
+        show()
+
+        val title = compose.onNode(hasText("Kanso") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            .fetchSemanticsNode()
+        val greeting = compose.onNode(hasText("What will you edit today?")).fetchSemanticsNode()
+        assertEquals(
+            "The greeting must read exactly so",
+            listOf("What will you edit today?"),
+            greeting.config[SemanticsProperties.Text].map { it.text },
+        )
+        val tops = listOf(
+            "title" to title.positionInRoot.y,
+            "greeting" to greeting.positionInRoot.y,
+            "carousel" to node(HOME_CAROUSEL_TAG).positionInRoot.y,
+            "dots" to node(HOME_CAROUSEL_DOTS_TAG).positionInRoot.y,
+            "shortcuts" to node(HOME_SHORTCUTS_TAG).positionInRoot.y,
+        )
+        tops.zipWithNext().forEach { (upper, lower) ->
+            assertTrue("${upper.first} (${upper.second}) must lie above ${lower.first} (${lower.second})", upper.second < lower.second)
+        }
+        Tool.entries.forEach { tool ->
+            compose.onNode(hasTestTag(homeShortcutTag(tool)) and hasAnyAncestor(hasTestTag(HOME_SHORTCUTS_TAG)))
+                .assertExists()
+        }
+    }
+
+    /**
+     * DoD 4: the five shortcuts, left to right Edit, Remove background, Enhance, Retouch and
+     * Artistic, have their tops within 1 dp of one another and their centres evenly spaced within
+     * 1 dp. Each is a button with a click action, the tool's name as its content description, and
+     * round: as wide as it is tall, the inside of its left edge in the tonal button colour while
+     * its corner is not. Under each, its name (`home-shortcut-<TOOL>-label`, the tool's label) is
+     * centred on the button within 1 dp, its top at or below the button's bottom.
+     */
+    @Test
+    fun the_five_shortcuts_are_round_named_buttons_in_one_row_with_their_names_under_them() {
+        show()
+
+        val buttons = Tool.entries.map { tool ->
+            compose.onNodeWithTag(homeShortcutTag(tool))
+                .assert(hasContentDescription(label(tool)))
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
+                .assertHasClickAction()
+                .fetchSemanticsNode()
+        }
+        assertEquals(
+            "The shortcuts must run left to right in the order of Tool.entries",
+            Tool.entries.map { homeShortcutTag(it) },
+            buttons.sortedBy { it.positionInRoot.x }.map { it.config[SemanticsProperties.TestTag] },
+        )
+        val firstTop = buttons.first().positionInRoot.y
+        buttons.forEach { button ->
+            assertEquals("Every shortcut's top", firstTop, button.positionInRoot.y, px(1.dp))
+        }
+        val centres = buttons.map { centreX(it) }
+        val steps = centres.zipWithNext { a, b -> b - a }
+        steps.forEach { step ->
+            assertEquals("The shortcuts' centres must be evenly spaced: $steps", steps.first(), step, px(1.dp))
+        }
+
+        Tool.entries.zip(buttons).forEach { (tool, button) ->
+            val labelNode = compose.onNodeWithTag(homeShortcutLabelTag(tool))
+                .assertTextEquals(label(tool))
+                .fetchSemanticsNode()
+            assertEquals("${tool.name}'s name must be centred on its button", centreX(button), centreX(labelNode), px(1.dp))
+            assertTrue(
+                "${tool.name}'s name must be under its button",
+                labelNode.positionInRoot.y >= button.positionInRoot.y + button.size.height - 0.5f,
+            )
+
+            val bounds = button.boundsInRoot
+            assertEquals("${tool.name}'s shortcut must be as wide as it is tall", bounds.width, bounds.height, px(1.dp))
+            val container = scheme().secondaryContainer
+            assertNear("Inside ${tool.name}'s left edge", container, pixel(bounds.left + px(4.dp), bounds.center.y))
+            assertFar("${tool.name}'s top-left corner", container, pixel(bounds.left + 2f, bounds.top + 2f))
+        }
+    }
+
+    /**
+     * DoD 4: the shortcut row is not a scrolling container. `home-shortcuts` carries no horizontal
+     * scroll range and no shortcut sits inside anything that scrolls sideways, and all five are
+     * wholly in the window at once, none clipped.
+     */
+    @Test
+    fun the_shortcut_row_never_scrolls_and_shows_all_five_at_once() {
+        show()
+
+        val row = node(HOME_SHORTCUTS_TAG)
+        assertTrue(
+            "home-shortcuts must not scroll sideways",
+            row.config.getOrNull(SemanticsProperties.HorizontalScrollAxisRange) == null,
+        )
+        val scrollsSideways = SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange)
+        Tool.entries.forEach { tool ->
+            compose.onNodeWithTag(homeShortcutTag(tool)).assert(!hasAnyAncestor(scrollsSideways))
+            assertWhollyOnScreen(homeShortcutTag(tool))
+        }
+    }
+
+    /** DoD 4 and 5: a tap on each of the five shortcuts reports that shortcut's tool, once. */
+    @Test
+    fun tapping_each_shortcut_reports_its_tool() {
+        val tapped = mutableListOf<Tool>()
+        show(onToolClick = { tapped += it })
+
+        Tool.entries.forEach { tool -> compose.onNodeWithTag(homeShortcutTag(tool)).performClick() }
+
+        assertEquals(Tool.entries.toList(), tapped)
+    }
+
+    /**
+     * DoD 4: `home-carousel` holds four banners, reached in this order by swiping left: Remove
+     * background, Enhance, Retouch and Artistic. Each shows its tool's name, a description of its
+     * own (not empty, different for each tool, on one line), a large icon (at least 64 dp square)
+     * and a "Try now" button whose spoken name names the tool.
+     */
+    @Test
+    fun the_carousel_holds_the_four_ai_tools_each_with_name_description_icon_and_try_now() {
+        show()
+
+        compose.onNodeWithTag(HOME_CAROUSEL_TAG).assertExists()
+        val descriptions = mutableListOf<String>()
+        CAROUSEL_TOOLS.forEachIndexed { index, tool ->
+            if (index > 0) swipeAndSettle(left = true)
+            val banner = homeBannerTag(tool)
+            compose.onNode(hasTestTag(banner) and hasAnyAncestor(hasTestTag(HOME_CAROUSEL_TAG)))
+                .assert(hasText(label(tool)))
+                .assertHasClickAction()
+            assertWhollyOnScreen(homeTryTag(tool))
+            assertCurrentDot(index)
+
+            val description = descriptionNode(tool)
+            val text = description.config[SemanticsProperties.Text].joinToString("") { it.text }
+            assertTrue("${tool.name}'s description must not be empty", text.isNotBlank())
+            assertEquals("${tool.name}'s description must take one line", 1, textLayout(description).lineCount)
+            descriptions += text
+
+            val icon = compose.onNodeWithTag(homeBannerIconTag(tool), useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue("${tool.name}'s icon must be at least 64 dp wide", icon.size.width >= px(64.dp) - 1f)
+            assertTrue("${tool.name}'s icon must be at least 64 dp tall", icon.size.height >= px(64.dp) - 1f)
+
+            compose.onNodeWithTag(homeTryTag(tool))
+                .assert(hasText(context().getString(R.string.home_hero_try_now)))
+                .assert(hasContentDescription(label(tool), substring = true))
+                .assertHasClickAction()
+        }
+        assertEquals("Every banner needs a description of its own: $descriptions", 4, descriptions.toSet().size)
+        compose.onAllNodes(isBanner).fetchSemanticsNodes().forEach { node ->
+            assertTrue(
+                "Only the four AI tools have banners, found ${node.config[SemanticsProperties.TestTag]}",
+                CAROUSEL_TOOLS.any { homeBannerTag(it) == node.config[SemanticsProperties.TestTag] },
+            )
+        }
+    }
+
+    /**
+     * DoD 4 and 5: on each banner, a tap on the banner outside its button and a tap on its "Try
+     * now" each report the banner's tool.
+     */
+    @Test
+    fun each_banner_and_its_try_now_report_their_tool() {
+        val tapped = mutableListOf<Tool>()
+        show(onToolClick = { tapped += it })
+
+        CAROUSEL_TOOLS.forEachIndexed { index, tool ->
+            if (index > 0) swipeAndSettle(left = true)
+            // Near the banner's top-left corner: on the tool's name, well away from the button,
+            // which sits at the bottom.
+            compose.onNodeWithTag(homeBannerTag(tool)).performTouchInput { click(percentOffset(0.1f, 0.12f)) }
+            compose.onNodeWithTag(homeTryTag(tool)).performClick()
+        }
+
+        assertEquals(CAROUSEL_TOOLS.flatMap { listOf(it, it) }, tapped)
+    }
+
+    /**
+     * DoD 4: `home-carousel-dots` holds four dots, the first marked current (selected) at the
+     * start and the other three not; the dots cannot be tapped.
+     */
+    @Test
+    fun the_dots_mark_the_first_banner_at_the_start() {
+        show()
+
+        compose.onAllNodes(hasAnyAncestor(hasTestTag(HOME_CAROUSEL_DOTS_TAG)) and isDot).assertCountEquals(4)
+        assertCurrentDot(0)
+        (0 until 4).forEach { index ->
+            val dot = compose.onNodeWithTag(homeCarouselDotTag(index)).fetchSemanticsNode()
+            assertFalse("Dot $index must not be tappable", SemanticsActions.OnClick in dot.config)
+        }
+    }
+
+    /**
+     * DoD 28: a left swipe on `home-carousel` settles (the clock stepped frame by frame until
+     * nothing moves) with banner 2's "Try now" wholly on screen and the dots marking 2; a right
+     * swipe then settles back on banner 1.
+     */
+    @Test
+    fun a_left_swipe_settles_on_banner_2_and_a_right_swipe_returns_to_banner_1() {
+        show()
+
+        swipeAndSettle(left = true)
+        assertWhollyOnScreen(homeTryTag(CAROUSEL_TOOLS[1]))
+        assertCurrentDot(1)
+
+        swipeAndSettle(left = false)
+        assertWhollyOnScreen(homeTryTag(CAROUSEL_TOOLS[0]))
+        assertCurrentDot(0)
+    }
+
+    /**
+     * DoD 28: the carousel never moves by itself. After 10 s of clock time with no input it still
+     * shows banner 1, in the same place, with the first dot marked.
+     */
+    @Test
+    fun ten_seconds_without_input_leave_banner_1_in_front() {
+        show()
+        val before = node(homeTryTag(CAROUSEL_TOOLS[0])).positionInRoot
+
+        compose.mainClock.autoAdvance = false
+        try {
+            compose.mainClock.advanceTimeBy(10_000)
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+        compose.waitForIdle()
+
+        val after = node(homeTryTag(CAROUSEL_TOOLS[0])).positionInRoot
+        assertEquals("Banner 1's Try now must not have moved", before.x, after.x, 0.5f)
+        assertWhollyOnScreen(homeTryTag(CAROUSEL_TOOLS[0]))
+        assertCurrentDot(0)
+    }
+
+    /** Hosts Home's stateless part with the real state, in light mode, reporting taps to [onToolClick]. */
+    private fun show(onToolClick: (Tool) -> Unit = {}) {
+        compose.setContent {
+            KansoTheme(themeMode = ThemeMode.Light) {
+                HomeContent(state = STATE, onToolClick = onToolClick)
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Swipes the carousel one banner to the left (or to the right), then steps the clock one frame
+     * at a time until no banner has moved for [STILL_FRAMES] frames, and fails if that takes more
+     * than [MAX_FRAMES] frames.
+     */
+    private fun swipeAndSettle(left: Boolean) {
+        compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput { if (left) swipeLeft() else swipeRight() }
+        compose.mainClock.autoAdvance = false
+        try {
+            var last = bannerPositions()
+            var still = 0
+            var frames = 0
+            while (still < STILL_FRAMES && frames < MAX_FRAMES) {
+                compose.mainClock.advanceTimeByFrame()
+                val now = bannerPositions()
+                if (now == last) still++ else still = 0
+                last = now
+                frames++
+            }
+            assertTrue("The carousel did not settle within $MAX_FRAMES frames", still >= STILL_FRAMES)
+        } finally {
+            compose.mainClock.autoAdvance = true
+        }
+        compose.waitForIdle()
+    }
+
+    /** Returns each banner composed right now with where it is laid out, to see whether any moved. */
+    private fun bannerPositions(): List<Pair<String?, Float>> =
+        compose.onAllNodes(isBanner).fetchSemanticsNodes()
+            .map { it.config.getOrNull(SemanticsProperties.TestTag) to it.positionInRoot.x }
+            .sortedBy { it.second }
+
+    /** Fails unless the dot at [index] is the one marked current and the other three are not. */
+    private fun assertCurrentDot(index: Int) {
+        (0 until 4).forEach { other ->
+            val dot = compose.onNodeWithTag(homeCarouselDotTag(other))
+            if (other == index) dot.assertIsSelected() else dot.assertIsNotSelected()
+        }
+    }
+
+    /**
+     * Fails unless the node tagged [tag] lies wholly inside the window and is not clipped: its
+     * visible bounds are as wide and as tall as the node itself.
+     */
+    private fun assertWhollyOnScreen(tag: String) {
+        val node = node(tag)
+        val window = compose.onRoot().fetchSemanticsNode().size
+        val left = node.positionInRoot.x
+        val top = node.positionInRoot.y
+        assertTrue("$tag's left ($left) must be inside the window", left >= -0.5f)
+        assertTrue("$tag's top ($top) must be inside the window", top >= -0.5f)
+        assertTrue("$tag's right must be inside the window", left + node.size.width <= window.width + 0.5f)
+        assertTrue("$tag's bottom must be inside the window", top + node.size.height <= window.height + 0.5f)
+        val visible: Rect = node.boundsInRoot
+        assertEquals("$tag must not be clipped sideways", node.size.width.toFloat(), visible.width, 1f)
+        assertEquals("$tag must not be clipped up or down", node.size.height.toFloat(), visible.height, 1f)
+    }
+
+    /** Returns the description's text node on [tool]'s banner, from the unmerged tree. */
+    private fun descriptionNode(tool: Tool): SemanticsNode {
+        val texts = compose.onAllNodes(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.Text) and
+                hasAnyAncestor(hasTestTag(homeBannerTag(tool))) and
+                !hasText(label(tool)) and
+                !hasAnyAncestor(hasTestTag(homeTryTag(tool))) and
+                !hasTestTag(homeTryTag(tool)),
+            useUnmergedTree = true,
+        ).fetchSemanticsNodes()
+        assertEquals("${tool.name}'s banner must hold exactly one description", 1, texts.size)
+        return texts.single()
+    }
+
+    /** Returns how the text of [node] was laid out, through its semantics action. */
+    private fun textLayout(node: SemanticsNode): TextLayoutResult {
+        val results = mutableListOf<TextLayoutResult>()
+        node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(results)
+        return results.single()
+    }
+
+    /** Returns the one node tagged [tag] in the merged tree. */
+    private fun node(tag: String): SemanticsNode = compose.onNodeWithTag(tag).fetchSemanticsNode()
+
+    /** Returns the horizontal centre of [node] where it is laid out, in pixels. */
+    private fun centreX(node: SemanticsNode): Float = node.positionInRoot.x + node.size.width / 2f
+
+    /** Returns [tool]'s label as Home shows it. */
+    private fun label(tool: Tool): String = context().getString(tool.labelRes)
+
+    /** Returns the app context, to read the same strings Home shows. */
+    private fun context(): android.content.Context = ApplicationProvider.getApplicationContext()
+
+    /** Returns [dp] in pixels at the test screen's density. */
+    private fun px(dp: Dp): Float = with(compose.density) { dp.toPx() }
+
+    /** Returns the colour scheme KansoTheme hands to Home. */
+    private fun scheme(): ColorScheme =
+        compose.onNodeWithTag(KANSO_THEME_TAG).fetchSemanticsNode().config[KansoColorSchemeKey]
+
+    /**
+     * Draws the activity's content view into a fresh bitmap and returns the colour of the pixel
+     * at ([x], [y]), in the Compose root's pixels (the root fills the view from its top-left).
+     */
+    private fun pixel(x: Float, y: Float): Color {
+        val content = compose.activity.findViewById<ViewGroup>(android.R.id.content)
+        val view = content.getChildAt(0) ?: error("The activity has no content view yet")
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        return try {
+            view.draw(Canvas(bitmap))
+            val px = x.roundToInt().coerceIn(0, bitmap.width - 1)
+            val py = y.roundToInt().coerceIn(0, bitmap.height - 1)
+            Color(bitmap.getPixel(px, py))
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    /** Fails unless [actual] equals [expected] within 2 in each 0-255 channel. */
+    private fun assertNear(what: String, expected: Color, actual: Color) {
+        assertTrue("$what: expected ${hex(expected)}, drawn ${hex(actual)}", channelsWithin(expected, actual, 2))
+    }
+
+    /** Fails unless [actual] differs from [colour] by more than 8 in at least one 0-255 channel. */
+    private fun assertFar(what: String, colour: Color, actual: Color) {
+        assertFalse("$what should not be ${hex(colour)}, drawn ${hex(actual)}", channelsWithin(colour, actual, 8))
+    }
+
+    /** Tells whether [a] and [b] are within [tolerance] of each other in red, green and blue. */
+    private fun channelsWithin(a: Color, b: Color, tolerance: Int): Boolean {
+        val first = a.toArgb()
+        val second = b.toArgb()
+        return listOf(16, 8, 0).all { shift ->
+            abs(((first shr shift) and 0xFF) - ((second shr shift) and 0xFF)) <= tolerance
+        }
+    }
+
+    /** Writes [colour] as `#AARRGGBB`, for failure messages. */
+    private fun hex(colour: Color): String = "#%08X".format(colour.toArgb())
+
+    /** Values the tests share. */
+    private companion object {
+        /** The four AI tools, in the order the carousel shows them. */
+        val CAROUSEL_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+
+        /** Home's state as the app builds it: the four banners and the five shortcuts. */
+        val STATE = HomeUiState(carouselTools = CAROUSEL_TOOLS, shortcutTools = Tool.entries.toList())
+
+        /** How many frames in a row nothing may move before the carousel counts as settled. */
+        const val STILL_FRAMES = 10
+
+        /** The most frames a swipe may take to settle: about ten seconds at 60 frames a second. */
+        const val MAX_FRAMES = 600
+
+        /** Matches a banner of the carousel (its tag starts `home-banner-`; its icon's is not merged). */
+        val isBanner = SemanticsMatcher("is a carousel banner") { node ->
+            val tag = node.config.getOrNull(SemanticsProperties.TestTag)
+            tag != null && tag.startsWith("home-banner-") && !tag.endsWith("-icon")
+        }
+
+        /** Matches a page dot under the carousel. */
+        val isDot = SemanticsMatcher("is a carousel dot") { node ->
+            node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("home-carousel-dot-") == true
+        }
+    }
+}

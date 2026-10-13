@@ -72,7 +72,13 @@ val appModule = module {
     }
 
     // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
-    viewModel { params -> SavedViewModel(photoUri = params.get(), loader = get(), probe = get()) }
+    viewModel { params -> SavedViewModel(
+            photoUri = params.get(),
+            loader = get(),
+            probe = get(),
+            // The photo viewer passes `true` as a second parameter; Saved passes only the Uri.
+            viewer = params.getOrNull<Boolean>() ?: false,
+        ) }
 
     // Writes the finished photo into Pictures/Kanso on the phone.
     single<PhotoSaver> { MediaStorePhotoSaver(androidContext()) }

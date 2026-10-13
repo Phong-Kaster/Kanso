@@ -239,7 +239,6 @@ class ThemeFollowTest {
         show(mode) {
             HomeContent(
                 state = HOME_STATE,
-                onOpenPhoto = {},
                 onToolClick = {},
             )
         }
@@ -338,9 +337,14 @@ class ThemeFollowTest {
      * the mark sits in the middle, so that pixel is background and well clear of the mark.
      */
     private fun checkSaved(mode: ThemeMode) {
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
+        // Saved now draws the photo over a blurred copy of itself, so the screen's colours come
+        // from the photo. A photo in the theme's own background colour makes the backdrop, and the
+        // shade (the theme's surface over it), read as the theme's colours: what this test follows.
+        val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
+        themed.eraseColor(scheme(mode).background.toArgb())
+        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed))
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onHome = {})
+            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
         }
         val mark = nodeRect(SAVED_MARK_TAG)
         assertFollows(
@@ -733,8 +737,8 @@ class ThemeFollowTest {
 
         /** Home's two groups of tools, as `HomeViewModel` builds them. */
         val HOME_STATE = HomeUiState(
-            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-            editTools = listOf(Tool.EDIT),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            shortcutTools = Tool.entries,
         )
 
         /** The three albums of the sample photo library. */
