@@ -566,3 +566,63 @@ A tab's screen is dropped when you switch tabs (a replaced key is popped).
 ### Taken, and why
 
 (A): simplest with Navigation 3's decorators. First checkpoint: Phase 1 (T-001, T-002).
+
+## A-025 - DoD 20(a)'s library grep against DoD 40's unchanged catalog
+
+- **Tier:** 3 (the approved DoD contradicts itself)
+- **Iteration:** 12 (the Verifier)
+- **First dependent checkpoint:** none (no code depends on it; it changes how criterion 20 is reported)
+- **Revert:** nothing to revert
+
+### Question
+
+DoD 20(a) asks `git grep -n -i -E 'lottie|airbnb|shimmer' -- app/src/main gradle/libs.versions.toml app/build.gradle.kts` to print nothing. `gradle/libs.versions.toml` already held `compose-shimmer` and `lottie-compose` entries at the base `a720960` (lines 19, 43, 106, 118), and DoD 40 requires that file to be unchanged from the base. Both cannot hold.
+
+### Options Considered
+
+1. Remove the two catalog entries (breaks DoD 40, which the owner approved as "no library change").
+2. Keep the catalog; report 20(a)'s library grep as failing only on the base's catalog lines, with `app/src/main` and `app/build.gradle.kts` clean.
+
+### Taken, and why
+
+(2): closest to the PRD's literal text (no new library, motion built with Compose's own tools); the catalog lines are unused by the app and predate this run. Criterion 20 is **assumed**, so it cannot make the run `DONE`; it was `machine-then-human` and unsigned anyway.
+
+## A-026 - DoD 33's settings-names grep compares line numbers
+
+- **Tier:** 3 (the Proof checks more than its sentence promises)
+- **Iteration:** 12 (the Verifier)
+- **First dependent checkpoint:** none
+- **Revert:** nothing to revert
+
+### Question
+
+DoD 33 asks the output of `git grep -n -E '"theme_mode"|...|settings\.preferences_pb' -- app/src/main` at HEAD to equal its output at the base. The four lines are word for word the same; only `di/AppModule.kt`'s line number moved (83 -> 99), because this run added the edits source above it.
+
+### Options Considered
+
+1. Move code in `AppModule.kt` so the line returns to 83 (meaningless churn).
+2. Read the proof as the same names in the same files (the sentence: "the colour and mode choices all survive"; Constraint: never change a stored settings name).
+
+### Taken, and why
+
+(2): the sentence's promise holds (`ThemeColourStoreTest`, `ThemeColourRestartTest`, `ThemeModeRestartTest` green). Criterion 33 is **assumed**; it can carry evidence but not make the run `DONE`.
+
+## A-027 - DoD 29(b)'s compare images for Phases 2 and 3 were never kept
+
+- **Tier:** 3 (a process proof that can no longer be produced)
+- **Iteration:** 12 (the Verifier)
+- **First dependent checkpoint:** none
+- **Revert:** nothing to revert
+
+### Question
+
+DoD 29(b) asks every commit that re-records a picture to add its `_compare.png`. Phases 1b and 5 did (`baseline-diffs/phase1b/`, `phase5/`); Phases 2 and 3 re-recorded pictures 1-6, 10-15, 18-21, 24-27 without keeping them, and the intermediate states they compared no longer exist.
+
+### Options Considered
+
+1. Rebuild Phases 2 and 3's trees to regenerate them (weeks of churn for a picture of a superseded state).
+2. Keep what 29 exists for: the person compares `baseline-diffs/before/` (the 24 base pictures) with `after/` (all 41 at HEAD), which the Verifier wrote; record the gap.
+
+### Taken, and why
+
+(2). Criterion 29 is **assumed** on clause (b); it was `machine-then-human` and unsigned anyway.

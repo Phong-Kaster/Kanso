@@ -23,3 +23,7 @@
 
 ## Iteration 11 - Tier 1: Saved's top shade holds its strength across the top row
 - `SavedScreen.kt` `SCRIM_HOLD` 8 dp -> 64 dp (found by T-012's stricter title-contrast test; DoD 24 failed in dark over a white photo). Four Saved/viewer baselines re-recorded as a consequence; no DoD text changed.
+
+## Iteration 12 (the Verifier) - Tier 1: T-013, T-014, T-015 added; Phases 6 and 7; DONE-candidate cleared
+- The Verifier's greps found production code failing DoD 20(a), 38, R4, R9 (T-013) and four evidence files the DoD reads missing (T-014). The owed fresh-context review of Phases 1-3 ran (no blocking finding); its findings became T-015 (F6 folded into T-013, which owns the file). Phase 6 = T-013 + T-015 (disjoint scopes), Phase 7 = T-014 (describes the final code). No DoD text changed.
+- Tier 3, recorded as assumptions, not applied: A-025 (DoD 20(a) vs 40), A-026 (DoD 33 line number), A-027 (DoD 29(b) compare images of Phases 2-3). Criteria 20, 29, 33 are assumed in `STATE.md`.
