@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Iteration 18 did T-017: pictures 28, 29, 34, 35 re-recorded with the bar; whole set green. PARTIAL-candidate (Tier-3 assumptions A-025..A-027 stop DONE). Next: the Verifier.
+- **Stage:** Iteration 19, the Verifier: every `machine` criterion re-proved, no gap. Run ended `DONE_PARTIAL` (Tier-3 assumptions A-025..A-027; criteria 20, 27-31, 37 await a person, listed in `.harness/ISSUES.md`).
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** none; the Verifier re-proves
-- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Iteration 18)
+- **Next Phase:** none
+- **DONE-candidate:** no. **PARTIAL-candidate:** reported as `DONE_PARTIAL` (Iteration 19)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -45,5 +45,5 @@ Before Iteration 12: none. A-002 to A-024 are "Missing information" readings of 
 
 ## Assumptions
 
-- A-029 (Iteration 18, SHA in the next Iteration): pictures 28, 29, 34, 35 are re-recorded to show the bar DoD 22 promises.
+- A-029 (`45d4023`, revert with `git revert 45d4023`): pictures 28, 29, 34, 35 are re-recorded to show the bar DoD 22 promises.
 - A-002 to A-024 in `ASSUMPTIONS.md`: Back from the tabs, the Camera button, close on a My edits photo, Saved's full-bleed reading, the viewer's button, mark and title, the gallery's camera button, card names, strip contents, permissions, the carousel kind, the bar with the keyboard, the blur fallback, one screen per tool, Replace, tab motion, thumbnails, the hex field and the engine-edit exception, new wording, the ADR, the selected pill's colour, Settings' title, a tab's state. A-001 (every tool one tap) is the owner's decision, not an assumption.

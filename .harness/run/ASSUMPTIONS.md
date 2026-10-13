@@ -652,8 +652,8 @@ DoD 29(b) asks every commit that re-records a picture to add its `_compare.png`.
 
 - **Tier:** 2 (re-recording a reference picture moves the standard it is graded against)
 - **Iteration:** 17 (the checkpoint of the Iteration that re-records them depends on it)
-- **First dependent checkpoint:** the Iteration that does T-017
-- **Revert:** `git revert <that commit>` (its SHA is written here by the Iteration after it)
+- **First dependent checkpoint:** `45d4023` (Iteration 18, T-017)
+- **Revert:** `git revert 45d4023`
 
 ### Question
 

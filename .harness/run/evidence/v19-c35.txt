@@ -1,0 +1,4 @@
+errors 0
+skipped 0
+tests 571
+failures 0

@@ -234,7 +234,7 @@ WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
 WARNING: sun.misc.Unsafe::arrayBaseOffset has been called by androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
 WARNING: Please consider reporting this to the maintainers of class androidx.datastore.preferences.protobuf.UnsafeUtil$MemoryAccessor
 WARNING: sun.misc.Unsafe::arrayBaseOffset will be removed in a future release
-Exception in thread "DefaultDispatcher-worker-2 @coroutine#11047" Exception in thread "DefaultDispatcher-worker-2 @coroutine#11048" Exception in thread "DefaultDispatcher-worker-2 @coroutine#11533" 
+Exception in thread "DefaultDispatcher-worker-2 @coroutine#11069" Exception in thread "DefaultDispatcher-worker-2 @coroutine#11070" Exception in thread "DefaultDispatcher-worker-2 @coroutine#11555" 
 > Task :app:finalizeTestRoborazziDebug SKIPPED
 
 [Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
@@ -245,6 +245,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 3m 24s
+BUILD SUCCESSFUL in 3m 19s
 163 actionable tasks: 2 executed, 161 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

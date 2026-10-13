@@ -55,12 +55,12 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:common:parseDebugLocalResources
 > Task :core:editimage:packageDebugResources
 > Task :core:editimage:parseDebugLocalResources
+> Task :core:common:generateDebugRFile
 > Task :core:imageprocessor:generateDebugResources
-> Task :core:editimage:generateDebugRFile
 > Task :core:imageprocessor:packageDebugResources
+> Task :core:editimage:generateDebugRFile
 > Task :core:imageprocessor:javaPreCompileDebug
 > Task :core:editimage:javaPreCompileDebug
-> Task :core:common:generateDebugRFile
 > Task :core:imageprocessor:parseDebugLocalResources
 > Task :core:gallery:generateDebugResources
 > Task :core:imageprocessor:generateDebugRFile
@@ -69,21 +69,21 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:imageprocessor:bundleLibCompileToJarDebug
 > Task :core:gallery:javaPreCompileDebug
-> Task :core:imagecrop:generateDebugResources
 > Task :core:gallery:parseDebugLocalResources
+> Task :core:imagecrop:generateDebugResources
+> Task :core:gallery:generateDebugRFile
 > Task :core:imagecrop:packageDebugResources
 > Task :core:imagecrop:javaPreCompileDebug
 > Task :core:localml:mergeDebugMlModels
 > Task :core:localml:generateDebugMlModelClass
 > Task :core:localml:javaPreCompileDebug
-> Task :core:imagecrop:parseDebugLocalResources
 > Task :core:overlaybrush:generateDebugResources
-> Task :core:gallery:generateDebugRFile
+> Task :core:imagecrop:parseDebugLocalResources
 > Task :core:overlaybrush:packageDebugResources
-> Task :core:imagecrop:generateDebugRFile
 > Task :core:overlaybrush:javaPreCompileDebug
 > Task :core:overlaybrush:parseDebugLocalResources
 > Task :core:overlaybrush:generateDebugRFile
+> Task :core:imagecrop:generateDebugRFile
 
 > Task :core:imagecrop:compileDebugKotlin
 w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups is enabled by default and specifying this option explicitly is not necessary.
@@ -97,9 +97,9 @@ w: Unable to release compile session, maybe daemon is already down: java.rmi.NoS
 > Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:colorpicker:bundleLibCompileToJarDebug
-> Task :opencv:bundleLibCompileToJarDebug
 > Task :core:imagecrop:bundleLibCompileToJarDebug
 > Task :core:gallery:bundleLibCompileToJarDebug
+> Task :opencv:bundleLibCompileToJarDebug
 
 > Task :core:common:compileDebugKotlin
 w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:18:83 Redundant call of conversion method.
@@ -112,8 +112,8 @@ w: Unable to release compile session, maybe daemon is already down: java.rmi.Unm
 > Task :core:editimage:compileDebugKotlin NO-SOURCE
 > Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:localml:compileDebugKotlin NO-SOURCE
-> Task :core:editimage:bundleLibCompileToJarDebug
 > Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:bundleLibCompileToJarDebug
 > Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
 > Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:overlaybrush:bundleLibCompileToJarDebug
@@ -131,6 +131,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 54s
+BUILD SUCCESSFUL in 55s
 74 actionable tasks: 74 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

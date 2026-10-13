@@ -107,3 +107,11 @@
 - Recover: dirt as before (owner's Foreman skill update, telemetry, archive); left alone.
 - Worker (sonnet) put pictures 28, 29, 34, 35 inside the tab shell with the bar. Compare: exactly those four changed; opened each, bar correct. Re-recorded (A-029). `after/` and `index.md` refreshed; `test-edits.md` line added.
 - Whole set green (`evidence/p9-whole.log`); Roborazzi 41, 0 changed. PARTIAL-candidate recorded. Report: CONTINUE (Verifier next).
+
+### Iteration 19 - 2026-10-13 (the Verifier: no gap; DONE_PARTIAL)
+- Recover: dirt was the owner's Foreman skill update under `.claude/` (not the engine's; left uncommitted), telemetry (committed) and the untracked `.harness/archive/`; left as before. No decision to consume.
+- Re-proved, fresh (`evidence/v19-verifier.md`): 571 tests = 571 `@Test` lines, 0 failed/skipped; Roborazzi 41 total, 0 changed; lint 0 errors (forced); `assembleDebug`; compile with no `app/src/main` deprecation; badging and dependencies equal the base; material3 1.5.0-beta01; colorpicker builds; every R grep empty; 45 gone test names and 32 M/D test files all in `test-edits.md`.
+- Looked at pictures 28, 29, 34, 35: each now shows the bar and did not show a defect (`index.md`). A-029's SHA (`45d4023`) written.
+- Not driven: the Galaxy A13 (focus `NotificationShade` at 22:22).
+- Wrote the Run 7 checklist for a person into `ISSUES.md` (12 items: criteria 20, 27, 28, 29 in six picture groups, 30, 31, 37).
+- Report: DONE_PARTIAL (Tier-3 A-025..A-027; criteria awaiting a person). No Cleanup Commit; `.harness/run/` stays.

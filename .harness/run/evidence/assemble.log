@@ -160,6 +160,7 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :opencv:writeDebugAarMetadata UP-TO-DATE
 > Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
 > Task :core:common:writeDebugAarMetadata UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
 > Task :core:editimage:writeDebugAarMetadata UP-TO-DATE
 > Task :core:gallery:writeDebugAarMetadata UP-TO-DATE
 > Task :core:imagecrop:writeDebugAarMetadata UP-TO-DATE
@@ -167,7 +168,6 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:localml:writeDebugAarMetadata UP-TO-DATE
 > Task :core:overlaybrush:writeDebugAarMetadata UP-TO-DATE
 > Task :app:checkDebugAarMetadata UP-TO-DATE
-> Task :app:mergeLibDexDebug UP-TO-DATE
 > Task :app:mapDebugSourceSetPaths UP-TO-DATE
 > Task :app:compileDebugNavigationResources UP-TO-DATE
 > Task :app:mergeDebugResources UP-TO-DATE
