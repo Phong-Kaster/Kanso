@@ -1,0 +1,1707 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt
+index 048995d..0b8350c 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt
+@@ -503,18 +503,17 @@ private fun HeroCarousel(
+ 
+ /**
+  * The colours of the banner at [index] in the carousel: the theme's container colours in turn
+- * (primary, secondary, tertiary, then the highest surface container), each with the text colour
++ * (primary, secondary, tertiary, repeating), each with the text colour
+  * made for it, so neighbouring banners differ and every banner stays readable in light and dark
+  * and with any theme colour. No banner has a picture or a fixed colour of its own.
+  */
+ @Composable
+ private fun bannerColors(index: Int): CardColors {
+     val scheme = MaterialTheme.colorScheme
+-    return when (index % 4) {
++    return when (index % 3) {
+         0 -> CardDefaults.cardColors(containerColor = scheme.primaryContainer, contentColor = scheme.onPrimaryContainer)
+         1 -> CardDefaults.cardColors(containerColor = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer)
+-        2 -> CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer)
+-        else -> CardDefaults.cardColors(containerColor = scheme.surfaceContainerHighest, contentColor = scheme.onSurface)
++        else -> CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer)
+     }
+ }
+ 
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+index 7e73236..504fb4a 100644
+--- a/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/AccessibilityWalkTest.kt
+@@ -28,11 +28,15 @@ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.semantics.Role
+ import androidx.compose.ui.semantics.SemanticsNode
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.semantics.getOrNull
+ import androidx.compose.ui.test.SemanticsMatcher
+ import androidx.compose.ui.test.assertIsDisplayed
+ import androidx.compose.ui.test.hasTestTag
+ import androidx.compose.ui.test.junit4.createAndroidComposeRule
+ import androidx.compose.ui.test.onNodeWithTag
++import androidx.compose.ui.test.performTouchInput
++import androidx.compose.ui.test.swipeLeft
+ import androidx.compose.ui.unit.DpSize
+ import androidx.compose.ui.unit.dp
+ import androidx.test.core.app.ApplicationProvider
+@@ -47,7 +51,11 @@ import com.phongkaster.kanso.data.settings.ThemeColour
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.di.ViewModelClearedProbe
+ import com.phongkaster.kanso.gallery.RecordingRegistry
++import com.phongkaster.kanso.navigation.KANSO_CAMERA_BUTTON_TAG
++import com.phongkaster.kanso.navigation.KansoTab
++import com.phongkaster.kanso.navigation.KansoTabShell
+ import com.phongkaster.kanso.navigation.Tool
++import com.phongkaster.kanso.navigation.kansoTabTag
+ import com.phongkaster.kanso.screenshots.FAKE_SCHEME
+ import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
+ import com.phongkaster.kanso.tool.ToolFixtures
+@@ -63,8 +71,14 @@ import com.phongkaster.kanso.ui.camera.CameraViewModel
+ import com.phongkaster.kanso.ui.camera.FlashMode
+ import com.phongkaster.kanso.ui.gallery.GalleryContent
+ import com.phongkaster.kanso.ui.gallery.GalleryUiState
++import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+ import com.phongkaster.kanso.ui.home.HomeContent
+ import com.phongkaster.kanso.ui.home.HomeUiState
++import com.phongkaster.kanso.ui.home.homeBannerTag
++import com.phongkaster.kanso.ui.home.homeCarouselDotTag
++import com.phongkaster.kanso.ui.home.homeTryTag
++import com.phongkaster.kanso.ui.myedits.MyEditsContent
++import com.phongkaster.kanso.ui.myedits.MyEditsUiState
+ import com.phongkaster.kanso.ui.permission.PermissionAccess
+ import com.phongkaster.kanso.ui.saved.SavedContent
+ import com.phongkaster.kanso.ui.saved.SavedPhoto
+@@ -90,45 +104,57 @@ import org.robolectric.annotation.GraphicsMode
+ 
+ /**
+  * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
+- * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
++ * at least 48 dp wide and tall (DoD 25), with [TouchTargetCheck].
+  *
+  * How a state is checked. Each test draws one state in its own window, inside KansoTheme in
+- * light mode: the screen's stateless part (the `...Content` composable, or the nearest public or
+- * internal part where that is private) fed a UiState built here from sample values, or, for the
+- * refused camera, the real screen (see below). No Koin, no permission dialog and no camera is
+- * involved, and no ViewModel apart from the refused camera's. Then the test reads the
+- * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
+- * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
+- * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
+- * nothing) or when any control fails; the failure names the state and, for each failing
+- * control, its test tag, role, text, description and measured size.
++ * light mode with Kanso blue: the screen's stateless part (the `...Content` composable) fed a
++ * UiState built here from sample values, or, for the refused camera, the real screen (see below).
++ * No Koin, no permission dialog and no camera is involved, and no ViewModel apart from the refused
++ * camera's. Then the test reads the merged semantics tree, the one TalkBack reads, takes every
++ * node that can be tapped, toggled or selected, and hands them to [TouchTargetCheck]. It prints
++ * one line per state, `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no
++ * control would prove nothing) or when any control fails; the failure names the state and, for
++ * each failing control, its test tag, role, text, description and measured size.
+  *
+- * The states: Home; the gallery full, partially shared, refused, empty and loading; the editor
+- * with each of the five tools selected, with the photo unreadable and while saving; Saved; the
+- * camera live, after a shot, refused and unavailable; Settings with Custom selected (the
+- * engine's colour picker is then on screen, and [TouchTargetCheck] leaves out what is inside
+- * it, DoD 18's named exception).
++ * The tab states. Home, My edits and Settings are tabs: in the app they are drawn under the
++ * floating tab bar, three tabs and the round Camera button (`nav-camera`). Here each tab state is
++ * drawn inside the app's own frame, `KansoTabShell`, with its tab selected, so the bar is walked
++ * on every tab state, and the test also fails if one of the bar's four controls was not among the
++ * nodes checked.
++ *
++ * The states:
++ * - Home with recent photos, with the carousel brought to each of its four banners in turn (the
++ *   carousel only composes the banners in view, so each banner is swiped to the front, as a finger
++ *   would, and the page dots must say it is the current one); Home empty; Home loading (the
++ *   still placeholder cards);
++ * - My edits with photos, empty and loading;
++ * - the gallery full, partially shared, refused, empty and loading;
++ * - each of the five tool screens with a ready photo, with the photo unreadable, and while saving;
++ * - Saved, and the photo opened from My edits (the same screen in its viewer form);
++ * - the camera live, after a shot, refused and unavailable;
++ * - Settings with Kanso blue, and with Custom selected (the engine's colour picker is then on
++ *   screen, and [TouchTargetCheck] leaves out what is inside it, the DoD's named exception).
+  *
+  * Where a stand-in replaces something the computer cannot provide:
+  * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
+  *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
+  *   description) take their places. Neither is a control, so the check sees the same controls;
+  * - the refused camera is the one state drawn from the real screen, `CameraScreen`, because its
+- *   refused panel (`CameraRefusedPanel`) is private and a hand-drawn copy would miss a control
+- *   later added to it. The screen reaches the state by itself, as in
+- *   `ThemeFollowTest.checkCameraRefused`: its ViewModel holds a [FakeCameraController] (the
+- *   computer has no camera, and with access refused the camera is never connected, so the fake
+- *   is never reached), and its one permission request goes to a [RecordingRegistry], which shows
+- *   no system dialog and answers "denied";
+- * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
+- *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
+- *   spoken name the app gives it.
++ *   refused panel is private and a hand-drawn copy would miss a control later added to it. The
++ *   screen reaches the state by itself, as in `ThemeFollowTest.checkCameraRefused`: its ViewModel
++ *   holds a [FakeCameraController] (the computer has no camera, and with access refused the
++ *   camera is never connected, so the fake is never reached), and its one permission request
++ *   goes to a [RecordingRegistry], which shows no system dialog and answers "denied";
++ * - the photos of the gallery, of Home's recent strip and of My edits are the real thumbnails,
++ *   loaded by Coil from made-up `fake://` addresses that [SolidColourFetcherFactory] turns into
++ *   coloured squares, so each photo keeps the spoken name the app gives it.
+  *
+  * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
+- * anything is drawn) and moved on by hand: the loading states show Material's loading
+- * indicator, which never stops moving, and with the clock running by itself every wait for the
+- * screen to settle would wait for it forever. Nothing is pressed: the refused camera's "denied"
+- * comes from the registry, and the clock is moved a frame at a time until the screen shows it.
++ * anything is drawn) and moved on by hand: the gallery's loading state and the tool screen's
++ * saving state show Material's loading indicator, which never stops moving, and with the clock
++ * running by itself every wait for the screen to settle would wait for it forever. The clock only
++ * runs by itself while Home's carousel is swiped, and Home shows no such indicator (its loading
++ * face is still placeholder cards).
+  *
+  * Two more tests check the check itself on a sample 40 dp icon button with no description (the
+  * DoD's "its own control"): it must be reported.
+@@ -161,14 +187,73 @@ class AccessibilityWalkTest {
+ 
+     // --- Home ------------------------------------------------------------------------------
+ 
+-    /** Home: the carousel of four AI tools and the row of five round tool shortcuts. */
++    /**
++     * Home with recent photos and the carousel on its first banner: the banner and its "Try now",
++     * the five round shortcuts, the arrow to My edits, the recent photo cards and the bar.
++     */
+     @Test
+-    fun home() {
+-        walk("home") {
+-            HomeContent(
+-                state = HOME_STATE,
+-                onToolClick = {},
+-            )
++    fun home_with_recent_photos_on_banner_1() {
++        walkHomeCarouselAt(0)
++    }
++
++    /** Home with recent photos after one swipe: the carousel's second banner is in front. */
++    @Test
++    fun home_with_recent_photos_on_banner_2() {
++        walkHomeCarouselAt(1)
++    }
++
++    /** Home with recent photos after two swipes: the carousel's third banner is in front. */
++    @Test
++    fun home_with_recent_photos_on_banner_3() {
++        walkHomeCarouselAt(2)
++    }
++
++    /** Home with recent photos after three swipes: the carousel's fourth and last banner is in front. */
++    @Test
++    fun home_with_recent_photos_on_banner_4() {
++        walkHomeCarouselAt(3)
++    }
++
++    /** Home on a fresh install: the recent strip shows its short message instead of photos. */
++    @Test
++    fun home_empty() {
++        walkTab("home empty", KansoTab.HOME) {
++            HomeContent(state = HOME_STATE, onToolClick = {})
++        }
++    }
++
++    /** Home while the recent photos are read for the first time: still placeholder cards. */
++    @Test
++    fun home_loading() {
++        walkTab("home loading", KansoTab.HOME) {
++            HomeContent(state = HOME_STATE.copy(recentLoading = true), onToolClick = {})
++        }
++    }
++
++    // --- My edits --------------------------------------------------------------------------
++
++    /** My edits with twelve saved photos: every tile and the bar. */
++    @Test
++    fun my_edits_with_photos() {
++        useSolidColourThumbnails()
++        walkTab("my edits with photos", KansoTab.MY_EDITS) {
++            MyEditsContent(state = MyEditsUiState(photos = photos(), loading = false), onPhotoClick = {})
++        }
++    }
++
++    /** My edits with nothing saved yet: the message has no control, so only the bar is walked. */
++    @Test
++    fun my_edits_empty() {
++        walkTab("my edits empty", KansoTab.MY_EDITS) {
++            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = false), onPhotoClick = {})
++        }
++    }
++
++    /** My edits while the saved photos are read: the still skeleton tiles and the bar. */
++    @Test
++    fun my_edits_loading() {
++        walkTab("my edits loading", KansoTab.MY_EDITS) {
++            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = true), onPhotoClick = {})
+         }
+     }
+ 
+@@ -245,89 +330,116 @@ class AccessibilityWalkTest {
+         )
+     }
+ 
+-    // --- Editor ----------------------------------------------------------------------------
++    // --- Tool screens ----------------------------------------------------------------------
+ 
+     /**
+-     * Each of the five editor tests below covers one tool; this one fails if a tool is ever added
+-     * to [Tool] without a state of its own here.
++     * Each tool screen state below covers one tool; this one fails if a tool is ever added to
++     * [Tool] without its three states (ready, unreadable, saving) here.
+      */
+     @Test
+-    fun every_tool_has_its_own_editor_state() {
+-        assertEquals(
+-            "Each tool needs an editor test of its own in this class",
+-            Tool.entries.toSet(),
+-            EDITOR_TOOLS_WALKED.toSet(),
+-        )
++    fun every_tool_has_its_own_tool_screen_states() {
++        val expected = Tool.entries.toSet()
++        assertEquals("Each tool needs a 'ready' test of its own in this class", expected, TOOLS_WALKED_READY.toSet())
++        assertEquals("Each tool needs an 'unreadable' test of its own in this class", expected, TOOLS_WALKED_UNREADABLE.toSet())
++        assertEquals("Each tool needs a 'saving' test of its own in this class", expected, TOOLS_WALKED_SAVING.toSet())
+     }
+ 
+-    /** The editor on Edit with a photo: back, Save and the five toolbar toggles. */
++    /** The Edit screen with a ready photo: Back, "Replace" and Save. */
+     @Test
+-    fun editor_with_edit_selected() {
+-        walkEditorWith(Tool.EDIT)
++    fun tool_screen_edit_ready() {
++        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+     }
+ 
+-    /** The editor on Remove background with a photo. */
++    /** The Remove background screen with a ready photo. */
+     @Test
+-    fun editor_with_remove_background_selected() {
+-        walkEditorWith(Tool.REMOVE_BACKGROUND)
++    fun tool_screen_remove_background_ready() {
++        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+     }
+ 
+-    /** The editor on Enhance with a photo. */
++    /** The Enhance screen with a ready photo. */
+     @Test
+-    fun editor_with_enhance_selected() {
+-        walkEditorWith(Tool.ENHANCE)
++    fun tool_screen_enhance_ready() {
++        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+     }
+ 
+-    /** The editor on Retouch with a photo. */
++    /** The Retouch screen with a ready photo. */
+     @Test
+-    fun editor_with_retouch_selected() {
+-        walkEditorWith(Tool.RETOUCH)
++    fun tool_screen_retouch_ready() {
++        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+     }
+ 
+-    /** The editor on Artistic with a photo. */
++    /** The Artistic screen with a ready photo. */
+     @Test
+-    fun editor_with_artistic_selected() {
+-        walkEditorWith(Tool.ARTISTIC)
++    fun tool_screen_artistic_ready() {
++        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+     }
+ 
+-    /** The editor when the photo cannot be opened: Save is switched off but still named. */
++    /** The Edit screen when the photo cannot be opened: Save is switched off but still named. */
+     @Test
+-    fun editor_with_the_photo_unreadable() {
+-        walk(
+-            "editor photo unreadable",
+-            editorScreen(
+-                ToolUiState(
+-                    tool = Tool.EDIT,
+-                    photoUri = PHOTO_URI,
+-                    photo = ToolUiState.PhotoState.Unreadable,
+-                    save = ToolUiState.SaveState.Idle,
+-                ),
+-            ),
+-        )
++    fun tool_screen_edit_unreadable() {
++        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
++    }
++
++    /** The Remove background screen when the photo cannot be opened. */
++    @Test
++    fun tool_screen_remove_background_unreadable() {
++        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
++    }
++
++    /** The Enhance screen when the photo cannot be opened. */
++    @Test
++    fun tool_screen_enhance_unreadable() {
++        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
++    }
++
++    /** The Retouch screen when the photo cannot be opened. */
++    @Test
++    fun tool_screen_retouch_unreadable() {
++        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
++    }
++
++    /** The Artistic screen when the photo cannot be opened. */
++    @Test
++    fun tool_screen_artistic_unreadable() {
++        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+     }
+ 
+     /**
+-     * The editor while a save runs: Save shows its small loading indicator and "Saving...", and
+-     * the toolbar's toggles are switched off but still named.
++     * The Edit screen while a save runs: Save shows its small loading indicator and "Saving...",
++     * and Save and "Replace" are switched off but still named.
+      */
+     @Test
+-    fun editor_while_saving() {
+-        walk(
+-            "editor saving",
+-            editorScreen(
+-                ToolUiState(
+-                    tool = Tool.EDIT,
+-                    photoUri = PHOTO_URI,
+-                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
+-                    save = ToolUiState.SaveState.Saving,
+-                ),
+-            ),
+-        )
++    fun tool_screen_edit_saving() {
++        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
++    }
++
++    /** The Remove background screen while a save runs. */
++    @Test
++    fun tool_screen_remove_background_saving() {
++        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
++    }
++
++    /** The Enhance screen while a save runs. */
++    @Test
++    fun tool_screen_enhance_saving() {
++        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
++    }
++
++    /** The Retouch screen while a save runs. */
++    @Test
++    fun tool_screen_retouch_saving() {
++        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
++    }
++
++    /** The Artistic screen while a save runs. */
++    @Test
++    fun tool_screen_artistic_saving() {
++        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+     }
+ 
+     // --- Saved -----------------------------------------------------------------------------
+ 
+-    /** Saved with its photo: Share, Edit another and Home. */
++    /** Saved right after a save, with its photo: the round close button, Share and "Edit another". */
+     @Test
+     fun saved() {
+         val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
+@@ -336,6 +448,19 @@ class AccessibilityWalkTest {
+         }
+     }
+ 
++    /** The photo opened from My edits (Saved's viewer form): the round close button, Share and "Edit". */
++    @Test
++    fun photo_opened_from_my_edits() {
++        val state = SavedUiState(
++            photoUri = PHOTO_URI,
++            photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)),
++            viewer = true,
++        )
++        walk("photo opened from my edits") {
++            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
++        }
++    }
++
+     // --- Camera ----------------------------------------------------------------------------
+ 
+     /** The camera before a shot: back, the flash button, the shutter and the lens switch. */
+@@ -380,13 +505,32 @@ class AccessibilityWalkTest {
+     // --- Settings --------------------------------------------------------------------------
+ 
+     /**
+-     * Settings with Custom colour selected, on a phone with wallpaper colours: back, the three
+-     * theme mode rows and the three colour rows. The colour picker below them is the engine's
++     * Settings with Kanso blue selected, on a phone with wallpaper colours: the three theme mode
++     * rows, the three colour rows and the bar.
++     */
++    @Test
++    fun settings_with_kanso_blue_selected() {
++        walkTab("settings kanso blue selected", KansoTab.SETTINGS) {
++            SettingsContent(
++                state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
++                wallpaperColour = WALLPAPER_COLOUR,
++                onThemeModeSelected = {},
++                onKansoBlueChosen = {},
++                onWallpaperChosen = {},
++                onCustomChosen = {},
++                onCustomColourChosen = {},
++            )
++        }
++    }
++
++    /**
++     * Settings with Custom colour selected, on a phone with wallpaper colours: the three theme
++     * mode rows, the three colour rows and the bar. The colour picker below them is the engine's
+      * and is left out by [TouchTargetCheck].
+      */
+     @Test
+     fun settings_with_custom_selected() {
+-        walk("settings custom selected") {
++        walkTab("settings custom selected", KansoTab.SETTINGS) {
+             SettingsContent(
+                 state = SettingsUiState(
+                     themeMode = ThemeMode.System,
+@@ -410,7 +554,7 @@ class AccessibilityWalkTest {
+      *
+      * Its size is not asserted here. Compose widens the touch area of every small tappable node
+      * to the phone's 48 dp minimum by itself and reports that widened area as the node's touch
+-     * bounds, which DoD 18 counts; the next test shows the size half of the check at work.
++     * bounds, which the DoD counts; the next test shows the size half of the check at work.
+      */
+     @Test
+     fun the_check_reports_a_40_dp_icon_button_without_a_name() {
+@@ -454,6 +598,44 @@ class AccessibilityWalkTest {
+         assertControlsPass(state)
+     }
+ 
++    /**
++     * Draws [content] as a tab state called [state], under the floating tab bar with [tab]
++     * selected (see [showOnTab]), checks every control in it, and fails if one of the bar's
++     * three tabs or its Camera button was not among the controls checked.
++     */
++    private fun walkTab(state: String, tab: KansoTab, content: @Composable () -> Unit) {
++        showOnTab(tab, content)
++        assertTabStatePasses(state)
++    }
++
++    /**
++     * Draws [content] inside the app's frame, `KansoTabShell`, with the bar shown and [tab]
++     * selected, as the app draws a tab (see [show]). Taps on the bar do nothing.
++     */
++    private fun showOnTab(tab: KansoTab, content: @Composable () -> Unit) {
++        show {
++            KansoTabShell(showBar = true, selected = tab, onTabSelected = {}, onCamera = {}) {
++                content()
++            }
++        }
++    }
++
++    /**
++     * Checks the tab state on screen, called [state] (see [assertControlsPass]), and then that
++     * the bar's three tabs and its Camera button were among the controls checked, so the bar is
++     * walked on every tab state.
++     */
++    private fun assertTabStatePasses(state: String) {
++        val checked = assertControlsPass(state)
++        val tags = checked.mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
++        val missing = BAR_TAGS.filterNot { it in tags }
++        assertTrue(
++            "a11y $state: the bar's controls $missing were not among the controls checked " +
++                "(checked tags: $tags)",
++            missing.isEmpty(),
++        )
++    }
++
+     /**
+      * Draws [content] inside KansoTheme in light mode with the test clock paused, then moves the
+      * clock on by [SETTLE_MS] and runs the main thread's queue, so the state is laid out and
+@@ -467,15 +649,21 @@ class AccessibilityWalkTest {
+                 content()
+             }
+         }
++        settle()
++    }
++
++    /** Moves the paused clock on by [SETTLE_MS] and runs the main thread's queue. */
++    private fun settle() {
+         compose.mainClock.advanceTimeBy(SETTLE_MS)
+         shadowOf(Looper.getMainLooper()).idle()
+     }
+ 
+     /**
+      * Reads the merged semantics tree of the state on screen, called [state] in the messages,
+-     * prints how many controls were checked, and fails if there were none or if any failed.
++     * prints how many controls were checked, fails if there were none or if any failed, and
++     * returns the controls checked.
+      */
+-    private fun assertControlsPass(state: String) {
++    private fun assertControlsPass(state: String): List<SemanticsNode> {
+         val nodes = mergedControls()
+         val checked = TouchTargetCheck.controlsToCheck(nodes)
+         println("a11y $state: ${checked.size} nodes checked")
+@@ -487,11 +675,12 @@ class AccessibilityWalkTest {
+         )
+         val violations = TouchTargetCheck.violations(nodes, compose.density)
+         assertTrue(
+-            "a11y $state: ${violations.size} of ${checked.size} controls fail DoD 18 " +
++            "a11y $state: ${violations.size} of ${checked.size} controls fail DoD 25 " +
+                 "(a spoken name, at least ${TouchTargetCheck.MIN_SIZE} each way):\n" +
+                 violations.joinToString("\n"),
+             violations.isEmpty(),
+         )
++        return checked
+     }
+ 
+     /**
+@@ -501,19 +690,54 @@ class AccessibilityWalkTest {
+     private fun mergedControls(): List<SemanticsNode> =
+         compose.onAllNodes(IS_CONTROL, useUnmergedTree = false).fetchSemanticsNodes()
+ 
+-    /** Checks the editor on [tool] with a photo shown and nothing said about saving. */
+-    private fun walkEditorWith(tool: Tool) {
+-        walk(
+-            "editor ${tool.name}",
+-            editorScreen(
+-                ToolUiState(
+-                    tool = tool,
+-                    photoUri = PHOTO_URI,
+-                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
+-                    save = ToolUiState.SaveState.Idle,
+-                ),
+-            ),
++    /**
++     * Draws Home with recent photos on the Home tab, brings the carousel's banner at [index] to
++     * the front by swiping it [index] times, checks that the page dots say so and that the
++     * banner and its "Try now" are composed, then walks the state.
++     *
++     * The swipe needs the clock to run: a swipe is a stream of touch events over time, and the
++     * carousel then settles on its spring. Home shows nothing that moves forever (its skeleton
++     * stands still outside the stateful screen), so the clock is let run by itself while swiping
++     * and paused again afterwards.
++     */
++    private fun walkHomeCarouselAt(index: Int) {
++        useSolidColourThumbnails()
++        showOnTab(KansoTab.HOME) {
++            HomeContent(state = HOME_WITH_PHOTOS, onToolClick = {})
++        }
++        compose.mainClock.autoAdvance = true
++        repeat(index) {
++            // A slow drag of under one banner's width: one banner forward, not a fling past it.
++            compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput {
++                swipeLeft(startX = width * 0.85f, endX = width * 0.4f, durationMillis = 1_000)
++            }
++            compose.waitForIdle()
++        }
++        compose.mainClock.autoAdvance = false
++        settle()
++
++        val current = compose.onNodeWithTag(homeCarouselDotTag(index)).fetchSemanticsNode()
++        assertTrue(
++            "After $index swipe(s) the carousel must show banner ${index + 1} in front",
++            current.config.getOrNull(SemanticsProperties.StateDescription) != null,
+         )
++        val tool = HOME_WITH_PHOTOS.carouselTools[index]
++        compose.onNodeWithTag(homeBannerTag(tool)).assertIsDisplayed()
++        compose.onNodeWithTag(homeTryTag(tool)).assertIsDisplayed()
++        assertTabStatePasses("home with recent photos, banner ${index + 1}")
++    }
++
++    /** Checks the screen of [tool] with its photo at [photo] and its save at [save]. */
++    private fun walkToolScreen(tool: Tool, photo: ToolUiState.PhotoState, save: ToolUiState.SaveState) {
++        val face = when {
++            save == ToolUiState.SaveState.Saving -> "saving"
++            photo == ToolUiState.PhotoState.Unreadable -> "photo unreadable"
++            else -> "ready"
++        }
++        val state = ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = photo, save = save)
++        walk("tool screen ${tool.name} $face") {
++            ToolContent(state = state, onBack = {}, onSave = {}, onReplace = {})
++        }
+     }
+ 
+     /**
+@@ -534,11 +758,6 @@ class AccessibilityWalkTest {
+         )
+     }
+ 
+-    /** Returns the editor's stateless part for [state], every tap doing nothing. */
+-    private fun editorScreen(state: ToolUiState): @Composable () -> Unit = {
+-        ToolContent(state = state, onBack = {}, onSave = {})
+-    }
+-
+     /**
+      * Returns the camera's top bar around its stateless content for [state]. The live picture is
+      * a plain box; when [shot] is given, it is shown as the photo just taken, with the real shot
+@@ -616,8 +835,7 @@ class AccessibilityWalkTest {
+             shadowOf(Looper.getMainLooper()).idle()
+             compose.onAllNodes(hasTestTag(CAMERA_REFUSED_TAG)).fetchSemanticsNodes().isNotEmpty()
+         }
+-        compose.mainClock.advanceTimeBy(SETTLE_MS)
+-        shadowOf(Looper.getMainLooper()).idle()
++        settle()
+ 
+         compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
+         compose.onNodeWithTag(CAMERA_SETTINGS_BUTTON_TAG).assertIsDisplayed()
+@@ -625,7 +843,7 @@ class AccessibilityWalkTest {
+ 
+     /**
+      * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
+-     * runs every step on the calling thread, so the gallery's thumbnails load without files.
++     * runs every step on the calling thread, so the thumbnails load without files.
+      */
+     private fun useSolidColourThumbnails() {
+         Coil.setImageLoader(
+@@ -709,7 +927,7 @@ class AccessibilityWalkTest {
+          */
+         const val REFUSED_TIMEOUT_MS = 10_000L
+ 
+-        /** The made-up Uri the editor and Saved states say their photo came from. */
++        /** The made-up Uri the tool screen and Saved states say their photo came from. */
+         const val PHOTO_URI = "content://media/external/images/media/42"
+ 
+         /** The test tag of the sample icon button the check is tried on. */
+@@ -721,20 +939,35 @@ class AccessibilityWalkTest {
+         /** A custom seed colour for the Settings state, a deep green, as an ARGB number. */
+         val CUSTOM_SEED_ARGB = 0xFF2E7D32.toInt()
+ 
+-        /** A wallpaper colour for the Settings state, so its wallpaper row is drawn too. */
++        /** A wallpaper colour for the Settings states, so their wallpaper row is drawn too. */
+         val WALLPAPER_COLOUR = Color(0xFF8B5000)
+ 
+         /** Matches a node that can be tapped, toggled or selected (see [TouchTargetCheck.isControl]). */
+         val IS_CONTROL = SemanticsMatcher("can be tapped, toggled or selected") { TouchTargetCheck.isControl(it) }
+ 
+-        /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them. */
++        /** The test tags of the floating bar's controls: its three tabs and the Camera button. */
++        val BAR_TAGS: List<String> = KansoTab.entries.map { kansoTabTag(it) } + KANSO_CAMERA_BUTTON_TAG
++
++        /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them, with no recent photo. */
+         val HOME_STATE = HomeUiState(
+             carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+             shortcutTools = Tool.entries,
++            recentPhotos = emptyList(),
++            recentLoading = false,
+         )
+ 
+-        /** The tools the five editor tests walk, one each; see `every_tool_has_its_own_editor_state`. */
+-        val EDITOR_TOOLS_WALKED = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
++        /** Home with five recent photos in its strip. */
++        val HOME_WITH_PHOTOS: HomeUiState
++            get() = HOME_STATE.copy(recentPhotos = photos().take(5))
++
++        /** The tools the five "ready" tool screen tests walk, one each. */
++        val TOOLS_WALKED_READY = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
++
++        /** The tools the five "unreadable" tool screen tests walk, one each. */
++        val TOOLS_WALKED_UNREADABLE = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
++
++        /** The tools the five "saving" tool screen tests walk, one each. */
++        val TOOLS_WALKED_SAVING = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+ 
+         /** A camera that is open and ready, with its flash on auto and a second lens. */
+         val READY_CAMERA = CameraState(
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt b/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt
+index 146199b..d5ac876 100644
+--- a/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/TouchTargetCheck.kt
+@@ -12,8 +12,8 @@ import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
+ import java.util.Locale
+ 
+ /**
+- * The one accessibility check every screen state is put through (DoD 18): a control that does
+- * something must have a spoken name and be at least [MIN_SIZE] wide and tall.
++ * The one accessibility check every screen state is put through (DoD 25, DoD 18 before it): a
++ * control that does something must have a spoken name and be at least [MIN_SIZE] wide and tall.
+  *
+  * What counts as a control. The check reads semantics nodes, the description of the screen that
+  * screen readers such as TalkBack and Compose tests read instead of pixels. A node is a control
+@@ -25,17 +25,18 @@ import java.util.Locale
+  * The spoken name is the node's text or its content description, whichever is not blank. The
+  * size is the largest of three measures, in each direction:
+  * - `size`, the node's own laid-out size, never cut by the screen's edge, so a row scrolled half
+- *   out of view still counts at its real size;
++ *   out of view (or a card of a sideways strip cut by the strip's edge, or a carousel banner
++ *   peeking in at the screen's edge) still counts at its real size;
+  * - `boundsInRoot`, where the node sits on screen, cut to what is visible;
+  * - `touchBoundsInRoot`, the area a finger can hit. Compose widens the touch area of a small
+  *   tappable node to the phone's minimum touch target (48 dp) by itself, and reports the widened
+  *   area here, so a Material icon button drawn at 40 dp still offers a 48 dp target. This is what
+- *   DoD 18 means by "max(boundsInRoot, touchBoundsInRoot)".
++ *   DoD 25 means by "max(boundsInRoot, touchBoundsInRoot)".
+  *
+  * Two kinds of node are left out, each for a stated reason:
+  * - nodes inside the node tagged [CUSTOM_COLOUR_PICKER_TAG]: the engine's colour picker
+  *   (`core/colorpicker`, whose source Kanso may not edit) sets no semantics of its own and draws
+- *   controls under 48 dp, the one named exception of DoD 18;
++ *   controls under 48 dp, the one named exception of DoD 25 (and DoD 18 before it);
+  * - nodes that are not placed on the screen at all (a layout measured them but never put them
+  *   anywhere, such as a button group's "more" button while every button fits). Nobody can see
+  *   or reach such a node, and TalkBack skips it too.
+@@ -69,10 +70,17 @@ object TouchTargetCheck {
+ 
+     /**
+      * Returns the nodes of [nodes] the check applies to: the controls that are placed on the
+-     * screen and are not inside the engine's colour picker (see the KDoc of this object).
++     * screen and are not inside the engine's colour picker (see the KDoc of this object). A
++     * control cut off sideways by a scrolling container (the "Try now" of a banner that only
++     * peeks in beside the carousel's front one) is not on the screen as a whole control, so it
++     * is skipped: its visible part is not what a finger aims at.
+      */
+     fun controlsToCheck(nodes: List<SemanticsNode>): List<SemanticsNode> =
+-        nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) }
++        nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) && !isCutOffSideways(it) }
++
++    /** Tells whether [node]'s visible box is narrower than the box it was laid out with. */
++    private fun isCutOffSideways(node: SemanticsNode): Boolean =
++        node.boundsInRoot.width < node.size.width - 1f
+ 
+     /**
+      * Checks every control of [nodes] (see [controlsToCheck]) and returns one line per control
+diff --git a/app/src/test/java/com/phongkaster/kanso/navigation/ReplaceNavigationTest.kt b/app/src/test/java/com/phongkaster/kanso/navigation/ReplaceNavigationTest.kt
+index 21d68fe..85ed654 100644
+--- a/app/src/test/java/com/phongkaster/kanso/navigation/ReplaceNavigationTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/navigation/ReplaceNavigationTest.kt
+@@ -3,30 +3,54 @@ package com.phongkaster.kanso.navigation
+ import android.Manifest
+ import android.app.Application
+ import android.os.Looper
++import androidx.compose.ui.semantics.SemanticsActions
++import androidx.compose.ui.semantics.getOrNull
+ import androidx.compose.ui.test.SemanticsMatcher
++import androidx.compose.ui.test.assertIsSelected
+ import androidx.compose.ui.test.hasAnyAncestor
+ import androidx.compose.ui.test.hasTestTag
+ import androidx.compose.ui.test.hasText
++import androidx.compose.ui.test.isEnabled
+ import androidx.compose.ui.test.junit4.createEmptyComposeRule
+ import androidx.compose.ui.test.onAllNodesWithTag
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.test.performClick
++import androidx.compose.ui.test.performScrollTo
++import androidx.compose.ui.test.performSemanticsAction
++import androidx.compose.ui.test.performTouchInput
++import androidx.compose.ui.test.swipeLeft
+ import androidx.test.core.app.ActivityScenario
+ import androidx.test.core.app.ApplicationProvider
+ import androidx.test.ext.junit.runners.AndroidJUnit4
+ import com.phongkaster.kanso.MainActivity
+ import com.phongkaster.kanso.R
++import com.phongkaster.kanso.camera.FakeCameraController
+ import com.phongkaster.kanso.data.media.Album
++import com.phongkaster.kanso.data.media.Photo
+ import com.phongkaster.kanso.data.media.PhotoSource
++import com.phongkaster.kanso.data.media.SavedPhotoSource
+ import com.phongkaster.kanso.data.photo.PhotoLoader
+ import com.phongkaster.kanso.gallery.FakePhotoSource
+ import com.phongkaster.kanso.gallery.GalleryGridTest
++import com.phongkaster.kanso.myedits.FakeSavedPhotoSource
+ import com.phongkaster.kanso.tool.FakePhotoLoader
+ import com.phongkaster.kanso.tool.ToolFixtures
++import com.phongkaster.kanso.ui.camera.CAMERA_KEEP_TAG
++import com.phongkaster.kanso.ui.camera.CAMERA_SHUTTER_TAG
++import com.phongkaster.kanso.ui.camera.CameraController
+ import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
+ import com.phongkaster.kanso.ui.gallery.galleryPhotoTag
++import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+ import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
++import com.phongkaster.kanso.ui.home.homeRecentTag
++import com.phongkaster.kanso.ui.home.homeTryTag
++import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
++import com.phongkaster.kanso.ui.myedits.myEditsTileTag
+ import com.phongkaster.kanso.ui.permission.photoPermissionsFor
++import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
++import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
++import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
++import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
+ import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
+ import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
+ import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
+@@ -34,6 +58,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
+ import org.junit.After
+ import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
+ import org.junit.Rule
+ import org.junit.Test
+ import org.junit.runner.RunWith
+@@ -45,16 +70,25 @@ import org.robolectric.annotation.Config
+ 
+ /**
+  * DoD 11, through the app's real navigation: "Replace" on a tool screen goes back to the photo
+- * gallery of the same tool, and the photo picked there opens in the same tool.
++ * gallery of the same tool, whichever way the tool screen was opened, and the photo picked there
++ * opens in the same tool.
+  *
+- * Case (a): from Home, Retouch's gallery, photo 1, then Replace. The gallery titled "Retouch:
+- * choose a photo" is on top again, with no tool screen left; photo 2 there opens the Retouch
+- * screen on photo 2; Replace once more, and one Back from the gallery reaches Home, so Replace
+- * never piled a screen up. A test cannot read the app's back stack, so its shape is read from what
+- * is on screen and from where Back leads.
++ * - (a) Home's carousel swiped to Retouch's banner, "Try now", photo 1, Replace: the gallery titled
++ *   "Retouch: choose a photo" is on top, with no tool screen left; photo 2 there opens the Retouch
++ *   screen on photo 2; Replace once more, and one Back from the gallery reaches Home.
++ * - (b) Home's newest recent photo (`home-recent-0`) opens the Edit screen; Replace shows the Edit
++ *   gallery, and one Back reaches Home.
++ * - (c) The Camera button, shutter, Keep: the Edit screen; Replace shows the Edit gallery, and one
++ *   Back reaches Home.
++ * - (d) My edits, a tile, the viewer's "Edit": the Edit screen; Replace shows the Edit gallery;
++ *   Back shows the photo screen (the viewer) again, and another Back shows My edits.
++ * - Two taps on Replace before the screen can change open one gallery, not two.
+  *
+- * Photo and camera access are granted, and the photo library and the photo decoder are swapped
+- * for fakes before the app starts (Home's ViewModel keeps the sources it was built with).
++ * A test cannot read the app's back stack, so its shape is read from what is on screen and from
++ * where Back leads. Photo and camera access are granted, and the photo library, the saved photos,
++ * the photo decoder and the camera are swapped for fakes before the app starts
++ * (`createEmptyComposeRule`, `loadKoinModules`, then `ActivityScenario.launch`): Home's and My
++ * edits' ViewModels keep the sources they were built with, so a later swap would never reach them.
+  */
+ @RunWith(AndroidJUnit4::class)
+ @Config(sdk = [35])
+@@ -75,55 +109,221 @@ class ReplaceNavigationTest {
+     }
+ 
+     /**
+-     * Case (a): Retouch gallery, photo 1, Replace: the Retouch gallery is on top; photo 2 gives
+-     * the Retouch screen on photo 2; Replace again, and one Back reaches Home.
++     * Case (a): Retouch's "Try now" in the carousel, photo 1, Replace: the Retouch gallery is on
++     * top; photo 2 gives the Retouch screen on photo 2; Replace again, and one Back reaches Home.
+      */
+     @Test
+     fun replace_on_the_retouch_screen_returns_to_the_retouch_gallery() {
+-        shadowOf(app).grantPermissions(Manifest.permission.CAMERA, *photoPermissionsFor(35).toTypedArray())
+-        val photos = GalleryGridTest.manyPhotos(3)
+         // Photo 1 is the newest, so it is the first cell of the gallery; photo 2 the second.
+-        val (photo1, photo2) = photos
+-        loadKoinModules(
+-            module {
+-                single<PhotoSource> { FakePhotoSource(albums = listOf(Album(1L, "A")), allPhotos = photos) }
+-                single<PhotoLoader> { FakePhotoLoader(app, ToolFixtures.gradient(60, 40)) }
+-            },
+-        )
+-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+-            openToolGallery(compose, Tool.RETOUCH)
+-            waitForRetouchGallery(photo1.id)
++        val (photo1, photo2) = galleryPhotos
++        launchWithFakes { scenario ->
++            bringRetouchBannerToFront()
++            // The banner's own click handler, as a screen reader's double tap would call it: the
++            // carousel sits in Home's scrolling column, where a touch could land on the tab bar.
++            compose.onNodeWithTag(homeTryTag(Tool.RETOUCH)).performSemanticsAction(SemanticsActions.OnClick)
++            waitForGallery(Tool.RETOUCH, photo1.id)
+             compose.onNodeWithTag(galleryPhotoTag(photo1.id)).performClick()
+-            waitForRetouchScreenOn(photo1.uri)
++            waitForToolScreenOn(Tool.RETOUCH, photo1.uri)
+ 
+             // Replace: back to the Retouch gallery, the tool screen gone.
+             compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
+-            waitForRetouchGallery(photo2.id)
++            waitForGallery(Tool.RETOUCH, photo2.id)
+             assertEquals(0, count(TOOL_SCREEN_TAG))
+             assertEquals(1, count(GALLERY_SCREEN_TAG))
+ 
+             // The photo picked there opens in the same tool.
+             compose.onNodeWithTag(galleryPhotoTag(photo2.id)).performClick()
+-            waitForRetouchScreenOn(photo2.uri)
++            waitForToolScreenOn(Tool.RETOUCH, photo2.uri)
+ 
+             // Replace again, then one Back from the gallery reaches Home.
+             compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
+-            waitForRetouchGallery(photo1.id)
+-            assertEquals(0, count(TOOL_SCREEN_TAG))
++            waitForGallery(Tool.RETOUCH, photo1.id)
++            assertOneBackReachesHome(scenario)
++        }
++    }
++
++    /**
++     * Case (b): Home's newest recent photo opens the Edit screen on it; Replace shows the Edit
++     * gallery, and one Back reaches Home.
++     */
++    @Test
++    fun replace_on_the_edit_screen_from_a_recent_photo_returns_to_the_edit_gallery() {
++        val newest = editedPhotos.first()
++        launchWithFakes { scenario ->
++            waitForHome(compose)
++            waitFor { count(homeRecentTag(0)) > 0 }
++            compose.onNodeWithTag(homeRecentTag(0)).tapAboveBar()
++            waitForToolScreenOn(Tool.EDIT, newest.uri)
++
++            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
++            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
++            assertEquals(1, count(GALLERY_SCREEN_TAG))
++            assertOneBackReachesHome(scenario)
++        }
++    }
++
++    /**
++     * Case (c): the Camera button beside the tab bar, the shutter, Keep: the Edit screen; Replace
++     * shows the Edit gallery, and one Back reaches Home (the camera is not left below it).
++     */
++    @Test
++    fun replace_on_the_edit_screen_from_the_camera_returns_to_the_edit_gallery() {
++        launchWithFakes { scenario ->
++            waitForHome(compose)
++            tapCameraButton(compose)
++            waitFor {
++                compose.onAllNodes(hasTestTag(CAMERA_SHUTTER_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
++            }
++            compose.onNodeWithTag(CAMERA_SHUTTER_TAG).performClick()
++            waitFor { count(CAMERA_KEEP_TAG) > 0 }
++            compose.onNodeWithTag(CAMERA_KEEP_TAG).performClick()
++            waitFor { count(TOOL_SCREEN_TAG) > 0 && count(CAMERA_KEEP_TAG) == 0 }
++            waitFor { count(TOOL_IMAGE_TAG) > 0 }
++            assertToolTitle(Tool.EDIT)
++
++            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
++            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
++            assertEquals(1, count(GALLERY_SCREEN_TAG))
++            assertOneBackReachesHome(scenario)
++        }
++    }
++
++    /**
++     * Case (d): My edits, tile 0, the viewer's "Edit": the Edit screen on that photo; Replace shows
++     * the Edit gallery; Back shows the photo screen on the same photo, and another Back shows My
++     * edits, its tab selected.
++     */
++    @Test
++    fun replace_on_the_edit_screen_from_my_edits_returns_to_the_edit_gallery_then_the_viewer() {
++        val photo = editedPhotos.first()
++        launchWithFakes { scenario ->
++            waitForHome(compose)
++            openTab(compose, KansoTab.MY_EDITS)
++            waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(myEditsTileTag(0)) > 0 }
++            compose.onNodeWithTag(myEditsTileTag(0)).tapAboveBar()
++            waitFor { count(SAVED_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
++            waitFor { count(SAVED_EDIT_ANOTHER_TAG) > 0 }
++            compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).performClick()
++            waitForToolScreenOn(Tool.EDIT, photo.uri)
++
++            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
++            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
++            assertEquals(1, count(GALLERY_SCREEN_TAG))
++
++            // Back: the photo screen the Edit screen was opened from, on the same photo.
+             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+-            waitFor { count(GALLERY_SCREEN_TAG) == 0 }
++            val viewerPhoto = hasTestTag(SAVED_PHOTO_TAG) and SemanticsMatcher.expectValue(SAVED_PHOTO_URI_KEY, photo.uri)
++            waitFor {
++                count(GALLERY_SCREEN_TAG) == 0 && count(SAVED_SCREEN_TAG) > 0 &&
++                    compose.onAllNodes(viewerPhoto).fetchSemanticsNodes().isNotEmpty()
++            }
+             assertEquals(0, count(TOOL_SCREEN_TAG))
+-            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
++            assertEquals(0, count(MY_EDITS_SCREEN_TAG))
++
++            // Another Back: My edits, with its tab selected.
++            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
++            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
++            waitFor { count(kansoTabTag(KansoTab.MY_EDITS)) > 0 }
++            compose.onNodeWithTag(kansoTabTag(KansoTab.MY_EDITS)).assertIsSelected()
++            assertEquals(0, count(HOME_SCREEN_TAG))
+             scenario.onActivity { assertFalse(it.isFinishing) }
+         }
+     }
+ 
+     /**
+-     * Waits until the gallery titled "Retouch: choose a photo" is the only screen of its kind,
+-     * no tool screen is left, and the photo [photoId] is among its cells.
++     * A double tap on Replace opens one gallery. The two taps are sent through Replace's own click
++     * handler inside one main-thread task, so the screen cannot change between them: the worst
++     * case of a fast double tap. Afterwards exactly one gallery is shown, no tool screen is left,
++     * and one Back reaches Home, so the second tap piled nothing up.
+      */
+-    private fun waitForRetouchGallery(photoId: Long) {
+-        val title = app.getString(R.string.gallery_title, app.getString(R.string.tool_retouch))
++    @Test
++    fun a_double_tap_on_replace_opens_one_gallery() {
++        val newest = editedPhotos.first()
++        launchWithFakes { scenario ->
++            waitForHome(compose)
++            waitFor { count(homeRecentTag(0)) > 0 }
++            compose.onNodeWithTag(homeRecentTag(0)).tapAboveBar()
++            waitForToolScreenOn(Tool.EDIT, newest.uri)
++
++            val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG).fetchSemanticsNode()
++            val click = checkNotNull(replace.config.getOrNull(SemanticsActions.OnClick)?.action) {
++                "Replace has no click action"
++            }
++            compose.runOnUiThread {
++                click()
++                click()
++            }
++
++            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
++            compose.waitForIdle()
++            assertEquals("A double tap on Replace must open one gallery", 1, count(GALLERY_SCREEN_TAG))
++            assertOneBackReachesHome(scenario)
++        }
++    }
++
++    // --- Helpers -----------------------------------------------------------------------------
++
++    /**
++     * Grants photo and camera access, loads the fakes ([galleryPhotos] as the photo library,
++     * [editedPhotos] as Kanso's saved photos, the fake decoder and the fake camera), starts the
++     * app and calls [body] with the scenario.
++     */
++    private fun launchWithFakes(body: (ActivityScenario<MainActivity>) -> Unit) {
++        shadowOf(app).grantPermissions(Manifest.permission.CAMERA, *photoPermissionsFor(35).toTypedArray())
++        loadKoinModules(
++            module {
++                single<PhotoSource> { FakePhotoSource(albums = listOf(Album(1L, "A")), allPhotos = galleryPhotos) }
++                single<SavedPhotoSource> { FakeSavedPhotoSource(editedPhotos) }
++                single<PhotoLoader> { FakePhotoLoader(app, ToolFixtures.gradient(60, 40)) }
++                factory<CameraController> { FakeCameraController() }
++            },
++        )
++        ActivityScenario.launch(MainActivity::class.java).use { scenario -> body(scenario) }
++    }
++
++    /**
++     * Swipes Home's carousel to the left, as a finger would, until Retouch's banner (the third,
++     * so two swipes from the first) is in front: its "Try now" wholly inside the carousel. Each
++     * swipe moves exactly one banner (the carousel's single-advance fling). Two more swipes are
++     * allowed in case one of the first two did not register, then the test fails.
++     */
++    private fun bringRetouchBannerToFront() {
++        waitForHome(compose)
++        waitFor { count(HOME_CAROUSEL_TAG) > 0 }
++        compose.onNodeWithTag(HOME_CAROUSEL_TAG).performScrollTo()
++        repeat(RETOUCH_SWIPES) { swipeCarouselLeft() }
++        repeat(SPARE_SWIPES) { if (!retouchTryNowInFront()) swipeCarouselLeft() }
++        assertTrue("Retouch's banner should be in front after swiping", retouchTryNowInFront())
++    }
++
++    /** Swipes Home's carousel one banner to the left and lets it settle. */
++    private fun swipeCarouselLeft() {
++        compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput {
++            swipeLeft(startX = width * 0.85f, endX = width * 0.4f, durationMillis = 1_000)
++        }
++        compose.waitForIdle()
++        shadowOf(Looper.getMainLooper()).idle()
++    }
++
++    /**
++     * Tells whether Retouch's "Try now" is composed and lies wholly inside the carousel, from its
++     * laid-out position and size (`positionInRoot`, which is not clipped to what is visible).
++     */
++    private fun retouchTryNowInFront(): Boolean {
++        val tryNow = compose.onAllNodesWithTag(homeTryTag(Tool.RETOUCH)).fetchSemanticsNodes().singleOrNull()
++            ?: return false
++        val carousel = compose.onNodeWithTag(HOME_CAROUSEL_TAG).fetchSemanticsNode()
++        val left = tryNow.positionInRoot.x
++        val right = left + tryNow.size.width
++        return left >= carousel.positionInRoot.x - 1f && right <= carousel.positionInRoot.x + carousel.size.width + 1f
++    }
++
++    /**
++     * Waits until the gallery titled "<tool>: choose a photo" is shown, no tool screen is left,
++     * and the photo [photoId] is among its cells.
++     */
++    private fun waitForGallery(tool: Tool, photoId: Long) {
++        val title = app.getString(R.string.gallery_title, app.getString(tool.labelRes))
+         val titled = hasText(title) and hasAnyAncestor(hasTestTag(GALLERY_SCREEN_TAG))
+         waitFor {
+             count(TOOL_SCREEN_TAG) == 0 &&
+@@ -133,17 +333,35 @@ class ReplaceNavigationTest {
+     }
+ 
+     /**
+-     * Waits until the Retouch screen shows the photo [photoUri] with no gallery left, and checks
+-     * that its title names Retouch.
++     * Waits until [tool]'s screen shows the photo [photoUri] with no gallery left, and checks that
++     * its title names [tool].
+      */
+-    private fun waitForRetouchScreenOn(photoUri: String) {
++    private fun waitForToolScreenOn(tool: Tool, photoUri: String) {
+         val shownPhoto = hasTestTag(TOOL_IMAGE_TAG) and SemanticsMatcher.expectValue(TOOL_PHOTO_URI_KEY, photoUri)
+         waitFor { count(GALLERY_SCREEN_TAG) == 0 && compose.onAllNodes(shownPhoto).fetchSemanticsNodes().isNotEmpty() }
+         assertEquals(1, count(TOOL_SCREEN_TAG))
+-        val title = hasText(app.getString(R.string.tool_retouch)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG))
++        assertToolTitle(tool)
++    }
++
++    /** Checks that the tool screen's title is [tool]'s name, shown exactly once. */
++    private fun assertToolTitle(tool: Tool) {
++        val title = hasText(app.getString(tool.labelRes)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG))
+         assertEquals(1, compose.onAllNodes(title).fetchSemanticsNodes().size)
+     }
+ 
++    /**
++     * With a gallery on top and no tool screen left, presses Back once and checks that Home is
++     * shown, with no gallery or tool screen, and that the app is still open.
++     */
++    private fun assertOneBackReachesHome(scenario: ActivityScenario<MainActivity>) {
++        assertEquals(0, count(TOOL_SCREEN_TAG))
++        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
++        waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
++        assertEquals(0, count(TOOL_SCREEN_TAG))
++        compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
++        scenario.onActivity { assertFalse(it.isFinishing) }
++    }
++
+     /**
+      * Waits up to ten seconds of real time for [condition], letting the main thread run in
+      * between: the gallery's read and the tool screen's decode post their results there, and
+@@ -158,4 +376,30 @@ class ReplaceNavigationTest {
+ 
+     /** Counts the nodes carrying [tag]. */
+     private fun count(tag: String): Int = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size
++
++    /** The photos and numbers the tests share. */
++    private companion object {
++        /** Left swipes from the first banner to Retouch's, the third. */
++        const val RETOUCH_SWIPES = 2
++
++        /** Extra swipes allowed if one did not register. */
++        const val SPARE_SWIPES = 2
++
++        /** The photo library: three photos, newest first, with ids 1 to 3. */
++        val galleryPhotos: List<Photo> = GalleryGridTest.manyPhotos(3)
++
++        /**
++         * The photos Kanso has saved, newest first, as Home's strip and My edits list them. Their
++         * Uris differ from the library's, so a screen on one cannot pass for the other.
++         */
++        val editedPhotos: List<Photo> = (0 until 3).map { i ->
++            Photo(
++                id = 300L + i,
++                uri = "content://media/external/images/media/${300 + i}",
++                name = "Kanso_$i.jpg",
++                albumId = 2L,
++                modifiedSeconds = 1_791_000_000L - i * 3_600L,
++            )
++        }
++    }
+ }
+diff --git a/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt b/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt
+index 8d59ebe..02587e6 100644
+--- a/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/theme/ThemeFollowTest.kt
+@@ -28,7 +28,10 @@ import androidx.compose.ui.test.isEnabled
+ import androidx.compose.ui.test.junit4.createAndroidComposeRule
+ import androidx.compose.ui.test.onNodeWithTag
+ import androidx.compose.ui.test.onRoot
++import androidx.compose.ui.test.performTouchInput
++import androidx.compose.ui.test.swipeLeft
+ import androidx.compose.ui.unit.IntSize
++import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.toSize
+ import androidx.test.core.app.ApplicationProvider
+ import androidx.test.ext.junit.runners.AndroidJUnit4
+@@ -54,10 +57,21 @@ import com.phongkaster.kanso.ui.gallery.GALLERY_BODY_TAG
+ import com.phongkaster.kanso.ui.gallery.GALLERY_GRID_TAG
+ import com.phongkaster.kanso.ui.gallery.GalleryContent
+ import com.phongkaster.kanso.ui.gallery.GalleryUiState
++import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
++import com.phongkaster.kanso.ui.home.HOME_RECENT_EMPTY_TAG
++import com.phongkaster.kanso.ui.home.HOME_RECENT_TAG
+ import com.phongkaster.kanso.ui.home.HomeContent
+ import com.phongkaster.kanso.ui.home.HomeUiState
++import com.phongkaster.kanso.ui.home.homeBannerTag
++import com.phongkaster.kanso.ui.home.homeCarouselDotTag
++import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
++import com.phongkaster.kanso.ui.myedits.MyEditsContent
++import com.phongkaster.kanso.ui.myedits.MyEditsUiState
++import com.phongkaster.kanso.ui.myedits.myEditsTileTag
+ import com.phongkaster.kanso.ui.permission.PermissionAccess
+ import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
++import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
++import com.phongkaster.kanso.ui.saved.SAVED_SCRIM_TAG
+ import com.phongkaster.kanso.ui.saved.SavedContent
+ import com.phongkaster.kanso.ui.saved.SavedPhoto
+ import com.phongkaster.kanso.ui.saved.SavedUiState
+@@ -118,6 +132,18 @@ import org.robolectric.annotation.GraphicsMode
+  * colours by design (the picker card is DoD 16's one named exception), so no pixel is read
+  * there; the Saved success mark is the theme's primary colour, so its row is sampled at the
+  * screen's left edge, well clear of it.
++ *
++ * Run 7's screens and states (DoD 23) are checked the same way, with Kanso blue in Light and in
++ * Dark: Home with recent photos and Home empty, My edits with photos and empty, each of the five
++ * tool screens with a ready photo, and the photo opened from My edits. Home and My edits have no
++ * top bar, so their top pixel (above Home's title, above My edits' first row) must be the
++ * scheme's `background`, as their background pixel must. The original fourteen checks are kept
++ * as they were.
++ *
++ * Home's carousel banners are checked too: each of the four is swiped to the front in turn (the
++ * carousel only composes the banners in view), and one pixel inside its padding must equal the
++ * scheme's `primaryContainer`, `secondaryContainer` or `tertiaryContainer`, for Kanso blue and
++ * for a custom #2E7D32, each in Light and in Dark.
+  */
+ @RunWith(AndroidJUnit4::class)
+ @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@@ -229,6 +255,152 @@ class ThemeFollowTest {
+         checkCameraLive(ThemeMode.Dark)
+     }
+ 
++    // --- Run 7's screens and states (DoD 23) -----------------------------------------------
++
++    /** Home with recent photos in light mode: light top and background beside the photo strip. */
++    @Test
++    fun home_with_recent_photos_follows_the_light_theme() {
++        checkHomeWithTop(ThemeMode.Light, withPhotos = true)
++    }
++
++    /** Home with recent photos in dark mode: dark top and background beside the photo strip. */
++    @Test
++    fun home_with_recent_photos_follows_the_dark_theme() {
++        checkHomeWithTop(ThemeMode.Dark, withPhotos = true)
++    }
++
++    /** Home with no recent photo in light mode: light top and background beside the message. */
++    @Test
++    fun home_empty_follows_the_light_theme() {
++        checkHomeWithTop(ThemeMode.Light, withPhotos = false)
++    }
++
++    /** Home with no recent photo in dark mode: dark top and background beside the message. */
++    @Test
++    fun home_empty_follows_the_dark_theme() {
++        checkHomeWithTop(ThemeMode.Dark, withPhotos = false)
++    }
++
++    /** My edits with photos in light mode: light top and background beside the grid. */
++    @Test
++    fun my_edits_with_photos_follows_the_light_theme() {
++        checkMyEditsWithPhotos(ThemeMode.Light)
++    }
++
++    /** My edits with photos in dark mode: dark top and background beside the grid. */
++    @Test
++    fun my_edits_with_photos_follows_the_dark_theme() {
++        checkMyEditsWithPhotos(ThemeMode.Dark)
++    }
++
++    /** My edits with nothing saved in light mode: light top and background beside the message. */
++    @Test
++    fun my_edits_empty_follows_the_light_theme() {
++        checkMyEditsEmpty(ThemeMode.Light)
++    }
++
++    /** My edits with nothing saved in dark mode: dark top and background beside the message. */
++    @Test
++    fun my_edits_empty_follows_the_dark_theme() {
++        checkMyEditsEmpty(ThemeMode.Dark)
++    }
++
++    /** The Edit screen with a ready photo in light mode. */
++    @Test
++    fun tool_screen_edit_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light, Tool.EDIT)
++    }
++
++    /** The Edit screen with a ready photo in dark mode. */
++    @Test
++    fun tool_screen_edit_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark, Tool.EDIT)
++    }
++
++    /** The Remove background screen with a ready photo in light mode. */
++    @Test
++    fun tool_screen_remove_background_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light, Tool.REMOVE_BACKGROUND)
++    }
++
++    /** The Remove background screen with a ready photo in dark mode. */
++    @Test
++    fun tool_screen_remove_background_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark, Tool.REMOVE_BACKGROUND)
++    }
++
++    /** The Enhance screen with a ready photo in light mode. */
++    @Test
++    fun tool_screen_enhance_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light, Tool.ENHANCE)
++    }
++
++    /** The Enhance screen with a ready photo in dark mode. */
++    @Test
++    fun tool_screen_enhance_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark, Tool.ENHANCE)
++    }
++
++    /** The Retouch screen with a ready photo in light mode. */
++    @Test
++    fun tool_screen_retouch_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light, Tool.RETOUCH)
++    }
++
++    /** The Retouch screen with a ready photo in dark mode. */
++    @Test
++    fun tool_screen_retouch_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark, Tool.RETOUCH)
++    }
++
++    /** The Artistic screen with a ready photo in light mode. */
++    @Test
++    fun tool_screen_artistic_follows_the_light_theme() {
++        checkEditor(ThemeMode.Light, Tool.ARTISTIC)
++    }
++
++    /** The Artistic screen with a ready photo in dark mode. */
++    @Test
++    fun tool_screen_artistic_follows_the_dark_theme() {
++        checkEditor(ThemeMode.Dark, Tool.ARTISTIC)
++    }
++
++    /** The photo opened from My edits (Saved's viewer form) in light mode. */
++    @Test
++    fun photo_opened_from_my_edits_follows_the_light_theme() {
++        checkViewer(ThemeMode.Light)
++    }
++
++    /** The photo opened from My edits (Saved's viewer form) in dark mode. */
++    @Test
++    fun photo_opened_from_my_edits_follows_the_dark_theme() {
++        checkViewer(ThemeMode.Dark)
++    }
++
++    /** Home's four carousel banners in light mode with Kanso blue: each in a theme container colour. */
++    @Test
++    fun carousel_banners_follow_kanso_blue_in_light() {
++        checkBanners(ThemeMode.Light, ThemeColour.KansoBlue)
++    }
++
++    /** Home's four carousel banners in dark mode with Kanso blue: each in a theme container colour. */
++    @Test
++    fun carousel_banners_follow_kanso_blue_in_dark() {
++        checkBanners(ThemeMode.Dark, ThemeColour.KansoBlue)
++    }
++
++    /** Home's four carousel banners in light mode with Custom #2E7D32: each in a container colour. */
++    @Test
++    fun carousel_banners_follow_a_custom_green_in_light() {
++        checkBanners(ThemeMode.Light, ThemeColour.Custom(seedArgb = CUSTOM_GREEN_ARGB))
++    }
++
++    /** Home's four carousel banners in dark mode with Custom #2E7D32: each in a container colour. */
++    @Test
++    fun carousel_banners_follow_a_custom_green_in_dark() {
++        checkBanners(ThemeMode.Dark, ThemeColour.Custom(seedArgb = CUSTOM_GREEN_ARGB))
++    }
++
+     // --- One screen each -------------------------------------------------------------------
+ 
+     /**
+@@ -295,14 +467,14 @@ class ThemeFollowTest {
+     }
+ 
+     /**
+-     * Draws the editor on Edit in [mode] with a ready landscape photo and checks the top bar and
+-     * a background pixel in the photo area above the photo, halfway between the area's top and
+-     * the photo's. A landscape photo on a portrait screen fills the width and leaves that band of
+-     * background above and below it; the test checks the band is there before reading it.
++     * Draws the screen of [tool] (Edit unless told otherwise) in [mode] with a ready landscape
++     * photo and checks the top bar and a background pixel left of the photo card, level with its
++     * middle. The card keeps 16 dp from the screen's edges; the test checks that margin is there
++     * before reading it.
+      */
+-    private fun checkEditor(mode: ThemeMode) {
++    private fun checkEditor(mode: ThemeMode, tool: Tool = Tool.EDIT) {
+         val state = ToolUiState(
+-            tool = Tool.EDIT,
++            tool = tool,
+             photoUri = PHOTO_URI,
+             photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
+             save = ToolUiState.SaveState.Idle,
+@@ -317,7 +489,7 @@ class ThemeFollowTest {
+             card.left >= MIN_BAND_PX,
+         )
+         assertFollows(
+-            screen = "Tool screen with a ready photo",
++            screen = "Tool screen ${tool.name} with a ready photo",
+             mode = mode,
+             topBar = topBarSpot(mode),
+             background = Spot(
+@@ -474,8 +646,214 @@ class ThemeFollowTest {
+         )
+     }
+ 
++    /**
++     * Draws Home in [mode], with five recent photos when [withPhotos] and with none otherwise (the
++     * strip's message), and checks a pixel at the top of the screen and a background pixel at the
++     * screen's left edge, level with the middle of the recent strip or of its message: Home's
++     * column keeps 16 dp from the edges, and the strip's cards start there.
++     *
++     * Home has no top bar: its title is the first item of its column, below the top edge. The top
++     * pixel, in the middle of the screen's top edge and above the title, must be the scheme's
++     * `background`, the colour Home's Scaffold fills its body with.
++     */
++    private fun checkHomeWithTop(mode: ThemeMode, withPhotos: Boolean) {
++        if (withPhotos) useSolidColourThumbnails()
++        val state = if (withPhotos) HOME_STATE.copy(recentPhotos = photos().take(5)) else HOME_STATE
++        show(mode) {
++            HomeContent(state = state, onToolClick = {})
++        }
++        val recent = nodeRect(if (withPhotos) HOME_RECENT_TAG else HOME_RECENT_EMPTY_TAG)
++        assertFollows(
++            screen = if (withPhotos) "Home with recent photos" else "Home empty",
++            mode = mode,
++            topBar = topSpot(expected =scheme(mode).background, role = "background"),
++            background = Spot(
++                place = "background at the left edge, level with the recent edits",
++                x = EDGE_X_PX,
++                y = recent.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = nodeRect(HOME_CAROUSEL_TAG).top,
++        )
++    }
++
++    /**
++     * Draws My edits in [mode] with twelve saved photos and checks a pixel at the top of the
++     * screen and a background pixel at the screen's left edge, level with the first row of tiles:
++     * the grid keeps 8 dp from the edges. My edits has no top bar, so the top pixel must be the
++     * scheme's `background`, the colour its Scaffold fills its body with.
++     */
++    private fun checkMyEditsWithPhotos(mode: ThemeMode) {
++        useSolidColourThumbnails()
++        show(mode) {
++            MyEditsContent(state = MyEditsUiState(photos = photos(), loading = false), onPhotoClick = {})
++        }
++        val firstTile = nodeRect(myEditsTileTag(0))
++        assertFollows(
++            screen = "My edits with photos",
++            mode = mode,
++            topBar = topSpot(expected =scheme(mode).background, role = "background"),
++            background = Spot(
++                place = "background at the left edge, level with the first row of tiles",
++                x = EDGE_X_PX,
++                y = firstTile.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = firstTile.top,
++        )
++    }
++
++    /**
++     * Draws My edits in [mode] with nothing saved and checks a pixel at the top of the screen and
++     * a background pixel at the screen's left edge, level with the middle of the "no edits yet"
++     * message, which keeps 24 dp from the edges.
++     */
++    private fun checkMyEditsEmpty(mode: ThemeMode) {
++        show(mode) {
++            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = false), onPhotoClick = {})
++        }
++        val message = nodeRect(MY_EDITS_EMPTY_TAG)
++        assertFollows(
++            screen = "My edits empty",
++            mode = mode,
++            topBar = topSpot(expected =scheme(mode).background, role = "background"),
++            background = Spot(
++                place = "background at the left edge, level with the middle of the message",
++                x = EDGE_X_PX,
++                y = message.center.y.roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = message.top,
++        )
++    }
++
++    /**
++     * Draws the photo opened from My edits (Saved's viewer form: no mark, no "saved" line) in
++     * [mode] and checks the top and a background pixel at the screen's left edge, halfway between
++     * the bottom of the top shade and the top of the photo, where only the blurred backdrop is.
++     *
++     * As in [checkSaved], the photo is a plain square of the theme's own background colour, so
++     * the blurred backdrop, and the shade (the theme's surface) over it, read as theme colours.
++     */
++    private fun checkViewer(mode: ThemeMode) {
++        val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
++        themed.eraseColor(scheme(mode).background.toArgb())
++        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed), viewer = true)
++        show(mode) {
++            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
++        }
++        val shade = nodeRect(SAVED_SCRIM_TAG)
++        val photo = nodeRect(SAVED_PHOTO_TAG)
++        assertTrue(
++            "The viewer's photo (top ${photo.top}) must start below its top shade (bottom ${shade.bottom}), " +
++                "or this test reads the wrong place",
++            photo.top - shade.bottom >= MIN_BAND_PX,
++        )
++        assertFollows(
++            screen = "Photo opened from My edits",
++            mode = mode,
++            topBar = topBarSpot(mode),
++            background = Spot(
++                place = "backdrop at the left edge, between the top shade and the photo",
++                x = EDGE_X_PX,
++                y = ((shade.bottom + photo.top) / 2f).roundToInt(),
++                expected = scheme(mode).background,
++                role = "background",
++            ),
++            contentTop = photo.top,
++        )
++    }
++
++    /**
++     * Draws Home in [mode] with [colour] and brings each of the carousel's four banners to the
++     * front in turn, swiping as a finger would (the carousel only composes the banners in view).
++     * For each banner it reads one pixel [BANNER_SPOT_INSET] inside its left edge, level with its
++     * middle, inside the banner's padding where no text, button or icon is drawn, and fails unless
++     * that pixel equals the scheme's `primaryContainer`, `secondaryContainer` or
++     * `tertiaryContainer` within [TOLERANCE] per channel. Every problem is listed in one failure.
++     */
++    private fun checkBanners(mode: ThemeMode, colour: ThemeColour) {
++        show(mode, colour) {
++            HomeContent(state = HOME_STATE, onToolClick = {})
++        }
++        val colours = scheme(mode, colour)
++        val containers = listOf(
++            "primaryContainer" to colours.primaryContainer,
++            "secondaryContainer" to colours.secondaryContainer,
++            "tertiaryContainer" to colours.tertiaryContainer,
++        )
++        val insetPx = with(compose.density) { BANNER_SPOT_INSET.toPx() }
++        val problems = mutableListOf<String>()
++        HOME_STATE.carouselTools.forEachIndexed { index, tool ->
++            if (index > 0) swipeCarouselLeft()
++            val dot = compose.onNodeWithTag(homeCarouselDotTag(index), useUnmergedTree = true).fetchSemanticsNode()
++            if (dot.config.getOrNull(SemanticsProperties.StateDescription) == null) {
++                problems += "after $index swipe(s) banner ${index + 1} (${tool.name}) is not the one in front"
++                return@forEachIndexed
++            }
++            val banner = nodeRect(homeBannerTag(tool))
++            // A neighbouring banner can peek over one edge, so try the left edge, then the right.
++            val candidates = listOf(
++                "$BANNER_SPOT_INSET inside its left edge" to (banner.left + insetPx),
++                "$BANNER_SPOT_INSET inside its right edge" to (banner.right - insetPx),
++            ).map { (edge, x) ->
++                Spot(
++                    place = "banner ${index + 1} (${tool.name}), $edge, level with its middle",
++                    x = x.roundToInt(),
++                    y = banner.center.y.roundToInt(),
++                    expected = containers.first().second,
++                    role = "a container colour",
++                )
++            }
++            val spot = candidates.firstOrNull { nodesUnder(it, ignoreTag = homeBannerTag(tool)).isEmpty() }
++                ?: candidates.first().also { first ->
++                    nodesUnder(first, ignoreTag = homeBannerTag(tool)).forEach { node ->
++                        problems += "the ${first.place} at (${first.x}, ${first.y}) lies on $node, " +
++                            "not on the banner's plain background: the test must read another pixel"
++                    }
++                }
++            val drawn = drawnColours(listOf(spot)).single()
++            if (containers.none { (_, expected) -> isNear(expected, drawn) }) {
++                problems += "the ${spot.place} at (${spot.x}, ${spot.y}) is drawn ${hex(drawn)}, expected one of " +
++                    containers.joinToString { (role, expected) -> "$role ${hex(expected)}" } +
++                    " within $TOLERANCE per channel"
++            }
++        }
++        assertTrue(
++            "Home's carousel banners in $mode with $colour do not follow the theme:\n" + problems.joinToString("\n"),
++            problems.isEmpty(),
++        )
++    }
++
+     // --- Helpers ---------------------------------------------------------------------------
+ 
++    /**
++     * Swipes Home's carousel once to the left, as a finger would, and waits until it settles: a
++     * slow drag of under one banner's width moves it one banner forward, never a fling past it.
++     */
++    private fun swipeCarouselLeft() {
++        compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput {
++            swipeLeft(startX = width * 0.85f, endX = width * 0.4f, durationMillis = 1_000)
++        }
++        compose.waitForIdle()
++    }
++
++    /**
++     * Returns the top pixel of a screen with no top bar: the middle of the screen,
++     * [TOP_BAR_Y_PX] below its top edge, which must be [expected], the scheme's colour called
++     * [role].
++     */
++    private fun topSpot(expected: Color, role: String): Spot = Spot(
++        place = "top of the screen, middle of its top edge",
++        x = rootSize().width / 2,
++        y = TOP_BAR_Y_PX,
++        expected = expected,
++        role = role,
++    )
++
+     /**
+      * One pixel the test reads: [place] says in words where it is, ([x], [y]) is where, in the
+      * screen's pixels from its top-left corner, and [expected] is the theme colour it must show,
+@@ -489,8 +867,15 @@ class ThemeFollowTest {
+         val role: String,
+     )
+ 
+-    /** Returns Kanso blue in [mode]'s look, the scheme KansoTheme hands to every screen. */
+-    private fun scheme(mode: ThemeMode): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
++    /**
++     * Returns [colour] (Kanso blue unless told otherwise) in [mode]'s look, the scheme KansoTheme
++     * hands to every screen: a custom colour's scheme is generated from its seed, as KansoTheme
++     * does. The tests never ask for the wallpaper choice.
++     */
++    private fun scheme(mode: ThemeMode, colour: ThemeColour = ThemeColour.KansoBlue): ColorScheme {
++        val seed = if (colour is ThemeColour.Custom) Color(colour.seedArgb) else KANSO_BLUE_SEED
++        return seedColorScheme(seed, dark = mode == ThemeMode.Dark)
++    }
+ 
+     /**
+      * Returns the top-bar pixel for [mode]: the middle of the screen, [TOP_BAR_Y_PX] below the
+@@ -506,12 +891,13 @@ class ThemeFollowTest {
+     )
+ 
+     /**
+-     * Draws [content] inside KansoTheme in [mode], with Kanso blue, and waits until the screen
+-     * has settled. Nothing the tests draw keeps moving, so the clock runs by itself.
++     * Draws [content] inside KansoTheme in [mode], with [colour] (Kanso blue unless told
++     * otherwise), and waits until the screen has settled. Nothing the tests draw keeps moving, so
++     * the clock runs by itself.
+      */
+-    private fun show(mode: ThemeMode, content: @Composable () -> Unit) {
++    private fun show(mode: ThemeMode, colour: ThemeColour = ThemeColour.KansoBlue, content: @Composable () -> Unit) {
+         compose.setContent {
+-            KansoTheme(themeMode = mode) {
++            KansoTheme(themeMode = mode, themeColour = colour) {
+                 content()
+             }
+         }
+@@ -585,11 +971,13 @@ class ThemeFollowTest {
+     /**
+      * Returns a description of every node placed on screen that shows text, a picture (a content
+      * description) or a control and covers [spot], from the unmerged tree, where every text and
+-     * icon is a node of its own.
++     * icon is a node of its own. The node tagged [ignoreTag], if given, is left out: a test that
++     * reads a tappable card's own background passes the card's tag.
+      */
+-    private fun nodesUnder(spot: Spot): List<String> {
++    private fun nodesUnder(spot: Spot, ignoreTag: String? = null): List<String> {
+         val point = Offset(spot.x + 0.5f, spot.y + 0.5f)
+         return compose.onAllNodes(SHOWS_SOMETHING, useUnmergedTree = true).fetchSemanticsNodes()
++            .filter { node -> ignoreTag == null || node.config.getOrNull(SemanticsProperties.TestTag) != ignoreTag }
+             .filter { node -> isPlaced(node) && Rect(node.positionInRoot, node.size.toSize()).contains(point) }
+             .map { node -> describe(node) }
+     }
+@@ -722,9 +1110,19 @@ class ThemeFollowTest {
+          */
+         const val MIN_BAND_PX = 12f
+ 
+-        /** The made-up Uri the editor and Saved say their photo came from. */
++        /** The made-up Uri the tool screens and Saved say their photo came from. */
+         const val PHOTO_URI = "content://media/external/images/media/42"
+ 
++        /** The Custom seed colour the banner checks use, #2E7D32 (a deep green), as an ARGB number. */
++        val CUSTOM_GREEN_ARGB = 0xFF2E7D32.toInt()
++
++        /**
++         * How far inside a banner's left edge its background pixel is read: inside its 16 dp
++         * padding, where no text, button or icon is drawn, and level with its middle, well clear
++         * of its rounded corners.
++         */
++        val BANNER_SPOT_INSET = 8.dp
++
+         /** Matches a node that shows text, a picture (it has a description) or a control. */
+         val SHOWS_SOMETHING = SemanticsMatcher("shows text, a picture or a control") { node ->
+             val config = node.config

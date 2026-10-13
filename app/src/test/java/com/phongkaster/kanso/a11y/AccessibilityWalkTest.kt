@@ -28,11 +28,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
@@ -47,7 +51,11 @@ import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.gallery.RecordingRegistry
+import com.phongkaster.kanso.navigation.KANSO_CAMERA_BUTTON_TAG
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.KansoTabShell
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.navigation.kansoTabTag
 import com.phongkaster.kanso.screenshots.FAKE_SCHEME
 import com.phongkaster.kanso.screenshots.SolidColourFetcherFactory
 import com.phongkaster.kanso.tool.ToolFixtures
@@ -63,8 +71,14 @@ import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.FlashMode
 import com.phongkaster.kanso.ui.gallery.GalleryContent
 import com.phongkaster.kanso.ui.gallery.GalleryUiState
+import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
 import com.phongkaster.kanso.ui.home.HomeContent
 import com.phongkaster.kanso.ui.home.HomeUiState
+import com.phongkaster.kanso.ui.home.homeBannerTag
+import com.phongkaster.kanso.ui.home.homeCarouselDotTag
+import com.phongkaster.kanso.ui.home.homeTryTag
+import com.phongkaster.kanso.ui.myedits.MyEditsContent
+import com.phongkaster.kanso.ui.myedits.MyEditsUiState
 import com.phongkaster.kanso.ui.permission.PermissionAccess
 import com.phongkaster.kanso.ui.saved.SavedContent
 import com.phongkaster.kanso.ui.saved.SavedPhoto
@@ -90,45 +104,57 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Walks every screen state of Kanso and checks that each control in it has a spoken name and is
- * at least 48 dp wide and tall (DoD 18), with [TouchTargetCheck].
+ * at least 48 dp wide and tall (DoD 25), with [TouchTargetCheck].
  *
  * How a state is checked. Each test draws one state in its own window, inside KansoTheme in
- * light mode: the screen's stateless part (the `...Content` composable, or the nearest public or
- * internal part where that is private) fed a UiState built here from sample values, or, for the
- * refused camera, the real screen (see below). No Koin, no permission dialog and no camera is
- * involved, and no ViewModel apart from the refused camera's. Then the test reads the
- * merged semantics tree, the one TalkBack reads, takes every node that can be tapped, toggled or
- * selected, and hands them to [TouchTargetCheck]. It prints one line per state,
- * `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no control would prove
- * nothing) or when any control fails; the failure names the state and, for each failing
- * control, its test tag, role, text, description and measured size.
+ * light mode with Kanso blue: the screen's stateless part (the `...Content` composable) fed a
+ * UiState built here from sample values, or, for the refused camera, the real screen (see below).
+ * No Koin, no permission dialog and no camera is involved, and no ViewModel apart from the refused
+ * camera's. Then the test reads the merged semantics tree, the one TalkBack reads, takes every
+ * node that can be tapped, toggled or selected, and hands them to [TouchTargetCheck]. It prints
+ * one line per state, `a11y <state>: <n> nodes checked`, and fails when n is 0 (a state with no
+ * control would prove nothing) or when any control fails; the failure names the state and, for
+ * each failing control, its test tag, role, text, description and measured size.
  *
- * The states: Home; the gallery full, partially shared, refused, empty and loading; the editor
- * with each of the five tools selected, with the photo unreadable and while saving; Saved; the
- * camera live, after a shot, refused and unavailable; Settings with Custom selected (the
- * engine's colour picker is then on screen, and [TouchTargetCheck] leaves out what is inside
- * it, DoD 18's named exception).
+ * The tab states. Home, My edits and Settings are tabs: in the app they are drawn under the
+ * floating tab bar, three tabs and the round Camera button (`nav-camera`). Here each tab state is
+ * drawn inside the app's own frame, `KansoTabShell`, with its tab selected, so the bar is walked
+ * on every tab state, and the test also fails if one of the bar's four controls was not among the
+ * nodes checked.
+ *
+ * The states:
+ * - Home with recent photos, with the carousel brought to each of its four banners in turn (the
+ *   carousel only composes the banners in view, so each banner is swiped to the front, as a finger
+ *   would, and the page dots must say it is the current one); Home empty; Home loading (the
+ *   still placeholder cards);
+ * - My edits with photos, empty and loading;
+ * - the gallery full, partially shared, refused, empty and loading;
+ * - each of the five tool screens with a ready photo, with the photo unreadable, and while saving;
+ * - Saved, and the photo opened from My edits (the same screen in its viewer form);
+ * - the camera live, after a shot, refused and unavailable;
+ * - Settings with Kanso blue, and with Custom selected (the engine's colour picker is then on
+ *   screen, and [TouchTargetCheck] leaves out what is inside it, the DoD's named exception).
  *
  * Where a stand-in replaces something the computer cannot provide:
  * - the camera's live picture and its photo just taken are slots of `CameraContent`; the real
  *   ones need a camera and a file, so a plain box and a drawn photo (with the real photo's
  *   description) take their places. Neither is a control, so the check sees the same controls;
  * - the refused camera is the one state drawn from the real screen, `CameraScreen`, because its
- *   refused panel (`CameraRefusedPanel`) is private and a hand-drawn copy would miss a control
- *   later added to it. The screen reaches the state by itself, as in
- *   `ThemeFollowTest.checkCameraRefused`: its ViewModel holds a [FakeCameraController] (the
- *   computer has no camera, and with access refused the camera is never connected, so the fake
- *   is never reached), and its one permission request goes to a [RecordingRegistry], which shows
- *   no system dialog and answers "denied";
- * - the gallery's thumbnails are the real ones, loaded by Coil from made-up `fake://` addresses
- *   that [SolidColourFetcherFactory] turns into coloured squares, so each photo cell keeps the
- *   spoken name the app gives it.
+ *   refused panel is private and a hand-drawn copy would miss a control later added to it. The
+ *   screen reaches the state by itself, as in `ThemeFollowTest.checkCameraRefused`: its ViewModel
+ *   holds a [FakeCameraController] (the computer has no camera, and with access refused the
+ *   camera is never connected, so the fake is never reached), and its one permission request
+ *   goes to a [RecordingRegistry], which shows no system dialog and answers "denied";
+ * - the photos of the gallery, of Home's recent strip and of My edits are the real thumbnails,
+ *   loaded by Coil from made-up `fake://` addresses that [SolidColourFetcherFactory] turns into
+ *   coloured squares, so each photo keeps the spoken name the app gives it.
  *
  * Every state is drawn with the test clock paused (`mainClock.autoAdvance = false`, set before
- * anything is drawn) and moved on by hand: the loading states show Material's loading
- * indicator, which never stops moving, and with the clock running by itself every wait for the
- * screen to settle would wait for it forever. Nothing is pressed: the refused camera's "denied"
- * comes from the registry, and the clock is moved a frame at a time until the screen shows it.
+ * anything is drawn) and moved on by hand: the gallery's loading state and the tool screen's
+ * saving state show Material's loading indicator, which never stops moving, and with the clock
+ * running by itself every wait for the screen to settle would wait for it forever. The clock only
+ * runs by itself while Home's carousel is swiped, and Home shows no such indicator (its loading
+ * face is still placeholder cards).
  *
  * Two more tests check the check itself on a sample 40 dp icon button with no description (the
  * DoD's "its own control"): it must be reported.
@@ -161,14 +187,73 @@ class AccessibilityWalkTest {
 
     // --- Home ------------------------------------------------------------------------------
 
-    /** Home: the carousel of four AI tools and the row of five round tool shortcuts. */
+    /**
+     * Home with recent photos and the carousel on its first banner: the banner and its "Try now",
+     * the five round shortcuts, the arrow to My edits, the recent photo cards and the bar.
+     */
     @Test
-    fun home() {
-        walk("home") {
-            HomeContent(
-                state = HOME_STATE,
-                onToolClick = {},
-            )
+    fun home_with_recent_photos_on_banner_1() {
+        walkHomeCarouselAt(0)
+    }
+
+    /** Home with recent photos after one swipe: the carousel's second banner is in front. */
+    @Test
+    fun home_with_recent_photos_on_banner_2() {
+        walkHomeCarouselAt(1)
+    }
+
+    /** Home with recent photos after two swipes: the carousel's third banner is in front. */
+    @Test
+    fun home_with_recent_photos_on_banner_3() {
+        walkHomeCarouselAt(2)
+    }
+
+    /** Home with recent photos after three swipes: the carousel's fourth and last banner is in front. */
+    @Test
+    fun home_with_recent_photos_on_banner_4() {
+        walkHomeCarouselAt(3)
+    }
+
+    /** Home on a fresh install: the recent strip shows its short message instead of photos. */
+    @Test
+    fun home_empty() {
+        walkTab("home empty", KansoTab.HOME) {
+            HomeContent(state = HOME_STATE, onToolClick = {})
+        }
+    }
+
+    /** Home while the recent photos are read for the first time: still placeholder cards. */
+    @Test
+    fun home_loading() {
+        walkTab("home loading", KansoTab.HOME) {
+            HomeContent(state = HOME_STATE.copy(recentLoading = true), onToolClick = {})
+        }
+    }
+
+    // --- My edits --------------------------------------------------------------------------
+
+    /** My edits with twelve saved photos: every tile and the bar. */
+    @Test
+    fun my_edits_with_photos() {
+        useSolidColourThumbnails()
+        walkTab("my edits with photos", KansoTab.MY_EDITS) {
+            MyEditsContent(state = MyEditsUiState(photos = photos(), loading = false), onPhotoClick = {})
+        }
+    }
+
+    /** My edits with nothing saved yet: the message has no control, so only the bar is walked. */
+    @Test
+    fun my_edits_empty() {
+        walkTab("my edits empty", KansoTab.MY_EDITS) {
+            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = false), onPhotoClick = {})
+        }
+    }
+
+    /** My edits while the saved photos are read: the still skeleton tiles and the bar. */
+    @Test
+    fun my_edits_loading() {
+        walkTab("my edits loading", KansoTab.MY_EDITS) {
+            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = true), onPhotoClick = {})
         }
     }
 
@@ -245,93 +330,133 @@ class AccessibilityWalkTest {
         )
     }
 
-    // --- Editor ----------------------------------------------------------------------------
+    // --- Tool screens ----------------------------------------------------------------------
 
     /**
-     * Each of the five editor tests below covers one tool; this one fails if a tool is ever added
-     * to [Tool] without a state of its own here.
+     * Each tool screen state below covers one tool; this one fails if a tool is ever added to
+     * [Tool] without its three states (ready, unreadable, saving) here.
      */
     @Test
-    fun every_tool_has_its_own_editor_state() {
-        assertEquals(
-            "Each tool needs an editor test of its own in this class",
-            Tool.entries.toSet(),
-            EDITOR_TOOLS_WALKED.toSet(),
-        )
+    fun every_tool_has_its_own_tool_screen_states() {
+        val expected = Tool.entries.toSet()
+        assertEquals("Each tool needs a 'ready' test of its own in this class", expected, TOOLS_WALKED_READY.toSet())
+        assertEquals("Each tool needs an 'unreadable' test of its own in this class", expected, TOOLS_WALKED_UNREADABLE.toSet())
+        assertEquals("Each tool needs a 'saving' test of its own in this class", expected, TOOLS_WALKED_SAVING.toSet())
     }
 
-    /** The editor on Edit with a photo: back, Save and the five toolbar toggles. */
+    /** The Edit screen with a ready photo: Back, "Replace" and Save. */
     @Test
-    fun editor_with_edit_selected() {
-        walkEditorWith(Tool.EDIT)
+    fun tool_screen_edit_ready() {
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
     }
 
-    /** The editor on Remove background with a photo. */
+    /** The Remove background screen with a ready photo. */
     @Test
-    fun editor_with_remove_background_selected() {
-        walkEditorWith(Tool.REMOVE_BACKGROUND)
+    fun tool_screen_remove_background_ready() {
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
     }
 
-    /** The editor on Enhance with a photo. */
+    /** The Enhance screen with a ready photo. */
     @Test
-    fun editor_with_enhance_selected() {
-        walkEditorWith(Tool.ENHANCE)
+    fun tool_screen_enhance_ready() {
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
     }
 
-    /** The editor on Retouch with a photo. */
+    /** The Retouch screen with a ready photo. */
     @Test
-    fun editor_with_retouch_selected() {
-        walkEditorWith(Tool.RETOUCH)
+    fun tool_screen_retouch_ready() {
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
     }
 
-    /** The editor on Artistic with a photo. */
+    /** The Artistic screen with a ready photo. */
     @Test
-    fun editor_with_artistic_selected() {
-        walkEditorWith(Tool.ARTISTIC)
+    fun tool_screen_artistic_ready() {
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
     }
 
-    /** The editor when the photo cannot be opened: Save is switched off but still named. */
+    /** The Edit screen when the photo cannot be opened: Save is switched off but still named. */
     @Test
-    fun editor_with_the_photo_unreadable() {
-        walk(
-            "editor photo unreadable",
-            editorScreen(
-                ToolUiState(
-                    tool = Tool.EDIT,
-                    photoUri = PHOTO_URI,
-                    photo = ToolUiState.PhotoState.Unreadable,
-                    save = ToolUiState.SaveState.Idle,
-                ),
-            ),
-        )
+    fun tool_screen_edit_unreadable() {
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+    }
+
+    /** The Remove background screen when the photo cannot be opened. */
+    @Test
+    fun tool_screen_remove_background_unreadable() {
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+    }
+
+    /** The Enhance screen when the photo cannot be opened. */
+    @Test
+    fun tool_screen_enhance_unreadable() {
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+    }
+
+    /** The Retouch screen when the photo cannot be opened. */
+    @Test
+    fun tool_screen_retouch_unreadable() {
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+    }
+
+    /** The Artistic screen when the photo cannot be opened. */
+    @Test
+    fun tool_screen_artistic_unreadable() {
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
     }
 
     /**
-     * The editor while a save runs: Save shows its small loading indicator and "Saving...", and
-     * the toolbar's toggles are switched off but still named.
+     * The Edit screen while a save runs: Save shows its small loading indicator and "Saving...",
+     * and Save and "Replace" are switched off but still named.
      */
     @Test
-    fun editor_while_saving() {
-        walk(
-            "editor saving",
-            editorScreen(
-                ToolUiState(
-                    tool = Tool.EDIT,
-                    photoUri = PHOTO_URI,
-                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
-                    save = ToolUiState.SaveState.Saving,
-                ),
-            ),
-        )
+    fun tool_screen_edit_saving() {
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+    }
+
+    /** The Remove background screen while a save runs. */
+    @Test
+    fun tool_screen_remove_background_saving() {
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+    }
+
+    /** The Enhance screen while a save runs. */
+    @Test
+    fun tool_screen_enhance_saving() {
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+    }
+
+    /** The Retouch screen while a save runs. */
+    @Test
+    fun tool_screen_retouch_saving() {
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+    }
+
+    /** The Artistic screen while a save runs. */
+    @Test
+    fun tool_screen_artistic_saving() {
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
     }
 
     // --- Saved -----------------------------------------------------------------------------
 
-    /** Saved with its photo: Share, Edit another and Home. */
+    /** Saved right after a save, with its photo: the round close button, Share and "Edit another". */
     @Test
     fun saved() {
         val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
         walk("saved") {
+            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+        }
+    }
+
+    /** The photo opened from My edits (Saved's viewer form): the round close button, Share and "Edit". */
+    @Test
+    fun photo_opened_from_my_edits() {
+        val state = SavedUiState(
+            photoUri = PHOTO_URI,
+            photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)),
+            viewer = true,
+        )
+        walk("photo opened from my edits") {
             SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
         }
     }
@@ -380,13 +505,32 @@ class AccessibilityWalkTest {
     // --- Settings --------------------------------------------------------------------------
 
     /**
-     * Settings with Custom colour selected, on a phone with wallpaper colours: back, the three
-     * theme mode rows and the three colour rows. The colour picker below them is the engine's
+     * Settings with Kanso blue selected, on a phone with wallpaper colours: the three theme mode
+     * rows, the three colour rows and the bar.
+     */
+    @Test
+    fun settings_with_kanso_blue_selected() {
+        walkTab("settings kanso blue selected", KansoTab.SETTINGS) {
+            SettingsContent(
+                state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
+                wallpaperColour = WALLPAPER_COLOUR,
+                onThemeModeSelected = {},
+                onKansoBlueChosen = {},
+                onWallpaperChosen = {},
+                onCustomChosen = {},
+                onCustomColourChosen = {},
+            )
+        }
+    }
+
+    /**
+     * Settings with Custom colour selected, on a phone with wallpaper colours: the three theme
+     * mode rows, the three colour rows and the bar. The colour picker below them is the engine's
      * and is left out by [TouchTargetCheck].
      */
     @Test
     fun settings_with_custom_selected() {
-        walk("settings custom selected") {
+        walkTab("settings custom selected", KansoTab.SETTINGS) {
             SettingsContent(
                 state = SettingsUiState(
                     themeMode = ThemeMode.System,
@@ -410,7 +554,7 @@ class AccessibilityWalkTest {
      *
      * Its size is not asserted here. Compose widens the touch area of every small tappable node
      * to the phone's 48 dp minimum by itself and reports that widened area as the node's touch
-     * bounds, which DoD 18 counts; the next test shows the size half of the check at work.
+     * bounds, which the DoD counts; the next test shows the size half of the check at work.
      */
     @Test
     fun the_check_reports_a_40_dp_icon_button_without_a_name() {
@@ -455,6 +599,44 @@ class AccessibilityWalkTest {
     }
 
     /**
+     * Draws [content] as a tab state called [state], under the floating tab bar with [tab]
+     * selected (see [showOnTab]), checks every control in it, and fails if one of the bar's
+     * three tabs or its Camera button was not among the controls checked.
+     */
+    private fun walkTab(state: String, tab: KansoTab, content: @Composable () -> Unit) {
+        showOnTab(tab, content)
+        assertTabStatePasses(state)
+    }
+
+    /**
+     * Draws [content] inside the app's frame, `KansoTabShell`, with the bar shown and [tab]
+     * selected, as the app draws a tab (see [show]). Taps on the bar do nothing.
+     */
+    private fun showOnTab(tab: KansoTab, content: @Composable () -> Unit) {
+        show {
+            KansoTabShell(showBar = true, selected = tab, onTabSelected = {}, onCamera = {}) {
+                content()
+            }
+        }
+    }
+
+    /**
+     * Checks the tab state on screen, called [state] (see [assertControlsPass]), and then that
+     * the bar's three tabs and its Camera button were among the controls checked, so the bar is
+     * walked on every tab state.
+     */
+    private fun assertTabStatePasses(state: String) {
+        val checked = assertControlsPass(state)
+        val tags = checked.mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
+        val missing = BAR_TAGS.filterNot { it in tags }
+        assertTrue(
+            "a11y $state: the bar's controls $missing were not among the controls checked " +
+                "(checked tags: $tags)",
+            missing.isEmpty(),
+        )
+    }
+
+    /**
      * Draws [content] inside KansoTheme in light mode with the test clock paused, then moves the
      * clock on by [SETTLE_MS] and runs the main thread's queue, so the state is laid out and
      * every finite animation has ended. The pause comes first, before anything is drawn, so a
@@ -467,15 +649,21 @@ class AccessibilityWalkTest {
                 content()
             }
         }
+        settle()
+    }
+
+    /** Moves the paused clock on by [SETTLE_MS] and runs the main thread's queue. */
+    private fun settle() {
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         shadowOf(Looper.getMainLooper()).idle()
     }
 
     /**
      * Reads the merged semantics tree of the state on screen, called [state] in the messages,
-     * prints how many controls were checked, and fails if there were none or if any failed.
+     * prints how many controls were checked, fails if there were none or if any failed, and
+     * returns the controls checked.
      */
-    private fun assertControlsPass(state: String) {
+    private fun assertControlsPass(state: String): List<SemanticsNode> {
         val nodes = mergedControls()
         val checked = TouchTargetCheck.controlsToCheck(nodes)
         println("a11y $state: ${checked.size} nodes checked")
@@ -487,11 +675,12 @@ class AccessibilityWalkTest {
         )
         val violations = TouchTargetCheck.violations(nodes, compose.density)
         assertTrue(
-            "a11y $state: ${violations.size} of ${checked.size} controls fail DoD 18 " +
+            "a11y $state: ${violations.size} of ${checked.size} controls fail DoD 25 " +
                 "(a spoken name, at least ${TouchTargetCheck.MIN_SIZE} each way):\n" +
                 violations.joinToString("\n"),
             violations.isEmpty(),
         )
+        return checked
     }
 
     /**
@@ -501,19 +690,54 @@ class AccessibilityWalkTest {
     private fun mergedControls(): List<SemanticsNode> =
         compose.onAllNodes(IS_CONTROL, useUnmergedTree = false).fetchSemanticsNodes()
 
-    /** Checks the editor on [tool] with a photo shown and nothing said about saving. */
-    private fun walkEditorWith(tool: Tool) {
-        walk(
-            "editor ${tool.name}",
-            editorScreen(
-                ToolUiState(
-                    tool = tool,
-                    photoUri = PHOTO_URI,
-                    photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
-                    save = ToolUiState.SaveState.Idle,
-                ),
-            ),
+    /**
+     * Draws Home with recent photos on the Home tab, brings the carousel's banner at [index] to
+     * the front by swiping it [index] times, checks that the page dots say so and that the
+     * banner and its "Try now" are composed, then walks the state.
+     *
+     * The swipe needs the clock to run: a swipe is a stream of touch events over time, and the
+     * carousel then settles on its spring. Home shows nothing that moves forever (its skeleton
+     * stands still outside the stateful screen), so the clock is let run by itself while swiping
+     * and paused again afterwards.
+     */
+    private fun walkHomeCarouselAt(index: Int) {
+        useSolidColourThumbnails()
+        showOnTab(KansoTab.HOME) {
+            HomeContent(state = HOME_WITH_PHOTOS, onToolClick = {})
+        }
+        compose.mainClock.autoAdvance = true
+        repeat(index) {
+            // A slow drag of under one banner's width: one banner forward, not a fling past it.
+            compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput {
+                swipeLeft(startX = width * 0.85f, endX = width * 0.4f, durationMillis = 1_000)
+            }
+            compose.waitForIdle()
+        }
+        compose.mainClock.autoAdvance = false
+        settle()
+
+        val current = compose.onNodeWithTag(homeCarouselDotTag(index)).fetchSemanticsNode()
+        assertTrue(
+            "After $index swipe(s) the carousel must show banner ${index + 1} in front",
+            current.config.getOrNull(SemanticsProperties.StateDescription) != null,
         )
+        val tool = HOME_WITH_PHOTOS.carouselTools[index]
+        compose.onNodeWithTag(homeBannerTag(tool)).assertIsDisplayed()
+        compose.onNodeWithTag(homeTryTag(tool)).assertIsDisplayed()
+        assertTabStatePasses("home with recent photos, banner ${index + 1}")
+    }
+
+    /** Checks the screen of [tool] with its photo at [photo] and its save at [save]. */
+    private fun walkToolScreen(tool: Tool, photo: ToolUiState.PhotoState, save: ToolUiState.SaveState) {
+        val face = when {
+            save == ToolUiState.SaveState.Saving -> "saving"
+            photo == ToolUiState.PhotoState.Unreadable -> "photo unreadable"
+            else -> "ready"
+        }
+        val state = ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = photo, save = save)
+        walk("tool screen ${tool.name} $face") {
+            ToolContent(state = state, onBack = {}, onSave = {}, onReplace = {})
+        }
     }
 
     /**
@@ -532,11 +756,6 @@ class AccessibilityWalkTest {
             onShareMore = {},
             onOpenSettings = {},
         )
-    }
-
-    /** Returns the editor's stateless part for [state], every tap doing nothing. */
-    private fun editorScreen(state: ToolUiState): @Composable () -> Unit = {
-        ToolContent(state = state, onBack = {}, onSave = {})
     }
 
     /**
@@ -616,8 +835,7 @@ class AccessibilityWalkTest {
             shadowOf(Looper.getMainLooper()).idle()
             compose.onAllNodes(hasTestTag(CAMERA_REFUSED_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.mainClock.advanceTimeBy(SETTLE_MS)
-        shadowOf(Looper.getMainLooper()).idle()
+        settle()
 
         compose.onNodeWithTag(CAMERA_REFUSED_TAG).assertIsDisplayed()
         compose.onNodeWithTag(CAMERA_SETTINGS_BUTTON_TAG).assertIsDisplayed()
@@ -625,7 +843,7 @@ class AccessibilityWalkTest {
 
     /**
      * Gives Coil an image loader that knows the `fake` scheme ([SolidColourFetcherFactory]) and
-     * runs every step on the calling thread, so the gallery's thumbnails load without files.
+     * runs every step on the calling thread, so the thumbnails load without files.
      */
     private fun useSolidColourThumbnails() {
         Coil.setImageLoader(
@@ -709,7 +927,7 @@ class AccessibilityWalkTest {
          */
         const val REFUSED_TIMEOUT_MS = 10_000L
 
-        /** The made-up Uri the editor and Saved states say their photo came from. */
+        /** The made-up Uri the tool screen and Saved states say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"
 
         /** The test tag of the sample icon button the check is tried on. */
@@ -721,20 +939,35 @@ class AccessibilityWalkTest {
         /** A custom seed colour for the Settings state, a deep green, as an ARGB number. */
         val CUSTOM_SEED_ARGB = 0xFF2E7D32.toInt()
 
-        /** A wallpaper colour for the Settings state, so its wallpaper row is drawn too. */
+        /** A wallpaper colour for the Settings states, so their wallpaper row is drawn too. */
         val WALLPAPER_COLOUR = Color(0xFF8B5000)
 
         /** Matches a node that can be tapped, toggled or selected (see [TouchTargetCheck.isControl]). */
         val IS_CONTROL = SemanticsMatcher("can be tapped, toggled or selected") { TouchTargetCheck.isControl(it) }
 
-        /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them. */
+        /** The test tags of the floating bar's controls: its three tabs and the Camera button. */
+        val BAR_TAGS: List<String> = KansoTab.entries.map { kansoTabTag(it) } + KANSO_CAMERA_BUTTON_TAG
+
+        /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them, with no recent photo. */
         val HOME_STATE = HomeUiState(
             carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
             shortcutTools = Tool.entries,
+            recentPhotos = emptyList(),
+            recentLoading = false,
         )
 
-        /** The tools the five editor tests walk, one each; see `every_tool_has_its_own_editor_state`. */
-        val EDITOR_TOOLS_WALKED = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        /** Home with five recent photos in its strip. */
+        val HOME_WITH_PHOTOS: HomeUiState
+            get() = HOME_STATE.copy(recentPhotos = photos().take(5))
+
+        /** The tools the five "ready" tool screen tests walk, one each. */
+        val TOOLS_WALKED_READY = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+
+        /** The tools the five "unreadable" tool screen tests walk, one each. */
+        val TOOLS_WALKED_UNREADABLE = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+
+        /** The tools the five "saving" tool screen tests walk, one each. */
+        val TOOLS_WALKED_SAVING = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
 
         /** A camera that is open and ready, with its flash on auto and a second lens. */
         val READY_CAMERA = CameraState(

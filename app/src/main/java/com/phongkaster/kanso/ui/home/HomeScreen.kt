@@ -503,18 +503,17 @@ private fun HeroCarousel(
 
 /**
  * The colours of the banner at [index] in the carousel: the theme's container colours in turn
- * (primary, secondary, tertiary, then the highest surface container), each with the text colour
+ * (primary, secondary, tertiary, repeating), each with the text colour
  * made for it, so neighbouring banners differ and every banner stays readable in light and dark
  * and with any theme colour. No banner has a picture or a fixed colour of its own.
  */
 @Composable
 private fun bannerColors(index: Int): CardColors {
     val scheme = MaterialTheme.colorScheme
-    return when (index % 4) {
+    return when (index % 3) {
         0 -> CardDefaults.cardColors(containerColor = scheme.primaryContainer, contentColor = scheme.onPrimaryContainer)
         1 -> CardDefaults.cardColors(containerColor = scheme.secondaryContainer, contentColor = scheme.onSecondaryContainer)
-        2 -> CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer)
-        else -> CardDefaults.cardColors(containerColor = scheme.surfaceContainerHighest, contentColor = scheme.onSurface)
+        else -> CardDefaults.cardColors(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer)
     }
 }
 
