@@ -1,11 +1,10 @@
 package com.phongkaster.kanso.screenshots
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -24,7 +23,6 @@ import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.editorToolTag
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -34,15 +32,16 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the reference pictures of the editor showing a photo, with its Save action visible, in
- * light and in dark: on the Edit tool (pictures 16 and 17, DoD 25) and after switching to Enhance
- * in the toolbar (pictures 22 and 23), where the title, the panel's message and the toolbar's
- * selected toggle follow the new tool.
+ * Takes the reference pictures of a tool screen showing a photo, with its Save button visible, in
+ * light and in dark: the Edit screen (pictures 16 and 17, DoD 25), the Enhance screen opened from
+ * its own key (pictures 22 and 23), where the title and the options strip are Enhance's, and the
+ * Edit screen with a tall, narrow photo whose blurred copy fills the card beside it (pictures 40
+ * and 41 on Android 15, 42 on Android 11, DoD 27).
  *
- * The photo is a 600 x 400 gradient drawn in code and handed over by a [FakePhotoLoader], so the
- * pictures never depend on a file or on the decoder. The screen is hosted directly in KansoTheme
- * with the mode forced and the default colours (Kanso blue), on Android 11 and the same phone
- * screen as [ScreenshotTest].
+ * The photos are drawn in code and handed over by a [FakePhotoLoader], so the pictures never
+ * depend on a file or on the decoder. The screen is hosted directly in KansoTheme with the mode
+ * forced and the default colours (Kanso blue), on Android 11 unless a test says otherwise, and
+ * the same phone screen as [ScreenshotTest].
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -62,57 +61,70 @@ class ToolScreenshotTest {
         stopKoin()
     }
 
-    /** Picture 16: the Edit tool with a photo, in light mode. */
+    /** Picture 16: the Edit screen with a photo, in light mode. */
     @Test
     fun tool_photo_light() {
-        showToolWithPhoto(ThemeMode.Light)
+        showTool(Tool.EDIT, ThemeMode.Light)
         capture("16_tool_photo_light.png")
     }
 
-    /** Picture 17: the Edit tool with a photo, in dark mode. */
+    /** Picture 17: the Edit screen with a photo, in dark mode. */
     @Test
     fun tool_photo_dark() {
-        showToolWithPhoto(ThemeMode.Dark)
+        showTool(Tool.EDIT, ThemeMode.Dark)
         capture("17_tool_photo_dark.png")
     }
 
-    /** Picture 22: the editor switched to Enhance on the same photo, in light mode. */
+    /** Picture 22: the Enhance screen, opened from its own key, on the same photo, in light mode. */
     @Test
     fun editor_enhance_light() {
-        val viewModel = showToolWithPhoto(ThemeMode.Light)
-        selectEnhance(viewModel)
+        showTool(Tool.ENHANCE, ThemeMode.Light)
         capture("22_editor_enhance_light.png")
     }
 
-    /** Picture 23: the editor switched to Enhance on the same photo, in dark mode. */
+    /** Picture 23: the Enhance screen, opened from its own key, on the same photo, in dark mode. */
     @Test
     fun editor_enhance_dark() {
-        val viewModel = showToolWithPhoto(ThemeMode.Dark)
-        selectEnhance(viewModel)
+        showTool(Tool.ENHANCE, ThemeMode.Dark)
         capture("23_editor_enhance_dark.png")
     }
 
-    /**
-     * Selects Enhance through [viewModel], as a tap on its toggle does, waits until the screen
-     * has finished moving, and checks that Enhance's toggle is the one on.
-     */
-    private fun selectEnhance(viewModel: ToolViewModel) {
-        compose.runOnUiThread { viewModel.selectTool(Tool.ENHANCE) }
-        compose.waitForIdle()
-        compose.onNodeWithTag(editorToolTag(Tool.ENHANCE)).assertIsOn()
-        compose.onNodeWithTag(editorToolTag(Tool.EDIT)).assertIsOff()
+    /** Picture 40: the Edit screen with a narrow photo over its blurred copy, Android 15, light. */
+    @Test
+    @Config(sdk = [35])
+    fun tool_narrow_photo_light() {
+        showTool(Tool.EDIT, ThemeMode.Light, ToolFixtures.narrowStripes())
+        capture("40_tool_narrow_photo_light.png")
+    }
+
+    /** Picture 41: the Edit screen with a narrow photo over its blurred copy, Android 15, dark. */
+    @Test
+    @Config(sdk = [35])
+    fun tool_narrow_photo_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark, ToolFixtures.narrowStripes())
+        capture("41_tool_narrow_photo_dark.png")
     }
 
     /**
-     * Shows the Edit tool on the gradient photo in [mode], waits until the photo is drawn, and
-     * returns the screen's ViewModel so a test can change the selected tool.
+     * Picture 42: the same on Android 11, where Compose's blur draws nothing and the stretched
+     * tiny copy alone softens the space beside the photo, light.
      */
-    private fun showToolWithPhoto(mode: ThemeMode): ToolViewModel {
+    @Test
+    fun tool_narrow_photo_sdk30_light() {
+        showTool(Tool.EDIT, ThemeMode.Light, ToolFixtures.narrowStripes())
+        capture("42_tool_narrow_photo_sdk30_light.png")
+    }
+
+    /**
+     * Shows [tool]'s screen on [photo] (by default the 600 x 400 gradient) in [mode], and waits
+     * until the photo is drawn and Save can be tapped.
+     */
+    private fun showTool(tool: Tool, mode: ThemeMode, photo: Bitmap = ToolFixtures.gradient(600, 400)) {
         val context: Context = ApplicationProvider.getApplicationContext()
-        val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
+        val loader = FakePhotoLoader(context, photo)
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
         val viewModel = ToolViewModel(
-            tool = Tool.EDIT,
+            tool = tool,
             photoUri = "content://media/external/images/media/42",
             loader = loader,
             probe = ViewModelClearedProbe(),
@@ -128,7 +140,6 @@ class ToolScreenshotTest {
         }
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
-        return viewModel
     }
 
     /** Saves a picture of the whole window as `src/test/screenshots/[name]`. */

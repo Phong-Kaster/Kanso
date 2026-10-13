@@ -7,8 +7,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * The five tools Kanso offers, each with the string resource for its label and the drawable
- * resource for its icon. Home shows each as a card and the editor shows each as a toggle in its
- * toolbar.
+ * resource for its icon. Home offers each as a shortcut and each opens its own tool screen.
  *
  * Taking a photo with the camera is not a tool: it makes a photo instead of working on one, so
  * Home draws it as a shortcut of its own and the `Camera` navigation key stands for it.
@@ -35,15 +34,5 @@ enum class Tool(@StringRes val labelRes: Int, @DrawableRes val iconRes: Int) {
     RETOUCH(R.string.tool_retouch, R.drawable.ic_face_retouching_natural),
 
     /** Artistic filters and styles. */
-    ARTISTIC(R.string.tool_artistic, R.drawable.ic_brush);
-
-    /** Lists built from the tools, shared by the screens that need them. */
-    companion object {
-        /**
-         * The tools the editor can switch between, in toolbar order: all of them, since the camera
-         * is no longer one. The editor reads this list rather than `entries` so its toolbar's
-         * contents read as a decision of the editor's.
-         */
-        val editingTools: List<Tool> = entries
-    }
+    ARTISTIC(R.string.tool_artistic, R.drawable.ic_brush),
 }

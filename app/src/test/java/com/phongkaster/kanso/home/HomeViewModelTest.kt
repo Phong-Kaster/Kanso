@@ -44,7 +44,7 @@ class HomeViewModelTest {
         val listed = state.aiTools + state.editTools
 
         assertEquals("A tool is listed twice: $listed", listed.toSet().size, listed.size)
-        assertEquals(Tool.editingTools.toSet(), listed.toSet())
+        assertEquals(Tool.entries.toSet(), listed.toSet())
         assertEquals(5, listed.size)
 
         // The fields the compiled class declares, read with Java reflection. Static fields are
@@ -62,7 +62,7 @@ class HomeViewModelTest {
 
     /**
      * Camera is not a tool any more (R3, assumption A-010): the `Tool` enum holds exactly the five
-     * editing tools, in the order Home and the editor's toolbar show them, and no entry is named
+     * editing tools, in the order Home shows them, and no entry is named
      * after the camera. The `Camera` navigation key is what stands for it.
      */
     @Test
@@ -76,6 +76,5 @@ class HomeViewModelTest {
             "A tool is named after the camera: ${Tool.entries}",
             Tool.entries.none { it.name.contains("camera", ignoreCase = true) },
         )
-        assertEquals(Tool.entries, Tool.editingTools)
     }
 }

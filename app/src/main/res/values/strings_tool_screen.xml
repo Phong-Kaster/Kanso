@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The chip floating at the bottom of a tool screen's photo card: it goes back to the photo
+         gallery of the same tool, to pick another photo (ToolScreen). -->
+    <string name="tool_screen_replace">Replace</string>
+</resources>

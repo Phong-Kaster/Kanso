@@ -537,7 +537,7 @@ class AccessibilityWalkTest {
 
     /** Returns the editor's stateless part for [state], every tap doing nothing. */
     private fun editorScreen(state: ToolUiState): @Composable () -> Unit = {
-        ToolContent(state = state, onBack = {}, onSave = {}, onSelectTool = {})
+        ToolContent(state = state, onBack = {}, onSave = {})
     }
 
     /**

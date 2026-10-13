@@ -12,14 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsOff
-import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -39,7 +35,6 @@ import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.editorToolTag
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -72,9 +67,8 @@ import org.robolectric.annotation.GraphicsMode
  *
  * The photo is a real EXIF-6 JPEG served under a content Uri, decoded by the real loader.
  *
- * A tool picked later in the editor's toolbar is not in the key (DoD 23): the tests that switch
- * to Artistic check that the switch survives rotation, through the ViewModel, and process death,
- * through the copy the screen keeps in its saved state, on the same photo.
+ * Each tool has a screen of its own (Run 7), so the key's tool is the screen's tool for good: a
+ * restored Artistic screen is the Artistic screen again, with no other tool's name on it.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -204,50 +198,21 @@ class ToolPhotoKeyTest {
     }
 
     /**
-     * Rotation after switching tools: the editor opened on Edit is switched to Artistic, the
-     * activity is re-created, and the editor still shows Artistic on the same photo. The key on
-     * the back stack is unchanged; the selection comes back from the ViewModel, which outlives
-     * the re-created activity.
+     * Process death on a tool other than Edit: the Artistic screen is restored as the Artistic
+     * screen on the same photo, its new ViewModel told the tool by the restored key alone.
      */
     @Test
-    fun recreate_keeps_a_switched_tool_and_the_photo() {
-        val key = ToolPhoto(Tool.EDIT, servedFixture())
-        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-            compose.waitForIdle()
-            openToolScreen(key)
-            assertToolScreenShows(key)
-            switchTo(Tool.ARTISTIC)
-            assertToolScreenShows(key, shownTool = Tool.ARTISTIC)
-
-            backStack = null
-            scenario.recreate()
-            compose.waitForIdle()
-
-            assertEquals(listOf(Home, key), backStack?.toList())
-            assertToolScreenShows(key, shownTool = Tool.ARTISTIC)
-        }
-    }
-
-    /**
-     * Process death after switching tools: as [process_death_keeps_the_tool_and_the_photo], but
-     * the editor was switched to Artistic before the app was killed. The restored editor is back
-     * on the same photo with Artistic selected, although its ViewModel is new and the key still
-     * says Edit: the screen kept the selection in its saved state and hands it back.
-     */
-    @Test
-    fun process_death_keeps_a_switched_tool_and_the_photo() {
-        val key = ToolPhoto(Tool.EDIT, servedFixture())
+    fun process_death_keeps_the_artistic_screen_and_the_photo() {
+        val key = ToolPhoto(Tool.ARTISTIC, servedFixture())
 
         val first = Robolectric.buildActivity(ComponentActivity::class.java).setup()
         compose.waitForIdle()
         openToolScreen(key)
         assertToolScreenShows(key)
-        switchTo(Tool.ARTISTIC)
-        assertToolScreenShows(key, shownTool = Tool.ARTISTIC)
 
         killAndRestore(first) {
             assertEquals(listOf(Home, key), backStack?.toList())
-            assertToolScreenShows(key, shownTool = Tool.ARTISTIC)
+            assertToolScreenShows(key)
         }
     }
 
@@ -294,12 +259,6 @@ class ToolPhotoKeyTest {
         }
     }
 
-    /** Taps [tool]'s toggle in the editor's toolbar and waits until the screen has caught up. */
-    private fun switchTo(tool: Tool) {
-        compose.onNodeWithTag(editorToolTag(tool)).performClick()
-        compose.waitForIdle()
-    }
-
     /** Writes a 400 x 200 EXIF-6 JPEG and serves it, returning its content Uri as text. */
     private fun servedFixture(): String {
         val file = ToolFixtures.writeJpeg(
@@ -320,28 +279,25 @@ class ToolPhotoKeyTest {
     }
 
     /**
-     * Waits for the tool screen, then checks it names [shownTool] (by default [key]'s own tool)
-     * in its top bar and draws the photo with [key]'s Uri, upright (taller than wide), each
-     * exactly once. [shownTool]'s toggle in the toolbar is the one on, every other one is off.
+     * Waits for the tool screen, then checks it names [key]'s tool in its top bar and draws the
+     * photo with [key]'s Uri, upright (taller than wide), each exactly once, and that no other
+     * tool's name is shown as text.
      */
-    private fun assertToolScreenShows(key: ToolPhoto, shownTool: Tool = key.tool) {
+    private fun assertToolScreenShows(key: ToolPhoto) {
         val image = hasTestTag(TOOL_IMAGE_TAG) and SemanticsMatcher.expectValue(TOOL_PHOTO_URI_KEY, key.photoUri)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(image).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onAllNodes(image).assertCountEquals(1)
-        compose.onAllNodes(
-            hasText(app.getString(shownTool.labelRes)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
-        ).assertCountEquals(1)
+        Tool.entries.forEach { tool ->
+            compose.onAllNodes(
+                hasText(app.getString(tool.labelRes)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
+            ).assertCountEquals(if (tool == key.tool) 1 else 0)
+        }
         compose.onAllNodes(hasText("home")).assertCountEquals(0)
 
         val bounds = compose.onAllNodes(image).fetchSemanticsNodes().single().boundsInRoot
         assertTrue("The photo is not upright: $bounds", bounds.height > bounds.width)
-
-        Tool.editingTools.forEach { tool ->
-            val toggle = compose.onNodeWithTag(editorToolTag(tool))
-            if (tool == shownTool) toggle.assertIsOn() else toggle.assertIsOff()
-        }
     }
 
     /** Writes [bundle] into a Parcel and reads it back, as Android does with saved state. */

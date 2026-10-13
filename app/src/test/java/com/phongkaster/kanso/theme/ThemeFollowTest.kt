@@ -67,8 +67,7 @@ import com.phongkaster.kanso.ui.settings.SettingsUiState
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
-import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import kotlin.math.abs
@@ -310,27 +309,26 @@ class ThemeFollowTest {
             save = ToolUiState.SaveState.Idle,
         )
         show(mode) {
-            ToolContent(state = state, onBack = {}, onSave = {}, onSelectTool = {})
+            ToolContent(state = state, onBack = {}, onSave = {})
         }
-        val body = nodeRect(TOOL_BODY_TAG)
-        val photo = nodeRect(TOOL_IMAGE_TAG)
+        val card = nodeRect(TOOL_CARD_TAG)
         assertTrue(
-            "The photo must leave a band of background above it (photo area top ${body.top}, " +
-                "photo top ${photo.top}), or this test reads the wrong place",
-            photo.top - body.top >= MIN_BAND_PX,
+            "The card must leave a margin at the screen's left edge (card left ${card.left}), " +
+                "or this test reads the wrong place",
+            card.left >= MIN_BAND_PX,
         )
         assertFollows(
-            screen = "Editor with a ready photo",
+            screen = "Tool screen with a ready photo",
             mode = mode,
             topBar = topBarSpot(mode),
             background = Spot(
-                place = "background above the photo, in the middle of the screen",
-                x = rootSize().width / 2,
-                y = ((body.top + photo.top) / 2f).roundToInt(),
+                place = "background left of the photo card, level with its middle",
+                x = (card.left / 2f).roundToInt(),
+                y = ((card.top + card.bottom) / 2f).roundToInt(),
                 expected = scheme(mode).background,
                 role = "background",
             ),
-            contentTop = body.top,
+            contentTop = card.top,
         )
     }
 

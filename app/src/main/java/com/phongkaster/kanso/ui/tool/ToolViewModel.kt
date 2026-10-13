@@ -18,15 +18,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Holds the state of the editor, the screen where a tool works on the photo named by [photoUri].
- * [tool] is the tool the editor opens on; the person can then switch to any other editing tool
- * with [selectTool], and the state's `tool` follows.
+ * Holds the state of a tool screen: [tool] working on the photo named by [photoUri].
  *
- * The first tool and the photo come from the navigation key (`ToolPhoto`), which is saved with
- * the back stack. The decoded photo is not saved anywhere: after the app is killed, the key comes
- * back and the photo is simply decoded again. The tool selected later is not in the key, so the
- * screen function keeps a copy of it in the screen's saved state and hands it back through
- * [selectTool] when a new ViewModel starts after the app was killed (see `ToolScreen`).
+ * Each tool has a screen of its own, opened from its navigation key (`ToolPhoto(tool, photoUri)`):
+ * one ViewModel class serves all five, told by the key which tool it is for. The tool never
+ * changes for this ViewModel's whole life, so the state's `tool` is always the key's tool; to work
+ * with another tool the person goes back and opens that tool's own screen.
+ *
+ * Both facts come from the key, which is saved with the back stack. The decoded photo is not
+ * saved anywhere: after the app is killed, the key comes back and the photo is simply decoded
+ * again.
  *
  * [loader] decodes the photo; [probe] is told when this ViewModel is cleared, so tests can check
  * that leaving the screen frees it; [saver] writes the photo into the phone's `Pictures/Kanso`
@@ -47,30 +48,10 @@ class ToolViewModel(
     private val mutableState = MutableStateFlow(ToolUiState(tool, photoUri))
 
     /**
-     * What the screen shows (the selected tool, the photo, and where saving stands), as one
-     * snapshot it can read at any moment.
+     * What the screen shows (its tool, the photo, and where saving stands), as one snapshot it
+     * can read at any moment.
      */
     val state: StateFlow<ToolUiState> = mutableState.asStateFlow()
-
-    /**
-     * Makes [tool] the editor's selected tool, as when the person taps its toggle in the toolbar.
-     *
-     * Only the tool part of the snapshot changes: the photo stays as it is (it is never decoded
-     * again for a switch) and so does where saving stands. Selecting the tool that is already
-     * selected changes nothing.
-     *
-     * While a save is running the call is ignored and the tool stays as it was. The app reads the
-     * selected tool when the save finishes, to decide which gallery "Edit another" opens on the
-     * Saved screen, so the tool must be the one the person saved with. The toolbar is switched
-     * off during a save too; this rule also covers a call that does not come from a tap.
-     */
-    fun selectTool(tool: Tool) {
-        // update { } reads and writes the snapshot in one step, so the check and the change see
-        // the same save state.
-        mutableState.update { current ->
-            if (current.save == ToolUiState.SaveState.Saving) current else current.copy(tool = tool)
-        }
-    }
 
     /** The size the photo was last asked for, so the same request is not decoded twice. */
     private var requestedMaxEdgePx: Int? = null
