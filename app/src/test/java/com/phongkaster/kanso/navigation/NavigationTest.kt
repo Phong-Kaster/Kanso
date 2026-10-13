@@ -19,6 +19,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -57,14 +58,18 @@ import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_DOTS_TAG
 import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_EMPTY_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_MORE_TAG
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.home.HOME_SHORTCUTS_TAG
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.home.homeBannerTag
 import com.phongkaster.kanso.ui.home.homeCarouselDotTag
+import com.phongkaster.kanso.ui.home.homeRecentTag
 import com.phongkaster.kanso.ui.home.homeShortcutLabelTag
 import com.phongkaster.kanso.ui.home.homeShortcutTag
 import com.phongkaster.kanso.ui.home.homeTryTag
+import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
@@ -294,6 +299,27 @@ class NavigationTest {
 
             assertBackClosesTheApp(scenario)
         }
+    }
+
+    /**
+     * DoD 21 (the strip) on Android 15, with no permission granted and the app's own edits source:
+     * launching, showing Home with its "Recent edits" section, and tapping its arrow (which opens
+     * My edits) record no permission request.
+     */
+    @Test
+    fun the_recent_strip_and_its_arrow_ask_for_nothing_on_android_15() {
+        assertStripAsksForNothing(expectEmpty = false)
+    }
+
+    /**
+     * DoD 21 (the strip) on Android 8.1, where reading Kanso's saved photos would need
+     * READ_EXTERNAL_STORAGE, which is not granted: nothing is asked for, nothing throws, and both
+     * Home's strip and the My edits tab show their empty messages.
+     */
+    @Test
+    @Config(sdk = [27])
+    fun the_recent_strip_and_its_arrow_ask_for_nothing_on_android_8_1() {
+        assertStripAsksForNothing(expectEmpty = true)
     }
 
     /**
@@ -607,6 +633,36 @@ class NavigationTest {
                 Espresso.pressBack()
                 waitForHomeOnly()
             }
+        }
+    }
+
+    /**
+     * Starts the app with no permission granted and the tests' empty edits source, waits until Home's
+     * "Recent edits" section has finished reading (the message, or a card, in place of the
+     * placeholders), checks nothing was asked for, taps the arrow and checks My edits is shown and
+     * selected, still with nothing asked for. With [expectEmpty], Home's strip and My edits must
+     * both show their empty messages (exact text).
+     */
+    private fun assertStripAsksForNothing(expectEmpty: Boolean) {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            waitForHome()
+            waitFor { count(HOME_RECENT_EMPTY_TAG) > 0 || count(homeRecentTag(0)) > 0 }
+            compose.onNodeWithTag(HOME_RECENT_MORE_TAG).assertHasClickAction()
+            assertNoRequest(scenario)
+            if (expectEmpty) {
+                compose.onNodeWithTag(HOME_RECENT_EMPTY_TAG)
+                    .assert(hasText(context.getString(R.string.home_hero_recent_empty)))
+            }
+
+            compose.onNodeWithTag(HOME_RECENT_MORE_TAG).tapAboveBar()
+            waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(HOME_SCREEN_TAG) == 0 }
+            assertSelected(KansoTab.MY_EDITS)
+            assertNoRequest(scenario)
+            if (expectEmpty) {
+                waitFor { count(MY_EDITS_EMPTY_TAG) > 0 }
+                compose.onNodeWithTag(MY_EDITS_EMPTY_TAG).assert(hasAnyDescendant(hasText(context.getString(R.string.my_edits_empty))))
+            }
+            scenario.onActivity { assertFalse(it.isFinishing) }
         }
     }
 

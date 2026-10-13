@@ -63,11 +63,20 @@ fun HSVColorPicker(
             BasicTextField(
                 value = inputColorCode.uppercase(),
                 onValueChange = {
-                    inputColorCode = it.filter { char -> char in '0'..'9' || char in 'A'..'F' }.take(6)
-                    tryWithoutCatch {
-                        val colorValue = inputColorCode.toLong()
-                        colorPickerValue = HSVColor.from(Color(colorValue))
-                        updatedOnColorChanged(colorPickerValue.toColor())
+                    // Keep only hex digits, in either case, shown upper-cased, at most six of them.
+                    inputColorCode = it
+                        .filter { char -> char in '0'..'9' || char in 'a'..'f' || char in 'A'..'F' }
+                        .uppercase()
+                        .take(6)
+                    // Only a complete six-digit code is applied: it is read in base 16 and made opaque
+                    // (0xFF in the alpha byte), so 2E7D32 gives exactly 0xFF2E7D32.
+                    // A shorter code changes nothing and reports nothing.
+                    val typedRgb = if (inputColorCode.length == 6) inputColorCode.toLongOrNull(16) else null
+                    if (typedRgb != null) {
+                        val typedColor = Color(0xFF000000L or typedRgb)
+                        colorPickerValue = HSVColor.from(typedColor)
+                        // Report the exact typed colour, not the HSV round trip, which can move a channel by one.
+                        updatedOnColorChanged(typedColor)
                     }
                 },
                 modifier = Modifier.weight(1f),

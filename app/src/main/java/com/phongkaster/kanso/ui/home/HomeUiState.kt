@@ -1,10 +1,12 @@
 package com.phongkaster.kanso.ui.home
 
+import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.navigation.Tool
 
 /**
  * Everything the Home screen shows that can differ from one snapshot to the next, in one value:
- * the tools of its two ways into a tool, each list in display order.
+ * the tools of its two ways into a tool, each list in display order, and the photos of its
+ * "Recent edits" strip.
  *
  * - [carouselTools] are the banners of the hero carousel, left to right: Remove background,
  *   Enhance, Retouch and Artistic, the four AI tools. A banner shows the tool large, with a line
@@ -13,6 +15,12 @@ import com.phongkaster.kanso.navigation.Tool
  *   Edit, Remove background, Enhance, Retouch and Artistic, every tool once. It equals
  *   `Tool.entries`, the order the [Tool] enum declares them in, so every tool is one tap from Home
  *   without swiping the carousel.
+ * - [recentPhotos] are the newest photos Kanso has saved, newest first, at most ten (the strip's
+ *   limit), and [recentLoading] is true while they are being read. Together they pick the strip's
+ *   face, as on the My edits tab: some photos show as cards (even while a new read runs, so the
+ *   strip never blinks when the person comes back to Home); no photos while loading show
+ *   placeholder cards; no photos once read show a short message. Both have defaults (no photos,
+ *   not loading), so a sample state that only names the tools draws the strip's message.
  *
  * The rest of Home is always the same: the title "Kanso" and the greeting under it are drawn on
  * every Home, so they need no field here. The camera is not a tool: it takes a new photo instead
@@ -45,7 +53,13 @@ import com.phongkaster.kanso.navigation.Tool
  * Which banner the carousel shows is not in here: it is the carousel's own scroll position, kept
  * by the carousel itself (see `HomeContent`), the same way a list keeps how far it is scrolled.
  *
- * On Home a tap only opens another screen, so Home's snapshot never changes. Home still has a
- * ViewModel and a UiState all the same, so that every screen of the app reads the same way.
+ * On Home a tap only opens another screen; the snapshot changes only when the recent photos have
+ * been read again (each time Home is shown), and then the ViewModel puts a new one in its
+ * StateFlow with `copy(...)`.
  */
-data class HomeUiState(val carouselTools: List<Tool>, val shortcutTools: List<Tool>)
+data class HomeUiState(
+    val carouselTools: List<Tool>,
+    val shortcutTools: List<Tool>,
+    val recentPhotos: List<Photo> = emptyList(),
+    val recentLoading: Boolean = false,
+)

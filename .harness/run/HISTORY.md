@@ -43,3 +43,9 @@
 - Did: two Capable Workers wrote SavedScreenTest and HomeScreenTest + the two navigation tests (the read guard refused them the evidence drafts, so HomeScreenTest was written afresh); Iteration fixed ThemeFollowTest (Saved premise: a photo in the theme's background colour), AccessibilityWalk (dots carry `stateDescription`, not `selected`), a Saved message assertion, HomeScreenTest's banner checks, ScreenshotTest's dot check; removed `strings_home.xml` and `saved_home`; recorded pictures 1-3, 10-15, 18-21, 26, 27 and new 43, 44 (judged 1, 10, 43).
 - Evidence: whole set green (`evidence/p2-run4.log`: tests, verifyRoborazziDebug, lint, assembleDebug).
 - Not done: fresh-context review of Phases 1 and 2 skipped for time; the Verifier re-proves everything.
+
+### Iteration 9 - 2026-10-13 (Phase 3: Settings rows, Recent edits strip, hex field)
+- **Phase:** 3 (T-007, T-008, T-009), three Capable Workers, attempt 1 each. Knowledge layout migrated first (ADR-040): `PROJECT.md` now Constraints plus an index, Reference and the API digest split into `knowledge/reference/` topics under 12 KB.
+- Did: Iteration wired `AppModule` (HomeViewModel takes the source) and `KansoNavHost` (`onRecentClick`, `onSeeAllEdits`); added `TestKansoApplication` + `robolectric.properties` (the real source on Home's launch crashed the next Robolectric sandbox); fixed the strip so a new first photo is scrolled into view; fixed the My edits empty-message assertion in `NavigationTest`; recorded pictures 1-6, 24, 25 (judged 4 and the small-phone Home 38) and new 34-39.
+- Evidence: whole set green (`evidence/p3-full-2.log`, then `p3-verify.log` after recording). Worker note: `HSVColorPicker.kt` has CRLF and no final newline, so the hex fix is inline with no trailing helper (DoD 39 still satisfied).
+- Not done: fresh-context review of Phases 1-3 (time); `evidence/baseline-diffs/` copies.

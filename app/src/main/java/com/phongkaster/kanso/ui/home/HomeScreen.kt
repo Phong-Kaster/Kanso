@@ -3,7 +3,9 @@ package com.phongkaster.kanso.ui.home
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +26,9 @@ import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -41,15 +46,20 @@ import androidx.compose.material3.carousel.CarouselState
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.stateDescription
@@ -60,9 +70,14 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.common.ProvideSkeletonPulse
 import com.phongkaster.kanso.ui.common.RoundIconButton
+import com.phongkaster.kanso.ui.common.SkeletonBlock
+import com.phongkaster.kanso.ui.gallery.PhotoThumbnail
+import com.phongkaster.kanso.ui.myedits.savedAtText
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /** The test tag on the root of the Home screen. */
@@ -98,6 +113,37 @@ fun homeShortcutTag(tool: Tool): String = "home-shortcut-${tool.name}"
 
 /** Returns the test tag of the name under [tool]'s shortcut, such as `home-shortcut-EDIT-label`. */
 fun homeShortcutLabelTag(tool: Tool): String = "${homeShortcutTag(tool)}-label"
+
+/** The test tag on the "Recent edits" strip: the row of photo cards, or of placeholders while loading. */
+const val HOME_RECENT_TAG = "home-recent"
+
+/** The test tag on the round arrow beside "Recent edits", which opens the My edits tab. */
+const val HOME_RECENT_MORE_TAG = "home-recent-more"
+
+/** The test tag on the short message shown instead of the strip when Kanso has saved nothing yet. */
+const val HOME_RECENT_EMPTY_TAG = "home-recent-empty"
+
+/** The start of every recent photo card's test tag; the card's place (0 is the newest) follows it. */
+const val HOME_RECENT_CARD_TAG_PREFIX = "home-recent-"
+
+/** The start of every placeholder card's test tag; the placeholder's place follows it. */
+const val HOME_RECENT_SKELETON_TAG_PREFIX = "home-recent-skeleton-"
+
+/**
+ * The Uri (as text) of the photo a recent card shows, attached to the card as a semantics fact.
+ *
+ * Semantics are what Compose tells screen readers and tests about a node, such as its text or its
+ * role. This extra, Kanso-only fact lets a test check which photo a card stands for (for example
+ * that the photo just saved is first) without comparing pixels; it is invisible to people and to
+ * screen readers, like the tool screen's `TOOL_PHOTO_URI_KEY`.
+ */
+val HOME_RECENT_URI_KEY = SemanticsPropertyKey<String>("HomeRecentUriKey")
+
+/** Returns the test tag of the recent photo card at [index], such as `home-recent-0` (the newest). */
+fun homeRecentTag(index: Int): String = "$HOME_RECENT_CARD_TAG_PREFIX$index"
+
+/** Returns the test tag of the placeholder card at [index], such as `home-recent-skeleton-0`. */
+fun homeRecentSkeletonTag(index: Int): String = "$HOME_RECENT_SKELETON_TAG_PREFIX$index"
 
 /** The space between the screen's left and right edges and Home's content. */
 private val SCREEN_PADDING = 16.dp
@@ -141,9 +187,37 @@ private val DOT_SPACING = 6.dp
 private val SHORTCUT_LABEL_GAP = 4.dp
 
 /**
+ * The height of the "Recent edits" heading row: the 48 dp of the round arrow button in it, so the
+ * heading and the arrow share one centre line.
+ */
+private val RECENT_HEADER_HEIGHT = 48.dp
+
+/** The gap between the "Recent edits" heading row and the cards under it. */
+private val RECENT_HEADER_GAP = 4.dp
+
+/** The width of a recent photo card (and of a placeholder card). */
+private val RECENT_CARD_WIDTH = 120.dp
+
+/** The height of a recent photo card: taller than wide, like a photo held upright. */
+private val RECENT_CARD_HEIGHT = 160.dp
+
+/** The gap between two cards of the strip. */
+private val RECENT_CARD_SPACING = 8.dp
+
+/**
+ * How many placeholder cards stand in for the photos while they load: more than fit across a
+ * phone, so the last one runs off the edge as real cards would.
+ */
+private const val RECENT_SKELETON_COUNT = 4
+
+/** The content type shared by every recent photo card (see [RecentEditsStrip]). */
+private const val RECENT_CARD_CONTENT_TYPE = "recent-photo"
+
+/**
  * The Home screen: in one scrolling column, the title "Kanso", the greeting "What will you edit
- * today?", the hero carousel of the four AI tools with its page dots, and a row of five round
- * shortcuts, one per tool. The camera, My edits and Settings are not on Home itself: they are
+ * today?", the hero carousel of the four AI tools with its page dots, a row of five round
+ * shortcuts, one per tool, and the "Recent edits" strip of Kanso's latest saved photos. The camera,
+ * My edits and Settings are not on Home itself: they are
  * reached from the floating tab bar the navigation host draws over every tab screen (see
  * `KansoTabShell`).
  *
@@ -168,7 +242,21 @@ private val SHORTCUT_LABEL_GAP = 4.dp
  * The screen itself never navigates: it only reports what was tapped, and the caller (the
  * navigation host) decides where that leads. [onToolClick] is called with the tool of the banner,
  * the "Try now" button or the shortcut that was tapped; the caller opens that tool's photo
- * gallery, and the photo picked there opens in that tool.
+ * gallery, and the photo picked there opens in that tool. [onRecentClick] is called with the Uri
+ * (as text) of the recent photo card that was tapped; the caller opens it in the Edit tool.
+ * [onSeeAllEdits] is called by the round arrow beside "Recent edits"; the caller selects the My
+ * edits tab.
+ *
+ * Besides reading the state, this stateful part does two things a preview must never do:
+ *
+ * - It asks the ViewModel to read the saved photos again each time Home enters the composition.
+ *   `LaunchedEffect` runs its block once when the composable first appears (and again only if its
+ *   key, here [viewModel], changes). Home leaves the composition while another screen covers it,
+ *   so coming back from the Saved screen runs it again and the photo just saved is first in the
+ *   strip. The photos already shown stay while the new read runs (see [HomeViewModel.refresh]).
+ * - It wraps the content in `ProvideSkeletonPulse`, which makes the placeholder cards' soft band
+ *   move while the photos load. [HomeContent] on its own keeps them still, which is what previews
+ *   and tests draw.
  *
  * [contentPadding] is extra empty space the caller asks for at the end of the column; the
  * navigation host passes the height the floating tab bar covers, so the last row can always be
@@ -180,24 +268,43 @@ fun HomeScreen(
     onToolClick: (Tool) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    onRecentClick: (String) -> Unit = {},
+    onSeeAllEdits: () -> Unit = {},
 ) {
     // collectAsState turns the ViewModel's StateFlow into Compose state: whenever a new
     // snapshot arrives, Home is drawn again with it. `by` lets `state` be used as the current
     // snapshot itself, rather than as a box holding it.
     val state by viewModel.state.collectAsState()
 
-    HomeContent(
-        state = state,
-        onToolClick = onToolClick,
-        modifier = modifier,
-        contentPadding = contentPadding,
-    )
+    LaunchedEffect(viewModel) {
+        viewModel.refresh()
+    }
+
+    ProvideSkeletonPulse {
+        HomeContent(
+            state = state,
+            onToolClick = onToolClick,
+            modifier = modifier,
+            contentPadding = contentPadding,
+            onRecentClick = onRecentClick,
+            onSeeAllEdits = onSeeAllEdits,
+        )
+    }
 }
 
 /**
  * The stateless part of Home (see [HomeScreen] for why there are two): draws one scrolling column
  * holding, from top to bottom, the title "Kanso" and the greeting, the hero carousel of
- * `state.carouselTools` with its page dots, and the row of round shortcuts of `state.shortcutTools`.
+ * `state.carouselTools` with its page dots, the row of round shortcuts of `state.shortcutTools`,
+ * and the "Recent edits" heading with its arrow above the strip of `state.recentPhotos`.
+ *
+ * Why every row fits on a small phone. The owner's rule is that every tool, the Camera button, the
+ * arrow and the newest recent photo are one tap from Home, with nothing scrolled. On a 360 x 780 dp
+ * phone with a 24 dp status bar and a 48 dp navigation bar, the rows add up, from the top of the
+ * window: status bar 24, title 48, greeting 28, gap 12, carousel 176, gap 12, dots 8, gap 12,
+ * shortcuts 84 (button 48, gap 4, two lines of name 32), gap 12, heading row 48, gap 4, cards 160:
+ * the cards end at 628 dp, 24 dp above the floating bar's top (780 - 48 - 16 - 64 = 652). The
+ * column still scrolls, for bigger fonts and smaller screens, but on that phone nothing needs to.
  *
  * The title is the first item of the column, not a separate top bar, so it scrolls away with the
  * rest and everything Home shows lives in the one scrolling column. With no top bar, the
@@ -210,8 +317,16 @@ fun HomeScreen(
  * the same banner after the person comes back from a tool or turns the phone.
  *
  * Taps are reported, never acted on here: [onToolClick] with the tool of the banner, the "Try now"
- * button or the shortcut. [contentPadding]'s bottom is added after the last row, inside the
- * scrolling part, so it is space the person scrolls through, not a margin that shrinks the screen.
+ * button or the shortcut; [onRecentClick] with the Uri (as text) of the tapped recent photo;
+ * [onSeeAllEdits] when the arrow beside "Recent edits" is tapped. The last two have defaults that
+ * do nothing, for callers that only draw Home. [contentPadding]'s bottom is added after the last
+ * row, inside the scrolling part, so it is space the person scrolls through, not a margin that
+ * shrinks the screen.
+ *
+ * [thumbnail] draws one recent card's picture, given the photo and the card's modifier (size,
+ * rounded shape, background, tap, spoken name and test tag, which it must use). The app keeps the
+ * default, the gallery's `PhotoThumbnail`, which loads the picture with Coil; a preview cannot read
+ * the phone's photos, so it passes a coloured box instead.
  */
 @Composable
 fun HomeContent(
@@ -219,6 +334,18 @@ fun HomeContent(
     onToolClick: (Tool) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    onRecentClick: (String) -> Unit = {},
+    onSeeAllEdits: () -> Unit = {},
+    thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit = { photo, cardModifier ->
+        PhotoThumbnail(
+            photo = photo,
+            // Decoded a little larger than the card's longer side, so the picture stays sharp.
+            sizePx = with(LocalDensity.current) { RECENT_CARD_HEIGHT.roundToPx() },
+            modifier = cardModifier,
+            // The card carries its own spoken name ("Edited photo" and the date).
+            contentDescription = null,
+        )
+    },
 ) {
     // The carousel asks for the number of banners through a lambda, so it always reads the
     // current list, even if a later snapshot held a different one.
@@ -267,6 +394,15 @@ fun HomeContent(
             CarouselDots(count = state.carouselTools.size, current = carouselState.currentItem)
             Spacer(Modifier.height(ROW_GAP))
             ToolShortcuts(tools = state.shortcutTools, onToolClick = onToolClick)
+            Spacer(Modifier.height(ROW_GAP))
+            RecentEditsHeader(onSeeAllEdits = onSeeAllEdits)
+            Spacer(Modifier.height(RECENT_HEADER_GAP))
+            RecentEdits(
+                photos = state.recentPhotos,
+                loading = state.recentLoading,
+                onRecentClick = onRecentClick,
+                thumbnail = thumbnail,
+            )
         }
     }
 }
@@ -592,13 +728,281 @@ private fun ToolShortcut(tool: Tool, onClick: () -> Unit, modifier: Modifier = M
 }
 
 /**
- * The sample state the preview draws: the same two lists the real Home shows, written out by
- * hand. It is a plain value, so building it needs nothing of the running app.
+ * The heading row of the "Recent edits" section: the words "Recent edits" on the left, marked as a
+ * heading for screen readers, and on the right a round arrow button ([RoundIconButton], the app's
+ * shared 48 dp tonal circle) that calls [onSeeAllEdits]; the caller opens the My edits tab, where
+ * every saved photo is listed. The row is exactly as tall as the button and centres both, so the
+ * heading and the arrow share one centre line.
  */
-private val sampleHomeState = HomeUiState(
-    carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-    shortcutTools = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-)
+@Composable
+private fun RecentEditsHeader(onSeeAllEdits: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(RECENT_HEADER_HEIGHT),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.home_hero_recent_title),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
+        )
+        RoundIconButton(
+            onClick = onSeeAllEdits,
+            iconRes = R.drawable.ic_arrow_forward,
+            contentDescription = stringResource(R.string.home_hero_recent_more),
+            modifier = Modifier.testTag(HOME_RECENT_MORE_TAG),
+        )
+    }
+}
+
+/**
+ * The body of the "Recent edits" section, one of three faces picked from [photos] and [loading]
+ * (see [HomeUiState]):
+ *
+ * - some [photos]: the strip of cards ([RecentEditsStrip]), even while a new read runs, so the
+ *   cards never blink away when the person comes back to Home;
+ * - no photos and [loading]: placeholder cards ([RecentEditsLoading]) while the first read runs;
+ * - no photos and not [loading]: a short message ([RecentEditsEmpty]), as on a fresh install.
+ *
+ * [onRecentClick] gets the tapped photo's Uri as text; [thumbnail] draws each card's picture (see
+ * [HomeContent]).
+ */
+@Composable
+private fun RecentEdits(
+    photos: List<Photo>,
+    loading: Boolean,
+    onRecentClick: (String) -> Unit,
+    thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when {
+        photos.isNotEmpty() -> RecentEditsStrip(
+            photos = photos,
+            onRecentClick = onRecentClick,
+            thumbnail = thumbnail,
+            modifier = modifier,
+        )
+        loading -> RecentEditsLoading(modifier = modifier)
+        else -> RecentEditsEmpty(modifier = modifier)
+    }
+}
+
+/**
+ * The strip of recent photos: one tall rounded card per photo of [photos], newest first, left to
+ * right, in a row the person swipes sideways. A tap on a card calls [onRecentClick] with that
+ * photo's Uri as text.
+ *
+ * What `LazyRow` is. The sideways twin of a lazy list: a row that scrolls left and right and
+ * builds only the cards in view (plus a few just outside), so ten cards cost no more than three.
+ * Each card is keyed by its photo's id, so when a new edit arrives at the front the strip keeps
+ * the other cards' pictures instead of rebuilding them all. It scrolls on its own axis only: a
+ * sideways swipe on it moves the cards, never Home's column.
+ *
+ * One catch of keyed lazy lists: when a photo is added at the front, the list keeps the card the
+ * person was looking at in place, which pushes the new first card just off the left edge. The
+ * strip's `LazyListState` (the object that remembers how far the row is scrolled) is therefore
+ * sent back to the start whenever the newest photo changes, so a photo just saved is the first
+ * thing seen when the person comes back to Home.
+ */
+@Composable
+private fun RecentEditsStrip(
+    photos: List<Photo>,
+    onRecentClick: (String) -> Unit,
+    thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    val newestId = photos.firstOrNull()?.id
+    LaunchedEffect(newestId) { listState.scrollToItem(0) }
+    LazyRow(
+        state = listState,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(HOME_RECENT_TAG),
+        horizontalArrangement = Arrangement.spacedBy(RECENT_CARD_SPACING),
+    ) {
+        itemsIndexed(
+            items = photos,
+            key = { _, photo -> photo.id },
+            contentType = { _, _ -> RECENT_CARD_CONTENT_TYPE },
+        ) { index, photo ->
+            RecentEditCard(
+                index = index,
+                photo = photo,
+                onClick = { onRecentClick(photo.uri) },
+                thumbnail = thumbnail,
+            )
+        }
+    }
+}
+
+/**
+ * One card of the strip: [photo]'s picture, [RECENT_CARD_WIDTH] wide and [RECENT_CARD_HEIGHT]
+ * tall, cut to the theme's large rounded shape, at place [index] (0 is the newest). A tap calls
+ * [onClick].
+ *
+ * The card shows no text. Its spoken name is the one the My edits tiles use, "Edited photo" and
+ * the date and time it was saved, so a screen reader names an edit the same way in both places.
+ * The order of the modifiers matters, because each wraps the ones after it: `clip` comes before
+ * the background, the tap and the picture, so all three are cut to the rounded shape, the tap's
+ * ripple included. The background, `surfaceContainerHigh`, shows until the picture has loaded.
+ */
+@Composable
+private fun RecentEditCard(
+    index: Int,
+    photo: Photo,
+    onClick: () -> Unit,
+    thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit,
+) {
+    // Formatting a date takes a moment; remember keeps the text until the photo's time changes.
+    val savedAt = remember(photo.modifiedSeconds) { savedAtText(photo.modifiedSeconds) }
+    val description = stringResource(R.string.my_edits_photo_description, savedAt)
+    thumbnail(
+        photo,
+        Modifier
+            .size(width = RECENT_CARD_WIDTH, height = RECENT_CARD_HEIGHT)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .semantics {
+                contentDescription = description
+                this[HOME_RECENT_URI_KEY] = photo.uri
+            }
+            .testTag(homeRecentTag(index)),
+    )
+}
+
+/**
+ * What the strip shows while the saved photos are read for the first time: [RECENT_SKELETON_COUNT]
+ * placeholder cards ([SkeletonBlock]), each the size and rounded shape of a real card and spaced
+ * like them, so nothing jumps when the photos arrive.
+ *
+ * Why placeholders instead of a spinner. A spinner says only "wait"; it sits where nothing will
+ * be and then vanishes, and the cards pop in around it. Placeholders (often called skeletons)
+ * already draw the strip's shape, so the person sees at once what is coming and where, and the
+ * photos simply fill the shapes in. They are also calmer: their soft band moves only while
+ * `ProvideSkeletonPulse` is active, and stands still in previews and tests.
+ *
+ * The placeholders have no text and no meaning of their own, so the strip carries one spoken
+ * name saying the edits are loading, and the placeholders add nothing for screen readers. It is a
+ * `LazyRow` like the real strip (so each placeholder gets its full width even past the edge), with
+ * scrolling turned off: there is nothing to scroll to yet.
+ */
+@Composable
+private fun RecentEditsLoading(modifier: Modifier = Modifier) {
+    // Read in composition, so the spoken name follows the phone's language.
+    val description = stringResource(R.string.home_hero_recent_loading)
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(HOME_RECENT_TAG)
+            .semantics { contentDescription = description },
+        horizontalArrangement = Arrangement.spacedBy(RECENT_CARD_SPACING),
+        userScrollEnabled = false,
+    ) {
+        items(count = RECENT_SKELETON_COUNT) { index ->
+            SkeletonBlock(
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier
+                    .size(width = RECENT_CARD_WIDTH, height = RECENT_CARD_HEIGHT)
+                    .testTag(homeRecentSkeletonTag(index)),
+            )
+        }
+    }
+}
+
+/**
+ * What the section shows when Kanso has saved no photo yet (or none can be read): one short line
+ * in the theme's softer text colour, centred on a calm rounded panel as tall as a card, so the
+ * rows above keep their places whether or not there are photos. The panel merges its text into
+ * one node for screen readers and tests.
+ */
+@Composable
+private fun RecentEditsEmpty(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(RECENT_CARD_HEIGHT)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .semantics(mergeDescendants = true) {}
+            .testTag(HOME_RECENT_EMPTY_TAG)
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.home_hero_recent_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * Three saved photos for the previews, newest first, one hour apart, named like Kanso's own
+ * files. Their Uris look like the phone's real ones, but nothing reads them: the previews draw
+ * [SampleRecentCard] instead of loading the pictures.
+ */
+private val sampleRecentPhotos by lazy {
+    (1..3).map { i ->
+        Photo(
+            id = i.toLong(),
+            uri = "content://media/external/images/media/${3_000 + i}",
+            name = "Kanso_20261012_%02d0000.jpg".format(24 - i),
+            albumId = 1L,
+            modifiedSeconds = 1_791_800_000L - i * 3_600L,
+        )
+    }
+}
+
+/**
+ * The stand-in for a recent photo's picture in the previews: a box of a soft colour whose hue
+ * moves round the colour wheel with the photo's id, drawn with the card's [modifier], which
+ * already cuts it to the rounded card.
+ */
+@Composable
+private fun SampleRecentCard(photo: Photo, modifier: Modifier = Modifier) {
+    Spacer(
+        modifier = modifier.background(
+            Color.hsv(hue = (photo.id * 53 % 360).toFloat(), saturation = 0.45f, value = 0.85f),
+        ),
+    )
+}
+
+/**
+ * The sample state the preview draws: the same two lists of tools the real Home shows, written
+ * out by hand, and three recent photos. It is a plain value, so building it needs nothing of the
+ * running app.
+ */
+private val sampleHomeState by lazy {
+    HomeUiState(
+        carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+        shortcutTools = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+        recentPhotos = sampleRecentPhotos,
+        recentLoading = false,
+    )
+}
+
+/**
+ * Home for the previews below: [HomeContent] drawing [state], with [SampleRecentCard] in every
+ * recent card and taps that do nothing. `ProvideSkeletonPulse(pulsing = false)` keeps the
+ * placeholder cards on their still frame: a preview has no test clock, and an animation that never
+ * ends would keep it from ever finishing.
+ */
+@Composable
+private fun SampleHome(state: HomeUiState) {
+    ProvideSkeletonPulse(pulsing = false) {
+        HomeContent(
+            state = state,
+            onToolClick = {},
+            thumbnail = { photo, cardModifier -> SampleRecentCard(photo, cardModifier) },
+        )
+    }
+}
 
 /**
  * Home as the person sees it, drawn once in light and once in dark.
@@ -607,17 +1011,33 @@ private val sampleHomeState = HomeUiState(
  * in day mode and one in night mode; `ThemeMode.System` makes KansoTheme follow that setting.
  * The sample data is [sampleHomeState], built by hand; no state holder from the app is needed to
  * make one. [HomeContent] draws every part of Home ([HomeTitle], [HomeGreeting], [HeroCarousel]
- * with its [HeroBanner]s, [CarouselDots], and [ToolShortcuts] with its [ToolShortcut]s), so this
- * one picture covers them all. The taps do nothing, because a preview cannot be tapped into
- * another screen.
+ * with its [HeroBanner]s, [CarouselDots], [ToolShortcuts] with its [ToolShortcut]s, and
+ * [RecentEditsHeader] above [RecentEditsStrip] with its [RecentEditCard]s), so this one picture
+ * covers them all; [HomeEmptyPreview] and [HomeLoadingPreview] show the strip's two other faces.
+ * The taps do nothing, because a preview cannot be tapped into another screen.
  */
 @PreviewLightDark
 @Composable
 private fun HomePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
-        HomeContent(
-            state = sampleHomeState,
-            onToolClick = {},
-        )
+        SampleHome(sampleHomeState)
+    }
+}
+
+/** Home on a fresh install, in light and dark: the strip's short message instead of photos. */
+@PreviewLightDark
+@Composable
+private fun HomeEmptyPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleHome(sampleHomeState.copy(recentPhotos = emptyList(), recentLoading = false))
+    }
+}
+
+/** Home while the recent photos are read, in light and dark: the placeholder cards, standing still. */
+@PreviewLightDark
+@Composable
+private fun HomeLoadingPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SampleHome(sampleHomeState.copy(recentPhotos = emptyList(), recentLoading = true))
     }
 }

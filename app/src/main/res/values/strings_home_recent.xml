@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home: the heading of the strip of Kanso's latest saved photos, under the tool shortcuts. -->
+    <string name="home_hero_recent_title">Recent edits</string>
+
+    <!-- Home: what a screen reader says for the round arrow beside "Recent edits", which opens
+         the My edits tab with every saved photo. -->
+    <string name="home_hero_recent_more">See all edits</string>
+
+    <!-- Home: the short message shown in place of the strip when Kanso has saved no photo yet. -->
+    <string name="home_hero_recent_empty">Your edits will show up here.</string>
+
+    <!-- Home: the spoken name of the strip while the saved photos are read. The placeholder
+         cards have no text, so a screen reader says this once for all of them. -->
+    <string name="home_hero_recent_loading">Loading your recent edits</string>
+</resources>

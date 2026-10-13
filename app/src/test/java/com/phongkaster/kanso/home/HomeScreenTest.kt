@@ -2,7 +2,10 @@ package com.phongkaster.kanso.home
 
 import android.app.Application
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -26,11 +29,15 @@ import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
+import com.phongkaster.kanso.myedits.FakeSavedPhotoSource
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_DOTS_TAG
 import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_MORE_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_TAG
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.home.HOME_SHORTCUTS_TAG
 import com.phongkaster.kanso.ui.home.HomeContent
@@ -57,7 +64,9 @@ import org.robolectric.annotation.Config
  * Checks Home's stateless part, [HomeContent], hosted on its own on a small phone (360 x 800 dp),
  * with the very state the real [HomeViewModel] hands it.
  *
- * What is checked: the rows come in order (title, greeting, carousel, page dots, shortcut row);
+ * What is checked: the rows come in order (title, greeting, carousel, page dots, shortcut row, the
+ * "Recent edits" heading with its round arrow on the same row, then the strip of three sample
+ * photos);
  * the carousel shows the four AI tools' banners in order, each with its name, its one-line
  * description, its large icon and a "Try now" button; four page dots mark the banner in front; a
  * left swipe settles on banner 2 and the dots follow; ten seconds without a touch leave banner 1
@@ -254,11 +263,18 @@ class HomeScreenTest {
      * recording every reported tap in [tapped], waits until it is drawn and returns the state.
      */
     private fun show(): HomeUiState {
-        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
-        val state = HomeViewModel(probe = ViewModelClearedProbe()).state.value
+        // Built outside the composable: lint forbids constructing a ViewModel while drawing. The
+        // tools are the real ViewModel's; the strip gets three sample photos, already read.
+        val state = HomeViewModel(probe = ViewModelClearedProbe(), savedPhotos = FakeSavedPhotoSource())
+            .state.value
+            .copy(recentPhotos = recentPhotos(), recentLoading = false)
         compose.setContent {
             KansoTheme(themeMode = ThemeMode.Light) {
-                HomeContent(state = state, onToolClick = { tapped += it })
+                HomeContent(
+                    state = state,
+                    onToolClick = { tapped += it },
+                    thumbnail = { _, cardModifier -> Spacer(cardModifier.background(Color(STAND_IN_COLOUR))) },
+                )
             }
         }
         compose.waitForIdle()
@@ -267,26 +283,62 @@ class HomeScreenTest {
     }
 
     /**
-     * Fails unless the title "Kanso" (a heading), the greeting, the carousel, the page dots and
-     * the shortcut row lie in that order, top to bottom, each starting no higher than the end of
-     * the one before.
+     * Fails unless the title "Kanso" (a heading), the greeting, the carousel, the page dots, the
+     * shortcut row, the heading "Recent edits" and the strip lie in that order, top to bottom,
+     * each starting no higher than the end of the one before (so their tops increase strictly).
+     * Then checks DoD 4 item (5): the round arrow `home-recent-more` is on the heading's row, its
+     * vertical centre within 4 dp of the heading's, round, clickable and named.
      */
     private fun assertRowsInOrder() {
         val title = box(hasText(app.getString(R.string.app_name)) and isHeading)
         val greeting = box(hasText(app.getString(R.string.home_hero_greeting)))
+        val recentTitle = box(hasText(app.getString(R.string.home_hero_recent_title)) and isHeading)
         val rows = listOf(
             "title" to title,
             "greeting" to greeting,
             "carousel" to box(HOME_CAROUSEL_TAG),
             "dots" to box(HOME_CAROUSEL_DOTS_TAG),
             "shortcuts" to box(HOME_SHORTCUTS_TAG),
+            "recent edits heading" to recentTitle,
+            "recent edits strip" to box(HOME_RECENT_TAG),
         )
         rows.zipWithNext().forEach { (above, below) ->
             assertTrue(
                 "${above.first} (${above.second}) must lie above ${below.first} (${below.second})",
                 above.second.bottom <= below.second.top + EPSILON,
             )
+            assertTrue(
+                "${below.first}'s top must be below ${above.first}'s top",
+                below.second.top > above.second.top,
+            )
         }
+
+        assertEquals("Recent edits", app.getString(R.string.home_hero_recent_title))
+        val fourDp = with(compose.density) { 4.dp.toPx() }
+        val oneDp = with(compose.density) { 1.dp.toPx() }
+        val more = box(HOME_RECENT_MORE_TAG)
+        assertEquals(
+            "The arrow must share the heading's row: arrow $more, heading $recentTitle",
+            recentTitle.center.y,
+            more.center.y,
+            fourDp,
+        )
+        assertTrue("The arrow must sit right of the heading: $more, $recentTitle", more.left >= recentTitle.left)
+        assertEquals("The arrow must be round: $more", more.width, more.height, oneDp)
+        compose.onNodeWithTag(HOME_RECENT_MORE_TAG)
+            .assertHasClickAction()
+            .assertContentDescriptionEquals(app.getString(R.string.home_hero_recent_more))
+    }
+
+    /** Three saved photos for the strip, newest first, one hour apart. */
+    private fun recentPhotos(): List<Photo> = (1..3).map { i ->
+        Photo(
+            id = i.toLong(),
+            uri = "content://media/external/images/media/$i",
+            name = "Kanso_$i.jpg",
+            albumId = 1L,
+            modifiedSeconds = 1_791_800_000L - i * 3_600L,
+        )
     }
 
     /**
@@ -406,6 +458,9 @@ class HomeScreenTest {
     private companion object {
         /** The four AI tools, in the order the carousel shows their banners. */
         val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+
+        /** The solid colour of the recent cards' stand-in pictures: a soft indigo. */
+        const val STAND_IN_COLOUR = 0xFF5C6BC0
 
         /** Ten seconds, in milliseconds: how long the carousel is left alone. */
         const val TEN_SECONDS_MS = 10_000L

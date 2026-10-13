@@ -42,7 +42,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { ViewModelClearedProbe() }
 
-    viewModel { HomeViewModel(probe = get()) }
+    viewModel { HomeViewModel(probe = get(), savedPhotos = get()) }
 
     // The photo library behind one small interface, so tests can swap in a fake list of photos.
     single<PhotoSource> { MediaStorePhotoSource(androidContext()) }

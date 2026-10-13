@@ -125,6 +125,12 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     onToolClick = { tool ->
                         if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },
+                    // A recent photo opens in the Edit tool; the arrow opens the My edits tab.
+                    // Both act only while Home is still on top, like the tool buttons above.
+                    onRecentClick = { photoUri ->
+                        if (backStack.last() == Home) backStack.add(ToolPhoto(Tool.EDIT, photoUri))
+                    },
+                    onSeeAllEdits = { if (backStack.last() == Home) backStack.selectTab(KansoTab.MY_EDITS) },
                     contentPadding = tabPadding,
                 )
             }

@@ -5,7 +5,7 @@
 
 ## Current
 
-- **Stage:** Phase 2 (T-004, T-005, T-006) complete and checkpointed (Iteration 7). Next: Phase 3 = T-007, T-008, T-009.
+- **Stage:** Phase 3 (T-007, T-008, T-009) complete and checkpointed (Iteration 9). Next: Phase 4 = T-010, T-011, then the Verifier.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
 - **Next Phase:** Phase 1b = T-003 
 - **DONE-candidate:** no
@@ -21,9 +21,9 @@
 | T-004 | complete | `ui/saved/*`, `navigation/EditedPhoto.kt`, saved tests, `MyEditsViewerNavigationTest` | - |
 | T-005 | complete | `ui/home/*` (title, carousel, the five tool shortcuts), Home-facing tests, `HomeTaps.kt` body | - |
 | T-006 | complete | `ui/gallery/GalleryScreen.kt`, `ui/camera/CameraScreen.kt`, their tests | - |
-| T-007 | pending (Phase 3) | `ui/settings/SettingsScreen.kt`, settings tests | - |
-| T-008 | pending (Phase 3) | `ui/home/*` (Recent edits), Home reach/recent/loading tests | - |
-| T-009 | pending (Phase 3) | `core/colorpicker/.../HSVColorPicker.kt` (hex handling), picker tests | - |
+| T-007 | complete | `ui/settings/SettingsScreen.kt`, settings tests | - |
+| T-008 | complete | `ui/home/*` (Recent edits), Home reach/recent/loading tests | - |
+| T-009 | complete | `core/colorpicker/.../HSVColorPicker.kt` (hex handling), picker tests | - |
 | T-010 | pending (Phase 4) | `a11y/AccessibilityWalkTest.kt`, `theme/ThemeFollowTest.kt`, `a11y/OverPhotoContrastTest.kt` | - |
 | T-011 | pending (Phase 4) | `navigation/ReplaceNavigationTest.kt`, `NavStateTest.kt`, `a11y/BottomClearanceTest.kt` | - |
 

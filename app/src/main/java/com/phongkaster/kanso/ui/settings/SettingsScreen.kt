@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.library.colorpicker.HSVColorPicker
@@ -115,6 +116,20 @@ const val THEME_COLOUR_CUSTOM_SWATCH_TAG = "theme-colour-custom-swatch"
 fun settingsRowIconTag(rowTag: String): String = "$rowTag-icon"
 
 /**
+ * Returns the test tag of the tinted rounded square that holds the icon of the row tagged
+ * [rowTag], such as `theme-mode-dark-icon-badge` for the "Dark" row. Like the icon, it is found
+ * in the unmerged tree.
+ */
+fun settingsRowIconBadgeTag(rowTag: String): String = "$rowTag-icon-badge"
+
+/**
+ * Returns the test tag of the one-line description under the title of the row tagged [rowTag],
+ * such as `theme-mode-dark-description` for the "Dark" row. Like the icon, it is found in the
+ * unmerged tree.
+ */
+fun settingsRowDescriptionTag(rowTag: String): String = "$rowTag-description"
+
+/**
  * The colour of the surface the picker sits on. The picker draws its text in fixed black, so
  * it always gets a white surface, which keeps that text readable in dark mode too.
  *
@@ -141,6 +156,12 @@ private val ROW_PADDING = 12.dp
 
 /** The smallest height of a row: 56 dp, comfortably above Android's 48 dp touch target. */
 private val ROW_MIN_HEIGHT = 56.dp
+
+/** The space above and below a row's title and description, inside the row. */
+private val ROW_VERTICAL_PADDING = 8.dp
+
+/** The side of the tinted rounded square that holds a row's icon. */
+private val BADGE_SIZE = 40.dp
 
 /** The size of a colour swatch: big enough to read the colour at a glance. */
 private val SWATCH_SIZE = 28.dp
@@ -320,6 +341,7 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) 
         ThemeMode.entries.forEach { mode ->
             SettingsChoiceRow(
                 label = stringResource(mode.labelRes()),
+                description = stringResource(mode.descriptionRes()),
                 iconRes = mode.iconRes(),
                 selected = mode == selected,
                 onClick = { onSelect(mode) },
@@ -376,6 +398,7 @@ private fun ThemeColourChoice(
         // Kanso's own colours come first: they are what a fresh install shows.
         SettingsChoiceRow(
             label = stringResource(R.string.theme_colour_kanso_blue),
+            description = stringResource(R.string.settings_rows_kanso_blue_description),
             iconRes = R.drawable.ic_palette,
             selected = selected == ThemeColour.KansoBlue,
             onClick = onKansoBlue,
@@ -385,7 +408,9 @@ private fun ThemeColourChoice(
         if (wallpaperColour != null) {
             SettingsChoiceRow(
                 label = stringResource(R.string.theme_colour_wallpaper),
-                iconRes = R.drawable.ic_palette,
+                description = stringResource(R.string.settings_rows_wallpaper_description),
+                // A picture icon: these colours come from the phone's wallpaper picture.
+                iconRes = R.drawable.ic_photo_library,
                 selected = selected == ThemeColour.Wallpaper,
                 onClick = onWallpaper,
                 testTag = THEME_COLOUR_WALLPAPER_TAG,
@@ -396,7 +421,9 @@ private fun ThemeColourChoice(
         }
         SettingsChoiceRow(
             label = stringResource(R.string.theme_colour_custom),
-            iconRes = R.drawable.ic_palette,
+            description = stringResource(R.string.settings_rows_custom_description),
+            // A brush icon: here the person paints with a colour of their own.
+            iconRes = R.drawable.ic_brush,
             selected = selected is ThemeColour.Custom,
             onClick = onCustom,
             testTag = THEME_COLOUR_CUSTOM_TAG,
@@ -482,10 +509,10 @@ private fun GroupLabel(text: String, modifier: Modifier = Modifier) {
  * ([content]) one under the other, the way the phone's own Settings app groups its rows.
  *
  * It is a `Surface`, a Material container that draws its colour in its shape: the theme's
- * `surfaceContainer`, a surface colour one step apart from the screen's background, so the block
- * stands out a little in light and in dark, with the theme's `largeIncreased` shape (20 dp
- * corners), one of the larger rounded shapes Material 3 Expressive adds. It keeps 16 dp from the
- * screen's edges.
+ * `surfaceContainerHigh`, a surface colour two steps apart from the screen's background, with the
+ * theme's `extraLarge` shape (28 dp corners), so the card reads as a card. (The plainer
+ * `surfaceContainer` is so close to the light background, about 5 in each of red, green and blue
+ * out of 255, that the card would barely show.) It keeps 16 dp from the screen's edges.
  *
  * `selectableGroup` tells screen readers the rows inside are one set of choices, of which
  * exactly one is picked, like a group of radio buttons on a web form. The group itself is not
@@ -502,8 +529,8 @@ private fun SettingsGroup(
             .fillMaxWidth()
             .padding(horizontal = SCREEN_PADDING)
             .testTag(testTag),
-        shape = MaterialTheme.shapes.largeIncreased,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -517,23 +544,29 @@ private fun SettingsGroup(
 }
 
 /**
- * One choice inside a [SettingsGroup]: the icon [iconRes], the [label], an optional [trailing]
- * element (a colour row's swatch), and a radio button at the end that [selected] fills. Tapping
- * anywhere on the row calls [onClick]. The row is tagged [testTag] and its icon
- * [settingsRowIconTag] of it.
+ * One choice inside a [SettingsGroup]: the icon [iconRes] in a tinted rounded square (see
+ * [SettingsIconBadge]), the [label] with a one-line [description] under it, an optional
+ * [trailing] element (a colour row's swatch), and a radio button at the end that [selected]
+ * fills. Tapping anywhere on the row calls [onClick]. The row is tagged [testTag]; its square,
+ * its icon and its description are tagged [settingsRowIconBadgeTag], [settingsRowIconTag] and
+ * [settingsRowDescriptionTag] of it.
  *
  * `selectable` makes the whole row tappable and reports it to screen readers as a radio button
  * (`Role.RadioButton`) that is selected or not, so the row, not the small circle, is the control.
  * Like any tappable node it merges what is inside it into one node, which TalkBack reads as, for
- * example, "Dark, radio button, selected". The icon is decorative (no content description),
- * because the label already names the row.
+ * example, "Dark, Always dark, radio button, selected". The icon is decorative (no
+ * content description), because the label already names the row.
+ *
+ * The description is held to one line (`maxLines = 1`): a row stays one even height, and a text
+ * too long for a narrow phone ends in "…" instead of pushing the row taller.
  *
  * [trailing] is a slot: a parameter that takes a piece of composable content instead of a plain
  * value, so the caller decides what goes there (a swatch for the colour rows, nothing for the
  * theme mode rows) while the row keeps its own layout.
  *
  * The chosen row is tinted with the theme's `secondaryContainer`, a soft tone of the theme
- * colour, and its text and icon take the matching `onSecondaryContainer`, so they stay readable.
+ * colour, and its text takes the matching `onSecondaryContainer`, so it stays readable; a row not
+ * chosen has the group's own `surfaceContainerHigh`, so it does not show as a block of its own.
  * `animateColorAsState` turns a jump between the two tints into a short fade: it returns a
  * colour that moves towards each new target over a few frames, here with the motion scheme's
  * `defaultEffectsSpec`, the spring Material 3 Expressive uses for colour changes. The row is
@@ -542,6 +575,7 @@ private fun SettingsGroup(
 @Composable
 private fun SettingsChoiceRow(
     label: String,
+    description: String,
     @DrawableRes iconRes: Int,
     selected: Boolean,
     onClick: () -> Unit,
@@ -551,13 +585,13 @@ private fun SettingsChoiceRow(
 ) {
     val colours = MaterialTheme.colorScheme
     val containerColour by animateColorAsState(
-        targetValue = if (selected) colours.secondaryContainer else colours.surfaceContainer,
+        targetValue = if (selected) colours.secondaryContainer else colours.surfaceContainerHigh,
         // Read in composition: MaterialTheme.motionScheme is only available while composing.
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>(),
         label = "settingsRowContainer",
     )
     val textColour = if (selected) colours.onSecondaryContainer else colours.onSurface
-    val iconColour = if (selected) colours.onSecondaryContainer else colours.onSurfaceVariant
+    val descriptionColour = if (selected) colours.onSecondaryContainer else colours.onSurfaceVariant
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -566,25 +600,28 @@ private fun SettingsChoiceRow(
             .background(containerColour)
             .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
             .testTag(testTag)
-            .padding(horizontal = ROW_PADDING),
+            .padding(horizontal = ROW_PADDING, vertical = ROW_VERTICAL_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // The drawable paints white; Icon tints it with the colour chosen above.
-        Icon(
-            painter = painterResource(iconRes),
-            contentDescription = null,
-            tint = iconColour,
-            modifier = Modifier.testTag(settingsRowIconTag(testTag)),
-        )
+        SettingsIconBadge(iconRes = iconRes, rowTag = testTag)
         Spacer(Modifier.width(16.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = textColour,
-            // weight(1f) gives the label all the width left over, so a long label wraps instead
-            // of pushing the swatch and the radio button off the row.
-            modifier = Modifier.weight(1f),
-        )
+        // weight(1f) gives the title and description all the width left over, so a long title
+        // wraps instead of pushing the swatch and the radio button off the row.
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = textColour,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = descriptionColour,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(settingsRowDescriptionTag(testTag)),
+            )
+        }
         if (trailing != null) {
             Spacer(Modifier.width(12.dp))
             trailing()
@@ -593,6 +630,38 @@ private fun SettingsChoiceRow(
         // onClick = null: the row above handles taps, so the button only draws the state and
         // screen readers announce one control instead of two.
         RadioButton(selected = selected, onClick = null)
+    }
+}
+
+/**
+ * The icon at the start of a row, drawn in a small tinted rounded square: a [BADGE_SIZE] square
+ * with the theme's `medium` rounded corners (12 dp), filled with `tertiaryContainer`, with the
+ * icon [iconRes] in the matching `onTertiaryContainer` in its middle. The square is tagged
+ * [settingsRowIconBadgeTag] of [rowTag] and the icon [settingsRowIconTag] of it.
+ *
+ * Why `tertiaryContainer`: the tertiary colours are the theme's accent, a hue set apart from the
+ * main one, so the square stands out both on the grey-blue card and on the chosen row, which is
+ * tinted with the blue `secondaryContainer`. A blue square would all but vanish on that row.
+ *
+ * The drawable paints white; `Icon` tints it with the colour given, so it never draws white on
+ * a light square.
+ */
+@Composable
+private fun SettingsIconBadge(@DrawableRes iconRes: Int, rowTag: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(BADGE_SIZE)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
+            .testTag(settingsRowIconBadgeTag(rowTag)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.testTag(settingsRowIconTag(rowTag)),
+        )
     }
 }
 
@@ -622,6 +691,14 @@ private fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.System -> R.string.theme_mode_system
     ThemeMode.Light -> R.string.theme_mode_light
     ThemeMode.Dark -> R.string.theme_mode_dark
+}
+
+/** Returns the string resource of the one-line description under this theme mode's title. */
+@StringRes
+private fun ThemeMode.descriptionRes(): Int = when (this) {
+    ThemeMode.System -> R.string.settings_rows_system_description
+    ThemeMode.Light -> R.string.settings_rows_light_description
+    ThemeMode.Dark -> R.string.settings_rows_dark_description
 }
 
 /**
@@ -782,7 +859,8 @@ private fun SettingsCustomColourPreview() {
 
 /**
  * The theme mode group on its own, with "Dark" chosen: the "Theme mode" label, then three rows,
- * each with its icon, its label and its radio button, the chosen row tinted. Drawn once in light
+ * each with its icon in a tinted rounded square, its title, its one-line description and its
+ * radio button, on the rounded card, the chosen row tinted. Drawn once in light
  * and once in dark on the screen's background colour.
  */
 @PreviewLightDark
@@ -812,7 +890,8 @@ private fun ColourRowPreview() {
                 SettingsGroup(testTag = SETTINGS_GROUP_COLOUR_TAG) {
                     SettingsChoiceRow(
                         label = stringResource(R.string.theme_colour_wallpaper),
-                        iconRes = R.drawable.ic_palette,
+                        description = stringResource(R.string.settings_rows_wallpaper_description),
+                        iconRes = R.drawable.ic_photo_library,
                         selected = false,
                         onClick = {},
                         testTag = THEME_COLOUR_WALLPAPER_TAG,
@@ -825,7 +904,8 @@ private fun ColourRowPreview() {
                     )
                     SettingsChoiceRow(
                         label = stringResource(R.string.theme_colour_custom),
-                        iconRes = R.drawable.ic_palette,
+                        description = stringResource(R.string.settings_rows_custom_description),
+                        iconRes = R.drawable.ic_brush,
                         selected = true,
                         onClick = {},
                         testTag = THEME_COLOUR_CUSTOM_TAG,
@@ -836,6 +916,35 @@ private fun ColourRowPreview() {
                             )
                         },
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The tinted rounded squares on their own, one per kind of row icon (gear, contrast, moon,
+ * palette, picture, brush), side by side on the card's colour, drawn once in light and once in
+ * dark, so the square's tint and its icon can be checked against both.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsIconBadgePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                listOf(
+                    R.drawable.ic_settings,
+                    R.drawable.ic_contrast,
+                    R.drawable.ic_dark_mode,
+                    R.drawable.ic_palette,
+                    R.drawable.ic_photo_library,
+                    R.drawable.ic_brush,
+                ).forEachIndexed { index, icon ->
+                    SettingsIconBadge(iconRes = icon, rowTag = "sample-row-$index")
                 }
             }
         }
