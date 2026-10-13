@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** The Verifier (Iteration 15) found one gap: DoD 36's `requiredPreviewNames` lacks four preview names (T-016). Everything else re-proved green (`evidence/v15-verifier.md`). Next: Phase 8 = T-016, then the Verifier again.
+- **Stage:** Phase 8 (T-016) done in Iteration 16: the four preview names are required and the whole set is green. Nothing executable remains; PARTIAL-candidate recorded (A-025, A-026, A-027 stand). Next: the Verifier.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** Phase 8 = T-016 (Fast; the Iteration itself: `PreviewsRenderTest.kt` and `test-edits.md`)
-- **DONE-candidate:** no. **PARTIAL-candidate:** no (cleared by the Verifier of Iteration 15: T-016 filed)
+- **Next Phase:** none; the Verifier re-runs (re-prove, look at the 41 `after/` pictures, drive the Galaxy A13 with `-Serial R58W1120QVA` if free)
+- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Iteration 16)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -29,7 +29,7 @@
 | T-012 | complete | review fixes in the six Phase 4 test files | - |
 | T-013 | complete | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
 | T-014 | complete (Iteration 14) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
-| T-016 | pending (Phase 8) | `previews/PreviewsRenderTest.kt` (`requiredPreviewNames`), `evidence/test-edits.md` | - |
+| T-016 | complete (Iteration 16) | `previews/PreviewsRenderTest.kt` (`requiredPreviewNames`), `evidence/test-edits.md` | - |
 | T-015 | complete except F4 (A-028) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
 
 ## Signed off

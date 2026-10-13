@@ -57,6 +57,7 @@ Count: 10 renamed, 17 replaced, 18 removed entries; the fanned names add up to a
 
 `M` (30), one reason each:
 - `LaunchTest.kt`, `navigation/NavTransitionTest.kt`, `previews/PreviewsRenderTest.kt`: start from the tab shell, new previews.
+- `previews/PreviewsRenderTest.kt` again (Phase 8): `requiredPreviewNames` gains `ToolNarrowPhotoPreview`, `PhotoViewerPreview`, `HomeEmptyPreview`, `HomeLoadingPreview` (DoD 36); no base name removed.
 - `ScreenStateTest.kt`: seven view models.
 - `a11y/AccessibilityWalkTest.kt`: walks the new states, tool screens renamed; `a11y/TouchTargetCheck.kt`: helper extended for the new walks.
 - `camera/CameraControlsTest.kt`, `CameraFlowTest.kt`, `CameraPermissionTest.kt`, `CameraScreenTest.kt`: the Camera's Back button and button shapes (DoD 16), and the shell around it.

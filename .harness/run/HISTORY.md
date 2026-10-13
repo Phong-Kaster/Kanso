@@ -89,3 +89,9 @@
 - Wrote (Verifier evidence): `home-reach.md` (from `HomeReachTest`'s log); refreshed `baseline-diffs/after/` for pictures 4, 5, 6, 24, 25 and added their `phase6/` compares to `index.md`; `head-badging.txt`, `head-deps.txt`, `head-unused-resources.txt`, `head-testnames.txt`.
 - Not driven: the Galaxy A13 (focus `NotificationShade`). Emulator `emulator-5554` instead: install, cold start 4.4 s, no FATAL, Home/My edits/Settings shown (`v15-emu-*.png`). `KansoTabShell.kt:110` is a preview's stand-in text: no action. The per-picture look was left for the next Verifier (no picture changes in T-016).
 - `ISSUES.md` archiving (ENGINE section 10) tried and refused: the Write tool is denied in `.harness/archive/`. `ISSUES.md` restored whole (39 open items kept); Suggestion S-013; the PROJECT.md Constraint corrected.
+
+### Iteration 16 - 2026-10-13 (Phase 8 = T-016)
+- Recover: dirt was the owner's Foreman skill update under `.claude/`, telemetry and the untracked `.harness/archive/`; left as before. No decision to consume.
+- Added `ToolNarrowPhotoPreview`, `PhotoViewerPreview`, `HomeEmptyPreview`, `HomeLoadingPreview` to `requiredPreviewNames` (DoD 36); one reason line in `evidence/test-edits.md`. No Worker (shared test file); the diff is four strings, read by the Iteration.
+- Whole set: tests, `verifyRoborazziDebug`, lint, `assembleDebug` all green (`evidence/p8-run16.log`).
+- Report: PARTIAL-candidate recorded; CONTINUE.

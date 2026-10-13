@@ -264,6 +264,10 @@ class PreviewsRenderTest {
             "MyEditsPreview",
             "MyEditsEmptyPreview",
             "MyEditsLoadingPreview",
+            "ToolNarrowPhotoPreview",
+            "PhotoViewerPreview",
+            "HomeEmptyPreview",
+            "HomeLoadingPreview",
         )
     }
 }
