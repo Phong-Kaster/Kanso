@@ -1,0 +1,5 @@
+OK   ic_photo_library.xml (pathData 8fe9e798198846c4; android:tint count: 0; files in app/src/main/java using it: 2)
+OK   ic_arrow_forward.xml (pathData 3afcde66510af2bc; android:tint count: 0; files in app/src/main/java using it: 1)
+OK   ic_close.xml (pathData f6d7b6e7a32d5b2f; android:tint count: 0; files in app/src/main/java using it: 1)
+OK   ic_swap_horiz.xml (pathData f7eed09e953079cd; android:tint count: 0; files in app/src/main/java using it: 2)
+OK   ic_hide_image.xml (pathData 59cd6afa2c665b08; android:tint count: 0; files in app/src/main/java using it: 1)

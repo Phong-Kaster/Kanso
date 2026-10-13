@@ -159,7 +159,6 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :opencv:bundleLibRuntimeToDirDebug UP-TO-DATE
 > Task :opencv:writeDebugAarMetadata UP-TO-DATE
 > Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
-> Task :app:mergeLibDexDebug UP-TO-DATE
 > Task :core:common:writeDebugAarMetadata UP-TO-DATE
 > Task :core:editimage:writeDebugAarMetadata UP-TO-DATE
 > Task :core:gallery:writeDebugAarMetadata UP-TO-DATE
@@ -168,6 +167,7 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:localml:writeDebugAarMetadata UP-TO-DATE
 > Task :core:overlaybrush:writeDebugAarMetadata UP-TO-DATE
 > Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
 > Task :app:mapDebugSourceSetPaths UP-TO-DATE
 > Task :app:compileDebugNavigationResources UP-TO-DATE
 > Task :app:mergeDebugResources UP-TO-DATE
@@ -210,7 +210,8 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:overlaybrush:mapDebugSourceSetPaths UP-TO-DATE
 > Task :core:overlaybrush:compileDebugLibraryResources UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
-> Task :app:dexBuilderDebug
+> Task :app:dexBuilderDebug UP-TO-DATE
+> Task :app:mergeProjectDexDebug UP-TO-DATE
 > Task :app:mergeDebugJniLibFolders UP-TO-DATE
 > Task :opencv:configureCMakeDebug[arm64-v8a]
 > Task :opencv:buildCMakeDebug[arm64-v8a][opencv_jni_shared]
@@ -252,10 +253,9 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :app:validateSigningDebug UP-TO-DATE
 > Task :app:writeDebugAppMetadata UP-TO-DATE
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
-> Task :app:mergeProjectDexDebug
-> Task :app:packageDebug
+> Task :app:packageDebug UP-TO-DATE
 > Task :app:createDebugApkListingFileRedirect UP-TO-DATE
-> Task :app:assembleDebug
+> Task :app:assembleDebug UP-TO-DATE
 
 [Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
 
@@ -265,6 +265,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 7s
-196 actionable tasks: 11 executed, 185 up-to-date
+BUILD SUCCESSFUL in 3s
+196 actionable tasks: 8 executed, 188 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

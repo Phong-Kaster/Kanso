@@ -339,7 +339,7 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :app:processDebugResources UP-TO-DATE
 > Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
 > Task :app:preDebugAndroidTestBuild SKIPPED
-> Task :app:generateDebugAndroidTestLintModel
+> Task :app:generateDebugAndroidTestLintModel UP-TO-DATE
 > Task :opencv:generateDebugLintModel UP-TO-DATE
 > Task :core:colorpicker:generateDebugLintModel UP-TO-DATE
 > Task :core:common:generateDebugLintModel UP-TO-DATE
@@ -349,9 +349,11 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:imagecrop:generateDebugLintModel UP-TO-DATE
 > Task :core:localml:generateDebugLintModel UP-TO-DATE
 > Task :core:overlaybrush:generateDebugLintModel UP-TO-DATE
-> Task :app:generateDebugLintReportModel
+> Task :app:generateDebugLintReportModel UP-TO-DATE
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
-> Task :app:generateDebugUnitTestLintModel
+> Task :app:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :app:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :app:lintAnalyzeDebugUnitTest UP-TO-DATE
 > Task :opencv:preDebugAndroidTestBuild UP-TO-DATE
 > Task :opencv:generateDebugAndroidTestLintModel UP-TO-DATE
 > Task :opencv:preDebugUnitTestBuild UP-TO-DATE
@@ -406,9 +408,7 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:overlaybrush:generateDebugUnitTestLintModel UP-TO-DATE
 > Task :core:overlaybrush:lintAnalyzeDebugAndroidTest UP-TO-DATE
 > Task :core:overlaybrush:lintAnalyzeDebugUnitTest UP-TO-DATE
-> Task :app:lintAnalyzeDebugAndroidTest
 > Task :app:lintAnalyzeDebug
-> Task :app:lintAnalyzeDebugUnitTest
 
 > Task :app:lintReportDebug
 Wrote HTML report to file:///D:/Valve/Personal/Kanso/app/build/reports/lint-results-debug.html
@@ -424,6 +424,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 28s
-341 actionable tasks: 17 executed, 324 up-to-date
+BUILD SUCCESSFUL in 21s
+341 actionable tasks: 12 executed, 329 up-to-date
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

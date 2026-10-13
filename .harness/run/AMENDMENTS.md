@@ -30,3 +30,7 @@
 
 ## Iteration 15 (the Verifier) - Tier 1: T-016 added; Phase 8; PARTIAL-candidate cleared
 - The Verifier re-proved every `machine` criterion green except one clause of DoD 36: `PreviewsRenderTest.requiredPreviewNames` lacks `ToolNarrowPhotoPreview`, `PhotoViewerPreview`, `HomeEmptyPreview` and `HomeLoadingPreview`, which the DoD names (the previews exist in the app). T-016 adds them (Phase 8, the Iteration's own shared file). No DoD text changed.
+
+## Iteration 17 - 2026-10-13 (the Verifier)
+
+- **Tier 1:** added T-017 (Phase 9): pictures 28, 29, 34 and 35 are drawn inside the tab shell and re-recorded, because DoD 22 promises they show the floating bar and they do not. PRD, DoD and architecture unchanged. Re-recording four approved new pictures: A-029.

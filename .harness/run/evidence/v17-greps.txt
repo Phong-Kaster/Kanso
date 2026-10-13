@@ -1,0 +1,238 @@
+## C8
+exit=1
+## C16 camera shapes
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:665:    OutlinedButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:685:    Button(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:734:    FilledTonalIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:755:    FilledTonalIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:816:    FilledIconButton(
+exit=0
+## C19 all button calls in app/src/main
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTabBar.kt:198:        FilledIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:665:    OutlinedButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:685:    Button(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:734:    FilledTonalIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:755:    FilledTonalIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:816:    FilledIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/common/RoundIconButton.kt:56:    FilledTonalIconButton(
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:784:            TextButton(
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:595:                Button(
+app/src/main/java/com/phongkaster/kanso/ui/permission/AccessRefusedPanel.kt:95:            Button(
+app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt:216:            TextButton(onClick = action.second, shapes = ButtonDefaults.shapes()) {
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:550:            Button(
+app/src/main/java/com/phongkaster/kanso/ui/theme/KansoTheme.kt:263:                    Button(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Save") }
+app/src/main/java/com/phongkaster/kanso/ui/theme/KansoTheme.kt:264:                    OutlinedButton(onClick = {}, shapes = ButtonDefaults.shapes()) { Text("Retake") }
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:354:        Button(
+exit=0
+## C19 shapes = lines
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTabBar.kt:2
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:5
+app/src/main/java/com/phongkaster/kanso/ui/common/RoundIconButton.kt:1
+app/src/main/java/com/phongkaster/kanso/ui/gallery/GalleryScreen.kt:3
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:2
+app/src/main/java/com/phongkaster/kanso/ui/permission/AccessRefusedPanel.kt:1
+app/src/main/java/com/phongkaster/kanso/ui/permission/PermissionGate.kt:1
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:1
+app/src/main/java/com/phongkaster/kanso/ui/theme/KansoTheme.kt:2
+app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt:1
+exit=0
+## C19 MaterialExpressiveTheme
+app/src/main/java/com/phongkaster/kanso/ui/theme/KansoTheme.kt:138:    MaterialExpressiveTheme(
+exit=0
+## C20a-1
+exit=1
+## C20a-2
+gradle/libs.versions.toml:19:compose-shimmer = "1.3.2"
+gradle/libs.versions.toml:43:lottie = "6.6.2"
+gradle/libs.versions.toml:106:compose-shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version.ref = "compose-shimmer" }
+gradle/libs.versions.toml:118:lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
+exit=0
+## C20a-2 at base
+a720960:gradle/libs.versions.toml:19:compose-shimmer = "1.3.2"
+a720960:gradle/libs.versions.toml:43:lottie = "6.6.2"
+a720960:gradle/libs.versions.toml:106:compose-shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version.ref = "compose-shimmer" }
+a720960:gradle/libs.versions.toml:118:lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
+exit=0
+## C23 fixed colours
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:855:                listOf(Color(0xFF7FB3D5), Color(0xFFF5CBA7), Color(0xFF58804A)),
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:865:                .background(Color(0xFFFFE08A), CircleShape),
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:887:        drawRect(Brush.verticalGradient(listOf(Color(0xFF5DADE2), Color(0xFFD6EAF8))))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:888:        drawCircle(color = Color(0xFFF7DC6F), radius = 36f, center = Offset(300f, 80f))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:889:        drawCircle(color = Color(0xFF52BE80), radius = 260f, center = Offset(140f, 470f))
+app/src/main/java/com/phongkaster/kanso/ui/camera/CameraScreen.kt:890:        drawCircle(color = Color(0xFF27AE60), radius = 220f, center = Offset(380f, 500f))
+app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt:140:private val PickerSurfaceColor = Color.White
+app/src/main/java/com/phongkaster/kanso/ui/settings/SettingsScreen.kt:738:private val sampleWallpaperColour = Color(0xFF8B5000)
+exit=0
+## C23 colors.xml
+exit=0
+## C23 bitmaps
+exit=1
+## C33
+4c4
+< app/src/main/java/com/phongkaster/kanso/di/AppModule.kt:99:            file = androidContext().filesDir.resolve("datastore/settings.preferences_pb"),
+---
+> app/src/main/java/com/phongkaster/kanso/di/AppModule.kt:83:            file = androidContext().filesDir.resolve("datastore/settings.preferences_pb"),
+exit=1
+## C35 assume
+exit=1
+## C35 @Test lines
+571
+## C36 MaterialTheme
+exit=1
+exit=1
+## C36 guard lists
+exit=1
+## C36 ScreenStateTest diff
+diff --git a/app/src/test/java/com/phongkaster/kanso/ScreenStateTest.kt b/app/src/test/java/com/phongkaster/kanso/ScreenStateTest.kt
+index 079fdb5..d774db5 100644
+--- a/app/src/test/java/com/phongkaster/kanso/ScreenStateTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/ScreenStateTest.kt
+@@ -20,7 +20,7 @@ import org.junit.Test
+  * Checks that every screen is built the one way CLAUDE.md asks for (DoD 12), so a later change
+  * cannot quietly give a screen a second source of state:
+  *
+- * - The screen packages under `ui/` hold exactly the six screen ViewModels.
++ * - The screen packages under `ui/` hold exactly the seven screen ViewModels.
+  * - Each ViewModel gives out exactly one StateFlow, and it is a StateFlow of the screen's own
+  *   UiState (`HomeViewModel` gives out a `StateFlow<HomeUiState>`). A one-shot Flow of events
+  *   that is not a StateFlow, such as ToolViewModel's `savedEvents`, and plain read-only values
+@@ -44,11 +44,11 @@ import org.junit.Test
+ class ScreenStateTest {
+ 
+     /**
+-     * The `ui` package holds exactly the six screen ViewModels, one per screen. A seventh, or one
++     * The `ui` package holds exactly the seven screen ViewModels, one per screen. An eighth, or one
+      * gone missing, means a screen was added or removed without this test being brought along.
+      */
+     @Test
+-    fun the_screen_packages_hold_exactly_the_six_view_models() {
++    fun the_screen_packages_hold_exactly_the_seven_view_models() {
+         assertEquals(
+             "The screen packages under ui/ must hold exactly one ViewModel per screen",
+             EXPECTED_VIEW_MODELS,
+@@ -756,13 +756,14 @@ class ScreenStateTest {
+         /** The package that holds one sub-package per screen. */
+         const val UI_PACKAGE = "com.phongkaster.kanso.ui"
+ 
+-        /** The six screens' ViewModels, as `folder/ClassName` under the `ui` package. */
++        /** The seven screens' ViewModels, as `folder/ClassName` under the `ui` package. */
+         val EXPECTED_VIEW_MODELS = setOf(
+             "home/HomeViewModel",
+             "gallery/GalleryViewModel",
+             "camera/CameraViewModel",
+             "tool/ToolViewModel",
+             "saved/SavedViewModel",
++            "myedits/MyEditsViewModel",
+             "settings/SettingsViewModel",
+         )
+ 
+## C36 requiredPreviewNames diff
+diff --git a/app/src/test/java/com/phongkaster/kanso/previews/PreviewsRenderTest.kt b/app/src/test/java/com/phongkaster/kanso/previews/PreviewsRenderTest.kt
+index 1636fa9..e1bcd61 100644
+--- a/app/src/test/java/com/phongkaster/kanso/previews/PreviewsRenderTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/previews/PreviewsRenderTest.kt
+@@ -259,6 +259,15 @@ class PreviewsRenderTest {
+             "AccessRefusedPanelPreview",
+             "KansoNavHostPreview",
+             "KansoThemePreview",
++            "KansoTabBarPreview",
++            "KansoTabShellPreview",
++            "MyEditsPreview",
++            "MyEditsEmptyPreview",
++            "MyEditsLoadingPreview",
++            "ToolNarrowPhotoPreview",
++            "PhotoViewerPreview",
++            "HomeEmptyPreview",
++            "HomeLoadingPreview",
+         )
+     }
+ }
+## C37
+65
+46:import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+454: * offers a few kinds; this one is `HorizontalUncontainedCarousel`: every banner keeps its full
+478:        HorizontalUncontainedCarousel(
+900: * Why placeholders instead of a spinner. A spinner says only "wait"; it sits where nothing will
+51
+5
+40: * The whole app's navigation: holds the back stack and shows the screen on top of it.
+50: * same back stack: picking a tab clears the stack down to Home and adds the tab's key, so tabs
+55:    // The back stack is a list of NavKeys, Home at the bottom; the last key is the screen shown.
+16:import androidx.compose.ui.draw.blur
+29: * How far [BlurredBackdrop]'s `blur` spreads each pixel. Public so a test can draw a control with
+55: *    only from Android 12 (API 31): on Android 12 and later it smooths away the last traces of
+54:import androidx.compose.ui.graphics.Brush
+428: * What a `Brush` is: whatever Compose paints an area with. The simplest brush is one plain colour;
+429: * a gradient brush paints a colour that changes smoothly across the area. A "gradient" is that
+430: * smooth change: here `Brush.verticalGradient` goes from top to bottom through a few "colour
+23:import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+228: * What `LazyVerticalGrid` is. A grid that scrolls up and down and builds only the tiles on screen
+71:                    // Only a complete six-digit code is applied: it is read in base 16 and made opaque
+## C38 suppress added
+exit=1
+## C39 names
+core/colorpicker/src/main/java/com/library/colorpicker/HSVColorPicker.kt
+## C39 hunks
+@@ -66,5 +66,14 @@ fun HSVColorPicker(
+## C40 build files
+exit=0
+## C40 reference
+exit=0
+exit=1
+## C40 drawables added
+app/src/main/res/drawable/ic_arrow_forward.xml
+app/src/main/res/drawable/ic_close.xml
+app/src/main/res/drawable/ic_hide_image.xml
+app/src/main/res/drawable/ic_photo_library.xml
+app/src/main/res/drawable/ic_swap_horiz.xml
+1
+app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt:1
+2
+1
+app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt:1
+2
+1
+app/src/main/java/com/phongkaster/kanso/ui/myedits/MyEditsScreen.kt:1
+2
+1
+app/src/main/java/com/phongkaster/kanso/navigation/KansoTab.kt:1
+2
+1
+app/src/main/java/com/phongkaster/kanso/ui/common/RoundIconButton.kt:1
+2
+## C41
+ADR-001-kanso-is-a-material-3-expressive-app-blue-by-default-with-one-editor.md
+ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md
+3:> **Superseded in part by [ADR-002](ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md) (2026-10-12):** the owner reversed this record's one-editor decision; each tool now has its own screen. Everything else here stands.
+7
+## R1
+exit=1
+exit=1
+## R2
+exit=1
+exit=1
+## R3
+exit=1
+## R4
+exit=1
+exit=1
+ls: cannot access 'app/src/main/res/drawable/ic_add_photo_alternate.xml': No such file or directory
+exit=2
+## R5
+exit=1
+exit=1
+exit=1
+## R6
+exit=1
+exit=1
+## R7
+exit=1
+## R8
+---orphans
+exit=0
+## R9 named
+home_open_photo res: java:
+home_header_ai_tools res: java:
+home_header_edit res: java:
+saved_home res: java:
+ic_add_photo_alternate res: java:

@@ -1,0 +1,78 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :core:colorpicker:checkDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:mergeDebugJniLibFolders UP-TO-DATE
+> Task :core:colorpicker:mergeDebugNativeLibs NO-SOURCE
+> Task :core:colorpicker:stripDebugDebugSymbols NO-SOURCE
+> Task :core:colorpicker:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:colorpicker:generateDebugResources UP-TO-DATE
+> Task :core:colorpicker:packageDebugResources UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources UP-TO-DATE
+> Task :core:colorpicker:parseDebugLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateDebugRFile UP-TO-DATE
+> Task :core:colorpicker:extractDebugAnnotations UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :core:colorpicker:generateDebugAssets UP-TO-DATE
+> Task :core:colorpicker:mergeDebugAssets UP-TO-DATE
+> Task :core:colorpicker:compileDebugKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebug UP-TO-DATE
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :core:colorpicker:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:prepareDebugArtProfile UP-TO-DATE
+> Task :core:colorpicker:prepareLintJarForPublish UP-TO-DATE
+> Task :core:colorpicker:processDebugManifest UP-TO-DATE
+> Task :core:colorpicker:processDebugJavaRes UP-TO-DATE
+> Task :core:colorpicker:mergeDebugJavaResource UP-TO-DATE
+> Task :core:colorpicker:syncDebugLibJars UP-TO-DATE
+> Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:bundleDebugAar UP-TO-DATE
+> Task :core:colorpicker:assembleDebug UP-TO-DATE
+> Task :core:colorpicker:preReleaseBuild UP-TO-DATE
+> Task :core:colorpicker:checkReleaseAarMetadata UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseNativeLibs NO-SOURCE
+> Task :core:colorpicker:stripReleaseDebugSymbols NO-SOURCE
+> Task :core:colorpicker:copyReleaseJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksForAarRelease UP-TO-DATE
+> Task :core:colorpicker:generateReleaseResources UP-TO-DATE
+> Task :core:colorpicker:packageReleaseResources UP-TO-DATE
+> Task :core:colorpicker:processReleaseNavigationResources UP-TO-DATE
+> Task :core:colorpicker:parseReleaseLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateReleaseRFile UP-TO-DATE
+> Task :core:colorpicker:extractReleaseAnnotations UP-TO-DATE
+> Task :core:colorpicker:generateReleaseAssets UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseAssets UP-TO-DATE
+> Task :core:colorpicker:compileReleaseKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileRelease UP-TO-DATE
+> Task :core:colorpicker:compileReleaseJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:mergeReleaseGeneratedProguardFiles UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseConsumerProguardFiles UP-TO-DATE
+> Task :core:colorpicker:prepareReleaseArtProfile UP-TO-DATE
+> Task :core:colorpicker:processReleaseManifest UP-TO-DATE
+> Task :core:colorpicker:processReleaseJavaRes UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseJavaResource UP-TO-DATE
+> Task :core:colorpicker:syncReleaseLibJars UP-TO-DATE
+> Task :core:colorpicker:writeReleaseAarMetadata UP-TO-DATE
+> Task :core:colorpicker:bundleReleaseAar UP-TO-DATE
+> Task :core:colorpicker:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :core:colorpicker:mergeReleaseResources UP-TO-DATE
+> Task :core:colorpicker:verifyReleaseResources UP-TO-DATE
+> Task :core:colorpicker:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2s
+48 actionable tasks: 48 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

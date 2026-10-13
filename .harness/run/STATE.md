@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Phase 8 (T-016) done in Iteration 16: the four preview names are required and the whole set is green. Nothing executable remains; PARTIAL-candidate recorded (A-025, A-026, A-027 stand). Next: the Verifier.
+- **Stage:** The Verifier (Iteration 17) re-proved every machine criterion and looked at all 41 pictures; one gap: pictures 28, 29, 34, 35 lack the bar DoD 22 promises -> T-017 (Phase 9). PARTIAL-candidate cleared.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** none; the Verifier re-runs (re-prove, look at the 41 `after/` pictures, drive the Galaxy A13 with `-Serial R58W1120QVA` if free)
-- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Iteration 16)
+- **Next Phase:** Phase 9 = T-017 (Fast Worker + the Iteration re-records four pictures, A-029); then the Verifier
+- **DONE-candidate:** no. **PARTIAL-candidate:** no (cleared by the Verifier, Iteration 17)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -30,6 +30,7 @@
 | T-013 | complete | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
 | T-014 | complete (Iteration 14) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
 | T-016 | complete (Iteration 16) | `previews/PreviewsRenderTest.kt` (`requiredPreviewNames`), `evidence/test-edits.md` | - |
+| T-017 | pending (Phase 9) | `screenshots/{MyEditsScreenshotTest,HomeScreenshotTest}.kt`; Iteration: pictures 28, 29, 34, 35 | - |
 | T-015 | complete except F4 (A-028) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
 
 ## Signed off
@@ -44,4 +45,5 @@ Before Iteration 12: none. A-002 to A-024 are "Missing information" readings of 
 
 ## Assumptions
 
+- A-029 (Iteration 17): pictures 28, 29, 34, 35 are re-recorded to show the bar DoD 22 promises.
 - A-002 to A-024 in `ASSUMPTIONS.md`: Back from the tabs, the Camera button, close on a My edits photo, Saved's full-bleed reading, the viewer's button, mark and title, the gallery's camera button, card names, strip contents, permissions, the carousel kind, the bar with the keyboard, the blur fallback, one screen per tool, Replace, tab motion, thumbnails, the hex field and the engine-edit exception, new wording, the ADR, the selected pill's colour, Settings' title, a tab's state. A-001 (every tool one tap) is the owner's decision, not an assumption.

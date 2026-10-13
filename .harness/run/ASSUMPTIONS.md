@@ -647,3 +647,23 @@ DoD 29(b) asks every commit that re-records a picture to add its `_compare.png`.
 ### Taken, and why
 
 (3). Not a DoD criterion; listed in `ISSUES.md` for a person to pick option 2 later.
+
+## A-029 - Four of the approved new pictures are re-recorded to show the bar
+
+- **Tier:** 2 (re-recording a reference picture moves the standard it is graded against)
+- **Iteration:** 17 (the checkpoint of the Iteration that re-records them depends on it)
+- **First dependent checkpoint:** the Iteration that does T-017
+- **Revert:** `git revert <that commit>` (its SHA is written here by the Iteration after it)
+
+### Question
+
+DoD 22 promises that pictures 1, 2, 28, 29, 34 and 35 show the floating bar. 28, 29, 34 and 35 were recorded (and approved in D-001's `## Baselines` list) without it. May they be re-recorded with the bar?
+
+### Options Considered
+
+1. Re-record the four inside the tab shell, as pictures 1, 2, 38 and 39 already are (T-017).
+2. Leave them and mark DoD 22 assumed.
+
+### Taken, and why
+
+(1). The owner approved recording these four pictures, and DoD 22, also approved, says what they must show; the re-recording makes them match the approved promise and changes no app code. Each compare file is kept in `baseline-diffs/phase9/`, and the person still looks at every picture under DoD 29.
