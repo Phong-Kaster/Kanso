@@ -16,6 +16,12 @@
 - Learned: the pills-to-shortcuts edit changes the Home height budget (five round buttons with names are 84 dp against 48 dp; kept at 24 dp spare by a 176 dp carousel and 12 dp gaps) and the tag family (`home-shortcut-<TOOL>`); `waitForIdle()` returns at once with a `rememberInfiniteTransition` under the test rule and the pulse never moves (so no paused clock is needed, and no test can see the pulse); `FilledTonalIconButton`'s default is a 40 dp circle in a 48 dp node, which the DoD's "round" pixel rule would read on its rim (T-003 sizes `RoundIconButton` to 48 dp); `boundsInRoot` is clipped by Compose, so a "wholly on screen" proof measures `positionInRoot` plus `size`.
 - Reconciled: knowledge update (PROJECT.md: the Home tag in a Constraint, the spike answer in Reference); a Tier-3 human edit applied and logged; one Suggestion Box entry (S-012); no decision queued; no task attempted.
 
+### Iteration 5 - 2026-10-13 (recover Phase 1a, finish and checkpoint)
+- **Phase:** 1a (T-001, T-002). Recovery: Iteration 4 left the Phase 1a work uncommitted with 18 red tests (its run was killed); it was coherent, so it was salvaged, not reverted.
+- Fixed: `ShortNavigationBar` sized two tabs to zero (bar rebuilt as Surface + Row of weighted items); Home-row clicks hidden under the bar (`tapAboveBar()`); ToolScreenTest's end probe looked for Home's removed Camera text; NavBarTest's `hasVisualOverflow` premise (Robolectric) replaced by geometry.
+- Evidence: whole unit suite, `compareRoborazziDebug`, lint, assembleDebug green (`evidence/p1a-run5.log`); new pictures 28-33 recorded, 1-6, 24, 25 re-recorded, `verifyRoborazziDebug` green. Pictures 1 and 29 opened and judged.
+- Not done: the fresh-context review of Phase 1a was skipped for lack of time (the diff is 300 KB); the Verifier gate still re-proves everything. Pictures' `_compare.png` copies were not saved to `evidence/baseline-diffs/phase1/`.
+
 ## Archived Decisions
 
 <!-- Full request + decision + rationale of every consumed Decision Queue entry. -->

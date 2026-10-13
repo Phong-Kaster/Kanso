@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -31,16 +32,12 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -148,13 +145,17 @@ private val ROW_MIN_HEIGHT = 56.dp
 /** The size of a colour swatch: big enough to read the colour at a glance. */
 private val SWATCH_SIZE = 28.dp
 
-/** The size of the top bar's back button: Android's smallest comfortable touch target. */
-private val TOP_BAR_BUTTON_SIZE = 48.dp
+/** The space above and below the large "Settings" title, so it stands as tall as a top bar would. */
+private val TITLE_PADDING = 16.dp
 
 /**
- * The Settings screen: a top bar titled "Settings" with a back arrow, and below it the
+ * The Settings screen: one scrolling column that starts with a large "Settings" title, then the
  * "Appearance" section, where the user picks the theme mode and the theme colour. Each setting
  * is a rounded group of rows, and each colour row shows a small circle of its colour.
+ *
+ * Settings is one of the app's three tabs, reached from the floating tab bar the navigation host
+ * draws over it, so it has no back arrow of its own: the system Back gesture or button takes the
+ * person Home, and the bar takes them to any other tab.
  *
  * Like Home, this screen is split in two (state hoisting; see `HomeScreen` for the full story).
  * This function is the *stateful* part: it reads Settings' state (the saved theme mode and theme
@@ -170,14 +171,15 @@ private val TOP_BAR_BUTTON_SIZE = 48.dp
  * Android 12 has no wallpaper colours, so it gets null, which leaves the wallpaper row out. A
  * preview can pass any colour, or null, whatever Android version it is drawn on.
  *
- * [onBack] is called when the user taps the back arrow; the caller pops the back stack.
- * The [viewModel] is passed in by the navigation entry, which owns it.
+ * The [viewModel] is passed in by the navigation entry, which owns it. [contentPadding] is the
+ * extra space the caller asks for at the end of the list: the navigation host passes the height
+ * the floating tab bar covers, so the last row can be scrolled up above the bar.
  */
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     // collectAsState reads the ViewModel's StateFlow as Compose state: when the saved mode or
     // colour changes, a new snapshot arrives and this screen re-draws with the new selection.
@@ -194,20 +196,20 @@ fun SettingsScreen(
     SettingsContent(
         state = state,
         wallpaperColour = wallpaperColour,
-        onBack = onBack,
         onThemeModeSelected = viewModel::setThemeMode,
         onKansoBlueChosen = viewModel::onKansoBlueChosen,
         onWallpaperChosen = viewModel::onWallpaperChosen,
         onCustomChosen = viewModel::onCustomChosen,
         onCustomColourChosen = viewModel::onCustomColourChosen,
         modifier = modifier,
+        contentPadding = contentPadding,
     )
 }
 
 /**
- * The stateless part of Settings (see [SettingsScreen] for why there are two): draws the top bar
- * with its back arrow and the "Appearance" section, with the theme mode and theme colour of
- * [state] marked as chosen.
+ * The stateless part of Settings (see [SettingsScreen] for why there are two): draws the large
+ * "Settings" title and the "Appearance" section, with the theme mode and theme colour of [state]
+ * marked as chosen.
  *
  * The section holds two rounded groups. The first holds the three theme mode rows; the second
  * the colour rows, in this order: Kanso blue, then From wallpaper when [wallpaperColour] is not
@@ -216,65 +218,43 @@ fun SettingsScreen(
  * parameter, not part of [state], because it is a fact about the phone rather than a saved
  * choice; null means the phone has no wallpaper colours (below Android 12).
  *
- * The title uses `titleLargeEmphasized`, one of the bolder "Emphasized" text styles of
- * Material 3 Expressive (see `HomeTitle` for the idea). The back arrow is an Expressive icon
- * button: given `shapes` instead of one shape, it squares its round outline a little while a
- * finger is on it (see `GalleryTopBar`); it is 48 dp, the smallest comfortable touch target, and
- * "Back" is its spoken name.
+ * The title is the first item of the scrolling column, not a top bar: Settings is a tab, so it
+ * has no back arrow to put in one, and like Home's title it scrolls away with the rest. It uses
+ * `headlineSmallEmphasized`, one of the bolder "Emphasized" text styles of Material 3 Expressive
+ * (see `HomeTitle` for the idea), the same style and height as Home's title, so moving between
+ * the two tabs keeps the title in one place. With no top bar, the [Scaffold] adds the status
+ * bar's height to `innerPadding` instead, so the title never sits under the clock.
  *
  * A plain scrolling Column holds the section: the list is short, so it is drawn all at once, and
  * every row exists for tests and screen readers even when it is scrolled out of view.
  *
- * Every tap is reported through a callback and nothing is saved here: [onBack] for the back
- * arrow, [onThemeModeSelected] for a mode row, [onKansoBlueChosen], [onWallpaperChosen] and
- * [onCustomChosen] for the colour rows, and [onCustomColourChosen] for each colour picked in the
- * colour picker.
+ * Every tap is reported through a callback and nothing is saved here: [onThemeModeSelected] for a
+ * mode row, [onKansoBlueChosen], [onWallpaperChosen] and [onCustomChosen] for the colour rows,
+ * and [onCustomColourChosen] for each colour picked in the colour picker. [contentPadding]'s
+ * bottom is added after the last row, inside the scrolling part, so the person can scroll the
+ * last row up above the floating tab bar.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
     state: SettingsUiState,
     wallpaperColour: Color?,
-    onBack: () -> Unit,
     onThemeModeSelected: (ThemeMode) -> Unit,
     onKansoBlueChosen: () -> Unit,
     onWallpaperChosen: () -> Unit,
     onCustomChosen: () -> Unit,
     onCustomColourChosen: (Color) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     Scaffold(
         modifier = modifier.testTag(SETTINGS_SCREEN_TAG),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings),
-                        style = MaterialTheme.typography.titleLargeEmphasized,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        shapes = IconButtonDefaults.shapes(),
-                        modifier = Modifier.size(TOP_BAR_BUTTON_SIZE),
-                    ) {
-                        // The drawable paints white; Icon tints it with the top bar's icon colour.
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-            )
-        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // innerPadding is the space the top bar and the navigation bar take;
-                // consumeWindowInsets marks it as dealt with, so the inset padding below only
-                // adds what is still missing.
+                // innerPadding is the space the status bar and the navigation bar take (there is
+                // no top bar); consumeWindowInsets marks it as dealt with, so the inset padding
+                // below only adds what is still missing.
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .verticalScroll(rememberScrollState())
@@ -284,9 +264,13 @@ fun SettingsContent(
                 .windowInsetsPadding(
                     WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
                 )
+                // The caller's extra space at the end (the floating tab bar's height), inside the
+                // scrolling content, so the last row can be scrolled up above the bar.
+                .padding(bottom = contentPadding.calculateBottomPadding())
                 // A bottom margin keeps the screen's bottom-left corner plain background.
                 .padding(bottom = 24.dp),
         ) {
+            SettingsTitle()
             SectionHeader(text = stringResource(R.string.appearance))
             ThemeModeChoice(
                 selected = state.themeMode,
@@ -303,6 +287,25 @@ fun SettingsContent(
             )
         }
     }
+}
+
+/**
+ * Settings' large title, the word "Settings", as the first item of the scrolling column.
+ *
+ * It is drawn in the same style and with the same height as Home's title (see [SettingsContent]).
+ * `heading()` marks it as a heading, so a screen reader announces it as one and lets the person
+ * jump to it. The same word is also the label of the Settings tab on the floating bar, so the
+ * text "Settings" is on screen twice; tests tell the two apart by the tab's test tag.
+ */
+@Composable
+private fun SettingsTitle(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.settings),
+        style = MaterialTheme.typography.headlineSmallEmphasized,
+        modifier = modifier
+            .padding(horizontal = SCREEN_PADDING, vertical = TITLE_PADDING)
+            .semantics { heading() },
+    )
 }
 
 /**
@@ -670,7 +673,6 @@ private fun SettingsSystemModePreview() {
                 themeColour = ThemeColour.KansoBlue,
             ),
             wallpaperColour = sampleWallpaperColour,
-            onBack = {},
             onThemeModeSelected = {},
             onKansoBlueChosen = {},
             onWallpaperChosen = {},
@@ -697,7 +699,6 @@ private fun SettingsLightModePreview() {
                 themeColour = ThemeColour.KansoBlue,
             ),
             wallpaperColour = null,
-            onBack = {},
             onThemeModeSelected = {},
             onKansoBlueChosen = {},
             onWallpaperChosen = {},
@@ -721,7 +722,6 @@ private fun SettingsDarkModePreview() {
                 themeColour = ThemeColour.Wallpaper,
             ),
             wallpaperColour = sampleWallpaperColour,
-            onBack = {},
             onThemeModeSelected = {},
             onKansoBlueChosen = {},
             onWallpaperChosen = {},
@@ -745,7 +745,6 @@ private fun SettingsWallpaperColourPreview() {
                 themeColour = ThemeColour.Wallpaper,
             ),
             wallpaperColour = sampleWallpaperColour,
-            onBack = {},
             onThemeModeSelected = {},
             onKansoBlueChosen = {},
             onWallpaperChosen = {},
@@ -772,7 +771,6 @@ private fun SettingsCustomColourPreview() {
                 themeColour = sampleCustomColour,
             ),
             wallpaperColour = sampleWallpaperColour,
-            onBack = {},
             onThemeModeSelected = {},
             onKansoBlueChosen = {},
             onWallpaperChosen = {},

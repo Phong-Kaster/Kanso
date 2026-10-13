@@ -64,7 +64,11 @@ import org.robolectric.annotation.Config
  * - each spec takes its springs from the motion scheme it is given;
  * - with the phone's "Remove animations" setting (the animator duration scale at 0), a push ends
  *   at once, if the test's host passes that setting on to Compose; when it does not, the test says
- *   so and checks that the push still runs as usual.
+ *   so and checks that the push still runs as usual;
+ * - the tab case (DoD 20(b)): with the tab entries given `kansoTabEntryMetadata`, a move between
+ *   the Home and Settings tabs, either way, is a fade in place (both screens stay at the left
+ *   edge while both are composed), while a push from a tab to a screen that is not a tab (a
+ *   gallery) still slides in from the right.
  *
  * The specs' springs settle in under a second, so 2 000 ms is ample. The preview the back gesture
  * shows while the finger moves (predictive back) is driven in [PredictiveBackGestureTest].
@@ -145,6 +149,57 @@ class NavTransitionTest {
 
         assertPopSlidesOutToTheRight()
         assertEquals("Back did not leave Home alone on the back stack", listOf<NavKey>(Home), backStack.toList())
+    }
+
+    /**
+     * DoD 20(b), the tab case: on a NavDisplay whose Home and Settings entries carry
+     * `kansoTabEntryMetadata`, choosing Settings from Home (a push) composes both screens for a
+     * while, and during that time neither moves from the left edge: the move is a fade, not a
+     * slide. 2 000 ms later only Settings is left. Choosing Home again (a pop) is the same fade
+     * the other way.
+     */
+    @Test
+    fun between_two_tabs_the_move_is_a_fade_in_place_either_way() {
+        val backStack = mutableStateListOf<NavKey>(Home)
+        showTabs(backStack)
+        assertOnlyScreen(shown = HOME_TAG, gone = SETTINGS_TAG)
+
+        backStack.selectTab(KansoTab.SETTINGS)
+        assertFadesInPlace(arriving = SETTINGS_TAG, leaving = HOME_TAG)
+
+        backStack.selectTab(KansoTab.HOME)
+        assertFadesInPlace(arriving = HOME_TAG, leaving = SETTINGS_TAG)
+        assertEquals(listOf<NavKey>(Home), backStack.toList())
+    }
+
+    /**
+     * DoD 20(b), the other half: with the same tab metadata in place, a push from the Home tab to
+     * a screen that is not a tab (a gallery, whose entry has no such metadata) still slides in
+     * from the right while Home moves left, so only moves between two tabs fade.
+     */
+    @Test
+    fun with_the_tab_metadata_a_push_from_a_tab_to_another_screen_still_slides() {
+        val backStack = mutableStateListOf<NavKey>(Home)
+        showTabs(backStack)
+        assertOnlyScreen(shown = HOME_TAG, gone = GALLERY_TAG)
+
+        backStack.add(Gallery(Tool.EDIT))
+
+        stepUntil("the gallery to be composed") { exists(GALLERY_TAG) }
+        compose.onNodeWithTag(HOME_TAG).assertExists()
+        stepUntil("the gallery to start moving") { left(GALLERY_TAG) < width(GALLERY_TAG) * 0.9f }
+        assertTrue(
+            "The gallery should arrive from the right, but its left edge is at ${left(GALLERY_TAG)}",
+            left(GALLERY_TAG) > 0f,
+        )
+        assertTrue(
+            "The tab it covers should move left, but its left edge is at ${left(HOME_TAG)}",
+            left(HOME_TAG) < 0f,
+        )
+
+        advance(FINISH_MS)
+        assertOnlyScreen(shown = GALLERY_TAG, gone = HOME_TAG)
+        assertEquals("The gallery did not come to rest at the left edge", 0f, left(GALLERY_TAG), 0.5f)
     }
 
     /**
@@ -286,6 +341,46 @@ class NavTransitionTest {
             }
         }
         advance(SETTLE_MS)
+    }
+
+    /**
+     * Like [show], but with [TabNavDisplay]: Home and Settings carry the tab metadata, and a
+     * gallery screen without it is there to push to.
+     */
+    private fun showTabs(backStack: SnapshotStateList<NavKey>) {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            KansoTheme(themeMode = ThemeMode.Light) {
+                TabNavDisplay(backStack)
+            }
+        }
+        advance(SETTLE_MS)
+    }
+
+    /**
+     * After the back stack moved from one tab to the other: steps the clock until the [arriving]
+     * screen is composed and checks that the [leaving] one still is (the move animates), then
+     * watches a few frames and fails if either screen leaves the left edge while it is composed:
+     * a fade keeps both in place, where a slide would move them. Then lets the move end and checks
+     * that only the arriving screen is left, at the left edge.
+     */
+    private fun assertFadesInPlace(arriving: String, leaving: String) {
+        val frames = stepUntil("the arriving tab to be composed") { exists(arriving) }
+        println("NavTransitionTest: both tabs composed $frames frame(s) after the tab change")
+        assertTrue("A change of tab should animate, yet the leaving tab is already gone", exists(leaving))
+        repeat(FADE_WATCH_FRAMES) { frame ->
+            if (exists(arriving)) {
+                assertEquals("The arriving tab slid (frame $frame)", 0f, left(arriving), 0.5f)
+            }
+            if (exists(leaving)) {
+                assertEquals("The leaving tab slid (frame $frame)", 0f, left(leaving), 0.5f)
+            }
+            nextFrame()
+        }
+
+        advance(FINISH_MS)
+        assertOnlyScreen(shown = arriving, gone = leaving)
+        assertEquals("The arriving tab did not rest at the left edge", 0f, left(arriving), 0.5f)
     }
 
     /**
@@ -465,6 +560,31 @@ class NavTransitionTest {
         )
     }
 
+    /**
+     * NavDisplay over [backStack] built the way the app's host builds it for the tabs: Kanso's
+     * three specs for the whole display, and on the Home and Settings entries the metadata of
+     * `kansoTabEntryMetadata`, made from the same motion scheme. The [Gallery] entry carries no
+     * metadata, like every screen that is not a tab. Each is drawn as a [PlainScreen].
+     */
+    @Composable
+    private fun TabNavDisplay(backStack: SnapshotStateList<NavKey>) {
+        val motionScheme = MaterialTheme.motionScheme
+        val tabMetadata = kansoTabEntryMetadata(motionScheme)
+        NavDisplay(
+            backStack = backStack,
+            modifier = Modifier.fillMaxSize(),
+            onBack = { backStack.removeLastOrNull() },
+            transitionSpec = kansoPushTransition(motionScheme),
+            popTransitionSpec = kansoPopTransition(motionScheme),
+            predictivePopTransitionSpec = kansoPredictivePopTransition(motionScheme),
+            entryProvider = entryProvider<NavKey> {
+                entry<Home>(metadata = tabMetadata) { PlainScreen(tag = HOME_TAG, label = "Home") }
+                entry<Settings>(metadata = tabMetadata) { PlainScreen(tag = SETTINGS_TAG, label = "Settings") }
+                entry<Gallery> { PlainScreen(tag = GALLERY_TAG, label = "Gallery") }
+            },
+        )
+    }
+
     /** A screen that fills the window, tagged [tag] so the test can find it, showing [label]. */
     @Composable
     private fun PlainScreen(tag: String, label: String) {
@@ -480,6 +600,12 @@ class NavTransitionTest {
 
         /** Marks the Settings screen. */
         const val SETTINGS_TAG = "nav-test-settings"
+
+        /** Marks the gallery screen of the tab case: a screen that is not a tab. */
+        const val GALLERY_TAG = "nav-test-gallery"
+
+        /** How many frames the tab case watches both tabs for a slide: 96 ms, most of a fade. */
+        const val FADE_WATCH_FRAMES = 6
 
         /** The most frames [stepUntil] waits: 160 ms, a fraction of a transition. */
         const val MAX_FRAMES = 10

@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** approved, re-cut and prepared (Iteration 2): D-001 answered with one edit (every tool one tap, five round shortcuts on Home); the DoD, plan and task files re-cut; Phase 1 preparation done. Phase 1 itself (the three Workers) is the next Iteration.
+- **Stage:** Phase 1a (T-001, T-002) complete and checkpointed (Iteration 5). Next: Phase 1b = T-003.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** Phase 1 = T-001, T-002, T-003 (preparation already done; start with the Workers)
+- **Next Phase:** Phase 1b = T-003 (then Phase 2)
 - **DONE-candidate:** no
 - **Run Mode:** Autonomous
 
@@ -15,8 +15,8 @@
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | pending (Phase 1) | tab shell (`navigation/Kanso*`, `BackStackActions.kt`, `MyEdits.kt`), Home's Camera/Settings entries, Settings without Back, the tests that reach Settings and the camera, `NavTransitionTest`, `KansoBlueContrastTest` | - |
-| T-002 | pending (Phase 1) | `data/media/*Saved*`, `ui/myedits/*`, `ui/common/SkeletonBlock.kt`, `PhotoThumbnail` visibility, `myedits/*` tests | - |
+| T-001 | complete (1a) | tab shell, tests | commit of Iteration 5; evidence/p1a-run5.log |
+| T-002 | complete (1a) | `data/media/*Saved*`, `ui/myedits/*`, `ui/common/SkeletonBlock.kt`, `PhotoThumbnail` visibility, `myedits/*` tests | - |
 | T-003 | pending (Phase 1) | `ui/tool/*`, `ui/common/{BlurredBackdrop,RoundIconButton}.kt`, tool tests, `HomeTaps.kt`, `ReplaceNavigationTest` case (a) | - |
 | T-004 | pending (Phase 2) | `ui/saved/*`, `navigation/EditedPhoto.kt`, saved tests, `MyEditsViewerNavigationTest` | - |
 | T-005 | pending (Phase 2) | `ui/home/*` (title, carousel, the five tool shortcuts), Home-facing tests, `HomeTaps.kt` body | - |

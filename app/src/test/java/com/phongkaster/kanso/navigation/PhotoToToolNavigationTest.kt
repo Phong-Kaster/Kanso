@@ -126,7 +126,7 @@ class PhotoToToolNavigationTest {
     fun open_a_photo_opens_the_edit_gallery_then_the_editor_on_edit() {
         val photo = PHOTOS.first()
         launchWithFakes { scenario ->
-            compose.onNodeWithTag(HOME_OPEN_PHOTO_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(HOME_OPEN_PHOTO_TAG).tapAboveBar()
             walkGalleryToEditor(Tool.EDIT, photo.id, photo.uri, scenario)
         }
     }
@@ -142,7 +142,7 @@ class PhotoToToolNavigationTest {
         val photo = PHOTOS.first()
         launchWithFakes { scenario ->
             Tool.editingTools.forEach { tool ->
-                compose.onNodeWithTag(homeToolTag(tool)).performScrollTo().performClick()
+                compose.onNodeWithTag(homeToolTag(tool)).tapAboveBar()
                 walkGalleryToEditor(tool, photo.id, photo.uri, scenario)
             }
         }
@@ -227,7 +227,7 @@ class PhotoToToolNavigationTest {
             compose.waitUntil(timeoutMillis = 10_000) {
                 compose.onAllNodesWithTag(editCard).fetchSemanticsNodes().isNotEmpty()
             }
-            compose.onNodeWithTag(editCard).performScrollTo().performClick()
+            compose.onNodeWithTag(editCard).tapAboveBar()
             compose.waitUntil(timeoutMillis = 10_000) {
                 compose.onAllNodesWithTag(galleryPhotoTag(source.allPhotos.first().id)).fetchSemanticsNodes().isNotEmpty()
             }

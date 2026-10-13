@@ -21,8 +21,8 @@ class HomeViewModel(private val probe: ViewModelClearedProbe) : ViewModel() {
     /**
      * The writable holder of Home's state. Only this class may put a new snapshot into it, and
      * Home never needs one, so it keeps its first snapshot for good: the four AI tools under
-     * "AI tools", then Edit alone under "Edit". The camera is in neither group: Home shows it as
-     * a shortcut of its own, because it takes a photo instead of editing one.
+     * "AI tools", then Edit alone under "Edit". The camera is in neither group: it takes a photo
+     * instead of editing one, so it is the round button beside the floating tab bar, not a card.
      */
     private val mutableState = MutableStateFlow(
         HomeUiState(

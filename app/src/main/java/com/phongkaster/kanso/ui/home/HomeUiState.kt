@@ -8,10 +8,10 @@ import com.phongkaster.kanso.navigation.Tool
  * the "AI tools" header (Remove background, Enhance, Retouch and Artistic) and [editTools] the
  * cards under the "Edit" header (Edit).
  *
- * The rest of Home is always the same: the "Open a photo" button, the Camera shortcut and the
- * Settings entry are drawn on every Home, so they need no field here. The camera in particular
- * is not a tool any more: it takes a new photo instead of working on one, so it has no place in
- * either list, and the screen draws its shortcut as a separate action.
+ * The rest of Home is always the same: the "Open a photo" button is drawn on every Home, so it
+ * needs no field here. The camera is not a tool: it takes a new photo instead of working on one,
+ * so it has no place in either list; it is the round button beside the floating tab bar, which
+ * also leads to Settings, and neither is part of Home's own state.
  *
  * What a UiState is. This is the first UiState a reader of Kanso meets, and every screen of the
  * app has one (`GalleryUiState`, `SettingsUiState` and the others point back here), so the idea
@@ -24,8 +24,8 @@ import com.phongkaster.kanso.navigation.Tool
  *   holder that always has one current value and tells its readers each time a new value arrives)
  *   and hands the screen exactly that one StateFlow, always named `state`, to read.
  * - The screen never changes the snapshot it is given. When the person taps something, the screen
- *   reports it through a callback (for Home, `onOpenPhoto`, `onCameraClick`, `onToolClick` and
- *   `onSettingsClick`). If the tap should change what is shown, the ViewModel builds a new
+ *   reports it through a callback (for Home, `onOpenPhoto` and `onToolClick`). If the tap
+ *   should change what is shown, the ViewModel builds a new
  *   snapshot (a data class's `copy(...)` makes one with a few fields changed) and puts it into its
  *   StateFlow, where it replaces the old one. So data only travels one way: state goes down to
  *   the screen, taps go up from it. This is called "unidirectional data flow".

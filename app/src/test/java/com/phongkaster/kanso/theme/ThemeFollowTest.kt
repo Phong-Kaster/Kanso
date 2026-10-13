@@ -241,9 +241,7 @@ class ThemeFollowTest {
             HomeContent(
                 state = HOME_STATE,
                 onOpenPhoto = {},
-                onCameraClick = {},
                 onToolClick = {},
-                onSettingsClick = {},
             )
         }
         assertFollows(
@@ -373,7 +371,6 @@ class ThemeFollowTest {
             SettingsContent(
                 state = SettingsUiState(themeMode = mode, themeColour = ThemeColour.KansoBlue),
                 wallpaperColour = null,
-                onBack = {},
                 onThemeModeSelected = {},
                 onKansoBlueChosen = {},
                 onWallpaperChosen = {},

@@ -18,10 +18,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
@@ -30,6 +27,10 @@ import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_COLOUR_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
@@ -67,6 +68,10 @@ import org.robolectric.annotation.Config
  *
  * The colours are read from the scheme KansoTheme publishes on its semantics node, which is
  * exactly what `MaterialTheme.colorScheme` returns on every screen below it.
+ *
+ * Settings is opened with the floating tab bar's Settings tab (`TabTaps.openTab`), and rows are
+ * tapped with `TabTaps.tapAboveBar`, because a row scrolled into view on this 320 x 470 dp screen
+ * can rest under the bar.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], qualifiers = "notnight")
@@ -131,12 +136,12 @@ class ThemeColourSettingsTest {
         compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).assertIsNotSelected()
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).assertIsNotSelected()
 
-        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).tapAboveBar()
         waitForPicker()
         compose.onNodeWithTag(CUSTOM_COLOUR_PICKER_TAG).performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).assertIsSelected()
 
-        compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).tapAboveBar()
         awaitSavedThemeColour(ThemeColour.Wallpaper)
         compose.waitUntil(timeoutMillis = 10_000) {
             appliedScheme().primary == dynamicLightColorScheme(context).primary
@@ -150,7 +155,7 @@ class ThemeColourSettingsTest {
         )
 
         // Back to Kanso blue: the choice is saved, and the app is drawn in Kanso blue again.
-        compose.onNodeWithTag(THEME_COLOUR_KANSO_BLUE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_COLOUR_KANSO_BLUE_TAG).tapAboveBar()
         awaitSavedThemeColour(ThemeColour.KansoBlue)
         compose.waitUntil(timeoutMillis = 10_000) {
             appliedScheme().primary == seedColorScheme(KANSO_BLUE_SEED, dark = false).primary
@@ -210,7 +215,7 @@ class ThemeColourSettingsTest {
         val expected = seedColorScheme(GREEN, dark = true).primary
         waitForHome()
         openSettings()
-        compose.onNodeWithTag(THEME_MODE_DARK_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_MODE_DARK_TAG).tapAboveBar()
 
         pickCustomColour()
         compose.waitUntil(timeoutMillis = 10_000) { appliedScheme().primary == expected }
@@ -331,27 +336,25 @@ class ThemeColourSettingsTest {
         }
     }
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     /** Waits until Home is shown and the Settings screen has left the screen. */
     private fun waitForHomeOnly() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty() &&
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty() &&
                 compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isEmpty()
         }
     }

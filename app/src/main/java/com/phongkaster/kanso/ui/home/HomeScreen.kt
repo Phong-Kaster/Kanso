@@ -2,12 +2,12 @@ package com.phongkaster.kanso.ui.home
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,7 +28,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -40,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -80,12 +78,6 @@ fun homeToolTag(tool: Tool): String = "home-tool-${tool.name}"
 private val OPEN_PHOTO_HEIGHT = ButtonDefaults.LargeContainerHeight
 
 /**
- * The height of the Camera shortcut: the medium button size, 56 dp. It is a second way in, so it
- * sits under "Open a photo", smaller and in a softer colour.
- */
-private val CAMERA_HEIGHT = ButtonDefaults.MediumContainerHeight
-
-/**
  * The smallest height of a tool card: 72 dp, well above Android's smallest touch target (48 dp),
  * so a card is easy to hit and its icon and label have room around them.
  */
@@ -93,9 +85,6 @@ private val CARD_MIN_HEIGHT = 72.dp
 
 /** The size of the tinted square behind each card's icon. */
 private val ICON_BADGE_SIZE = 40.dp
-
-/** The smallest height of the Settings entry: 56 dp, comfortably above the 48 dp touch target. */
-private val SETTINGS_MIN_HEIGHT = 56.dp
 
 /** The space between the screen's left and right edges and Home's buttons and cards. */
 private val SCREEN_PADDING = 16.dp
@@ -110,9 +99,10 @@ private val TITLE_PADDING = 16.dp
 private const val PRESSED_CARD_SCALE = 0.97f
 
 /**
- * The Home screen: in one scrolling column, the title "Kanso", the large "Open a photo" button,
- * the Camera shortcut, the tool cards in two groups ("AI tools" and "Edit") and, at the bottom,
- * the Settings entry.
+ * The Home screen: in one scrolling column, the title "Kanso", the large "Open a photo" button
+ * and the tool cards in two groups ("AI tools" and "Edit"). The camera and Settings are not on
+ * Home itself: they are reached from the floating tab bar the navigation host draws over every
+ * tab screen (see `KansoTabShell`).
  *
  * Why Home is two composables. A screen in this app usually needs things that only exist while
  * the real app runs: here, a [HomeViewModel] that the app's wiring (Koin) creates and keeps
@@ -126,7 +116,7 @@ private const val PRESSED_CARD_SCALE = 0.97f
  *   ViewModels or Koin: it simply draws whatever [HomeUiState] it is given, and reports taps
  *   through the callbacks it is given.
  *
- * Because [HomeContent] needs only plain values (a [HomeUiState] and four lambdas), a preview can
+ * Because [HomeContent] needs only plain values (a [HomeUiState] and two lambdas), a preview can
  * call it with a state built from made-up sample data and see exactly what the person sees,
  * with none of the app's machinery running. That is what `HomePreview` at the bottom of this
  * file does. The other screens of the app follow the same pattern. (What a UiState is, and why
@@ -135,17 +125,19 @@ private const val PRESSED_CARD_SCALE = 0.97f
  * The screen itself never navigates: it only reports what was tapped, and the caller (the
  * navigation host) decides where that leads. [onOpenPhoto] is called for "Open a photo" (the
  * caller opens the gallery, and the photo picked there opens in the editor on the Edit tool),
- * [onCameraClick] for the Camera shortcut, [onToolClick] with the tool of the card that was
- * tapped, and [onSettingsClick] for Settings.
+ * and [onToolClick] with the tool of the card that was tapped.
+ *
+ * [contentPadding] is extra empty space the caller asks for at the end of the column; the
+ * navigation host passes the height the floating tab bar covers, so the last card can always be
+ * scrolled up above the bar instead of resting under it.
  */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onOpenPhoto: () -> Unit,
-    onCameraClick: () -> Unit,
     onToolClick: (Tool) -> Unit,
-    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     // collectAsState turns the ViewModel's StateFlow into Compose state: whenever a new
     // snapshot arrives, Home is drawn again with it. `by` lets `state` be used as the current
@@ -155,18 +147,17 @@ fun HomeScreen(
     HomeContent(
         state = state,
         onOpenPhoto = onOpenPhoto,
-        onCameraClick = onCameraClick,
         onToolClick = onToolClick,
-        onSettingsClick = onSettingsClick,
         modifier = modifier,
+        contentPadding = contentPadding,
     )
 }
 
 /**
  * The stateless part of Home (see [HomeScreen] for why there are two): draws one scrolling column
- * holding, from top to bottom, the title "Kanso", the "Open a photo" button, the Camera shortcut,
- * the "AI tools" header with one card per tool of `state.aiTools`, the "Edit" header with one card
- * per tool of `state.editTools`, and the Settings entry.
+ * holding, from top to bottom, the title "Kanso", the "Open a photo" button, the "AI tools" header
+ * with one card per tool of `state.aiTools`, and the "Edit" header with one card per tool of
+ * `state.editTools`.
  *
  * The title is the first item of the column, not a separate top bar, so it scrolls away with the
  * rest and everything Home shows lives in the one scrolling column. With no top bar, the
@@ -178,17 +169,17 @@ fun HomeScreen(
  * the column is built at once, so every control exists for tests and screen readers even when it
  * is scrolled out of view, and a test can scroll to it.
  *
- * Taps are reported, never acted on here: [onOpenPhoto] for "Open a photo", [onCameraClick] for
- * the Camera shortcut, [onToolClick] with the card's tool, [onSettingsClick] for Settings.
+ * Taps are reported, never acted on here: [onOpenPhoto] for "Open a photo", [onToolClick] with
+ * the card's tool. [contentPadding]'s bottom is added after the last card, inside the scrolling
+ * part, so it is space the person scrolls through, not a margin that shrinks the screen.
  */
 @Composable
 fun HomeContent(
     state: HomeUiState,
     onOpenPhoto: () -> Unit,
-    onCameraClick: () -> Unit,
     onToolClick: (Tool) -> Unit,
-    onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
 ) {
     Scaffold(
         modifier = modifier.testTag(HOME_SCREEN_TAG),
@@ -213,16 +204,18 @@ fun HomeContent(
                 // the two, and `only(Bottom)` leaves out the side gesture zones, where the back
                 // swipe starts. Placed after verticalScroll, this padding is part of the scrolling
                 // content: it adds empty space after the last row, so when the column is scrolled
-                // to its end the Settings entry comes to rest above both strips.
+                // to its end the last card comes to rest above both strips.
                 .windowInsetsPadding(
                     WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
                 )
+                // The caller's extra space at the end (the floating tab bar's height), also inside
+                // the scrolling content, so the last card can be scrolled up above the bar.
+                .padding(bottom = contentPadding.calculateBottomPadding())
                 .padding(horizontal = SCREEN_PADDING, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             HomeTitle()
             OpenPhotoButton(onClick = onOpenPhoto)
-            CameraButton(onClick = onCameraClick)
             ToolGroup(
                 title = stringResource(R.string.home_header_ai_tools),
                 tools = state.aiTools,
@@ -233,7 +226,6 @@ fun HomeContent(
                 tools = state.editTools,
                 onToolClick = onToolClick,
             )
-            SettingsEntry(onClick = onSettingsClick)
         }
     }
 }
@@ -295,37 +287,6 @@ private fun OpenPhotoButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
         Text(
             text = stringResource(R.string.home_open_photo),
             style = ButtonDefaults.textStyleFor(OPEN_PHOTO_HEIGHT),
-        )
-    }
-}
-
-/**
- * The Camera shortcut under "Open a photo": a camera icon and the word "Camera" on a tonal button
- * (the theme's softer secondary container colour), across the whole width. Tapping it calls
- * [onClick]; the caller opens the camera, and a kept shot opens in the editor.
- *
- * Like [OpenPhotoButton] it is given `shapes =` for its height, so it morphs while pressed. The
- * word "Camera" is its spoken name, so the icon has no content description of its own.
- */
-@Composable
-private fun CameraButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalButton(
-        onClick = onClick,
-        shapes = ButtonDefaults.shapesFor(CAMERA_HEIGHT),
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = CAMERA_HEIGHT),
-        contentPadding = ButtonDefaults.contentPaddingFor(CAMERA_HEIGHT, hasStartIcon = true),
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_photo_camera),
-            contentDescription = null,
-            modifier = Modifier.size(ButtonDefaults.iconSizeFor(CAMERA_HEIGHT)),
-        )
-        Spacer(Modifier.width(ButtonDefaults.iconSpacingFor(CAMERA_HEIGHT)))
-        Text(
-            text = stringResource(R.string.tool_camera),
-            style = ButtonDefaults.textStyleFor(CAMERA_HEIGHT),
         )
     }
 }
@@ -454,41 +415,6 @@ private fun ToolCard(tool: Tool, onClick: () -> Unit, modifier: Modifier = Modif
 }
 
 /**
- * The Settings entry at the bottom of Home: a gear icon and the word "Settings" on a row across
- * the whole width. Tapping anywhere on the row calls [onClick].
- *
- * It is deliberately plain: no filled container, so the row sits on the screen's own background
- * and its text is the theme's normal text colour, as on any settings list. `clickable` makes the
- * whole row tappable and, with `Role.Button`, tells screen readers it is a button; it also merges
- * the row into one node read as "Settings". The row is clipped to a rounded shape first, so the
- * ripple a tap draws has rounded corners too.
- */
-@Composable
-private fun SettingsEntry(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = SETTINGS_MIN_HEIGHT)
-            .clip(MaterialTheme.shapes.largeIncreased)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_settings),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(16.dp))
-        Text(
-            text = stringResource(R.string.settings),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-/**
  * The sample state the preview draws: the same two groups the real Home shows, written out by
  * hand. It is a plain value, so building it needs nothing of the running app.
  */
@@ -503,9 +429,9 @@ private val sampleHomeState = HomeUiState(
  * `@PreviewLightDark` asks Android Studio for two pictures of this function, one with the phone
  * in day mode and one in night mode; `ThemeMode.System` makes KansoTheme follow that setting.
  * The sample data is [sampleHomeState], built by hand; no state holder from the app is needed to
- * make one. [HomeContent] draws every part of Home ([OpenPhotoButton], [CameraButton],
- * [ToolGroup] with its [GroupHeader] and [ToolCard]s, and [SettingsEntry]), so this one picture
- * covers them all. The taps do nothing, because a preview cannot be tapped into another screen.
+ * make one. [HomeContent] draws every part of Home ([OpenPhotoButton], and [ToolGroup] with its
+ * [GroupHeader] and [ToolCard]s), so this one picture covers them all. The taps do nothing,
+ * because a preview cannot be tapped into another screen.
  */
 @PreviewLightDark
 @Composable
@@ -514,9 +440,7 @@ private fun HomePreview() {
         HomeContent(
             state = sampleHomeState,
             onOpenPhoto = {},
-            onCameraClick = {},
             onToolClick = {},
-            onSettingsClick = {},
         )
     }
 }

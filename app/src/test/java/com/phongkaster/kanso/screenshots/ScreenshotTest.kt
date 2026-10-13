@@ -1,6 +1,5 @@
 package com.phongkaster.kanso.screenshots
 
-import android.content.Context
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
@@ -8,20 +7,19 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
-import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -66,7 +64,8 @@ import org.robolectric.annotation.GraphicsMode
  * the pictures show actual pixels.
  *
  * Every test drives the real app: MainActivity, its navigation, its ViewModels and Koin, nothing
- * faked. Light and dark are chosen the way a person would, through Settings -> Theme mode. The
+ * faked. Light and dark are chosen the way a person would, through Settings -> Theme mode, with
+ * Settings opened from the floating tab bar's Settings tab (`TabTaps.openTab`). The
  * light and dark pictures 1, 2, 4 and 5 run as Android 11 (no wallpaper colours there), in Kanso
  * blue, the colours of a fresh install. The custom colour pictures run as Android 15 in light
  * mode. The swatch pictures 24 and 25 run as Android 15 in Kanso blue, so the wallpaper row is
@@ -81,10 +80,6 @@ class ScreenshotTest {
     /** Launches MainActivity before each test and lets the test find and tap its Compose nodes. */
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
-
-    /** The app context, used to read the same string resources the screens show. */
-    private val context: Context
-        get() = ApplicationProvider.getApplicationContext()
 
     /**
      * Stops Koin after each test. Koin's state outlives the test's Application inside the same
@@ -233,7 +228,7 @@ class ScreenshotTest {
      */
     private fun chooseThemeMode(mode: ThemeMode) {
         val tag = if (mode == ThemeMode.Dark) THEME_MODE_DARK_TAG else THEME_MODE_LIGHT_TAG
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag).tapAboveBar()
         awaitSaved("theme mode $mode") { savedThemeMode() == mode }
         val expected = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
         compose.waitUntil(timeoutMillis = 10_000) {
@@ -284,11 +279,9 @@ class ScreenshotTest {
     /** Returns the app's one settings repository from Koin. */
     private fun repository(): SettingsRepository = KoinPlatform.getKoin().get()
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
@@ -302,17 +295,17 @@ class ScreenshotTest {
         assertEquals(scheme.primary, appliedScheme().primary)
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     /** Waits until Home is shown and the Settings screen has left the screen. */
     private fun waitForHomeOnly() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty() &&
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty() &&
                 compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isEmpty()
         }
     }

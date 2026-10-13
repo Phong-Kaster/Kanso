@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- My edits: the spoken name of one tile of the grid of saved photos. The tile shows no
+         text, so a screen reader says this. %1$s is the date and time the photo was saved.
+         Home's Recent edits cards reuse it. -->
+    <string name="my_edits_photo_description">Edited photo, %1$s</string>
+    <!-- My edits: the message shown when Kanso has saved no photo yet (or none is readable). -->
+    <string name="my_edits_empty">No edits yet. Photos you save in Kanso will show up here.</string>
+    <!-- My edits: the spoken name of the grid of placeholder tiles shown while the saved photos
+         are read. The placeholders have no text, so a screen reader says this once for all. -->
+    <string name="my_edits_loading">Loading your edits</string>
+</resources>

@@ -16,18 +16,19 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
-import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.scrollAboveBar
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_SWATCH_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
@@ -76,6 +77,10 @@ import org.robolectric.annotation.GraphicsMode
  * does (Compose's own `captureToImage` times out under Robolectric here), with Robolectric's real
  * drawing code switched on (`GraphicsMode.Mode.NATIVE`). A row is scrolled into view before its
  * swatch is read, since only what is on screen is drawn.
+ *
+ * Settings is opened with the floating tab bar's Settings tab (`TabTaps.openTab`), and rows are
+ * tapped with `TabTaps.tapAboveBar`, because a row scrolled into view on this 320 x 470 dp screen
+ * can rest under the bar.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -181,7 +186,7 @@ class ThemeSwatchTest {
         openSettings()
 
         // Tapped as a person would: on a fresh install Custom starts from Kanso blue's seed.
-        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).tapAboveBar()
         awaitSavedThemeColour(ThemeColour.Custom(KANSO_BLUE_SEED.toArgb()))
         // What the picker's save writes once a drag towards green has settled.
         runBlocking { repository().setThemeColour(ThemeColour.Custom(CUSTOM_GREEN.toArgb())) }
@@ -276,7 +281,8 @@ class ThemeSwatchTest {
         // One deadline on the wall clock for the whole tap, taken just before it: the save and
         // the recolouring below share these ten seconds instead of getting ten seconds each.
         val deadline = System.currentTimeMillis() + TAP_TO_SCHEME_MILLIS
-        row.performClick()
+        // Tapped above the floating bar (the row is already in view, so its scroll is a no-op).
+        row.tapAboveBar()
         awaitSavedThemeColour(saved, deadline)
         val expected = rolesOf(scheme)
         // runCatching holds on to a failed wait instead of ending the test at once: the checks
@@ -304,7 +310,7 @@ class ThemeSwatchTest {
     }
 
     /**
-     * Scrolls the row tagged [rowTag] into view, then fails unless it holds the swatch tagged
+     * Scrolls the row tagged [rowTag] into view above the floating bar, then fails unless it holds the swatch tagged
      * [swatchTag], at least 24 dp across, whose middle pixel equals [expected] within
      * [TOLERANCE] per channel; [what] names that colour in the failure message.
      *
@@ -313,7 +319,9 @@ class ThemeSwatchTest {
      * Compose clips to the visible part of the screen.
      */
     private fun assertSwatch(rowTag: String, swatchTag: String, expected: Color, what: String) {
-        compose.onNodeWithTag(rowTag).performScrollTo()
+        // Above the floating bar, not merely into view: a row left under the bar would be read
+        // through the bar's pixels.
+        compose.onNodeWithTag(rowTag).scrollAboveBar(compose)
         compose.waitForIdle()
         val swatch = compose.onNode(
             hasTestTag(swatchTag) and hasAnyAncestor(hasTestTag(rowTag)),
@@ -480,20 +488,18 @@ class ThemeSwatchTest {
     /** Returns the app's one settings repository from Koin. */
     private fun repository(): SettingsRepository = KoinPlatform.getKoin().get()
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

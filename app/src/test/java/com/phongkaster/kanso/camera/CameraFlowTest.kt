@@ -11,17 +11,15 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.PhotoLoader
+import com.phongkaster.kanso.navigation.tapCameraButton
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.camera.CAMERA_KEEP_TAG
@@ -47,9 +45,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * DoD 6, through the app's real navigation: Home's Camera tile opens the camera; Keep replaces
- * the camera with the Edit tool on the shot; Retake leaves the camera on top with the shutter
- * back and the shot's file deleted.
+ * DoD 6, through the app's real navigation: the round Camera button beside the floating tab bar
+ * on Home opens the camera; Keep replaces the camera with the Edit tool on the shot; Retake
+ * leaves the camera on top with the shutter back and the shot's file deleted.
  *
  * The app is started as a person would. Camera access is granted beforehand, and the camera and
  * the photo decoder are swapped for fakes through Koin before the camera is opened (the fake
@@ -123,8 +121,8 @@ class CameraFlowTest {
     }
 
     /**
-     * Grants camera access, starts the app, swaps in the fakes, taps the Camera tile and waits
-     * until the shutter can be used, then runs [body].
+     * Grants camera access, starts the app, swaps in the fakes, taps the Camera button on Home's
+     * tab bar (by its tag, `nav-camera`) and waits until the shutter can be used, then runs [body].
      */
     private fun openCamera(body: () -> Unit) {
         shadowOf(app).grantPermissions(Manifest.permission.CAMERA)
@@ -136,11 +134,7 @@ class CameraFlowTest {
                     single<PhotoLoader> { FakePhotoLoader(app, ToolFixtures.gradient(60, 40)) }
                 },
             )
-            val cameraLabel = app.getString(R.string.tool_camera)
-            compose.waitUntil(timeoutMillis = 10_000) {
-                compose.onAllNodesWithText(cameraLabel).fetchSemanticsNodes().isNotEmpty()
-            }
-            compose.onNodeWithText(cameraLabel).performScrollTo().performClick()
+            tapCameraButton(compose)
             waitForEnabledShutter()
             body()
         }

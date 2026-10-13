@@ -255,3 +255,5 @@ Defects found, not fixed:
 - In dark mode the colour picker sits on a white card from `core/colorpicker` that clashes with the
   dark screen.
 - All four figures are from a debug build; measure a release build before deciding what to fix.
+
+- Phase 1a (Iteration 5): no fresh-context review was run on the T-001/T-002 diff (time); picture compare files not copied to `evidence/baseline-diffs/phase1/`.

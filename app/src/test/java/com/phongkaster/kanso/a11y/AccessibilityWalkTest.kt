@@ -168,9 +168,7 @@ class AccessibilityWalkTest {
             HomeContent(
                 state = HOME_STATE,
                 onOpenPhoto = {},
-                onCameraClick = {},
                 onToolClick = {},
-                onSettingsClick = {},
             )
         }
     }
@@ -396,7 +394,6 @@ class AccessibilityWalkTest {
                     themeColour = ThemeColour.Custom(seedArgb = CUSTOM_SEED_ARGB),
                 ),
                 wallpaperColour = WALLPAPER_COLOUR,
-                onBack = {},
                 onThemeModeSelected = {},
                 onKansoBlueChosen = {},
                 onWallpaperChosen = {},

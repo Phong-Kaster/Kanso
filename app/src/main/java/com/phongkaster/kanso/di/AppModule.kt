@@ -3,7 +3,9 @@ package com.phongkaster.kanso.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.phongkaster.kanso.data.media.MediaStorePhotoSource
+import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
 import com.phongkaster.kanso.data.media.PhotoSource
+import com.phongkaster.kanso.data.media.SavedPhotoSource
 import com.phongkaster.kanso.data.photo.MediaStorePhotoSaver
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.PhotoSaver
@@ -15,6 +17,7 @@ import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.CameraXController
+import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
 import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -43,6 +46,13 @@ val appModule = module {
 
     // The photo library behind one small interface, so tests can swap in a fake list of photos.
     single<PhotoSource> { MediaStorePhotoSource(androidContext()) }
+
+    // The photos Kanso itself saved (the Pictures/Kanso folder), behind one small interface so tests
+    // can swap in a fake list. It never asks for a permission.
+    single<SavedPhotoSource> { MediaStoreSavedPhotoSource(androidContext()) }
+
+    // The My edits tab's ViewModel reads that list each time the tab appears.
+    viewModel { MyEditsViewModel(savedPhotos = get(), probe = get()) }
 
     // Decodes one photo for the tool screen: upright and no bigger than the screen needs.
     single { PhotoLoader(androidContext()) }

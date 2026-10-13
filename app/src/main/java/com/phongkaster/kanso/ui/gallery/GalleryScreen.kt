@@ -696,12 +696,19 @@ private fun PhotoCell(
  * background colour until the picture is ready. Coil reads the photo through its content URI.
  * It has no preview of its own: a preview cannot read the phone's photos, so the gallery's
  * previews draw a coloured square in its place (see [GalleryContent]).
+ *
+ * It is `internal` (visible to the whole app, not only this file) because My edits draws its
+ * tiles with it too. [contentDescription] is what a screen reader says for the picture: by
+ * default "Photo" and the file name, as the gallery wants; My edits passes null, because its
+ * tile already carries its own description ("Edited photo" and the date) and a second one on the
+ * same tile would be read out as well.
  */
 @Composable
-private fun PhotoThumbnail(
+internal fun PhotoThumbnail(
     photo: Photo,
     sizePx: Int,
     modifier: Modifier = Modifier,
+    contentDescription: String? = stringResource(R.string.gallery_photo_description, photo.name),
 ) {
     val context = LocalContext.current
     // The request is remembered so it is not rebuilt each time the cell is drawn again.
@@ -718,7 +725,7 @@ private fun PhotoThumbnail(
     }
     AsyncImage(
         model = request,
-        contentDescription = stringResource(R.string.gallery_photo_description, photo.name),
+        contentDescription = contentDescription,
         contentScale = ContentScale.Crop,
         modifier = modifier,
     )

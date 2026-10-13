@@ -259,6 +259,11 @@ class PreviewsRenderTest {
             "AccessRefusedPanelPreview",
             "KansoNavHostPreview",
             "KansoThemePreview",
+            "KansoTabBarPreview",
+            "KansoTabShellPreview",
+            "MyEditsPreview",
+            "MyEditsEmptyPreview",
+            "MyEditsLoadingPreview",
         )
     }
 }

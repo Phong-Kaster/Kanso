@@ -43,6 +43,7 @@ import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.gallery.GALLERY_CAMERA_TAG
 import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
 import com.phongkaster.kanso.ui.gallery.galleryPhotoTag
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
 import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
 import com.phongkaster.kanso.ui.saved.SAVED_HOME_TAG
@@ -117,7 +118,7 @@ class SavedNavigationTest {
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             waitFor { count(GALLERY_SCREEN_TAG) == 0 }
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -129,7 +130,7 @@ class SavedNavigationTest {
             waitFor { count(SAVED_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
             assertEquals(0, count(GALLERY_SCREEN_TAG))
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -140,7 +141,7 @@ class SavedNavigationTest {
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             waitFor { count(SAVED_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -165,7 +166,7 @@ class SavedNavigationTest {
             waitFor { count(GALLERY_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
             assertEquals(0, count(SAVED_SCREEN_TAG))
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -177,7 +178,7 @@ class SavedNavigationTest {
             waitFor { count(SAVED_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
             assertEquals(0, count(GALLERY_SCREEN_TAG))
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -255,7 +256,7 @@ class SavedNavigationTest {
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             waitFor { count(GALLERY_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
-            compose.onNodeWithText(app.getString(R.string.tool_camera)).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -268,7 +269,7 @@ class SavedNavigationTest {
         val byText = hasText(app.getString(R.string.tool_edit)) and hasClickAction()
         waitFor { count(HOME_EDIT_CARD_TAG) > 0 || compose.onAllNodes(byText).fetchSemanticsNodes().isNotEmpty() }
         val entry = if (count(HOME_EDIT_CARD_TAG) > 0) hasTestTag(HOME_EDIT_CARD_TAG) else byText
-        compose.onNode(entry).performScrollTo().performClick()
+        compose.onNode(entry).tapAboveBar()
     }
 
     /** Checks that [selected]'s toolbar toggle is on and every other editing tool's toggle is off. */
@@ -295,10 +296,9 @@ class SavedNavigationTest {
                     single<PhotoSaver> { FakePhotoSaver() }
                 },
             )
-            // Home's Camera tile opens the camera for the Edit tool.
-            val cameraLabel = app.getString(R.string.tool_camera)
-            waitFor { compose.onAllNodesWithText(cameraLabel).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText(cameraLabel).performScrollTo().performClick()
+            // The floating bar's Camera button opens the camera for the Edit tool.
+            waitFor { count(KANSO_CAMERA_BUTTON_TAG) > 0 }
+            tapCameraButton(compose)
             waitFor {
                 compose.onAllNodes(hasTestTag(CAMERA_SHUTTER_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
             }
@@ -343,7 +343,7 @@ class SavedNavigationTest {
             )
             val label = app.getString(R.string.tool_retouch)
             waitFor { compose.onAllNodesWithText(label).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText(label).performScrollTo().performClick()
+            compose.onNodeWithText(label).tapAboveBar()
             waitFor { count(GALLERY_CAMERA_TAG) > 0 }
             compose.onNodeWithTag(GALLERY_CAMERA_TAG).performClick()
             waitFor {

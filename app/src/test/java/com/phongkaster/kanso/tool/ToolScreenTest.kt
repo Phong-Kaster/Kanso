@@ -57,6 +57,8 @@ import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.gallery.FakePhotoSource
 import com.phongkaster.kanso.gallery.GalleryGridTest
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.save.FakePhotoSaver
 import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
@@ -540,7 +542,7 @@ class ToolScreenTest {
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
             waitFor { count(GALLERY_SCREEN_TAG) == 0 }
             assertEquals(0, count(TOOL_SCREEN_TAG))
-            compose.onNodeWithText(cameraLabel()).assertExists()
+            compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         }
     }
 
@@ -704,7 +706,7 @@ class ToolScreenTest {
         val byText = hasText(label(Tool.EDIT)) and hasClickAction()
         waitFor { count(HOME_EDIT_CARD_TAG) > 0 || compose.onAllNodes(byText).fetchSemanticsNodes().isNotEmpty() }
         val entry = if (count(HOME_EDIT_CARD_TAG) > 0) hasTestTag(HOME_EDIT_CARD_TAG) else byText
-        compose.onNode(entry).performScrollTo().performClick()
+        compose.onNode(entry).tapAboveBar()
     }
 
     /** Checks that [inner] lies within [outer], allowing half a pixel for rounding. */

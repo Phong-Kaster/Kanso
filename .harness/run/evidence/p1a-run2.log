@@ -1,0 +1,297 @@
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preDebugBuild UP-TO-DATE
+> Task :opencv:processDebugNavigationResources UP-TO-DATE
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preDebugBuild UP-TO-DATE
+> Task :core:editimage:processDebugNavigationResources UP-TO-DATE
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preDebugBuild UP-TO-DATE
+> Task :core:gallery:processDebugNavigationResources UP-TO-DATE
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preDebugBuild UP-TO-DATE
+> Task :core:imagecrop:processDebugNavigationResources UP-TO-DATE
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:processDebugNavigationResources UP-TO-DATE
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preDebugBuild UP-TO-DATE
+> Task :core:localml:generateDebugEmptyResourceFiles UP-TO-DATE
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preDebugBuild UP-TO-DATE
+> Task :core:overlaybrush:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :opencv:generateDebugBuildConfig UP-TO-DATE
+> Task :opencv:generateDebugResources UP-TO-DATE
+> Task :opencv:packageDebugResources UP-TO-DATE
+> Task :opencv:parseDebugLocalResources UP-TO-DATE
+> Task :opencv:generateDebugRFile UP-TO-DATE
+> Task :opencv:javaPreCompileDebug UP-TO-DATE
+> Task :core:colorpicker:generateDebugResources UP-TO-DATE
+> Task :core:colorpicker:packageDebugResources UP-TO-DATE
+> Task :core:colorpicker:parseDebugLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateDebugRFile UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebug UP-TO-DATE
+> Task :core:common:generateDebugResources UP-TO-DATE
+> Task :core:common:packageDebugResources UP-TO-DATE
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+> Task :core:common:generateDebugRFile UP-TO-DATE
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+> Task :core:editimage:generateDebugResources UP-TO-DATE
+> Task :core:editimage:packageDebugResources UP-TO-DATE
+> Task :core:editimage:parseDebugLocalResources UP-TO-DATE
+> Task :core:editimage:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:generateDebugResources UP-TO-DATE
+> Task :core:imageprocessor:packageDebugResources UP-TO-DATE
+> Task :core:imageprocessor:parseDebugLocalResources UP-TO-DATE
+> Task :core:imageprocessor:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:compileDebugKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileDebug UP-TO-DATE
+> Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:javaPreCompileDebug UP-TO-DATE
+> Task :core:gallery:generateDebugResources UP-TO-DATE
+> Task :core:gallery:packageDebugResources UP-TO-DATE
+> Task :core:gallery:parseDebugLocalResources UP-TO-DATE
+> Task :core:gallery:generateDebugRFile UP-TO-DATE
+> Task :core:gallery:javaPreCompileDebug UP-TO-DATE
+> Task :core:imagecrop:generateDebugResources UP-TO-DATE
+> Task :core:imagecrop:packageDebugResources UP-TO-DATE
+> Task :core:imagecrop:parseDebugLocalResources UP-TO-DATE
+> Task :core:imagecrop:generateDebugRFile UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileDebug UP-TO-DATE
+> Task :core:localml:mergeDebugMlModels UP-TO-DATE
+> Task :core:localml:generateDebugMlModelClass UP-TO-DATE
+> Task :core:localml:javaPreCompileDebug UP-TO-DATE
+> Task :core:overlaybrush:generateDebugResources UP-TO-DATE
+> Task :core:overlaybrush:packageDebugResources UP-TO-DATE
+> Task :core:overlaybrush:parseDebugLocalResources UP-TO-DATE
+> Task :core:overlaybrush:generateDebugRFile UP-TO-DATE
+> Task :core:overlaybrush:javaPreCompileDebug UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :opencv:writeDebugAarMetadata UP-TO-DATE
+> Task :core:colorpicker:writeDebugAarMetadata UP-TO-DATE
+> Task :core:common:writeDebugAarMetadata UP-TO-DATE
+> Task :core:editimage:writeDebugAarMetadata UP-TO-DATE
+> Task :core:gallery:writeDebugAarMetadata UP-TO-DATE
+> Task :core:imagecrop:writeDebugAarMetadata UP-TO-DATE
+> Task :core:imageprocessor:writeDebugAarMetadata UP-TO-DATE
+> Task :core:localml:writeDebugAarMetadata UP-TO-DATE
+> Task :core:overlaybrush:writeDebugAarMetadata UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :opencv:extractDeepLinksDebug UP-TO-DATE
+> Task :opencv:processDebugManifest UP-TO-DATE
+> Task :core:colorpicker:extractDeepLinksDebug UP-TO-DATE
+> Task :core:colorpicker:processDebugManifest UP-TO-DATE
+> Task :core:common:extractDeepLinksDebug UP-TO-DATE
+> Task :core:common:processDebugManifest UP-TO-DATE
+> Task :core:editimage:extractDeepLinksDebug UP-TO-DATE
+> Task :core:editimage:processDebugManifest UP-TO-DATE
+> Task :core:gallery:extractDeepLinksDebug UP-TO-DATE
+> Task :core:gallery:processDebugManifest UP-TO-DATE
+> Task :core:imagecrop:extractDeepLinksDebug UP-TO-DATE
+> Task :core:imagecrop:processDebugManifest UP-TO-DATE
+> Task :core:imageprocessor:extractDeepLinksDebug UP-TO-DATE
+> Task :core:imageprocessor:processDebugManifest UP-TO-DATE
+> Task :core:localml:processDebugManifest UP-TO-DATE
+> Task :core:overlaybrush:extractDeepLinksDebug UP-TO-DATE
+> Task :core:overlaybrush:processDebugManifest UP-TO-DATE
+
+> Task :app:processDebugMainManifest
+D:\Valve\Personal\Kanso\app\src\main\AndroidManifest.xml:37:5-39:31 Warning:
+	uses-permission#android.permission.READ_PHONE_STATE was tagged at AndroidManifest.xml:37 to remove other declarations but no other declaration present
+
+> Task :app:processDebugManifest
+> Task :opencv:mapDebugSourceSetPaths UP-TO-DATE
+> Task :opencv:compileDebugLibraryResources UP-TO-DATE
+> Task :core:colorpicker:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:colorpicker:compileDebugLibraryResources UP-TO-DATE
+> Task :core:common:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:common:compileDebugLibraryResources UP-TO-DATE
+> Task :core:editimage:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:editimage:compileDebugLibraryResources UP-TO-DATE
+> Task :core:gallery:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:gallery:compileDebugLibraryResources UP-TO-DATE
+> Task :core:imagecrop:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:imagecrop:compileDebugLibraryResources UP-TO-DATE
+> Task :core:imageprocessor:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:imageprocessor:compileDebugLibraryResources UP-TO-DATE
+> Task :core:overlaybrush:mapDebugSourceSetPaths UP-TO-DATE
+> Task :core:overlaybrush:compileDebugLibraryResources UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :opencv:generateDebugAssets UP-TO-DATE
+> Task :opencv:mergeDebugAssets UP-TO-DATE
+> Task :core:colorpicker:generateDebugAssets UP-TO-DATE
+> Task :core:colorpicker:mergeDebugAssets UP-TO-DATE
+> Task :core:common:generateDebugAssets UP-TO-DATE
+> Task :core:common:mergeDebugAssets UP-TO-DATE
+> Task :core:editimage:generateDebugAssets UP-TO-DATE
+> Task :core:editimage:mergeDebugAssets UP-TO-DATE
+> Task :core:gallery:generateDebugAssets UP-TO-DATE
+> Task :core:gallery:mergeDebugAssets UP-TO-DATE
+> Task :core:imagecrop:generateDebugAssets UP-TO-DATE
+> Task :core:imagecrop:mergeDebugAssets UP-TO-DATE
+> Task :core:imageprocessor:generateDebugAssets UP-TO-DATE
+> Task :app:processDebugManifestForPackage
+> Task :core:imageprocessor:mergeDebugAssets UP-TO-DATE
+> Task :core:localml:generateDebugAssets UP-TO-DATE
+> Task :core:localml:mergeDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:generateDebugAssets UP-TO-DATE
+> Task :core:overlaybrush:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:mergeDebugUnitTestManifest UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :core:imageprocessor:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:imageprocessor:processDebugJavaRes NO-SOURCE
+> Task :app:processDebugResources
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :opencv:compileDebugKotlin
+> Task :core:gallery:compileDebugKotlin
+> Task :core:colorpicker:compileDebugKotlin
+
+> Task :core:imagecrop:compileDebugKotlin
+w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups is enabled by default and specifying this option explicitly is not necessary.
+
+> Task :opencv:compileDebugJavaWithJavac
+> Task :opencv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :opencv:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :opencv:processDebugJavaRes UP-TO-DATE
+> Task :core:colorpicker:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:colorpicker:processDebugJavaRes UP-TO-DATE
+> Task :core:gallery:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:gallery:processDebugJavaRes UP-TO-DATE
+> Task :core:imagecrop:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:imagecrop:processDebugJavaRes UP-TO-DATE
+
+> Task :core:common:compileDebugKotlin
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:18:83 Redundant call of conversion method.
+w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:19:85 Redundant call of conversion method.
+
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:compileDebugKotlin NO-SOURCE
+> Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:localml:compileDebugKotlin NO-SOURCE
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:localml:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:common:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:common:processDebugJavaRes UP-TO-DATE
+> Task :core:editimage:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:editimage:processDebugJavaRes NO-SOURCE
+> Task :core:localml:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:localml:processDebugJavaRes NO-SOURCE
+> Task :core:overlaybrush:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:overlaybrush:processDebugJavaRes NO-SOURCE
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by org.robolectric.nativeruntime.DefaultNativeRuntimeLoader in an unnamed module
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+
+> Task :app:testDebugUnitTest
+
+NavBarColourTest > wallpaper_dark FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarColourTest > kanso_blue_dark FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarColourTest > custom_green_light FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarColourTest > custom_green_dark FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarColourTest > wallpaper_light FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarColourTest > kanso_blue_light FAILED
+    java.lang.AssertionError at NavBarColourTest.kt:252
+
+NavBarTest > on_a_320_dp_screen_the_three_tabs_and_the_camera_button_fit FAILED
+    java.lang.AssertionError at NavBarTest.kt:349
+
+NavBarTest > the_selected_tab_follows_taps_and_tapping_it_again_changes_nothing FAILED
+    java.lang.AssertionError at NavBarTest.kt:169
+
+SavedNavigationTest > back_from_saved_goes_home FAILED
+    androidx.compose.ui.test.ComposeTimeoutException at SavedNavigationTest.kt:370
+
+SavedNavigationTest > edit_another_leaves_home_and_the_tools_gallery FAILED
+    androidx.compose.ui.test.ComposeTimeoutException at SavedNavigationTest.kt:370
+
+SavedNavigationTest > gallery_camera_keep_opens_the_galleries_own_tool FAILED
+    androidx.compose.ui.test.ComposeTimeoutException at SavedNavigationTest.kt:370
+
+SavedNavigationTest > home_leaves_only_home FAILED
+    androidx.compose.ui.test.ComposeTimeoutException at SavedNavigationTest.kt:370
+
+SavedNavigationTest > the_editor_switches_tools_in_place_on_the_chosen_photo FAILED
+    androidx.compose.ui.test.ComposeTimeoutException at SavedNavigationTest.kt:370
+
+22 tests completed, 13 failed
+
+> Task :app:testDebugUnitTest FAILED
+> Task :app:finalizeTestRoborazziDebug SKIPPED
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///D:/Valve/Personal/Kanso/app/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 55s
+162 actionable tasks: 12 executed, 150 up-to-date

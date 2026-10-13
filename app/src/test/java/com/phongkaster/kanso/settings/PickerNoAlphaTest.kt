@@ -1,6 +1,5 @@
 package com.phongkaster.kanso.settings
 
-import android.content.Context
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -8,15 +7,14 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
-import com.phongkaster.kanso.R
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
@@ -47,10 +45,6 @@ class PickerNoAlphaTest {
     @get:Rule
     val compose = createAndroidComposeRule<MainActivity>()
 
-    /** The app context, used to read the same string resources the screens show. */
-    private val context: Context
-        get() = ApplicationProvider.getApplicationContext()
-
     /**
      * Stops Koin after each test. Koin's state outlives the test's Application inside the same
      * JVM, and starting it twice fails.
@@ -65,7 +59,7 @@ class PickerNoAlphaTest {
     fun custom_colour_picker_shows_no_percentage() {
         waitForHome()
         openSettings()
-        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).tapAboveBar()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(CUSTOM_COLOUR_PICKER_TAG).fetchSemanticsNodes().isNotEmpty()
         }
@@ -91,20 +85,18 @@ class PickerNoAlphaTest {
         assertTrue("No percentage text expected, found: $percentages", percentages.isEmpty())
     }
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 }

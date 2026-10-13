@@ -23,6 +23,8 @@ import org.robolectric.annotation.Config
  * - At least 3.0 (WCAG's level for icons, outlines and large text) for the icon and outline
  *   pairs the screens use: `primary`, `onSurfaceVariant` and `outline` on the surface, and
  *   `onSecondaryContainer` on `secondaryContainer`.
+ * - The floating tab bar's pairs (DoD 22): its selected pill on the bar at 3.0, and the selected
+ *   icon on the pill and every label on the bar at 4.5.
  *
  * The luminance is worked out here from the 8-bit sRGB channels, so the test does not rest on
  * any library's own rounding. Each failure names the pair, the look and the ratio found.
@@ -55,6 +57,49 @@ class KansoBlueContrastTest {
     fun dark_icon_and_outline_pairs_reach_3_to_1() {
         assertPairsReach(iconPairs(scheme(dark = true)), ICON_RATIO, look = "dark")
     }
+
+    /**
+     * DoD 22, in the light scheme: on the floating tab bar, the selected tab's pill stands out on
+     * the bar (3:1), and the selected icon on the pill and every label on the bar reach 4.5:1.
+     */
+    @Test
+    fun light_tab_bar_pairs_reach_their_minimums() {
+        val scheme = scheme(dark = false)
+        assertPairsReach(tabBarTextPairs(scheme), TEXT_RATIO, look = "light")
+        assertPairsReach(tabBarGraphicPairs(scheme), ICON_RATIO, look = "light")
+    }
+
+    /** DoD 22, in the dark scheme: the same tab bar pairs as in light. */
+    @Test
+    fun dark_tab_bar_pairs_reach_their_minimums() {
+        val scheme = scheme(dark = true)
+        assertPairsReach(tabBarTextPairs(scheme), TEXT_RATIO, look = "dark")
+        assertPairsReach(tabBarGraphicPairs(scheme), ICON_RATIO, look = "dark")
+    }
+
+    /**
+     * Returns the pairs of the floating tab bar (`KansoTabBar`) that must reach the text level:
+     * the selected icon (`inverseSurface`) on the selected pill (`inversePrimary`), the selected
+     * label (`inversePrimary`) on the bar (`inverseSurface`), and the other tabs' icons and labels
+     * (`inverseOnSurface`) on the bar.
+     */
+    private fun tabBarTextPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> = listOf(
+        Triple("tab bar: selected icon (inverseSurface) on the pill (inversePrimary)", scheme.inverseSurface, scheme.inversePrimary),
+        Triple("tab bar: selected label (inversePrimary) on the bar (inverseSurface)", scheme.inversePrimary, scheme.inverseSurface),
+        Triple(
+            "tab bar: unselected icons and labels (inverseOnSurface) on the bar (inverseSurface)",
+            scheme.inverseOnSurface,
+            scheme.inverseSurface,
+        ),
+    )
+
+    /**
+     * Returns the pair of the floating tab bar that must reach the graphics level: the selected
+     * tab's pill (`inversePrimary`) on the bar (`inverseSurface`).
+     */
+    private fun tabBarGraphicPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> = listOf(
+        Triple("tab bar: the selected pill (inversePrimary) on the bar (inverseSurface)", scheme.inversePrimary, scheme.inverseSurface),
+    )
 
     /** Returns Kanso blue in the [dark] or light look, as KansoTheme hands it to the screens. */
     private fun scheme(dark: Boolean): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark)

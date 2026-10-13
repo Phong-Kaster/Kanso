@@ -15,16 +15,18 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
@@ -46,8 +48,12 @@ import org.robolectric.annotation.GraphicsMode
  * phone's night setting. Surviving a restart is checked in ThemeModeRestartTest.
  *
  * Every check looks at two things in one drawing: the background, and the text of a known label
- * (the "Dark" row on Settings, the "Settings" row on Home), which must have the opposite
+ * (the "Dark" row on Settings, the title "Kanso" on Home), which must have the opposite
  * brightness. So a screen that only painted its own background would not pass.
+ *
+ * Settings is opened with the floating tab bar's Settings tab (by its tag, `TabTaps.openTab`), and
+ * rows are tapped with `TabTaps.tapAboveBar`, because a row scrolled into view on this 320 x 470 dp
+ * screen can rest under the bar.
  *
  * One more test reads the semantics tree instead of pixels: the theme mode rows sit together in
  * their grouped container, each with an icon and its label.
@@ -213,13 +219,15 @@ class ThemeModeSettingsTest {
         }
 
     /**
-     * Draws Home and samples its background and the text of its "Settings" row. Home is taller
-     * than this test's screen (Robolectric's default 320 x 470 dp), so the row is first scrolled
-     * into view: the text must be drawn on screen to be sampled.
+     * Draws Home and samples its background and the text of its title, "Kanso": plain text on
+     * the plain background. (The "Settings" tab's label is no sample: it sits on the bar's inverse
+     * colour, so its brightness is the opposite of the screen's text.) The title is first scrolled
+     * into view, since only what is on screen is drawn.
      */
     private fun sampleHome(): ScreenSample {
-        compose.onNodeWithText(context.getString(R.string.settings)).performScrollTo()
-        return sampleAround(hasText(context.getString(R.string.settings)))
+        val title = hasText(context.getString(R.string.app_name)) and hasAnyAncestor(hasTestTag(HOME_SCREEN_TAG))
+        compose.onNode(title).performScrollTo()
+        return sampleAround(title)
     }
 
     /** Draws Settings and samples its background and the text of its "Dark" row. */
@@ -238,9 +246,9 @@ class ThemeModeSettingsTest {
         return compose.activity.sampleScreen(bounds)
     }
 
-    /** Taps the theme mode row tagged [tag]. */
+    /** Taps the theme mode row tagged [tag], above the floating bar. */
     private fun pick(tag: String) {
-        compose.onNodeWithTag(tag).performScrollTo().performClick()
+        compose.onNodeWithTag(tag).tapAboveBar()
     }
 
     /** Waits until the screen's background is drawn dark, which needs the DataStore write. */
@@ -257,28 +265,26 @@ class ThemeModeSettingsTest {
         }
     }
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText(context.getString(R.string.theme_mode)).assertIsDisplayed()
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     /** Waits until Home is shown and the Settings screen has left the screen. */
     private fun waitForHomeOnly() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty() &&
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty() &&
                 compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isEmpty()
         }
     }
