@@ -20,3 +20,6 @@
 
 ## Iteration 10 - Tier 1: T-012 added; banner colours cycle three containers
 - Added T-012 (fix the Phase 4 review findings). Changed `HomeScreen.bannerColors` from `index % 4` (4th = `surfaceContainerHighest`) to `index % 3` so every banner uses a container DoD 23 allows; no DoD text changed.
+
+## Iteration 11 - Tier 1: Saved's top shade holds its strength across the top row
+- `SavedScreen.kt` `SCRIM_HOLD` 8 dp -> 64 dp (found by T-012's stricter title-contrast test; DoD 24 failed in dark over a white photo). Four Saved/viewer baselines re-recorded as a consequence; no DoD text changed.

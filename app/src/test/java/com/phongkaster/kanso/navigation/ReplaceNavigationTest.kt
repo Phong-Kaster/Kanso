@@ -235,6 +235,12 @@ class ReplaceNavigationTest {
      * handler inside one main-thread task, so the screen cannot change between them: the worst
      * case of a fast double tap. Afterwards exactly one gallery is shown, no tool screen is left,
      * and one Back reaches Home, so the second tap piled nothing up.
+     *
+     * What this proves, and what it does not: it proves the outcome (one gallery, nothing piled
+     * up), not the guard that brings it about. It cannot tell which part of the app ignored the
+     * second tap: Replace's own guard, the navigation's handling of a repeated key, or anything
+     * else on the way would all pass it. Removing one guard while another still stops the second
+     * tap leaves this test green.
      */
     @Test
     fun a_double_tap_on_replace_opens_one_gallery() {

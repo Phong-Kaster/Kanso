@@ -71,16 +71,33 @@ object TouchTargetCheck {
     /**
      * Returns the nodes of [nodes] the check applies to: the controls that are placed on the
      * screen and are not inside the engine's colour picker (see the KDoc of this object). A
-     * control cut off sideways by a scrolling container (the "Try now" of a banner that only
-     * peeks in beside the carousel's front one) is not on the screen as a whole control, so it
-     * is skipped: its visible part is not what a finger aims at.
+     * control mostly cut off sideways by a scrolling container (the "Try now" of a banner that
+     * only peeks in beside the carousel's front one) is not on the screen as a whole control, so
+     * it is skipped: its visible sliver is not what a finger aims at.
      */
     fun controlsToCheck(nodes: List<SemanticsNode>): List<SemanticsNode> =
         nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) && !isCutOffSideways(it) }
 
-    /** Tells whether [node]'s visible box is narrower than the box it was laid out with. */
+    /**
+     * Tells whether less than [MIN_VISIBLE_FRACTION] of [node]'s laid-out width is visible on
+     * screen: a control that only peeks in from the side of a strip or a carousel.
+     *
+     * Why a fraction and not "any cut at all". The carousel draws each banner through a mask
+     * whose edges are worked out in fractions of a pixel, so even the banner in front, and the
+     * "Try now" inside it, can come out a pixel or two narrower on screen than laid out. Skipping
+     * every control cut by any amount would then skip the very banner the walk is about;
+     * `AccessibilityWalkTest` checks the front banner and its "Try now" are among the controls
+     * checked.
+     */
     private fun isCutOffSideways(node: SemanticsNode): Boolean =
-        node.boundsInRoot.width < node.size.width - 1f
+        node.boundsInRoot.width < node.size.width * MIN_VISIBLE_FRACTION
+
+    /**
+     * The least part of a control's laid-out width that must be visible for it to be checked: a
+     * half. The front banner shows whole; a banner beside it that shows more than half is checked
+     * too, and is measured at its laid-out size like any control.
+     */
+    private const val MIN_VISIBLE_FRACTION = 0.5f
 
     /**
      * Checks every control of [nodes] (see [controlsToCheck]) and returns one line per control

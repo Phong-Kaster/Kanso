@@ -91,7 +91,8 @@ import org.robolectric.annotation.Config
  * (swipe gestures with the hint hidden) and (ii) a 48 dp three-button navigation bar. Robolectric
  * draws no system bars, so the test sends those insets to the app's Compose view itself, as the
  * system would ([sendInsets]), with `ViewCompat.dispatchApplyWindowInsets` on the view `LocalView`
- * names inside the app. They are sent again on every screen the walk reaches.
+ * names inside the app. They are sent again on every screen the walk reaches, and each time the test
+ * checks the screen received them: one of its bottom controls must move up by the inset sent.
  *
  * Two kinds of check:
  * - The bottom controls end at least the larger of the two insets above the window's bottom, so no
@@ -183,7 +184,7 @@ class BottomClearanceTest {
     /** Home: the bar and Camera button clear the insets; the last recent card scrolls above the bar. */
     private fun checkHome(scenario: ActivityScenario<MainActivity>) {
         waitForHome(compose)
-        sendInsets(scenario)
+        sendInsets(scenario, probeTag = KANSO_TAB_BAR_TAG)
         assertBarClearsInsets("Home")
 
         val last = HomeViewModel.RECENT_LIMIT - 1
@@ -202,7 +203,7 @@ class BottomClearanceTest {
     private fun checkMyEditsAndViewer(scenario: ActivityScenario<MainActivity>) {
         openTab(compose, KansoTab.MY_EDITS)
         waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(myEditsTileTag(0)) > 0 }
-        sendInsets(scenario)
+        sendInsets(scenario, probeTag = KANSO_TAB_BAR_TAG)
         assertBarClearsInsets("My edits")
 
         val last = EDIT_COUNT - 1
@@ -213,7 +214,7 @@ class BottomClearanceTest {
 
         compose.onNodeWithTag(myEditsTileTag(last)).tapAboveBar()
         waitFor { count(SAVED_SCREEN_TAG) > 0 && count(KANSO_TAB_BAR_TAG) == 0 && count(SAVED_SHARE_TAG) > 0 }
-        sendInsets(scenario)
+        sendInsets(scenario, probeTag = SAVED_SHARE_TAG)
         assertClearsInsets("The viewer's Share", SAVED_SHARE_TAG)
         assertClearsInsets("The viewer's Edit", SAVED_EDIT_ANOTHER_TAG)
 
@@ -228,7 +229,7 @@ class BottomClearanceTest {
     private fun checkSettings(scenario: ActivityScenario<MainActivity>) {
         openTab(compose, KansoTab.SETTINGS)
         waitFor { count(SETTINGS_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
-        sendInsets(scenario)
+        sendInsets(scenario, probeTag = KANSO_TAB_BAR_TAG)
         assertBarClearsInsets("Settings")
 
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).tapAboveBar()
@@ -244,7 +245,7 @@ class BottomClearanceTest {
         waitFor {
             compose.onAllNodes(hasTestTag(CAMERA_SHUTTER_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty()
         }
-        sendInsets(scenario)
+        sendInsets(scenario, probeTag = CAMERA_SHUTTER_TAG)
         assertClearsInsets("The camera's shutter", CAMERA_SHUTTER_TAG)
 
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -263,14 +264,14 @@ class BottomClearanceTest {
             waitFor { count(GALLERY_SCREEN_TAG) > 0 && count(galleryPhotoTag(galleryPhotos.first().id)) > 0 }
             compose.onNodeWithTag(galleryPhotoTag(galleryPhotos.first().id)).performClick()
             waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(TOOL_IMAGE_TAG) > 0 && count(TOOL_SAVE_TAG) > 0 }
-            sendInsets(scenario)
+            sendInsets(scenario, probeTag = TOOL_SAVE_TAG)
             assertClearsInsets("${tool.name}'s Save", TOOL_SAVE_TAG)
 
             if (tool == SAVE_TOOL) {
                 waitFor { compose.onAllNodes(hasTestTag(TOOL_SAVE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
                 waitFor { count(SAVED_SCREEN_TAG) > 0 && count(TOOL_SCREEN_TAG) == 0 && count(SAVED_SHARE_TAG) > 0 }
-                sendInsets(scenario)
+                sendInsets(scenario, probeTag = SAVED_SHARE_TAG)
                 assertClearsInsets("The Saved screen's Share", SAVED_SHARE_TAG)
                 assertClearsInsets("The Saved screen's Edit another", SAVED_EDIT_ANOTHER_TAG)
                 scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
@@ -373,14 +374,49 @@ class BottomClearanceTest {
 
     /**
      * Sends the walk's insets (a 24 dp status bar, the navigation bar and the bottom gesture area)
-     * to the app's Compose view, as the system would, and waits until the screen has laid out
-     * again.
+     * to the app's Compose view, as the system would, waits until the screen has laid out again,
+     * and checks that the screen received them.
+     *
+     * How receipt is checked. Robolectric draws no system bars, so nothing would complain if the
+     * insets went nowhere, and a control that happened to sit high enough would pass the
+     * clearance checks all the same. So the insets are sent twice: first with no navigation bar
+     * and no gesture area, then with the walk's. Between the two, the node tagged [probeTag], one
+     * of the controls about to be checked, which lifts itself by the taller of the two insets,
+     * must have moved up by at least that much. A screen that never got the second set, or whose
+     * control ignores it, leaves the probe where it was and fails here.
      */
-    private fun sendInsets(scenario: ActivityScenario<MainActivity>) {
+    private fun sendInsets(scenario: ActivityScenario<MainActivity>, probeTag: String) {
+        dispatchInsets(scenario, navigationBarPx = 0, gesturesPx = 0)
+        waitFor { count(probeTag) > 0 }
+        val bottomWithout = bottomOf(probeTag)
+
+        val density = compose.density
+        dispatchInsets(
+            scenario,
+            navigationBarPx = with(density) { navigationBar.roundToPx() },
+            gesturesPx = with(density) { gestures.roundToPx() },
+        )
+        val bottomWith = bottomOf(probeTag)
+        val inset = with(density) { max(navigationBar.toPx(), gestures.toPx()) }
+        val moved = bottomWithout - bottomWith
+        println("insets $probeTag with ${describeInsets()}: moved up $moved px for an inset of $inset px")
+        assertTrue(
+            "The screen did not receive the insets sent: $probeTag ends at $bottomWithout px with none and at " +
+                "$bottomWith px with ${describeInsets()}, so it moved up $moved px, not the $inset px sent",
+            moved >= inset - EPSILON,
+        )
+    }
+
+    /**
+     * Sends a 24 dp status bar, a [navigationBarPx] tall navigation bar and a [gesturesPx] tall
+     * bottom gesture area (both in pixels) to the app's Compose view, as the system would, and
+     * waits until the screen has laid out again.
+     */
+    private fun dispatchInsets(scenario: ActivityScenario<MainActivity>, navigationBarPx: Int, gesturesPx: Int) {
         val density = compose.density
         val status = with(density) { STATUS_BAR.roundToPx() }
-        val navigation = with(density) { navigationBar.roundToPx() }
-        val gesture = with(density) { gestures.roundToPx() }
+        val navigation = navigationBarPx
+        val gesture = gesturesPx
         val built = WindowInsetsCompat.Builder()
             .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, status, 0, 0))
             .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, navigation))

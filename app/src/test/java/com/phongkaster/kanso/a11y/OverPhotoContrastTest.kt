@@ -58,7 +58,11 @@ import org.robolectric.annotation.GraphicsMode
  *
  * - Saved's title ("Saved", or "My edits" in the viewer): the lightest and the darkest pixel
  *   inside its text's bounds, at least [TEXT_MIN_CONTRAST]. The title sits on the top shade over
- *   the blurred photo, so the darkest or lightest pixel there is the shade and the other the ink;
+ *   the blurred photo, so the darkest or lightest pixel there is the shade and the other the ink.
+ *   Because the shade fades from row to row, the title's ink is also compared, row by row, with
+ *   that row's own background read just past the title's end, and the lowest of those ratios
+ *   must reach [TEXT_MIN_CONTRAST] too ([titleRowsContrast]; a self-check test proves that
+ *   measure fails ink fading into its background);
  * - the round close and Share buttons: their icon against the circle it sits on, at least
  *   [ICON_MIN_CONTRAST];
  * - the "Replace" chip on the tool screens: its word against the chip's container, at least
@@ -188,6 +192,47 @@ class OverPhotoContrastTest {
         checkToolScreen(ThemeMode.Dark, Tool.ARTISTIC)
     }
 
+    // --- The title's measure checks itself -------------------------------------------------
+
+    /**
+     * Proves the title's row-by-row measure can fail, on a drawn-by-hand picture of the very case
+     * it exists for: a pale "letter" (a bar of #E0E0E0) whose top half sits on near-black
+     * (#101010) and whose bottom half sits on a pale grey (#C8C8C8), as a dark title would if the
+     * shade faded to a white photo behind its baseline. The lightest-against-darkest measure
+     * passes it (about 13), the row measure must not (about 1.3); and over near-black alone, the
+     * row measure must pass, so the failure comes from the pale rows and not from the measure.
+     */
+    @Test
+    fun title_measure_catches_ink_that_fades_into_its_background() {
+        val ink = 0xFFE0E0E0.toInt()
+        val dark = 0xFF101010.toInt()
+        val pale = 0xFFC8C8C8.toInt()
+
+        /** Draws the 100 x 40 test picture: background [lower] below row 20, the bar at x 10 to 19. */
+        fun picture(lower: Int): Bitmap = Bitmap.createBitmap(100, 40, Bitmap.Config.ARGB_8888).apply {
+            for (y in 0 until 40) {
+                for (x in 0 until 100) setPixel(x, y, if (y < 20) dark else lower)
+                for (x in 10 until 20) setPixel(x, y, ink)
+            }
+        }
+
+        val fading = picture(lower = pale)
+        val plain = picture(lower = dark)
+        try {
+            val box = Rect(0f, 0f, 30f, 40f)
+            val extremes = textExtremesContrast(fading, box).getOrThrow()
+            val fadingRows = rowsContrast(fading, left = 0, top = 0, right = 30, bottom = 40, backgroundX = 60)
+            val plainRows = rowsContrast(plain, left = 0, top = 0, right = 30, bottom = 40, backgroundX = 60)
+            println("contrast self-check: extremes $extremes, rows over a fading background $fadingRows, rows over plain $plainRows")
+            assertTrue("the extremes measure should pass the fading picture (it is the gap), got $extremes", extremes >= TEXT_MIN_CONTRAST)
+            assertTrue("the row measure must fail ink fading into its background, got $fadingRows", fadingRows < TEXT_MIN_CONTRAST)
+            assertTrue("the row measure must pass ink over a plain dark background, got $plainRows", plainRows >= TEXT_MIN_CONTRAST)
+        } finally {
+            fading.recycle()
+            plain.recycle()
+        }
+    }
+
     // --- One screen each -------------------------------------------------------------------
 
     /**
@@ -211,7 +256,9 @@ class OverPhotoContrastTest {
             },
             measure = { bitmap ->
                 buildList {
-                    add(Measure("title", textExtremesContrast(bitmap, nodeRect(SAVED_TITLE_TAG)), TEXT_MIN_CONTRAST))
+                    val title = nodeRect(SAVED_TITLE_TAG)
+                    add(Measure("title, lightest against darkest pixel", textExtremesContrast(bitmap, title), TEXT_MIN_CONTRAST))
+                    add(Measure("title's ink against each row's own background", titleRowsContrast(bitmap, title), TEXT_MIN_CONTRAST))
                     add(Measure("close icon", roundButtonContrast(bitmap, nodeRect(SAVED_CLOSE_TAG)), ICON_MIN_CONTRAST))
                     add(Measure("share icon", roundButtonContrast(bitmap, nodeRect(SAVED_SHARE_TAG)), ICON_MIN_CONTRAST))
                     if (!viewer) {
@@ -366,6 +413,86 @@ class OverPhotoContrastTest {
     }
 
     /**
+     * Returns the lowest contrast between the title's ink and the background of any pixel row the
+     * ink is drawn on, the title laid out at [text].
+     *
+     * Why rows. The title sits on the top shade, which holds its strength at the top and then
+     * fades towards the photo, so the background behind the title changes from row to row: in
+     * dark mode over a white photo the shade is dark at the top of the letters and paler at their
+     * baseline. The lightest and darkest pixels of the whole box ([textExtremesContrast]) can then
+     * be the ink and the darkest shade at the top, and pass, while the bottom of the letters
+     * barely shows against the paler shade. So each row's background is read on its own, just
+     * past the end of the title ([TITLE_BACKGROUND_GAP] beyond its bounds, where nothing else is
+     * drawn and the shade and the plain photo are the same as behind the letters), and the ink is
+     * compared with every row's.
+     */
+    private fun titleRowsContrast(bitmap: Bitmap, text: Rect): Result<Double> = runCatching {
+        rowsContrast(
+            bitmap = bitmap,
+            left = text.left.roundToInt(),
+            top = text.top.roundToInt(),
+            right = text.right.roundToInt(),
+            bottom = text.bottom.roundToInt(),
+            backgroundX = (text.right + px(TITLE_BACKGROUND_GAP)).roundToInt(),
+        )
+    }
+
+    /**
+     * Returns the lowest contrast between the ink drawn in the box [left] to [right] (exclusive),
+     * [top] to [bottom] (exclusive), of [bitmap] and the background of each row that ink is on.
+     * A row's background is its pixel at [backgroundX], outside the box. Throws when the box or
+     * the background column lies outside the bitmap or the box holds too few rows of ink.
+     *
+     * 1. The ink's colour: the pixel of the box that differs most from its own row's background.
+     *    Text is drawn in one colour, and only where a glyph covers a pixel fully is it pure ink;
+     *    the softened edges blend it with the background, so they differ less.
+     * 2. The rows the ink is on: each row holding a pixel within [INK_MATCH] per channel of the
+     *    ink. A row whose background has itself come close to the ink counts too: there the
+     *    letters are lost, which is exactly what must fail.
+     * 3. The ratio of the ink against each of those rows' background; the lowest is returned.
+     */
+    private fun rowsContrast(bitmap: Bitmap, left: Int, top: Int, right: Int, bottom: Int, backgroundX: Int): Double {
+        check(left in 0 until right && right <= bitmap.width && top in 0 until bottom && bottom <= bitmap.height) {
+            "the box ($left, $top) to ($right, $bottom) does not lie inside the drawn screen of ${bitmap.width} x ${bitmap.height}"
+        }
+        check(backgroundX in right until bitmap.width) {
+            "the background column $backgroundX does not lie between the box's end $right and the screen's edge ${bitmap.width}"
+        }
+        val backgrounds = IntArray(bottom - top) { row -> bitmap.getPixel(backgroundX, top + row) }
+
+        var ink = 0
+        var inkRatio = -1.0
+        for (y in top until bottom) {
+            val background = relativeLuminance(backgrounds[y - top])
+            for (x in left until right) {
+                val argb = bitmap.getPixel(x, y)
+                val r = ratio(relativeLuminance(argb), background)
+                if (r > inkRatio) {
+                    inkRatio = r
+                    ink = argb
+                }
+            }
+        }
+        val inkLuminance = relativeLuminance(ink)
+
+        var lowest = Double.MAX_VALUE
+        var inkRows = 0
+        for (y in top until bottom) {
+            val holdsInk = (left until right).any { x -> isNearColour(bitmap.getPixel(x, y), ink, INK_MATCH) }
+            if (holdsInk) {
+                inkRows++
+                lowest = min(lowest, ratio(inkLuminance, relativeLuminance(backgrounds[y - top])))
+            }
+        }
+        check(inkRows >= MIN_INK_ROWS) { "only $inkRows row(s) of the box hold its ink, at least $MIN_INK_ROWS expected" }
+        return lowest
+    }
+
+    /** Tells whether the ARGB colours [first] and [second] differ by at most [tolerance] in each of red, green and blue. */
+    private fun isNearColour(first: Int, second: Int, tolerance: Int): Boolean =
+        listOf(16, 8, 0).all { shift -> kotlin.math.abs(((first shr shift) and 0xFF) - ((second shr shift) and 0xFF)) <= tolerance }
+
+    /**
      * Returns the contrast of a round icon button's icon against its circle, the button laid out
      * at [button]. The circle's colour is read [ROUND_CONTAINER_OFFSET] below the button's
      * centre, inside the 48 dp circle and below the 24 dp icon; the icon's is the pixel within
@@ -517,6 +644,18 @@ class OverPhotoContrastTest {
 
         /** How far past the end of the chip's word its container's colour is read: inside its end padding. */
         val CHIP_CONTAINER_GAP = 3.dp
+
+        /**
+         * How far past the end of Saved's title each row's background is read: clear of the last
+         * letter's softened edge, on the shade over the photo, where nothing else is drawn.
+         */
+        val TITLE_BACKGROUND_GAP = 4.dp
+
+        /** How far per channel (0 to 255) a pixel may be from the title's ink and still count as ink. */
+        const val INK_MATCH = 24
+
+        /** The fewest rows of ink the title's box must hold for its measure to mean anything. */
+        const val MIN_INK_ROWS = 3
     }
 }
 

@@ -732,38 +732,81 @@ class ThemeFollowTest {
 
     /**
      * Draws the photo opened from My edits (Saved's viewer form: no mark, no "saved" line) in
-     * [mode] and checks the top and a background pixel at the screen's left edge, halfway between
-     * the bottom of the top shade and the top of the photo, where only the blurred backdrop is.
+     * [mode] over a plain red photo and checks two pixels of the top shade, at the middle of its
+     * top edge and at its left edge: each must be the theme's `surface`, at the shade's
+     * [VIEWER_SHADE_ALPHA], laid over the red.
      *
-     * As in [checkSaved], the photo is a plain square of the theme's own background colour, so
-     * the blurred backdrop, and the shade (the theme's surface) over it, read as theme colours.
+     * Why red, and why the shade. Once the photo is decoded the viewer shows no plain background
+     * at all: a blurred copy of the photo fills the window behind the sharp photo, so every pixel
+     * outside the shade is the photo's colour. A photo painted in the theme's own background colour
+     * would make those pixels "follow the theme" whatever the screen did; a red photo, a colour no
+     * Kanso blue role has, cannot match a theme colour by construction. The one thing the viewer
+     * paints from the theme over the photo is the top shade, so that is what is read, and the
+     * colour it must show is worked out by blending the theme's surface over the red, as the
+     * screen's drawing does. Before reading, the test checks that the red does change the blend
+     * (a shade that ignored the photo, a plain surface, would fail too) and that both pixels lie
+     * inside the shade, in the band where it holds its full strength.
      */
     private fun checkViewer(mode: ThemeMode) {
-        val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
-        themed.eraseColor(scheme(mode).background.toArgb())
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed), viewer = true)
+        val red = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
+        red.eraseColor(VIEWER_PHOTO_ARGB)
+        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(red), viewer = true)
         show(mode) {
             SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
         }
         val shade = nodeRect(SAVED_SCRIM_TAG)
         val photo = nodeRect(SAVED_PHOTO_TAG)
+        val surface = scheme(mode).surface
+        val expected = blendOver(surface, VIEWER_SHADE_ALPHA, Color(VIEWER_PHOTO_ARGB))
+        // The shade holds its full strength over the status bar and 64 dp below it (SCRIM_HOLD), so its top
+        // [VIEWER_SHADE_HOLD] is inside that band whatever height the status bar has.
+        val holdBottom = shade.top + with(compose.density) { VIEWER_SHADE_HOLD.toPx() }
+        val shadeY = TOP_BAR_Y_PX
         assertTrue(
-            "The viewer's photo (top ${photo.top}) must start below its top shade (bottom ${shade.bottom}), " +
-                "or this test reads the wrong place",
-            photo.top - shade.bottom >= MIN_BAND_PX,
+            "The viewer's shade pixels at y $shadeY must lie inside its full-strength band " +
+                "(${shade.top} to $holdBottom), or this test reads the wrong place",
+            shadeY >= shade.top && shadeY < holdBottom,
+        )
+        assertTrue(
+            "The red photo must change the shade's blend (expected ${hex(expected)}, surface ${hex(surface)}), " +
+                "or this test cannot tell a shade over the photo from a plain surface",
+            !isNear(expected, surface, VIEWER_SHADE_TOLERANCE),
         )
         assertFollows(
             screen = "Photo opened from My edits",
             mode = mode,
-            topBar = topBarSpot(mode),
+            topBar = Spot(
+                place = "top shade, middle of its top edge",
+                x = rootSize().width / 2,
+                y = shadeY,
+                expected = expected,
+                role = "surface at alpha $VIEWER_SHADE_ALPHA over the red photo",
+                tolerance = VIEWER_SHADE_TOLERANCE,
+            ),
             background = Spot(
-                place = "backdrop at the left edge, between the top shade and the photo",
+                place = "top shade at the left edge",
                 x = EDGE_X_PX,
-                y = ((shade.bottom + photo.top) / 2f).roundToInt(),
-                expected = scheme(mode).background,
-                role = "background",
+                y = shadeY,
+                expected = expected,
+                role = "surface at alpha $VIEWER_SHADE_ALPHA over the red photo",
+                tolerance = VIEWER_SHADE_TOLERANCE,
             ),
             contentTop = photo.top,
+        )
+    }
+
+    /**
+     * Returns [top] drawn at [alpha] (0 to 1) over the opaque [bottom], as the screen's drawing
+     * blends a see-through colour: each channel is top x alpha + bottom x (1 - alpha). The alpha
+     * is first rounded to the 8 bits (0 to 255) a drawn colour carries.
+     */
+    private fun blendOver(top: Color, alpha: Float, bottom: Color): Color {
+        val a = (alpha * 255f).roundToInt() / 255f
+        return Color(
+            red = top.red * a + bottom.red * (1f - a),
+            green = top.green * a + bottom.green * (1f - a),
+            blue = top.blue * a + bottom.blue * (1f - a),
+            alpha = 1f,
         )
     }
 
@@ -857,7 +900,8 @@ class ThemeFollowTest {
     /**
      * One pixel the test reads: [place] says in words where it is, ([x], [y]) is where, in the
      * screen's pixels from its top-left corner, and [expected] is the theme colour it must show,
-     * the scheme's colour called [role].
+     * the scheme's colour called [role]. [tolerance] is how far per channel the drawn pixel may be
+     * from it: [TOLERANCE] for a colour painted as it is, more for one worked out by blending.
      */
     private data class Spot(
         val place: String,
@@ -865,6 +909,7 @@ class ThemeFollowTest {
         val y: Int,
         val expected: Color,
         val role: String,
+        val tolerance: Int = TOLERANCE,
     )
 
     /**
@@ -944,9 +989,9 @@ class ThemeFollowTest {
 
         val drawn = drawnColours(spots)
         spots.zip(drawn).forEach { (spot, colour) ->
-            if (!isNear(spot.expected, colour)) {
+            if (!isNear(spot.expected, colour, spot.tolerance)) {
                 problems += "the ${spot.place} at (${spot.x}, ${spot.y}) is drawn ${hex(colour)}, " +
-                    "expected the theme's ${spot.role} ${hex(spot.expected)} within $TOLERANCE per channel"
+                    "expected the theme's ${spot.role} ${hex(spot.expected)} within ${spot.tolerance} per channel"
             }
         }
 
@@ -1045,14 +1090,15 @@ class ThemeFollowTest {
     }
 
     /**
-     * Tells whether [actual] equals [expected] within [TOLERANCE] in each of its alpha, red,
-     * green and blue channels (0 to 255). An undrawn, see-through pixel never passes.
+     * Tells whether [actual] equals [expected] within [tolerance] ([TOLERANCE] unless told
+     * otherwise) in each of its alpha, red, green and blue channels (0 to 255). An undrawn,
+     * see-through pixel never passes.
      */
-    private fun isNear(expected: Color, actual: Color): Boolean {
+    private fun isNear(expected: Color, actual: Color, tolerance: Int = TOLERANCE): Boolean {
         val wanted = expected.toArgb()
         val drawn = actual.toArgb()
         return listOf(24, 16, 8, 0).all { shift ->
-            abs(((wanted shr shift) and 0xFF) - ((drawn shr shift) and 0xFF)) <= TOLERANCE
+            abs(((wanted shr shift) and 0xFF) - ((drawn shr shift) and 0xFF)) <= tolerance
         }
     }
 
@@ -1109,6 +1155,27 @@ class ThemeFollowTest {
          * have for the test to read a pixel in its middle (4 dp at xxhdpi).
          */
         const val MIN_BAND_PX = 12f
+
+        /**
+         * The photo colour [checkViewer] uses, pure opaque red (#FFFF0000): no role of the Kanso
+         * blue schemes is red, so no pixel of the photo can pass for a theme colour.
+         */
+        val VIEWER_PHOTO_ARGB = 0xFFFF0000.toInt()
+
+        /** The alpha of Saved's top shade where it holds full strength (`SCRIM_TOP_ALPHA` in SavedScreen.kt). */
+        const val VIEWER_SHADE_ALPHA = 0.85f
+
+        /**
+         * How far per channel a shade pixel may be from the blend [checkViewer] works out: the
+         * blend's 8-bit rounding and the gradient's dithering can each move a channel by 1 or 2.
+         */
+        const val VIEWER_SHADE_TOLERANCE = 4
+
+        /**
+         * How far below the top of Saved's shade it still holds full strength, at least: its hold
+         * is 64 dp below the status bar (`SCRIM_HOLD`); 7 dp keeps clear of the status bar itself.
+         */
+        val VIEWER_SHADE_HOLD = 7.dp
 
         /** The made-up Uri the tool screens and Saved say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"

@@ -623,9 +623,9 @@ class AccessibilityWalkTest {
     /**
      * Checks the tab state on screen, called [state] (see [assertControlsPass]), and then that
      * the bar's three tabs and its Camera button were among the controls checked, so the bar is
-     * walked on every tab state.
+     * walked on every tab state. Returns the test tags of the controls checked.
      */
-    private fun assertTabStatePasses(state: String) {
+    private fun assertTabStatePasses(state: String): List<String> {
         val checked = assertControlsPass(state)
         val tags = checked.mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
         val missing = BAR_TAGS.filterNot { it in tags }
@@ -634,6 +634,7 @@ class AccessibilityWalkTest {
                 "(checked tags: $tags)",
             missing.isEmpty(),
         )
+        return tags
     }
 
     /**
@@ -724,7 +725,16 @@ class AccessibilityWalkTest {
         val tool = HOME_WITH_PHOTOS.carouselTools[index]
         compose.onNodeWithTag(homeBannerTag(tool)).assertIsDisplayed()
         compose.onNodeWithTag(homeTryTag(tool)).assertIsDisplayed()
-        assertTabStatePasses("home with recent photos, banner ${index + 1}")
+        val state = "home with recent photos, banner ${index + 1}"
+        val checked = assertTabStatePasses(state)
+        // The front banner is what this state is about: it and its "Try now" must have been
+        // checked, not skipped as cut off (TouchTargetCheck skips controls that only peek in).
+        val missing = listOf(homeBannerTag(tool), homeTryTag(tool)).filterNot { it in checked }
+        assertTrue(
+            "a11y $state: the front banner's controls $missing were not among the controls checked " +
+                "(checked tags: $checked)",
+            missing.isEmpty(),
+        )
     }
 
     /** Checks the screen of [tool] with its photo at [photo] and its save at [save]. */

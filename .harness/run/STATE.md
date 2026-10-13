@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Phase 4 (T-010, T-011) complete and green (Iteration 10); review findings open as T-012. Next: T-012, then the Verifier.
+- **Stage:** Phase 5 (T-012) complete and green (Iteration 11). Next: PARTIAL/DONE-candidate, then the Verifier.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
 - **Next Phase:** Phase 1b = T-003 
-- **DONE-candidate:** no
+- **DONE-candidate:** yes (Iteration 11: all tasks complete; the next invocation is the Verifier)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -26,7 +26,7 @@
 | T-009 | complete | `core/colorpicker/.../HSVColorPicker.kt` (hex handling), picker tests | - |
 | T-010 | complete (review F1/F3/F4 -> T-012) | `a11y/AccessibilityWalkTest.kt`, `theme/ThemeFollowTest.kt`, `a11y/OverPhotoContrastTest.kt` | - |
 | T-011 | complete (review F2/F5 -> T-012) | `navigation/ReplaceNavigationTest.kt`, `NavStateTest.kt`, `a11y/BottomClearanceTest.kt` | - |
-| T-012 | pending | review fixes in the six Phase 4 test files | - |
+| T-012 | complete | review fixes in the six Phase 4 test files | - |
 
 ## Signed off
 

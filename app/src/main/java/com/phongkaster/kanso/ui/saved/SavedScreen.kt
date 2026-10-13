@@ -156,10 +156,12 @@ val SAVED_PHOTO_URI_KEY = SemanticsPropertyKey<String>("SavedPhotoUriKey")
 private val SCRIM_HEIGHT = 120.dp
 
 /**
- * How far below the status bar the shade keeps its full strength before it starts to fade, so the
- * very top of the screen, where the status bar's clock and icons are drawn, is evenly shaded.
+ * How far below the status bar the shade keeps its full strength before it starts to fade: the whole
+ * top row (8 dp, the 48 dp close button, 8 dp), so the title is drawn over an evenly shaded
+ * background from its first pixel row to its last, and does not sit in the fade where a white photo
+ * would lower its contrast.
  */
-private val SCRIM_HOLD = 8.dp
+private val SCRIM_HOLD = 64.dp
 
 /**
  * The strength of the shade at its top: 85 % of the surface colour over the photo, enough for the
