@@ -19,8 +19,8 @@ Written by the Verifier, Iteration 12. A person opens each after/ picture beside
 | 21_camera_live_dark.png | M | before/21_camera_live_dark.png | after/21_camera_live_dark.png | none (A-027) | - |
 | 22_editor_enhance_light.png | M | before/22_editor_enhance_light.png | after/22_editor_enhance_light.png | phase1b/22_editor_enhance_light_compare.png  | - |
 | 23_editor_enhance_dark.png | M | before/23_editor_enhance_dark.png | after/23_editor_enhance_dark.png | phase1b/23_editor_enhance_dark_compare.png  | - |
-| 24_settings_swatches_light.png | M | before/24_settings_swatches_light.png | after/24_settings_swatches_light.png | phase1b/24_settings_swatches_light_compare.png  | - |
-| 25_settings_swatches_dark.png | M | before/25_settings_swatches_dark.png | after/25_settings_swatches_dark.png | phase1b/25_settings_swatches_dark_compare.png  | - |
+| 24_settings_swatches_light.png | M | before/24_settings_swatches_light.png | after/24_settings_swatches_light.png | phase1b/24_settings_swatches_light_compare.png, phase6/24_settings_swatches_light_compare.png (re-recorded Iteration 13; after/ refreshed by the Verifier, Iteration 15) | - |
+| 25_settings_swatches_dark.png | M | before/25_settings_swatches_dark.png | after/25_settings_swatches_dark.png | phase1b/25_settings_swatches_dark_compare.png, phase6/25_settings_swatches_dark_compare.png (re-recorded Iteration 13; after/ refreshed by the Verifier, Iteration 15) | - |
 | 26_gallery_loading_light.png | M | before/26_gallery_loading_light.png | after/26_gallery_loading_light.png | none (A-027) | - |
 | 27_gallery_loading_dark.png | M | before/27_gallery_loading_dark.png | after/27_gallery_loading_dark.png | none (A-027) | - |
 | 28_my_edits_light.png | A | - (new) | after/28_my_edits_light.png | phase1b/28_my_edits_light_compare.png  | - |
@@ -42,6 +42,6 @@ Written by the Verifier, Iteration 12. A person opens each after/ picture beside
 | 42_tool_narrow_photo_sdk30_light.png | A | - (new) | after/42_tool_narrow_photo_sdk30_light.png | phase1b/42_tool_narrow_photo_sdk30_light_compare.png  | - |
 | 43_photo_viewer_light.png | A | - (new) | after/43_photo_viewer_light.png | phase5/43_photo_viewer_light_compare.png  | - |
 | 44_photo_viewer_dark.png | A | - (new) | after/44_photo_viewer_dark.png | phase5/44_photo_viewer_dark_compare.png  | - |
-| 4_settings_light.png | M | before/4_settings_light.png | after/4_settings_light.png | phase1b/4_settings_light_compare.png  | - |
-| 5_settings_dark.png | M | before/5_settings_dark.png | after/5_settings_dark.png | phase1b/5_settings_dark_compare.png  | - |
-| 6_settings_custom_colour.png | M | before/6_settings_custom_colour.png | after/6_settings_custom_colour.png | phase1b/6_settings_custom_colour_compare.png  | - |
+| 4_settings_light.png | M | before/4_settings_light.png | after/4_settings_light.png | phase1b/4_settings_light_compare.png, phase6/4_settings_light_compare.png (re-recorded Iteration 13; after/ refreshed by the Verifier, Iteration 15) | - |
+| 5_settings_dark.png | M | before/5_settings_dark.png | after/5_settings_dark.png | phase1b/5_settings_dark_compare.png, phase6/5_settings_dark_compare.png (re-recorded Iteration 13; after/ refreshed by the Verifier, Iteration 15) | - |
+| 6_settings_custom_colour.png | M | before/6_settings_custom_colour.png | after/6_settings_custom_colour.png | phase1b/6_settings_custom_colour_compare.png, phase6/6_settings_custom_colour_compare.png (re-recorded Iteration 13; after/ refreshed by the Verifier, Iteration 15) | - |

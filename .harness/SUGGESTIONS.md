@@ -204,3 +204,18 @@ Two things. First, the bootstrap's rule for an ambiguous PRD is to take the read
 
 The owner's one-line goal said "every tool in one tap" and a detail lower down could be read as "two tools in one tap, the rest after a swipe". The engine chose the detail and asked the owner about it; the owner said the goal was what they meant. When the stated goal and a detail disagree, the safer default is to follow the goal and ask about the detail. And when the owner's answer changes a requirement, the engine should check every place that still repeats the old requirement, not only the ones it remembers.
 
+---
+
+## S-013 - ENGINE.md section 10 asks to archive into `.harness/archive/`, but the permission rules deny the engine every write there
+
+- **Destination:** loop (`.harness/loop/ENGINE.md` section 10, ADR-040, and the compiled permission settings)
+- **Earned by:** Kanso Run 7, Iteration 15 (2026-10-13). `.harness/ISSUES.md` is 52 KB, 43 KB of it about Runs 1 to 6. Section 10 says to move each settled earlier-run section to a new `.harness/archive/ISSUES-run-<n>.md` "written once with Write". The Iteration carried all 39 open items into one "Awaiting a person" section (checked with a `diff` of the `- [ ]` lines), then the Write of the archive file was refused: "File is in a directory that is denied by your permission settings". Read is denied there too. Iteration 12 had hit the same wall from the other side (a shell redirect created the file, then nothing could edit or delete it). `ISSUES.md` was put back as it was, so nothing was lost and nothing moved.
+- **Status:** open
+
+### What happened
+
+The specification and the permission rules disagree. The rules deny Read, Edit and Write on `.harness/archive/` (sensibly: so the engine cannot edit history), but the specification's only way to create an archive file is a Write. A rule that allows Write of a file that does not exist yet, and denies everything else, would match the intent ("written once, never edited").
+
+### In plain words
+
+The instructions tell the engine to move old notes into an archive folder, and the safety rules forbid it from writing into that folder at all. Until one of the two changes, the old notes stay in the main issues file, and every Iteration keeps paying to read them.

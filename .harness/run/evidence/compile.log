@@ -37,31 +37,31 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :app:processDebugNavigationResources
 > Task :opencv:generateDebugBuildConfig
 > Task :opencv:generateDebugResources
-> Task :app:parseDebugLocalResources
 > Task :opencv:packageDebugResources
-> Task :opencv:parseDebugLocalResources
 > Task :opencv:javaPreCompileDebug
 > Task :core:colorpicker:generateDebugResources
-> Task :app:generateDebugRFile
+> Task :opencv:parseDebugLocalResources
 > Task :core:colorpicker:packageDebugResources
-> Task :core:colorpicker:parseDebugLocalResources
+> Task :app:parseDebugLocalResources
 > Task :core:colorpicker:javaPreCompileDebug
-> Task :opencv:generateDebugRFile
 > Task :core:common:generateDebugResources
-> Task :core:colorpicker:generateDebugRFile
+> Task :core:colorpicker:parseDebugLocalResources
+> Task :opencv:generateDebugRFile
+> Task :app:generateDebugRFile
 > Task :core:common:packageDebugResources
 > Task :core:common:javaPreCompileDebug
-> Task :core:common:parseDebugLocalResources
 > Task :core:editimage:generateDebugResources
+> Task :core:common:parseDebugLocalResources
+> Task :core:colorpicker:generateDebugRFile
 > Task :core:editimage:packageDebugResources
-> Task :core:common:generateDebugRFile
 > Task :core:editimage:parseDebugLocalResources
 > Task :core:imageprocessor:generateDebugResources
+> Task :core:common:generateDebugRFile
 > Task :core:imageprocessor:packageDebugResources
 > Task :core:imageprocessor:javaPreCompileDebug
+> Task :core:editimage:generateDebugRFile
 > Task :core:editimage:javaPreCompileDebug
 > Task :core:imageprocessor:parseDebugLocalResources
-> Task :core:editimage:generateDebugRFile
 > Task :core:gallery:generateDebugResources
 > Task :core:imageprocessor:generateDebugRFile
 > Task :core:gallery:packageDebugResources
@@ -73,16 +73,16 @@ OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
 > Task :core:gallery:parseDebugLocalResources
 > Task :core:imagecrop:packageDebugResources
 > Task :core:imagecrop:javaPreCompileDebug
-> Task :core:imagecrop:parseDebugLocalResources
-> Task :core:gallery:generateDebugRFile
 > Task :core:localml:mergeDebugMlModels
 > Task :core:localml:generateDebugMlModelClass
 > Task :core:localml:javaPreCompileDebug
 > Task :core:overlaybrush:generateDebugResources
+> Task :core:imagecrop:parseDebugLocalResources
+> Task :core:gallery:generateDebugRFile
 > Task :core:overlaybrush:packageDebugResources
 > Task :core:overlaybrush:javaPreCompileDebug
-> Task :core:imagecrop:generateDebugRFile
 > Task :core:overlaybrush:parseDebugLocalResources
+> Task :core:imagecrop:generateDebugRFile
 > Task :core:overlaybrush:generateDebugRFile
 
 > Task :core:imagecrop:compileDebugKotlin
@@ -90,8 +90,8 @@ w: The feature plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=Optim
 w: Unable to release compile session, maybe daemon is already down: java.rmi.NoSuchObjectException: no such object in table
 
 > Task :opencv:compileDebugKotlin
-> Task :core:colorpicker:compileDebugKotlin
 > Task :core:gallery:compileDebugKotlin
+> Task :core:colorpicker:compileDebugKotlin
 > Task :opencv:compileDebugJavaWithJavac
 > Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
@@ -104,19 +104,17 @@ w: Unable to release compile session, maybe daemon is already down: java.rmi.NoS
 > Task :core:common:compileDebugKotlin
 w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:18:83 Redundant call of conversion method.
 w: file:///D:/Valve/Personal/Kanso/core/common/src/main/java/com/photo/editor/common/util/DimensionUtil.kt:19:85 Redundant call of conversion method.
-w: Unable to release compile session, maybe daemon is already down: java.rmi.UnmarshalException: Error unmarshaling return header; nested exception is: 
-	java.net.SocketException: Connection reset
 
 > Task :core:common:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:common:bundleLibCompileToJarDebug
 > Task :core:editimage:compileDebugKotlin NO-SOURCE
 > Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:localml:compileDebugKotlin NO-SOURCE
-> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:editimage:bundleLibCompileToJarDebug
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
-> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:localml:bundleLibCompileToJarDebug
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:overlaybrush:bundleLibCompileToJarDebug
 
 > Task :app:compileDebugKotlin
@@ -131,6 +129,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 53s
+BUILD SUCCESSFUL in 55s
 74 actionable tasks: 74 executed
 Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

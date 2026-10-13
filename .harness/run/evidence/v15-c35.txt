@@ -1,0 +1,12 @@
+## C35 totals
+errors 0
+skipped 0
+tests 571
+failures 0
+@Test lines: 571
+## C35 names
+#!/bin/bash
+# Usage: testnames.sh <rev>  -> File.kt:testName, sorted, one per @Test
+git grep -I -E '@Test|^\s*(private |internal )?fun ' "$1" -- app/src/test/java | tr -d '\r' | awk '
+{ i = index($0, ":"); rest = substr($0, i+1); j = index(rest, ":"); path = substr(rest, 1, j-1); line = substr(rest, j+1);
+  n = split(path, parts, "/"); file = parts[n]; }

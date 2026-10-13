@@ -9,3 +9,17 @@
 > automatically. Delete it yourself once you are satisfied nothing needs restoring.
 
 ---
+
+## R-001 - deleted
+
+- **When:** 2026-10-13T21:42:17.1148046+07:00
+- **Target:** `C:\Users\MAC_PC\AppData\Local\Temp\tmp.Rr2lP8Y14u`
+- **Captured:** moved to `D:\Valve\Personal\Kanso\.harness\trash\20261013-214217-080\tmp.Rr2lP8Y14u`
+- **Restore:** `Copy-Item -LiteralPath 'D:\Valve\Personal\Kanso\.harness\trash\20261013-214217-080\tmp.Rr2lP8Y14u' -Destination 'C:\Users\MAC_PC\AppData\Local\Temp\tmp.Rr2lP8Y14u' -Recurse`
+
+## R-002 - deleted
+
+- **When:** 2026-10-13T21:42:17.6512761+07:00
+- **Target:** `C:\Users\MAC_PC\AppData\Local\Temp\tmp.RcQsgWoHNJ`
+- **Captured:** moved to `D:\Valve\Personal\Kanso\.harness\trash\20261013-214217-622\tmp.RcQsgWoHNJ`
+- **Restore:** `Copy-Item -LiteralPath 'D:\Valve\Personal\Kanso\.harness\trash\20261013-214217-622\tmp.RcQsgWoHNJ' -Destination 'C:\Users\MAC_PC\AppData\Local\Temp\tmp.RcQsgWoHNJ' -Recurse`

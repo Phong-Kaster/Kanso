@@ -72,6 +72,7 @@ Every name another task or a DoD proof depends on is decided here, before any Wo
 | 5 | T-012 | done (Iteration 11) |
 | 6 | T-013, T-015 | (Iteration 12 Verifier, Tier 1) `git rm app/src/main/res/drawable/ic_add_photo_alternate.xml`; the stale comments in `Tool.kt:12-13` and `KansoNavHost.kt:104,123`; `compareRoborazziDebug`, copy compare files to `evidence/baseline-diffs/phase6/`, re-record 4, 5, 6, 24, 25 (and any other picture T-015 moves only if the compare shows the move is F2's or F4's), append every test edit to `test-edits.md` |
 | 7 | T-014 | the Iteration writes `head-testnames.txt`, the `comm -23` list and the `M`/`D` test-file list into `evidence/` before dispatch, runs `orphans.sh` after; then the Verifier |
+| 8 | T-016 | (Iteration 15 Verifier, Tier 1) no Worker: the Iteration adds the four names to `requiredPreviewNames` itself (a shared file), appends the reason to `test-edits.md`, runs the whole set; then the Verifier |
 
 Scopes inside a Phase are pairwise disjoint (each task file lists its exact scope; the conflict analysis checked them against the tree). Across Phases overlap is intended: `HomeScreen.kt`/`HomeUiState.kt`/`HomeViewModel.kt` (T-001, T-005, T-008), `SettingsScreen.kt` (T-001, T-007), `GalleryScreen.kt` (T-002 one line, T-006), `NavigationTest`, `PhotoToToolNavigationTest`, `ScreenshotTest`, `HomeViewModelTest` (T-001/T-003, T-005, T-008), `SavedNavigationTest` (T-003, T-004), `HomeTaps.kt` (T-003, T-005), `ReplaceNavigationTest` (T-003, T-011).
 

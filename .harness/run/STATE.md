@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Phase 7 done (Iteration 14): T-014 wrote the four evidence files. No code changed since the whole set was green in Iteration 13 (`evidence/p6-full-1.log`). Next: the Verifier.
+- **Stage:** The Verifier (Iteration 15) found one gap: DoD 36's `requiredPreviewNames` lacks four preview names (T-016). Everything else re-proved green (`evidence/v15-verifier.md`). Next: Phase 8 = T-016, then the Verifier again.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** none; the Verifier
-- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Iteration 14: no executable task remains and Tier-3 assumptions 20, 29, 33 stand, so the next invocation is the Verifier of section 14.4; it re-proves every `machine` criterion, drives the A13, checks `KansoTabShell.kt:110`, and writes `home-reach.md` if a criterion needs it)
+- **Next Phase:** Phase 8 = T-016 (Fast; the Iteration itself: `PreviewsRenderTest.kt` and `test-edits.md`)
+- **DONE-candidate:** no. **PARTIAL-candidate:** no (cleared by the Verifier of Iteration 15: T-016 filed)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -29,6 +29,7 @@
 | T-012 | complete | review fixes in the six Phase 4 test files | - |
 | T-013 | complete | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
 | T-014 | complete (Iteration 14) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
+| T-016 | pending (Phase 8) | `previews/PreviewsRenderTest.kt` (`requiredPreviewNames`), `evidence/test-edits.md` | - |
 | T-015 | complete except F4 (A-028) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
 
 ## Signed off

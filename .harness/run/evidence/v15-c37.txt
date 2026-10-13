@@ -1,0 +1,24 @@
+## C37
+65
+46:HorizontalUncontainedCarousel
+454:HorizontalUncontainedCarousel
+478:HorizontalUncontainedCarousel
+900: * Why placeholders instead of a spinner. A spinner says only "wait"; it sits where nothing will
+-- bar
+51
+5
+-- navhost
+40: * The whole app's navigation: holds the back stack and shows the screen on top of it.
+50: * same back stack: picking a tab clears the stack down to Home and adds the tab's key, so tabs
+55:    // The back stack is a list of NavKeys, Home at the bottom; the last key is the screen shown.
+-- blur
+8
+1
+-- saved
+4
+7
+-- myedits
+4
+-- hex
++                    // Only a complete six-digit code is applied: it is read in base 16 and made opaque
+## C34 aapt later
