@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** Verifier (Iteration 12) found gaps: T-013, T-014, T-015 filed; DONE-candidate cleared. Whole set green at `eedaa07` (`evidence/verifier-full.log`).
+- **Stage:** Phase 6 done (Iteration 13): T-013 and T-015 (F4 left, A-028). Whole set green (`evidence/p6-full-1.log`). Next Phase 7 = T-014.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** Phase 6 = T-013 (Fast) + T-015 (Capable); then Phase 7 = T-014; then the Verifier
+- **Next Phase:** Phase 7 = T-014 (evidence files); then the Verifier
 - **DONE-candidate:** no (cleared by the Verifier, Iteration 12: gaps in DoD 16, 19, 20(a), 23, 32, 35, 36, 38, R4, R8, R9 and review findings)
 - **Run Mode:** Autonomous
 
@@ -27,9 +27,9 @@
 | T-010 | complete (review F1/F3/F4 -> T-012) | `a11y/AccessibilityWalkTest.kt`, `theme/ThemeFollowTest.kt`, `a11y/OverPhotoContrastTest.kt` | - |
 | T-011 | complete (review F2/F5 -> T-012) | `navigation/ReplaceNavigationTest.kt`, `NavStateTest.kt`, `a11y/BottomClearanceTest.kt` | - |
 | T-012 | complete | review fixes in the six Phase 4 test files | - |
-| T-013 | pending (Phase 6) | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
+| T-013 | complete | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
 | T-014 | pending (Phase 7) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
-| T-015 | pending (Phase 6) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
+| T-015 | complete except F4 (A-028) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
 
 ## Signed off
 

@@ -49,7 +49,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -805,6 +807,11 @@ private fun RecentEdits(
  * strip's `LazyListState` (the object that remembers how far the row is scrolled) is therefore
  * sent back to the start whenever the newest photo changes, so a photo just saved is the first
  * thing seen when the person comes back to Home.
+ *
+ * "Changes" means "differs from the newest photo this strip saw last time", not "Home was shown
+ * again". The last seen id is kept with `rememberSaveable`, which, like the list state itself,
+ * survives Home leaving the screen while a tool is open. So Back from a tool that saved nothing
+ * leaves the strip where the person scrolled it, and only a new photo at the front sends it home.
  */
 @Composable
 private fun RecentEditsStrip(
@@ -815,7 +822,18 @@ private fun RecentEditsStrip(
 ) {
     val listState = rememberLazyListState()
     val newestId = photos.firstOrNull()?.id
-    LaunchedEffect(newestId) { listState.scrollToItem(0) }
+    // The newest id the strip has already reacted to; null until it has seen one.
+    val lastSeenNewestId = rememberSaveable { mutableStateOf<Long?>(null) }
+    LaunchedEffect(newestId) {
+        if (newestId != lastSeenNewestId.value) {
+            // A different photo is at the front (or the first one ever seen): show it. This scrolls
+            // even when the row seems to start at its first card already, because the keyed list
+            // may only push the new card off the left edge at its next layout, after this runs.
+            // On a row already at its first card, scrolling to it changes nothing on screen.
+            listState.scrollToItem(0)
+            lastSeenNewestId.value = newestId
+        }
+    }
     LazyRow(
         state = listState,
         modifier = modifier

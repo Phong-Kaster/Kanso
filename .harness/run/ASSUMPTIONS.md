@@ -626,3 +626,24 @@ DoD 29(b) asks every commit that re-records a picture to add its `_compare.png`.
 ### Taken, and why
 
 (2). Criterion 29 is **assumed** on clause (b); it was `machine-then-human` and unsigned anyway.
+
+## A-028 - Review finding F4 (blur's tiny copy built on the main thread) is left as it is
+
+- **Tier:** 2 (a non-blocking review finding whose fix needs a test or an interface change)
+- **Iteration:** 13
+- **First dependent checkpoint:** none
+- **Revert:** nothing to revert
+
+### Question
+
+`BlurredBackdrop.kt` builds the tiny copy in composition. Moving it off the main thread with `produceState` is unsafe for `SavedScreenshotTest` (pictures 18, 19, 43, 44): it pauses the clock, and `waitForIdle()` waits neither for `Dispatchers.Default` nor for the frame that redraws.
+
+### Options Considered
+
+1. `produceState` in `BlurredBackdrop` (breaks or makes flaky the paused-clock pictures).
+2. Build the copy in `ToolViewModel` / `SavedViewModel` (already off the main thread) and pass it in: an interface change across two screens and their tests.
+3. Leave it: a one-off read-back of a small photo, no DoD criterion names it.
+
+### Taken, and why
+
+(3). Not a DoD criterion; listed in `ISSUES.md` for a person to pick option 2 later.

@@ -101,8 +101,8 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
         // Picking a tab clears the stack down to Home and adds that tab's key. Only act while a
         // tab is on top, so a tap during a move to another screen cannot disturb the stack.
         onTabSelected = { tab -> if (top != null && isTabKey(top)) backStack.selectTab(tab) },
-        // The Camera button opens the camera; a shot that is kept opens the editor with the Edit
-        // tool selected. Only act while a tab is on top, so a fast double tap opens one camera.
+        // The Camera button opens the camera; a shot that is kept opens the Edit tool's
+        // screen. Only act while a tab is on top, so a fast double tap opens one camera.
         onCamera = { if (backStack.lastOrNull()?.let(::isTabKey) == true) backStack.add(Camera(Tool.EDIT)) },
         modifier = modifier,
     ) {
@@ -120,8 +120,7 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 HomeScreen(
                     viewModel = viewModel,
                     // Every banner, "Try now" button and round tool shortcut opens that tool's
-                    // photo gallery, and the photo picked there opens in the editor with that
-                    // tool selected.
+                    // photo gallery, and the photo picked there opens that tool's own screen.
                     onToolClick = { tool ->
                         if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },

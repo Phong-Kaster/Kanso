@@ -68,3 +68,10 @@
 - Review of Phases 1-3 (Capable, fresh, `evidence/verifier-review-p1-3.patch`): no blocking finding, no Constraint broken. F1 bar KDoc describes `ShortNavigationBar` the code no longer uses; F2 Settings' title differs from Home's, so it jumps on a tab fade; F3 Recent strip scrolls to 0 on every return; F4 backdrop tiny copy built on the main thread; F5 stale one-editor comments in `Tool.kt`/`KansoNavHost.kt`; F6 Android 8.1/9 `LIKE` pattern too loose; F7 teal sample in a preview. -> T-013 (F6), T-015 (the rest).
 - Not driven: the Galaxy A13 (the code still changes, so the next Verifier drives it).
 - Mistake: an attempt to archive the Runs 1-6 sections of `ISSUES.md` wrote `.harness/archive/ISSUES-run-1-6.md` with a shell redirect. The permission rules then refused editing or deleting it. It is left untracked and uncommitted, flagged in `ISSUES.md` for a person, and `ISSUES.md` itself was not trimmed. A Constraint now records the trap.
+
+### Iteration 13 - 2026-10-13 (Phase 6: T-013 Fast + T-015 Capable)
+- Recover: dirt was the owner's Foreman skill update and telemetry, left as before. No decision to consume.
+- T-013: no `@Suppress("DEPRECATION")` (column named `"_data"` by a const); Android 8.1/9 selection anchored with `GLOB` to `/storage/emulated/<n>/Pictures/Kanso/*`, subfolders out; "Remove animations" read from `Settings.Global.ANIMATOR_DURATION_SCALE`; `ic_add_photo_alternate.xml` removed.
+- T-015: bar KDoc true to the `Surface`+`Row` build; Settings' title = Home's style and 8 dp; Recent strip scrolls to 0 only when the newest id changed; non-teal `sampleWideBitmap`. F4 not done (A-028).
+- Iteration: stale comments in `Tool.kt`, `KansoNavHost.kt`. Whole set (tests, compare, lint, assemble) exit 0, `evidence/p6-full-1.log`; `foreman-record-baselines` re-recorded exactly pictures 4, 5, 6, 24, 25 (D-001); 4 looked at: title now Home's size. No test file edited.
+- Not done by Workers' report: `navigation/KansoTabShell.kt:110` uses `headlineSmallEmphasized` for a title; looked at in the Verifier.

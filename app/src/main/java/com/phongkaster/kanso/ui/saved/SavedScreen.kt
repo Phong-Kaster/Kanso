@@ -818,8 +818,8 @@ private fun sampleBitmap(): Bitmap {
 }
 
 /**
- * A second made-up photo for the viewer's preview: a 4:3 landscape picture, a teal-to-violet
- * gradient with a pale moon, so the blurred backdrop shows above and below it.
+ * A second made-up photo for the viewer's preview: a 4:3 landscape picture, a warm
+ * orange-to-violet sunset gradient with a pale moon, so the blurred backdrop shows above and below it.
  */
 private fun sampleWideBitmap(): Bitmap {
     val bitmap = Bitmap.createBitmap(800, 600, Bitmap.Config.ARGB_8888)
@@ -827,7 +827,7 @@ private fun sampleWideBitmap(): Bitmap {
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     paint.shader = android.graphics.LinearGradient(
         0f, 0f, 800f, 600f,
-        0xFF26A69A.toInt(), 0xFF5E35B1.toInt(),
+        0xFFFB8C00.toInt(), 0xFF5E35B1.toInt(),
         android.graphics.Shader.TileMode.CLAMP,
     )
     canvas.drawRect(0f, 0f, 800f, 600f, paint)

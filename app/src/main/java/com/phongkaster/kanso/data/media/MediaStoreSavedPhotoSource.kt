@@ -79,12 +79,19 @@ class MediaStoreSavedPhotoSource(
         val (selection, arguments) = if (sdkInt >= Build.VERSION_CODES.Q) {
             "${MediaStore.MediaColumns.RELATIVE_PATH} = ?" to arrayOf(KANSO_RELATIVE_PATH)
         } else {
-            // DATA (the file path) is deprecated from Android 10, where RELATIVE_PATH replaces
+            // The file path column is deprecated from Android 10, where RELATIVE_PATH replaces
             // it; on Android 8.1 and 9 it is the only way to tell which folder a photo is in.
-            // In LIKE, `%` stands for any run of characters.
-            @Suppress("DEPRECATION")
-            val pathColumn = MediaStore.MediaColumns.DATA
-            "$pathColumn LIKE ?" to arrayOf("%/$KANSO_RELATIVE_PATH%")
+            // In LIKE, `%` stands for any run of characters (and ignores letter case).
+            // LIKE alone would also match `Download/Pictures/Kanso/`, a `Pictures/kanso/` of
+            // another app and subfolders, so two more conditions make this branch agree with the
+            // exact `relative_path` match above. GLOB is case-sensitive; `[0-9]` is one digit (the
+            // phone user's number in `/storage/emulated/0/`); and the last condition drops any
+            // path with a further folder below Kanso's own.
+            "$PATH_COLUMN LIKE ? AND " +
+                "($PATH_COLUMN GLOB '$PRIMARY_STORAGE_ROOT[0-9]/$KANSO_RELATIVE_PATH*' OR " +
+                "$PATH_COLUMN GLOB '$PRIMARY_STORAGE_ROOT[0-9][0-9]/$KANSO_RELATIVE_PATH*') AND " +
+                "$PATH_COLUMN NOT GLOB '*/$KANSO_RELATIVE_PATH*/*'" to
+                arrayOf("%/$KANSO_RELATIVE_PATH%")
         }
         val projection = arrayOf(
             BaseColumns._ID,
@@ -129,6 +136,16 @@ class MediaStoreSavedPhotoSource(
          * It is the same text as the saver's own constant, which is private to the saver.
          */
         const val KANSO_RELATIVE_PATH = "Pictures/Kanso/"
+
+        /**
+         * The name of the file-path column. It is the value of the deprecated
+         * `MediaStore.MediaColumns.DATA`, written out and used only on Android 8.1 and 9, where
+         * `RELATIVE_PATH` does not exist.
+         */
+        const val PATH_COLUMN = "_data"
+
+        /** Where the phone's primary shared storage starts, followed by the user's number. */
+        const val PRIMARY_STORAGE_ROOT = "/storage/emulated/"
 
         /**
          * MediaStore's album column ("bucket" is MediaStore's word for a folder). It is written

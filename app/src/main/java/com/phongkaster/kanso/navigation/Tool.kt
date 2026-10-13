@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * resource for its icon. Home offers each as a shortcut and each opens its own tool screen.
  *
  * Taking a photo with the camera is not a tool: it makes a photo instead of working on one, so
- * Home draws it as a shortcut of its own and the `Camera` navigation key stands for it.
+ * the floating bar's Camera button opens it and the `Camera` navigation key stands for it.
  *
  * It is @Serializable because a tool travels inside navigation keys such as [Gallery], and every
  * key on the back stack must be saveable so it survives rotation and process death.

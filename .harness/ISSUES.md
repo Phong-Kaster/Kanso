@@ -2,6 +2,7 @@
 
 ## Run 7 (the InFlux layout in Kanso's own colours): Verifier of Iteration 12 found gaps, building again
 
+- **Iteration 13 (Phase 6) closed T-013 and T-015 except one review finding, recorded not fixed:** F4, the blurred backdrop's tiny copy is still made on the main thread (`BlurredBackdrop.kt`). Moving it off the thread breaks the paused-clock pictures 18, 19, 43, 44; the clean fix is to build the copy in the ViewModels (A-028). T-014 (evidence files) is next, then the Verifier. Also to look at: `navigation/KansoTabShell.kt:110` uses `headlineSmallEmphasized` for a title.
 - **The Verifier (Iteration 12, 2026-10-13) reached no verdict.** The whole set is green: 571 tests, 0 skipped, 41 pictures unchanged, lint 0 errors, `assembleDebug` (`evidence/verifier-full.log`). But the approved DoD's greps and evidence files found gaps, now tasks:
   - **T-013** (Fast): a new `@Suppress("DEPRECATION")` in `MediaStoreSavedPhotoSource.kt:85` (DoD 38); `ValueAnimator.areAnimatorsEnabled()` in `SkeletonBlock.kt` (DoD 20(a)); `ic_add_photo_alternate.xml` unused (R4, R9; lint lists it); the Android 8.1/9 folder match `_data LIKE '%/Pictures/Kanso/%'` is case-blind and open at both ends (review F6, DoD 32).
   - **T-014** (Capable): `test-edits.md`, `orphans.sh`, `m3-scan.md` and `fixed-colours.md` were never written (DoD 16, 19, 23, 35, 36, R8).

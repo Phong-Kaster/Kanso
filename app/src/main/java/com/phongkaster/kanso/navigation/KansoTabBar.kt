@@ -88,8 +88,11 @@ private val TAB_BAR_ELEVATION = 6.dp
  * button calls [onCamera]. The bar itself only draws and reports; the caller (the navigation
  * host, through `KansoTabShell`) decides what a tap does to the back stack.
  *
- * The bar is Material 3's `ShortNavigationBar` with one `ShortNavigationBarItem` per tab, icon on
- * top (`NavigationItemIconPosition.Top`). Each item is a selectable node with the Tab role, so a
+ * The bar is built by hand: a pill-shaped `Surface` in the `inverseSurface` colour holding a
+ * `Row` of three Material 3 `ShortNavigationBarItem`s, one per tab, each given an equal share of
+ * the width, because Material's ready-made `ShortNavigationBar` neither has a pill shape nor
+ * shared its width equally between the tabs. Each item puts its icon on top
+ * (`NavigationItemIconPosition.Top`) and is a selectable node with the Tab role, so a
  * screen reader says "Home, tab, selected"; its label names it, so the icon has no description
  * of its own. The Camera button is a separate `FilledIconButton`, outside the bar, because taking
  * a photo is an action, not a place: it opens the camera on top of the current tab.
@@ -103,11 +106,9 @@ private val TAB_BAR_ELEVATION = 6.dp
  * current tab reads at a glance; the other icons and labels are `inverseOnSurface`. Every colour
  * comes from the theme, so the bar follows light and dark and the app's colour choice.
  *
- * Why it clips to a pill: `ShortNavigationBar` is a plain full-width surface with square corners
- * and no shape parameter. `shadow` draws the soft shadow of a pill (`CircleShape` on a wide box is
- * a pill: its ends are half circles) and `clip` then cuts the bar's colour to the same pill. The
- * bar's own inset padding is turned off (`WindowInsets(0, 0, 0, 0)`): it would make the bar
- * taller by the height of the navigation bar. Instead the whole row is lifted above the
+ * Why it is a pill: the `Surface` is given `CircleShape` (on a wide box that is a pill: its ends
+ * are half circles), which draws the soft shadow and cuts the bar's colour to the pill in one
+ * step. The whole row is lifted above the
  * navigation bar and the bottom gesture area, whichever is taller, and 16 dp more, so the bar
  * floats and no tab sits where a swipe up means "go home".
  *

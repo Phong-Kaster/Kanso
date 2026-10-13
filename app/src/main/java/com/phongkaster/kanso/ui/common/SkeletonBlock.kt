@@ -1,6 +1,6 @@
 package com.phongkaster.kanso.ui.common
 
-import android.animation.ValueAnimator
+import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -111,13 +112,17 @@ fun SkeletonBlock(shape: Shape, modifier: Modifier = Modifier) {
  *
  * Only a screen's stateful part calls this (My edits wraps its screen in it); previews pass
  * `pulsing = false`, because a preview is drawn with no test clock and an endless animation would
- * keep it from ever finishing. When the phone's "Remove animations" setting is on, Android reports
- * animators as switched off and the blocks stay still too.
+ * keep it from ever finishing. When the phone's "Remove animations" setting is on, Android sets
+ * the animator duration scale (read from the global settings) to 0 and the blocks stay still too.
  */
 @Composable
 fun ProvideSkeletonPulse(pulsing: Boolean = true, content: @Composable () -> Unit) {
-    // Asked once: the setting rarely changes while a skeleton is on screen.
-    val animatorsOn = remember { ValueAnimator.areAnimatorsEnabled() }
+    // Asked once: the setting rarely changes while a skeleton is on screen. "Remove animations"
+    // sets the animator duration scale to 0; an unset scale means normal speed (1).
+    val context = LocalContext.current
+    val animatorsOn = remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
+    }
     if (pulsing && animatorsOn) {
         val transition = rememberInfiniteTransition(label = "skeletonPulse")
         val phase = transition.animateFloat(

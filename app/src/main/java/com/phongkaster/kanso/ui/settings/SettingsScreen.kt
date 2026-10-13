@@ -166,8 +166,11 @@ private val BADGE_SIZE = 40.dp
 /** The size of a colour swatch: big enough to read the colour at a glance. */
 private val SWATCH_SIZE = 28.dp
 
-/** The space above and below the large "Settings" title, so it stands as tall as a top bar would. */
-private val TITLE_PADDING = 16.dp
+/**
+ * The space above the large "Settings" title: 8 dp, the same as above Home's "Kanso" title, so the
+ * two titles sit at the same height and a tab change does not make the title jump.
+ */
+private val TITLE_TOP_PADDING = 8.dp
 
 /**
  * The Settings screen: one scrolling column that starts with a large "Settings" title, then the
@@ -241,9 +244,9 @@ fun SettingsScreen(
  *
  * The title is the first item of the scrolling column, not a top bar: Settings is a tab, so it
  * has no back arrow to put in one, and like Home's title it scrolls away with the rest. It uses
- * `headlineSmallEmphasized`, one of the bolder "Emphasized" text styles of Material 3 Expressive
- * (see `HomeTitle` for the idea), the same style and height as Home's title, so moving between
- * the two tabs keeps the title in one place. With no top bar, the [Scaffold] adds the status
+ * `headlineLargeEmphasized`, one of the bolder "Emphasized" text styles of Material 3 Expressive
+ * (see `HomeTitle` for the idea), with 8 dp above it and 16 dp at each side: exactly Home's
+ * title, so moving between the two tabs keeps the title in one place. With no top bar, the [Scaffold] adds the status
  * bar's height to `innerPadding` instead, so the title never sits under the clock.
  *
  * A plain scrolling Column holds the section: the list is short, so it is drawn all at once, and
@@ -313,7 +316,9 @@ fun SettingsContent(
 /**
  * Settings' large title, the word "Settings", as the first item of the scrolling column.
  *
- * It is drawn in the same style and with the same height as Home's title (see [SettingsContent]).
+ * It is drawn in the same style and with the same padding as Home's title (see [SettingsContent]):
+ * `headlineLargeEmphasized`, 8 dp above, 16 dp at each side and nothing below, since the next
+ * line (Home's greeting, here the "Appearance" header) brings its own space.
  * `heading()` marks it as a heading, so a screen reader announces it as one and lets the person
  * jump to it. The same word is also the label of the Settings tab on the floating bar, so the
  * text "Settings" is on screen twice; tests tell the two apart by the tab's test tag.
@@ -322,9 +327,9 @@ fun SettingsContent(
 private fun SettingsTitle(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.settings),
-        style = MaterialTheme.typography.headlineSmallEmphasized,
+        style = MaterialTheme.typography.headlineLargeEmphasized,
         modifier = modifier
-            .padding(horizontal = SCREEN_PADDING, vertical = TITLE_PADDING)
+            .padding(start = SCREEN_PADDING, end = SCREEN_PADDING, top = TITLE_TOP_PADDING)
             .semantics { heading() },
     )
 }
