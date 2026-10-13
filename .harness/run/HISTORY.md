@@ -75,3 +75,9 @@
 - T-015: bar KDoc true to the `Surface`+`Row` build; Settings' title = Home's style and 8 dp; Recent strip scrolls to 0 only when the newest id changed; non-teal `sampleWideBitmap`. F4 not done (A-028).
 - Iteration: stale comments in `Tool.kt`, `KansoNavHost.kt`. Whole set (tests, compare, lint, assemble) exit 0, `evidence/p6-full-1.log`; `foreman-record-baselines` re-recorded exactly pictures 4, 5, 6, 24, 25 (D-001); 4 looked at: title now Home's size. No test file edited.
 - Not done by Workers' report: `navigation/KansoTabShell.kt:110` uses `headlineSmallEmphasized` for a title; looked at in the Verifier.
+
+### Iteration 14 - 2026-10-13 (Phase 7: T-014, written by the Iteration itself; evidence only)
+- Recover: dirt was the owner's Foreman skill update, telemetry and the untracked archive file, left as before. No decision to consume.
+- Wrote `evidence/test-edits.md` (45 gone names: 10 renamed, 17 replaced, 18 removed, each with its Removal; every A/M/D test file with a reason), `orphans.sh` (run: prints nothing), `m3-scan.md` (every piece with file:line; 15 button calls, all with `shapes =`; hand-built pieces say why), `fixed-colours.md` (8 lines, all in samples or `PickerSurfaceColor`; the Settings sample is at 738, was 733). Inputs: `head-testnames.txt` (571), `comm-removed.txt`, `test-name-status.txt`. The base names file is not in C order, so both lists were re-sorted before `comm`.
+- No code changed, so no build was run. Not written: `home-reach.md` (named in the evidence README; left to the Verifier to check against the DoD).
+- Report: PARTIAL-candidate recorded; CONTINUE.

@@ -10,7 +10,7 @@
 > Keep it small. Every iteration pays to read it, and unlike ENGINE.md it is not served from a
 > prompt cache. Never let history accumulate here.
 
-- **Stage:** Phase 6 done (Iteration 13; T-013, T-015 minus F4 = A-028). **Next: Phase 7 = T-014** (Capable; scope: `.harness/run/evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}`; the Iteration first writes `head-testnames.txt`, the `comm -23` output and the name-status list into `evidence/`; note that pictures 4, 5, 6, 24, 25 were re-recorded in Iteration 13, a baseline change, no test file edited). Then the Verifier again (drive the A13; check `KansoTabShell.kt:110` title).
+- **Stage:** Phase 7 done (Iteration 14: T-014 wrote `test-edits.md`, `orphans.sh`, `m3-scan.md`, `fixed-colours.md`; no code changed). **Next: the Verifier** (PARTIAL-candidate, section 14.4): re-prove every machine criterion, drive the A13, check the `KansoTabShell.kt:110` title; `evidence/home-reach.md` is not written, check whether a criterion needs it. (Superseded plan text follows; ignore:) Phase 7 = T-014 (Capable; scope: `.harness/run/evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}`; the Iteration first writes `head-testnames.txt`, the `comm -23` output and the name-status list into `evidence/`; note that pictures 4, 5, 6, 24, 25 were re-recorded in Iteration 13, a baseline change, no test file edited). Then the Verifier again (drive the A13; check `KansoTabShell.kt:110` title).
 - **DoD text the Phase cites:** see `DoD.md` criteria 16, 19, 23, 35, 36, R8 (Worker needs their text in its Brief; Grep by number).
 - **Open ISSUES items naming these files:** none.
 - **Queued decisions:** 0 (D-001 answered).

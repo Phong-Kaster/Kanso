@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Phase 6 done (Iteration 13): T-013 and T-015 (F4 left, A-028). Whole set green (`evidence/p6-full-1.log`). Next Phase 7 = T-014.
+- **Stage:** Phase 7 done (Iteration 14): T-014 wrote the four evidence files. No code changed since the whole set was green in Iteration 13 (`evidence/p6-full-1.log`). Next: the Verifier.
 - **Loop Branch:** loop/kanso-influx-layout (started from `a720960`)
-- **Next Phase:** Phase 7 = T-014 (evidence files); then the Verifier
-- **DONE-candidate:** no (cleared by the Verifier, Iteration 12: gaps in DoD 16, 19, 20(a), 23, 32, 35, 36, 38, R4, R8, R9 and review findings)
+- **Next Phase:** none; the Verifier
+- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Iteration 14: no executable task remains and Tier-3 assumptions 20, 29, 33 stand, so the next invocation is the Verifier of section 14.4; it re-proves every `machine` criterion, drives the A13, checks `KansoTabShell.kt:110`, and writes `home-reach.md` if a criterion needs it)
 - **Run Mode:** Autonomous
 
 ## Progress
@@ -28,7 +28,7 @@
 | T-011 | complete (review F2/F5 -> T-012) | `navigation/ReplaceNavigationTest.kt`, `NavStateTest.kt`, `a11y/BottomClearanceTest.kt` | - |
 | T-012 | complete | review fixes in the six Phase 4 test files | - |
 | T-013 | complete | `data/media/MediaStoreSavedPhotoSource.kt`, `ui/common/SkeletonBlock.kt`; Iteration: `git rm` `ic_add_photo_alternate.xml` | - |
-| T-014 | pending (Phase 7) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
+| T-014 | complete (Iteration 14) | `evidence/{test-edits.md,orphans.sh,m3-scan.md,fixed-colours.md}` | - |
 | T-015 | complete except F4 (A-028) | `navigation/KansoTabBar.kt`, `ui/settings/SettingsScreen.kt`, `ui/home/HomeScreen.kt`, `ui/common/BlurredBackdrop.kt`, `ui/saved/SavedScreen.kt`; Iteration: `Tool.kt`, `KansoNavHost.kt` comments, pictures 4-6, 24, 25 | - |
 
 ## Signed off
