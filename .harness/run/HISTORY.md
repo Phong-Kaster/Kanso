@@ -102,3 +102,8 @@
 - Looked at all 41 `after/` pictures (`baseline-diffs/index.md` filled): 37 did not show a defect; 28, 29, 34, 35 lack the floating bar DoD 22 says they show -> T-017 (Phase 9, A-029). Notes for a person (title of the camera left-aligned; cut word on the peeking banner; hard edge of the wide sample photo) in `ISSUES.md`.
 - Not driven: the Galaxy A13 (focus `NotificationShade` at 21:51 and 21:53).
 - Report: CONTINUE.
+
+## Iteration 18 - Phase 9 (T-017)
+- Recover: dirt as before (owner's Foreman skill update, telemetry, archive); left alone.
+- Worker (sonnet) put pictures 28, 29, 34, 35 inside the tab shell with the bar. Compare: exactly those four changed; opened each, bar correct. Re-recorded (A-029). `after/` and `index.md` refreshed; `test-edits.md` line added.
+- Whole set green (`evidence/p9-whole.log`); Roborazzi 41, 0 changed. PARTIAL-candidate recorded. Report: CONTINUE (Verifier next).

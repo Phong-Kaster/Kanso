@@ -135,14 +135,25 @@ class HomeScreenshotTest {
         capture("39_home_small_phone_dark.png")
     }
 
-    /** Shows Home with no saved photo in [mode] and checks the message is on screen. */
+    /**
+     * Shows Home with no saved photo in [mode] inside the tab shell with the floating bar (Home
+     * selected, the bar's clearance at the end of the column) and checks the bar and the message
+     * are on screen.
+     */
     private fun showEmpty(mode: ThemeMode) {
         compose.setContent {
             KansoTheme(themeMode = mode) {
-                HomeContent(state = homeState(photos = emptyList(), loading = false), onToolClick = {})
+                KansoTabShell(showBar = true, selected = KansoTab.HOME, onTabSelected = {}, onCamera = {}) {
+                    HomeContent(
+                        state = homeState(photos = emptyList(), loading = false),
+                        onToolClick = {},
+                        contentPadding = PaddingValues(bottom = tabBarClearance()),
+                    )
+                }
             }
         }
         compose.waitForIdle()
+        compose.onNodeWithTag(KANSO_TAB_BAR_TAG).assertIsDisplayed()
         compose.onNodeWithTag(HOME_RECENT_EMPTY_TAG).assertExists()
     }
 

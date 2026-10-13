@@ -69,3 +69,4 @@ Count: 10 renamed, 17 replaced, 18 removed entries; the fanned names add up to a
 - `tool/{ToolFixtures,ToolPhotoKeyTest,ToolScreenTest,ToolViewModelTest}.kt`: R1 and R2 as listed above.
 
 No base test whose subject still exists in the app was only removed. `orphans.sh` prints nothing (R8, helpers).
+- `screenshots/{MyEditsScreenshotTest,HomeScreenshotTest}.kt` (T-017): pictures 28, 29 (`showPhotos`) and 34, 35 (Home `showEmpty`) are now drawn inside the tab shell with the floating bar and assert the bar is displayed, as DoD 22 promises. No `@Test` added or removed.

@@ -3,6 +3,7 @@ package com.phongkaster.kanso.screenshots
 import android.app.Application
 import android.graphics.Color
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -14,6 +15,10 @@ import coil.ImageLoader
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.navigation.KANSO_TAB_BAR_TAG
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.KansoTabShell
+import com.phongkaster.kanso.navigation.tabBarClearance
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_GRID_TAG
 import com.phongkaster.kanso.ui.myedits.MyEditsContent
@@ -120,8 +125,9 @@ class MyEditsScreenshotTest {
     }
 
     /**
-     * Installs the solid-colour image loader, shows twelve saved photos in [mode] and waits until
-     * every picture is loaded.
+     * Installs the solid-colour image loader, shows twelve saved photos in [mode] inside the tab
+     * shell with the floating bar (My edits selected, the bar's clearance at the end of the grid)
+     * and waits until every picture is loaded.
      */
     private fun showPhotos(mode: ThemeMode) {
         val fetchers = SolidColourFetcherFactory()
@@ -134,10 +140,17 @@ class MyEditsScreenshotTest {
         val state = MyEditsUiState(photos = twelvePhotos(), loading = false)
         compose.setContent {
             KansoTheme(themeMode = mode) {
-                MyEditsContent(state = state, onPhotoClick = {})
+                KansoTabShell(showBar = true, selected = KansoTab.MY_EDITS, onTabSelected = {}, onCamera = {}) {
+                    MyEditsContent(
+                        state = state,
+                        onPhotoClick = {},
+                        contentPadding = PaddingValues(bottom = tabBarClearance()),
+                    )
+                }
             }
         }
         compose.waitForIdle()
+        compose.onNodeWithTag(KANSO_TAB_BAR_TAG).assertIsDisplayed()
         compose.onNodeWithTag(MY_EDITS_GRID_TAG).assertIsDisplayed()
         compose.waitUntil(LOAD_TIMEOUT_MS) { fetchers.fetched.get() >= PHOTO_COUNT }
         compose.waitForIdle()
