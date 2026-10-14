@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.navigation.KansoTabBarColours
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.seedColorScheme
 import kotlin.math.pow
@@ -78,28 +79,27 @@ class KansoBlueContrastTest {
     }
 
     /**
-     * Returns the pairs of the floating tab bar (`KansoTabBar`) that must reach the text level:
-     * the selected icon (`inverseSurface`) on the selected pill (`inversePrimary`), the selected
-     * label (`inversePrimary`) on the bar (`inverseSurface`), and the other tabs' icons and labels
-     * (`inverseOnSurface`) on the bar.
+     * Returns the pairs of the floating tab bar (`KansoTabBar`) that must reach the text level, in
+     * the colours [KansoTabBarColours] gives it for [scheme]: the selected icon on the selected
+     * pill, the selected label on the bar, and the other tabs' icons and labels on the bar.
      */
-    private fun tabBarTextPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> = listOf(
-        Triple("tab bar: selected icon (inverseSurface) on the pill (inversePrimary)", scheme.inverseSurface, scheme.inversePrimary),
-        Triple("tab bar: selected label (inversePrimary) on the bar (inverseSurface)", scheme.inversePrimary, scheme.inverseSurface),
-        Triple(
-            "tab bar: unselected icons and labels (inverseOnSurface) on the bar (inverseSurface)",
-            scheme.inverseOnSurface,
-            scheme.inverseSurface,
-        ),
-    )
+    private fun tabBarTextPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> {
+        val bar = KansoTabBarColours.of(scheme)
+        return listOf(
+            Triple("tab bar: selected icon on the pill", bar.onPill, bar.pill),
+            Triple("tab bar: selected label on the bar", bar.selectedLabel, bar.bar),
+            Triple("tab bar: unselected icons and labels on the bar", bar.onBar, bar.bar),
+        )
+    }
 
     /**
      * Returns the pair of the floating tab bar that must reach the graphics level: the selected
-     * tab's pill (`inversePrimary`) on the bar (`inverseSurface`).
+     * tab's pill on the bar, in the colours [KansoTabBarColours] gives it for [scheme].
      */
-    private fun tabBarGraphicPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> = listOf(
-        Triple("tab bar: the selected pill (inversePrimary) on the bar (inverseSurface)", scheme.inversePrimary, scheme.inverseSurface),
-    )
+    private fun tabBarGraphicPairs(scheme: ColorScheme): List<Triple<String, Color, Color>> {
+        val bar = KansoTabBarColours.of(scheme)
+        return listOf(Triple("tab bar: the selected pill on the bar", bar.pill, bar.bar))
+    }
 
     /** Returns Kanso blue in the [dark] or light look, as KansoTheme hands it to the screens. */
     private fun scheme(dark: Boolean): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark)

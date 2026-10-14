@@ -40,21 +40,22 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * DoD 22: the floating bar is dark in light mode and light in dark mode, in the app's own colours,
+ * DoD 22, as changed by the human on 2026-10-14: the floating bar is dark in both modes (the
+ * inverse surface in light, the highest surface container in dark), in the app's own colours,
  * for each of the six schemes (Kanso blue, From wallpaper and Custom colour #2E7D32, each light
  * and dark), and its selected pill, labels and icons stand out.
  *
  * The bar is hosted inside KansoTheme with each scheme over the theme's background, first with
  * Home selected and then with My edits selected, and read from the drawn pixels (Robolectric's
  * real drawing code, `GraphicsMode.Mode.NATIVE`) and from the scheme KansoTheme publishes:
- * - a pixel of `nav-bar` between two tabs equals `inverseSurface` within 2, with a relative
- *   luminance below 0.15 in light and above 0.6 in dark;
- * - a pixel inside the selected tab's pill, beside its icon, equals `inversePrimary` within 2,
- *   with a contrast of at least 3.0 against `inverseSurface`;
- * - the selected icon's role (`inverseSurface`) reaches 4.5:1 on the pill, and the selected label
- *   (`inversePrimary`) and the other icons and labels (`inverseOnSurface`) reach 4.5:1 on the
- *   bar; inside each icon's bounds, the most frequent colour other than the ground is its role
- *   within 8;
+ * - a pixel of `nav-bar` between two tabs equals `inverseSurface` (light) or
+ *   `surfaceContainerHighest` (dark) within 2, with a relative luminance below 0.15, and in dark
+ *   differs from the background;
+ * - a pixel inside the selected tab's pill, beside its icon, equals the pill's role
+ *   ([KansoTabBarColours]) within 2, with a contrast of at least 3.0 against the bar;
+ * - the selected icon reaches 4.5:1 on the pill, and the selected label and the other icons and
+ *   labels reach 4.5:1 on the bar; inside each icon's bounds, the most frequent colour other than
+ *   the ground is its role within 8;
  * - the Camera button's container pixel is its container role (`primary`) within 2, and its
  *   icon's role (`onPrimary`) reaches 3:1 on it.
  *
@@ -85,7 +86,7 @@ class NavBarColourTest {
         checkScheme(ThemeMode.Light, ThemeColour.KansoBlue)
     }
 
-    /** Kanso blue, dark: a light bar with a standing-out pill, labels and icons. */
+    /** Kanso blue, dark: a dark grey bar with a standing-out pill, labels and icons. */
     @Test
     fun kanso_blue_dark() {
         checkScheme(ThemeMode.Dark, ThemeColour.KansoBlue)
@@ -156,33 +157,40 @@ class NavBarColourTest {
         val scheme = scheme()
         val bitmap = drawScreen()
         try {
-            // The bar between the first two tabs: the inverse surface, dark in light, light in dark.
+            // The bar between the first two tabs: dark in light (the inverse surface), and in dark
+            // a dark surface a step above the background, never the light inverse surface.
+            val roles = KansoTabBarColours.of(scheme)
             val bar = bounds(KANSO_TAB_BAR_TAG)
             val boundary = bounds(kansoTabTag(KansoTab.HOME)).right
             val ground = pixel(bitmap, boundary, bar.center.y)
-            assertNear("$look: the bar between two tabs", scheme.inverseSurface, ground, 2)
             if (dark) {
-                assertTrue("$look: the bar must be light, luminance ${ground.luminance()}", ground.luminance() > 0.6f)
+                assertNear("$look: the bar between two tabs", scheme.surfaceContainerHighest, ground, 2)
+                assertTrue("$look: the bar must be dark, luminance ${ground.luminance()}", ground.luminance() < 0.15f)
+                assertTrue(
+                    "$look: the bar must stand apart from the background",
+                    hex(ground) != hex(scheme.background),
+                )
             } else {
+                assertNear("$look: the bar between two tabs", scheme.inverseSurface, ground, 2)
                 assertTrue("$look: the bar must be dark, luminance ${ground.luminance()}", ground.luminance() < 0.15f)
             }
 
             // The selected tab's pill, beside its icon.
             val selectedIcon = iconBounds(selected)
             val pill = pixel(bitmap, selectedIcon.left - px(8.dp), selectedIcon.center.y)
-            assertNear("$look: the pill of ${selected.name}", scheme.inversePrimary, pill, 2)
-            assertContrast("$look: pill on the bar", scheme.inversePrimary, scheme.inverseSurface, 3.0)
+            assertNear("$look: the pill of ${selected.name}", roles.pill, pill, 2)
+            assertContrast("$look: pill on the bar", roles.pill, roles.bar, 3.0)
 
             // The roles of the icons and labels against what they are drawn on.
-            assertContrast("$look: selected icon on the pill", scheme.inverseSurface, scheme.inversePrimary, 4.5)
-            assertContrast("$look: selected label on the bar", scheme.inversePrimary, scheme.inverseSurface, 4.5)
-            assertContrast("$look: other icons and labels on the bar", scheme.inverseOnSurface, scheme.inverseSurface, 4.5)
+            assertContrast("$look: selected icon on the pill", roles.onPill, roles.pill, 4.5)
+            assertContrast("$look: selected label on the bar", roles.selectedLabel, roles.bar, 4.5)
+            assertContrast("$look: other icons and labels on the bar", roles.onBar, roles.bar, 4.5)
 
             // Each icon is drawn in its role: the most frequent colour inside it, ground aside.
             KansoTab.entries.forEach { tab ->
                 val isSelected = tab == selected
-                val iconGround = if (isSelected) scheme.inversePrimary else scheme.inverseSurface
-                val role = if (isSelected) scheme.inverseSurface else scheme.inverseOnSurface
+                val iconGround = if (isSelected) roles.pill else roles.bar
+                val role = if (isSelected) roles.onPill else roles.onBar
                 val ink = mostFrequentInk(bitmap, iconBounds(tab), iconGround)
                 assertNear("$look: the ${tab.name} icon (selected: $isSelected)", role, ink, 8)
             }

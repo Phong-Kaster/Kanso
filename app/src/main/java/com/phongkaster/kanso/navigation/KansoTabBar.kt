@@ -88,7 +88,7 @@ private val TAB_BAR_ELEVATION = 6.dp
  * button calls [onCamera]. The bar itself only draws and reports; the caller (the navigation
  * host, through `KansoTabShell`) decides what a tap does to the back stack.
  *
- * The bar is built by hand: a pill-shaped `Surface` in the `inverseSurface` colour holding a
+ * The bar is built by hand: a pill-shaped `Surface` in the bar colour holding a
  * `Row` of three Material 3 `ShortNavigationBarItem`s, one per tab, each given an equal share of
  * the width, because Material's ready-made `ShortNavigationBar` neither has a pill shape nor
  * shared its width equally between the tabs. Each item puts its icon on top
@@ -97,14 +97,14 @@ private val TAB_BAR_ELEVATION = 6.dp
  * of its own. The Camera button is a separate `FilledIconButton`, outside the bar, because taking
  * a photo is an action, not a place: it opens the camera on top of the current tab.
  *
- * Why the bar is the inverse of the screen: it floats over the content of the tab screens, so it
- * must stand apart from whatever scrolls under it. Material's "inverse" colour roles are made for
- * exactly this: `inverseSurface` is a dark surface in the light theme and a light one in the dark
- * theme, with `inverseOnSurface` for what is drawn on it. The selected tab's pill is
- * `inversePrimary` (the theme colour, tuned to stand out on the inverse surface), the selected
- * icon on it is `inverseSurface` again, and the selected label is `inversePrimary`, so the
- * current tab reads at a glance; the other icons and labels are `inverseOnSurface`. Every colour
- * comes from the theme, so the bar follows light and dark and the app's colour choice.
+ * Why the bar has its own colours: it floats over the content of the tab screens, so it must
+ * stand apart from whatever scrolls under it. In the light theme it is the inverse of the screen
+ * (a dark `inverseSurface` pill); in the dark theme it is a dark grey surface a step above the
+ * background, because the light inverse surface glared there. [KansoTabBarColours] holds both
+ * looks. In each, the selected tab sits on a pill in the theme colour with its icon in the
+ * matching "on" colour, its label is the theme colour, and the other icons and labels are the
+ * bar's "on" colour. Every colour comes from the theme, so the bar follows light and dark and the
+ * app's colour choice.
  *
  * Why it is a pill: the `Surface` is given `CircleShape` (on a wide box that is a pill: its ends
  * are half circles), which draws the soft shadow and cuts the bar's colour to the pill in one
@@ -123,15 +123,17 @@ fun KansoTabBar(
     modifier: Modifier = Modifier,
 ) {
     val colours = MaterialTheme.colorScheme
-    // The item colours (see the KDoc). `selectedTextColorTopIconPosition` is the selected label's
-    // colour when the icon is on top; the older single "selected text colour" parameter is hidden
-    // in this version of Material 3 and does not compile.
+    // The bar's colours: the inverse look in light, a dark surface in dark (see the KDoc).
+    val barColours = KansoTabBarColours.of(colours)
+    // The item colours. `selectedTextColorTopIconPosition` is the selected label's colour when the
+    // icon is on top; the older single "selected text colour" parameter is hidden in this version
+    // of Material 3 and does not compile.
     val itemColours = ShortNavigationBarItemDefaults.colors(
-        selectedIconColor = colours.inverseSurface,
-        selectedTextColorTopIconPosition = colours.inversePrimary,
-        selectedIndicatorColor = colours.inversePrimary,
-        unselectedIconColor = colours.inverseOnSurface,
-        unselectedTextColor = colours.inverseOnSurface,
+        selectedIconColor = barColours.onPill,
+        selectedTextColorTopIconPosition = barColours.selectedLabel,
+        selectedIndicatorColor = barColours.pill,
+        unselectedIconColor = barColours.onBar,
+        unselectedTextColor = barColours.onBar,
     )
     Row(
         modifier = modifier
@@ -156,8 +158,8 @@ fun KansoTabBar(
                 .weight(1f)
                 .testTag(KANSO_TAB_BAR_TAG),
             shape = CircleShape,
-            color = colours.inverseSurface,
-            contentColor = colours.inverseOnSurface,
+            color = barColours.bar,
+            contentColor = barColours.onBar,
             shadowElevation = TAB_BAR_ELEVATION,
         ) {
             Row(
