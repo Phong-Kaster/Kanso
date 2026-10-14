@@ -8,6 +8,9 @@ import android.graphics.Paint
 import android.graphics.Shader
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -43,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -64,11 +70,13 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
@@ -117,8 +125,23 @@ const val TOOL_SAVE_PROGRESS_TAG = "tool-save-progress"
 /** The test tag on the message about the last save (failed, refused, or kept sideways). */
 const val SAVE_MESSAGE_TAG = "save-message"
 
-/** The test tag on the options strip under the photo card, which says what the tool will offer. */
+/**
+ * The test tag on the options strip under the photo card, the slot that holds the tool's own
+ * controls (see `ToolPanel`).
+ */
 const val EDITOR_PANEL_TAG = "editor-panel"
+
+/**
+ * The test tag on the progress indicator shown in the middle of the photo card while an edit
+ * runs. It is gone as soon as the edit ends, well or badly.
+ */
+const val TOOL_PROGRESS_TAG = "tool-progress"
+
+/** The test tag on the Undo control at the top right, which takes back the last edit. */
+const val TOOL_UNDO_TAG = "tool-undo"
+
+/** The test tag on the plain-words message shown when an edit did not work. */
+const val TOOL_FAILURE_TAG = "tool-failure"
 
 /**
  * A semantics property carrying the Uri (as text) of the photo the image node shows.
@@ -133,11 +156,17 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * A tool screen: one tool working on one photo. Each of the five tools has a screen of its own,
  * opened for that tool and showing only it; this one function draws all five, told by its
  * [viewModel] which tool it is for. From top to bottom:
- * - a round Back button at the top left and the tool's name centred beside it;
- * - a large rounded card holding the photo, as large as fits, over a soft blurred copy of itself
- *   that fills the rest of the card, with a "Replace" chip floating at the card's bottom;
- * - the options strip, which for now says what the tool will offer in a later run;
+ * - a round Back button at the top left, the tool's name centred and an Undo control at the right;
+ * - a large rounded card holding the photo (the edited one once an edit is made), as large as
+ *   fits, over a soft blurred copy of itself that fills the rest of the card, with a "Replace"
+ *   chip floating at the card's bottom;
+ * - the options strip, holding the tool's own controls (`ToolPanel`);
  * - one full-width Save button at the bottom, clear of the phone's gesture area.
+ *
+ * While an edit runs, a progress ring fills in the middle of the card and Save and Undo are
+ * switched off, so a half-made edit cannot be saved by mistake; the screen stays responsive
+ * because the edit itself runs off the main thread (see `ToolViewModel.apply`). When an edit
+ * fails, a plain message under the top of the card says why, and the photo shown is unchanged.
  *
  * Passing data in a Navigation 3 key: the screen needs two facts to open, which tool and which
  * photo. They are not handed over in memory from the gallery; they travel inside the navigation
@@ -152,7 +181,7 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * background, and never at full size; meanwhile a loading indicator moves in the middle of the
  * card. If the photo cannot be opened, a plain message says so.
  *
- * Save can be tapped once the photo is shown, and writes a new upright JPEG into the phone's
+ * Save can be tapped once the photo is shown, and writes the edited photo (or, unedited, a new upright copy) into the phone's
  * `Pictures/Kanso` album (see `MediaStorePhotoSaver`); while it runs, Save shows a small loading
  * indicator and "Saving…". On Android 8.1 and 9 writing there needs the WRITE_EXTERNAL_STORAGE
  * permission, so the first tap asks for it; after a refusal a plain message says nothing was
@@ -228,6 +257,11 @@ fun ToolScreen(
         },
         onReplace = onReplace,
         modifier = modifier,
+        // The tool's own controls, drawn in the options strip under the photo card.
+        panel = { ToolPanel(state.tool) },
+        // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
+        onUndo = viewModel::undo,
+        onDismissFailure = viewModel::dismissFailure,
     )
 }
 
@@ -235,21 +269,32 @@ fun ToolScreen(
  * The stateless part of the tool screen (see [ToolScreen] for why there are two): draws [state],
  * the screen's one snapshot, from top to bottom.
  *
- * - The top bar: the round Back button and the tool's name, centred.
+ * - The top bar: the round Back button, the tool's name, centred, and the Undo control at the
+ *   right, usable only when there is an edit to take back and no edit is running.
  * - The photo card: whatever the photo part of [state] says (a loading indicator while the photo
- *   is decoded, the photo over its blurred backdrop when ready, a plain message when unreadable),
- *   the message about the last save at its top when the save part has one, and the "Replace" chip
- *   at its bottom. It takes all the height the other parts leave.
- * - The options strip: a short message saying what the tool will offer.
- * - The Save button, full width, at the bottom.
+ *   is decoded, the photo over its blurred backdrop when ready, a plain message when unreadable);
+ *   the edited photo in place of the original once an edit has been made; a progress ring while
+ *   an edit runs; the messages about the last failed edit and the last save at its top; and the
+ *   "Replace" chip at its bottom. It takes all the height the other parts leave.
+ * - The options strip: [panel], the tool's own controls.
+ * - The Save button, full width, at the bottom, switched off while an edit runs.
  *
  * `Scaffold` is Material's frame for a screen: it places a top bar and a bottom bar and hands the
  * content the space left between them (`innerPadding`), so nothing is drawn under either bar.
  *
+ * [panel] is a composable lambda, a slot: the caller decides what is drawn there and this function
+ * only decides where. It is empty by default, so tests and previews that do not care about the
+ * tool's controls need not pass one.
+ *
  * The photo's Uri in [state] only marks the image node for tests. Taps are reported through
  * callbacks and nothing is changed here: [onBack] for Back, [onSave] for Save (the caller decides
- * whether the storage permission must be asked for first) and [onReplace] for "Replace".
+ * whether the storage permission must be asked for first), [onReplace] for "Replace", [onUndo]
+ * for Undo and [onDismissFailure] for a tap on the failure message, which hides it.
+ *
+ * The root node sets `testTagsAsResourceId`, still marked experimental (hence the opt-in), so
+ * tools such as uiautomator can find the tags.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun ToolContent(
     state: ToolUiState,
@@ -257,10 +302,24 @@ fun ToolContent(
     onSave: () -> Unit,
     onReplace: () -> Unit = {},
     modifier: Modifier = Modifier,
+    panel: @Composable () -> Unit = {},
+    onUndo: () -> Unit = {},
+    onDismissFailure: () -> Unit = {},
 ) {
     Scaffold(
-        modifier = modifier.testTag(TOOL_SCREEN_TAG),
-        topBar = { ToolTopBar(tool = state.tool, onBack = onBack) },
+        modifier = modifier
+            .testTag(TOOL_SCREEN_TAG)
+            // Exposes every test tag below as an Android resource id, so tools outside the app
+            // (UI Automator, a device dump) can find the screen's controls by tag.
+            .semantics { testTagsAsResourceId = true },
+        topBar = {
+            ToolTopBar(
+                tool = state.tool,
+                onBack = onBack,
+                undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle,
+                onUndo = onUndo,
+            )
+        },
         bottomBar = { SaveBar(state = state, onSave = onSave) },
     ) { innerPadding ->
         // innerPadding is the space the two bars and the system bars take. consumeWindowInsets
@@ -277,30 +336,37 @@ fun ToolContent(
             PhotoCard(
                 state = state,
                 onReplace = onReplace,
+                onDismissFailure = onDismissFailure,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
-            EditorPanel(
-                tool = state.tool,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // The options strip: the slot for the tool's own controls, full width under the card.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(EDITOR_PANEL_TAG),
+            ) {
+                panel()
+            }
         }
     }
 }
 
 /**
- * The tool screen's top bar: the round Back button at the left (calls [onBack]) and [tool]'s name
- * centred across the screen.
+ * The tool screen's top bar: the round Back button at the left (calls [onBack]), [tool]'s name
+ * centred across the screen, and the Undo control at the right (calls [onUndo]; it does nothing
+ * while [undoEnabled] is false).
  *
  * `CenterAlignedTopAppBar` is Material 3's top bar whose title sits in the middle of the screen
  * rather than beside the Back button; it also keeps clear of the status bar at the top. The
- * tool's name appears exactly once as text on this screen: here.
+ * tool's name appears exactly once as text on this screen: here. Its `actions` slot holds the
+ * controls drawn at the bar's right end.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
+private fun ToolTopBar(tool: Tool, onBack: () -> Unit, undoEnabled: Boolean, onUndo: () -> Unit) {
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -318,7 +384,33 @@ private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
                     .testTag(TOOL_BACK_TAG),
             )
         },
+        actions = {
+            UndoButton(
+                enabled = undoEnabled,
+                onClick = onUndo,
+                modifier = Modifier.padding(end = 8.dp),
+            )
+        },
     )
+}
+
+/**
+ * The Undo control: the word "Undo" as a text button, calling [onClick] to take back the last
+ * edit, one at a time, down to the original photo. While [enabled] is false (nothing to take
+ * back, or an edit running) it is drawn faint and ignores taps.
+ *
+ * A text button is Material's quietest button, a word with no container, the usual look for a
+ * secondary action in a top bar. Its visible word is also what screen readers say for it.
+ */
+@Composable
+private fun UndoButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.testTag(TOOL_UNDO_TAG),
+    ) {
+        Text(stringResource(R.string.tool_undo))
+    }
 }
 
 /**
@@ -336,7 +428,7 @@ private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
  * taller (`union`), then keeps a small margin above that.
  *
  * Save is always visible, so the screen does not jump, and can be tapped once the photo is shown
- * and no save is running. While a save runs it shows a small loading indicator
+ * and neither a save nor an edit is running. While a save runs it shows a small loading indicator
  * ([SavingIndicator]) and "Saving…".
  */
 @Composable
@@ -354,7 +446,9 @@ private fun SaveBar(state: ToolUiState, onSave: () -> Unit) {
         Button(
             onClick = onSave,
             shapes = ButtonDefaults.shapesFor(height),
-            enabled = state.photo is ToolUiState.PhotoState.Ready && !saving,
+            // Off while an edit runs too, so a half-made edit can never be saved by mistake.
+            enabled = state.photo is ToolUiState.PhotoState.Ready && !saving &&
+                state.processing is ToolUiState.Processing.Idle,
             contentPadding = ButtonDefaults.contentPaddingFor(height, hasStartIcon = true),
             modifier = Modifier
                 .fillMaxWidth()
@@ -422,14 +516,25 @@ private fun SavingIndicator() {
  *
  * Inside it ([TOOL_BODY_TAG]): a loading indicator while the photo is decoded; the photo when it
  * is ready, as large as fits, over a [BlurredBackdrop] of itself that fills the rest of the card;
- * a plain message when it cannot be opened; and the message about the last save, if any, at the
- * top. The "Replace" chip floats 16 dp above the card's bottom edge over all of it.
+ * a plain message when it cannot be opened; a progress ring ([EditProgress]) while an edit runs;
+ * and, at the top, the message about the last failed edit (a tap hides it, calling
+ * [onDismissFailure]) and the message about the last save, if any. The "Replace" chip floats
+ * 16 dp above the card's bottom edge over all of it.
  *
- * Replace is switched off while a save runs, so the screen cannot be left under a save that has
- * not finished.
+ * Once an edit has been made, the card shows `state.edited` instead of the decoded original; a
+ * failed edit leaves `edited` as it was, so the photo shown never changes on a failure.
+ *
+ * Replace is switched off while a save or an edit runs, so the screen cannot be left under work
+ * that has not finished.
  */
 @Composable
-private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modifier = Modifier) {
+private fun PhotoCard(
+    state: ToolUiState,
+    onReplace: () -> Unit,
+    onDismissFailure: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val running = state.processing as? ToolUiState.Processing.Running
     Card(
         shape = MaterialTheme.shapes.extraLarge,
         modifier = modifier.testTag(TOOL_CARD_TAG),
@@ -444,9 +549,11 @@ private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modif
                 // Decoding takes a moment; meanwhile an indicator moves in the middle of the card.
                 ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
                 is ToolUiState.PhotoState.Ready -> {
+                    // The edited photo when there is one, else the decoded original.
+                    val shown = state.edited ?: current.bitmap
                     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and
                     // remember keeps the wrapper between redraws.
-                    val image = remember(current.bitmap) { current.bitmap.asImageBitmap() }
+                    val image = remember(shown) { shown.asImageBitmap() }
                     BlurredBackdrop(photo = image)
                     PhotoView(image = image, photoUri = state.photoUri)
                 }
@@ -459,14 +566,28 @@ private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modif
                         .testTag(TOOL_UNREADABLE_TAG),
                 )
             }
-            saveMessageRes(state.save)?.let { messageRes ->
-                SaveMessage(
-                    text = stringResource(messageRes),
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
+            // AnimatedVisibility fades the ring in when an edit starts and out when it ends; while
+            // it fades out the edit is over, so the ring is drawn full.
+            androidx.compose.animation.AnimatedVisibility(visible = running != null, enter = fadeIn(), exit = fadeOut()) {
+                EditProgress(progress = running?.progress ?: 1f)
+            }
+            // The messages stack at the top of the card: the failed edit's, then the save's.
+            Column(
+                modifier = Modifier.align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                state.failure?.let { failure ->
+                    FailureMessage(
+                        text = stringResource(failureMessageRes(failure)),
+                        onDismiss = onDismissFailure,
+                    )
+                }
+                saveMessageRes(state.save)?.let { messageRes ->
+                    SaveMessage(text = stringResource(messageRes))
+                }
             }
             ReplaceChip(
-                enabled = state.save != ToolUiState.SaveState.Saving,
+                enabled = state.save != ToolUiState.SaveState.Saving && running == null,
                 onClick = onReplace,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -531,39 +652,80 @@ private fun PhotoLoadingIndicator() {
 }
 
 /**
- * The options strip under the photo card: a short message saying what [tool] will offer once its
- * controls exist, on a rounded container in the theme's `surfaceContainerLow` colour.
+ * The progress ring in the middle of the photo card while an edit runs, filled to [progress]
+ * (0 = just started, 1 = done).
+ *
+ * It is a determinate `CircularProgressIndicator`: given a value, it draws that share of the ring
+ * and does not move by itself, so it never keeps a test or a preview waiting. The value the edit
+ * reports jumps in steps; `animateFloatAsState` turns each jump into a short smooth glide from the
+ * old value to the new one, so the ring fills steadily. It sits on a small round surface in the
+ * theme's `surfaceContainerHigh` colour, so it stays visible over any photo.
+ *
+ * It shows no text; its content description, which screen readers say, tells that the photo is
+ * being edited, and the indicator itself reports how far along it is.
  */
 @Composable
-private fun EditorPanel(tool: Tool, modifier: Modifier = Modifier) {
+private fun EditProgress(progress: Float) {
+    val description = stringResource(R.string.tool_progress_description)
+    // The animated value follows `progress`, gliding to each new one instead of jumping.
+    val shown by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        label = "edit progress",
+    )
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        shape = MaterialTheme.shapes.large,
-        modifier = modifier.testTag(EDITOR_PANEL_TAG),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = CircleShape,
     ) {
-        Text(
-            text = stringResource(panelMessageRes(tool)),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
+        CircularProgressIndicator(
+            // A lambda, so only the drawing is redone as the value glides, not the layout.
+            progress = { shown },
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(12.dp)
+                .size(48.dp)
+                .testTag(TOOL_PROGRESS_TAG)
+                .semantics { contentDescription = description },
         )
     }
 }
 
 /**
- * Returns the options-strip message for [tool]: what that tool will offer once its controls
- * exist. Every tool has one, and the `when` has no `else` on purpose: a sixth [Tool] would not
- * compile until it is given a message here.
+ * Returns the plain-words message for [failure]: what went wrong, and that the photo is
+ * unchanged. The `when` has no `else` on purpose: a new kind of [EditFailure] would not compile
+ * until it is given a message here.
  */
-private fun panelMessageRes(tool: Tool): Int = when (tool) {
-    Tool.EDIT -> R.string.editor_panel_edit
-    Tool.REMOVE_BACKGROUND -> R.string.editor_panel_remove_background
-    Tool.ENHANCE -> R.string.editor_panel_enhance
-    Tool.RETOUCH -> R.string.editor_panel_retouch
-    Tool.ARTISTIC -> R.string.editor_panel_artistic
+private fun failureMessageRes(failure: EditFailure): Int = when (failure) {
+    EditFailure.OutOfMemory -> R.string.tool_failed_out_of_memory
+    EditFailure.NoSubject -> R.string.tool_failed_no_subject
+    EditFailure.NoFace -> R.string.tool_failed_no_face
+    EditFailure.ModelUnavailable -> R.string.tool_failed_model_unavailable
+    EditFailure.Other -> R.string.tool_failed_other
+}
+
+/**
+ * Shows [text], why the last edit did not work, on a card in the theme's error-container colours
+ * at the top of the photo card. A tap on it calls [onDismiss], which hides it; the next edit
+ * replaces it too. Screen readers announce it as soon as it appears.
+ */
+@Composable
+private fun FailureMessage(text: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    // Surface with onClick is a tappable card: it gets press feedback and a button's semantics.
+    Surface(
+        onClick = onDismiss,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier
+            .padding(16.dp)
+            .testTag(TOOL_FAILURE_TAG)
+            // A polite live region: TalkBack reads the message without interrupting itself.
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+    }
 }
 
 /**
@@ -688,12 +850,13 @@ private fun ToolPhotoPreview() {
             onBack = {},
             onSave = {},
             onReplace = {},
+            panel = { ToolPanel(Tool.EDIT) },
         )
     }
 }
 
 /**
- * The Enhance screen on the same photo: the title and the options strip's message are
+ * The Enhance screen on the same photo: the title and the controls in the options strip are
  * Enhance's own.
  */
 @PreviewLightDark
@@ -710,6 +873,7 @@ private fun ToolEnhancePreview() {
             onBack = {},
             onSave = {},
             onReplace = {},
+            panel = { ToolPanel(Tool.ENHANCE) },
         )
     }
 }
@@ -732,6 +896,7 @@ private fun ToolNarrowPhotoPreview() {
             onBack = {},
             onSave = {},
             onReplace = {},
+            panel = { ToolPanel(Tool.RETOUCH) },
         )
     }
 }
@@ -754,6 +919,7 @@ private fun ToolUnreadablePreview() {
             onBack = {},
             onSave = {},
             onReplace = {},
+            panel = { ToolPanel(Tool.EDIT) },
         )
     }
 }
@@ -776,6 +942,60 @@ private fun ToolSaveFailedPreview() {
             onBack = {},
             onSave = {},
             onReplace = {},
+            panel = { ToolPanel(Tool.EDIT) },
+        )
+    }
+}
+
+/**
+ * The Remove background screen while an edit runs, a little over half done: the progress ring
+ * in the middle of the photo, and Save, Undo and Replace switched off. The ring has a fixed
+ * value and does not move by itself, so the preview draws one still picture.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolEditingPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            state = ToolUiState(
+                tool = Tool.REMOVE_BACKGROUND,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Idle,
+                canUndo = true,
+                processing = ToolUiState.Processing.Running(progress = 0.6f),
+            ),
+            onBack = {},
+            onSave = {},
+            onReplace = {},
+            panel = { ToolPanel(Tool.REMOVE_BACKGROUND) },
+        )
+    }
+}
+
+/**
+ * The Retouch screen after an edit failed because no face was found: the plain message at the
+ * top of the card, the photo unchanged under it, and Undo usable because an earlier edit
+ * (the narrow sample photo standing in for it) can still be taken back.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolEditFailedPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            state = ToolUiState(
+                tool = Tool.RETOUCH,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Idle,
+                edited = sampleNarrowPhoto(),
+                canUndo = true,
+                failure = EditFailure.NoFace,
+            ),
+            onBack = {},
+            onSave = {},
+            onReplace = {},
+            panel = { ToolPanel(Tool.RETOUCH) },
         )
     }
 }

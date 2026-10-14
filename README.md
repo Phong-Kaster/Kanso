@@ -27,11 +27,11 @@ not a roadmap. Where the UI promises something the code does not do yet, this fi
 
 | Feature | Where you reach it | State | What really happens |
 |---|---|---|---|
-| **Edit** (crop, colour, filters) | Home shortcut, a "Recent edits" photo, the Camera button, "Edit" in the photo viewer | **UI only** | Shows the photo; Save writes an upright copy of the original. Panel: "Crop, colour and filter controls are coming in a later run." |
-| **Remove background** | Home carousel banner and shortcut | **UI only** | Same as Edit. Panel: "Cutting the subject out of its background is coming in a later run." |
-| **Enhance** | Home carousel banner and shortcut | **UI only** | Same as Edit. Panel: "One-tap sharpening and lighting fixes are coming in a later run." |
-| **Retouch** | Home carousel banner and shortcut | **UI only** | Same as Edit. Panel: "Face and skin retouching tools are coming in a later run." |
-| **Artistic** | Home carousel banner and shortcut | **UI only** | Same as Edit. Panel: "Painterly styles and effects are coming in a later run." |
+| **Edit** (crop, colour, filters) | Home shortcut, a "Recent edits" photo, the Camera button, "Edit" in the photo viewer | **UI only** | Shows the photo; Save writes an upright copy of the original. Its controls panel is an empty slot until this tool is built (Run 8). |
+| **Remove background** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
+| **Enhance** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
+| **Retouch** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
+| **Artistic** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
 | **Turn upright (EXIF orientation)** | Automatic, on display and on Save | **Works** | The only change Kanso makes to pixels today. See [below](#turn-upright-the-one-pixel-change-kanso-makes). |
 | Engine features in `core/` (crop UI, filters, brushes, AI models) | Nowhere | **Not wired** | Compiled into the APK; no code in `app/` calls them. See [The image engine](#the-image-engine-in-core-and-libs-built-but-not-called). |
 
@@ -41,7 +41,7 @@ not a roadmap. Where the UI promises something the code does not do yet, this fi
 |---|---|---|
 | Photo gallery with albums, per tool | Works | MediaStore, through `core/gallery`'s `MediaRepository`. Handles full, partial (Android 14+) and refused photo access. |
 | Camera (take, keep or retake) | Works | CameraX; back/front lens, flash auto/on/off, pinch to zoom. |
-| Save to `Pictures/Kanso` | Works | New JPEG-named file each time. The original is never changed. |
+| Save to `Pictures/Kanso` | Works | New file each time: a JPEG (quality 95), or a PNG when an edited picture carries transparency. The original is never changed. |
 | Saved screen and Share | Works | Android share sheet with a one-off read grant. |
 | My edits tab and photo viewer | Works | Lists what Kanso saved in `Pictures/Kanso`, newest first. |
 | Home "Recent edits" strip | Works | The newest 10 saved photos. |
@@ -99,15 +99,20 @@ popped. It depends on nothing from `core/`.
 **4. What the screen shows** (`ui/tool/ToolScreen.kt`)
 
 A Back button and the tool's name; the photo in a rounded card over a blurred copy of itself; a
-"Replace" chip, which goes back to this tool's gallery (`replaceWithGallery`); the panel with the
-"coming in a later run" message (`EditorPanel`, strings in `res/values/strings_tool.xml`); and a
-full-width Save button, enabled once the photo is shown. **There are no editing controls, and the
-bitmap is never changed after decoding.**
+"Replace" chip, which goes back to this tool's gallery (`replaceWithGallery`); an Undo button
+(`tool-undo`, top right); a progress ring (`tool-progress`) and a plain-words failure message
+(`tool-failure`) when an edit runs or fails; the tool's panel slot (`ToolPanel.kt`, empty for now);
+and a full-width Save button, disabled while an edit runs. **No tool has controls yet.** The
+pipeline they will use is in place: `ToolViewModel.apply(processor)` shrinks the shown bitmap to
+the tool's working size (`data/edit/WorkingSize.kt`), runs a `ToolProcessor` off the main thread
+with progress, and on success keeps the result as the shown photo and the previous one for Undo; a
+failure (`EditFailure`) leaves the photo as it was.
 
 **5. Saving** (`ToolViewModel.save()` → `data/photo/MediaStorePhotoSaver.kt`)
 
-- `ToolViewModel.save()` calls `saver.save(photoUri)` with the **original Uri**, not the decoded
-  bitmap. A second tap while a save is running is ignored.
+- `ToolViewModel.save()` calls `saver.save(photoUri)` with the **original Uri** for an unedited
+  photo, and `saver.save(bitmap)` with the shown edited bitmap otherwise (JPEG q95, or PNG when the
+  bitmap has an alpha channel; same name scheme, same size as shown). A second tap while a save is running is ignored.
 - On Android 8.1 and 9 (API 27–28), `needsWritePermission()` is true until
   `WRITE_EXTERNAL_STORAGE` is granted, so the screen asks first. A refusal shows "Kanso needs
   permission to write to your storage to save the photo. Nothing was saved." Android 10+ asks for

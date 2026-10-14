@@ -2,6 +2,7 @@ package com.phongkaster.kanso.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.media.MediaStorePhotoSource
 import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
 import com.phongkaster.kanso.data.media.PhotoSource
@@ -72,8 +73,12 @@ val appModule = module {
             loader = get(),
             probe = get(),
             saver = get(),
+            registry = get(),
         )
     }
+
+    // Which processor edits the photo for each tool; a tool whose engine is not built yet has none.
+    single { ProcessorRegistry() }
 
     // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
     viewModel { params -> SavedViewModel(

@@ -422,6 +422,10 @@ class SavedScreenTest {
 
         assertChooserFor(chooser, Uri.parse(CONTENT_URI))
         compose.waitForIdle()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            shares >= 1
+        }
         assertEquals(1, shares)
     }
 

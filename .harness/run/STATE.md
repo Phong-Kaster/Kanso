@@ -2,16 +2,16 @@
 
 ## Current
 
-- **Stage:** bootstrap
+- **Stage:** phase 1 done
 - **Loop Branch:** loop/kanso-editing-tools
-- **Next Phase:** T-001 (blocked until D-001, the DoD approval, is answered)
+- **Next Phase:** T-002, T-003, T-004
 - **DONE-candidate:** no
 
 ## Progress
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | pending | data/edit, ui/tool, data/photo, di | - |
+| T-001 | complete | data/edit, ui/tool, data/photo, di | evidence/p1-full-2.log |
 | T-002 | pending | data/edit/edit, EditPanel | - |
 | T-003 | pending | data/edit/cutout, CutoutPanel | - |
 | T-004 | pending | data/edit/enhance, EnhancePanel | - |

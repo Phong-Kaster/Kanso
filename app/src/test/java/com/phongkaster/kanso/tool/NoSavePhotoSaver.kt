@@ -1,5 +1,6 @@
 package com.phongkaster.kanso.tool
 
+import android.graphics.Bitmap
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.photo.SaveResult
 
@@ -14,4 +15,7 @@ class NoSavePhotoSaver : PhotoSaver {
 
     /** Writes nothing and reports failure. */
     override suspend fun save(sourceUri: String): SaveResult = SaveResult.Failed
+
+    /** Writes nothing for an edited picture either, and reports failure. */
+    override suspend fun save(bitmap: Bitmap): SaveResult = SaveResult.Failed
 }

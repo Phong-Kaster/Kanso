@@ -1,0 +1,1596 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/EditFailure.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/EditFailure.kt
+new file mode 100644
+index 0000000..d661034
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/EditFailure.kt
+@@ -0,0 +1,28 @@
++package com.phongkaster.kanso.data.edit
++
++/**
++ * Why an edit could not be made. A tool processor reports one of these instead of throwing, so
++ * the tool screen can tell the person what happened in plain words while the photo on screen
++ * stays exactly as it was.
++ *
++ * It is a sealed interface: every possible reason is listed here, and a `when` over it must
++ * handle each one, so adding a reason later makes the compiler point at every place that has to
++ * show it.
++ */
++sealed interface EditFailure {
++
++    /** The phone ran out of memory while working on the photo. */
++    data object OutOfMemory : EditFailure
++
++    /** The tool looked for a subject to cut out (a person, for example) and found none. */
++    data object NoSubject : EditFailure
++
++    /** The tool needs a face to work on and found none in the photo. */
++    data object NoFace : EditFailure
++
++    /** The machine-learning model the tool needs would not load on this phone. */
++    data object ModelUnavailable : EditFailure
++
++    /** Something else went wrong that the tool cannot name more precisely. */
++    data object Other : EditFailure
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/EditResult.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/EditResult.kt
+new file mode 100644
+index 0000000..e3ddcbe
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/EditResult.kt
+@@ -0,0 +1,23 @@
++package com.phongkaster.kanso.data.edit
++
++import android.graphics.Bitmap
++
++/**
++ * What came of one run of a tool processor: either the edited picture or the reason there is
++ * none. Returning a result instead of throwing keeps failure an ordinary value that the tool
++ * screen's ViewModel can show, rather than an exception that might escape and crash the app.
++ */
++sealed interface EditResult {
++
++    /**
++     * The edit worked. [bitmap] is the new picture, at the working size the processor was given;
++     * the caller keeps it as the photo's current state and can still undo back to the one before.
++     */
++    data class Edited(val bitmap: Bitmap) : EditResult
++
++    /**
++     * The edit did not work, for the reason in [failure]. The photo the caller had stays as it
++     * was: nothing about it has changed.
++     */
++    data class Failed(val failure: EditFailure) : EditResult
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/ProcessorRegistry.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/ProcessorRegistry.kt
+new file mode 100644
+index 0000000..9b1b46c
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/ProcessorRegistry.kt
+@@ -0,0 +1,17 @@
++package com.phongkaster.kanso.data.edit
++
++import com.phongkaster.kanso.navigation.Tool
++
++/**
++ * Knows which [ToolProcessor] does each tool's default edit. The app builds one in its Koin
++ * module and hands it to the tool screen's ViewModel, so the ViewModel never builds an engine
++ * itself, and a test can pass a registry holding fake processors.
++ *
++ * A tool with no entry has no processor built yet; [processorFor] then returns null and the
++ * screen simply has nothing to run.
++ */
++class ProcessorRegistry(private val processors: Map<Tool, ToolProcessor> = emptyMap()) {
++
++    /** Returns the processor registered for [tool], or null when that tool has none yet. */
++    fun processorFor(tool: Tool): ToolProcessor? = processors[tool]
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/ToolProcessor.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/ToolProcessor.kt
+new file mode 100644
+index 0000000..04bde5b
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/ToolProcessor.kt
+@@ -0,0 +1,34 @@
++package com.phongkaster.kanso.data.edit
++
++import android.graphics.Bitmap
++
++/**
++ * One editing step a tool can run on a photo: removing a background, enhancing it, applying a
++ * style and so on. It is the seam between the tool screen and the engine that does the work, so
++ * the screen's ViewModel runs every tool the same way, and a test can hand it a fake processor
++ * instead of the native engine (which cannot load in a JVM test).
++ *
++ * The contract every processor keeps:
++ * - It does its heavy work off the main thread, by switching to a background dispatcher itself
++ *   (`withContext(Dispatchers.Default)` for computation, `Dispatchers.IO` for reading files), so
++ *   the screen stays responsive while it runs. The caller only launches it in a coroutine.
++ * - It reports how far along it is through [process]'s `onProgress`, as a number from 0 (just
++ *   started) to 1 (done).
++ * - It never throws for a failed edit. It returns [EditResult.Failed] with the reason instead;
++ *   an `OutOfMemoryError` becomes [EditFailure.OutOfMemory].
++ * - The one exception it lets through is `CancellationException`: when the person leaves the
++ *   screen the coroutine is cancelled, and swallowing that would keep work running for nobody.
++ *   A cancellation must never be turned into a failure.
++ *
++ * Each tool's own processor takes its own settings (a style, a strength, a colour) through its
++ * constructor; this interface is only the common way to run one.
++ */
++interface ToolProcessor {
++
++    /**
++     * Edits [input] and returns the edited picture, or the reason it could not. [input] is
++     * already scaled down to the tool's working size (see [WorkingSize]) and is not changed: the
++     * result is a new bitmap. [onProgress] is called with values from 0 to 1 as the work goes on.
++     */
++    suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt
+new file mode 100644
+index 0000000..0a63b9b
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt
+@@ -0,0 +1,60 @@
++package com.phongkaster.kanso.data.edit
++
++import android.graphics.Bitmap
++import com.phongkaster.kanso.navigation.Tool
++import kotlin.math.max
++import kotlin.math.roundToInt
++
++/**
++ * The largest picture each tool works on, measured as its longest edge in pixels.
++ *
++ * A phone photo can be 4000 x 3000 pixels or more, and the heavy tools need several copies of it
++ * in memory at once; Enhance even makes its output four times wider and taller. So before a tool
++ * runs, the photo is scaled down to a smaller working copy (keeping its shape) instead of letting
++ * the app run out of memory and crash on a very large photo.
++ */
++object WorkingSize {
++
++    /** Longest edge, in pixels, that Remove background works on. */
++    const val REMOVE_BACKGROUND = 2000
++
++    /**
++     * Longest edge, in pixels, that Enhance works on. It is small because Enhance upscales four
++     * times: a 512-pixel input already becomes a 2048-pixel result.
++     */
++    const val ENHANCE = 512
++
++    /** Longest edge, in pixels, that Retouch works on. */
++    const val RETOUCH = 2000
++
++    /** Longest edge, in pixels, that the Artistic styles work on. */
++    const val ARTISTIC = 1024
++
++    /** Longest edge, in pixels, that the general Edit tool works on. */
++    const val EDIT = 2000
++
++    /** Returns the longest edge, in pixels, that [tool] works on. */
++    fun maxEdgeFor(tool: Tool): Int = when (tool) {
++        Tool.EDIT -> EDIT
++        Tool.REMOVE_BACKGROUND -> REMOVE_BACKGROUND
++        Tool.ENHANCE -> ENHANCE
++        Tool.RETOUCH -> RETOUCH
++        Tool.ARTISTIC -> ARTISTIC
++    }
++
++    /**
++     * Returns [bitmap] scaled down so its longest edge is at most [maxEdgePx], keeping its aspect
++     * ratio. When it already fits, the same bitmap comes back and no copy is made, so a small
++     * photo costs no extra memory. The scaled copy is filtered (smoothed) so it does not look
++     * jagged. The original [bitmap] is never changed.
++     */
++    fun fit(bitmap: Bitmap, maxEdgePx: Int): Bitmap {
++        val longest = max(bitmap.width, bitmap.height)
++        if (longest <= maxEdgePx) return bitmap
++        val scale = maxEdgePx.toFloat() / longest
++        // At least one pixel on each side, so a very long thin picture still gives a valid bitmap.
++        val width = (bitmap.width * scale).roundToInt().coerceIn(1, maxEdgePx)
++        val height = (bitmap.height * scale).roundToInt().coerceIn(1, maxEdgePx)
++        return Bitmap.createScaledBitmap(bitmap, width, height, true)
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt
+index f18358b..3b8da3d 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt
+@@ -24,7 +24,8 @@ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.withContext
+ 
+ /**
+- * Saves a photo as a new, upright JPEG in the phone's `Pictures/Kanso` album.
++ * Saves a photo as a new, upright JPEG in the phone's `Pictures/Kanso` album, or an edited
++ * picture as it is: a JPEG when it is opaque, a PNG when it has see-through pixels (a cut-out).
+  *
+  * MediaStore and scoped storage, in plain words:
+  *
+@@ -48,8 +49,8 @@ import kotlinx.coroutines.withContext
+  * it is, tag included, and the result says so ([SaveResult.Saved.keptOriginalOrientation]).
+  *
+  * The original photo is only ever opened for reading; it is never changed. Every save makes a
+- * new file named `Kanso_<yyyyMMdd_HHmmss>.jpg`, with `_1`, `_2` ... added when that name is
+- * taken, so an existing picture is never overwritten.
++ * new file named `Kanso_<yyyyMMdd_HHmmss>.jpg` (`.png` for a picture with see-through pixels),
++ * with `_1`, `_2` ... added when that name is taken, so an existing picture is never overwritten.
+  *
+  * [context] gives the ContentResolver; [decoder] decodes a turned photo at full size (tests pass
+  * one that runs out of memory); [now] tells the time in milliseconds, used for the file name.
+@@ -86,10 +87,12 @@ class MediaStorePhotoSaver(
+             val output = prepare(source) ?: return@withContext SaveResult.Failed
+             try {
+                 val baseName = FILE_PREFIX + SimpleDateFormat(TIME_PATTERN, Locale.US).format(Date(now()))
++                // An unedited photo is always a JPEG: its own bytes, or its pixels turned upright.
++                val writePhoto: (OutputStream) -> Unit = { write(it, source, output) }
+                 val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+-                    writeToMediaStore(baseName, source, output)
++                    writeToMediaStore(baseName, JPEG_EXTENSION, JPEG_MIME_TYPE, writePhoto)
+                 } else {
+-                    writeToPicturesFolder(baseName, source, output)
++                    writeToPicturesFolder(baseName, JPEG_EXTENSION, JPEG_MIME_TYPE, writePhoto)
+                 }
+                 SaveResult.Saved(saved, output.keptOriginalOrientation)
+             } finally {
+@@ -106,6 +109,49 @@ class MediaStorePhotoSaver(
+         }
+     }
+ 
++    /**
++     * Saves [bitmap], the picture the person edited, exactly as it is: no scaling, no turning.
++     *
++     * The format follows the picture (see [saveFormatFor]): a picture with an alpha channel, such
++     * as a cut-out whose background was removed, is written as a PNG, the only common format
++     * that keeps see-through pixels; any other picture is written as a JPEG at quality 95, which
++     * is far smaller and looks the same to the eye. The file name, its extension (`.jpg` or
++     * `.png`) and the type MediaStore and the media scanner are told (`image/jpeg` or
++     * `image/png`) all follow that choice, in the same `Pictures/Kanso` album and with the same
++     * `Kanso_<yyyyMMdd_HHmmss>` naming as [save] for an unedited photo.
++     *
++     * The work runs on Dispatchers.IO so the screen keeps drawing. The bitmap is only read: it is
++     * not recycled, because the screen is still showing it. The original photo is not touched at
++     * all. Any failure gives [SaveResult.Failed], and the half-written row or file is deleted.
++     */
++    override suspend fun save(bitmap: Bitmap): SaveResult = withContext(Dispatchers.IO) {
++        try {
++            val format = saveFormatFor(bitmap)
++            val extension = extensionFor(format)
++            val mimeType = mimeTypeFor(format)
++            val baseName = FILE_PREFIX + SimpleDateFormat(TIME_PATTERN, Locale.US).format(Date(now()))
++            val writeBitmap: (OutputStream) -> Unit = { stream ->
++                // compress encodes the pixels as they are; PNG is lossless and ignores the quality.
++                if (!bitmap.compress(format, EDITED_JPEG_QUALITY, stream)) {
++                    throw IOException("The $mimeType encoder failed")
++                }
++            }
++            val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++                writeToMediaStore(baseName, extension, mimeType, writeBitmap)
++            } else {
++                writeToPicturesFolder(baseName, extension, mimeType, writeBitmap)
++            }
++            SaveResult.Saved(saved)
++        } catch (e: CancellationException) {
++            throw e
++        } catch (_: Exception) {
++            // Full disk, access taken away, MediaStore refusing the row, the encoder failing.
++            SaveResult.Failed
++        } catch (_: OutOfMemoryError) {
++            SaveResult.Failed
++        }
++    }
++
+     /**
+      * Works out what to write for the photo at [source]: its own bytes when it is already
+      * upright (or too large to turn), else the turned pixels. Returns null when the photo carries
+@@ -131,18 +177,24 @@ class MediaStorePhotoSaver(
+     }
+ 
+     /**
+-     * Android 10 and later: adds a pending row to MediaStore in `Pictures/Kanso/`, writes the
+-     * photo into it, then publishes it. Returns the new row's content Uri as text. If anything
+-     * fails after the row exists, the row is deleted again and the error is passed on.
++     * Android 10 and later: adds a pending row to MediaStore in `Pictures/Kanso/`, named
++     * [baseName] with [extension] and typed [mimeType], lets [writeBytes] write the picture into
++     * it, then publishes it. Returns the new row's content Uri as text. If anything fails after
++     * the row exists, the row is deleted again and the error is passed on.
+      */
+     @RequiresApi(Build.VERSION_CODES.Q)
+-    private fun writeToMediaStore(baseName: String, source: Uri, output: Output): String {
++    private fun writeToMediaStore(
++        baseName: String,
++        extension: String,
++        mimeType: String,
++        writeBytes: (OutputStream) -> Unit,
++    ): String {
+         // VOLUME_EXTERNAL_PRIMARY is the phone's main shared storage, where the gallery looks.
+         val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+-        val name = uniqueName(baseName, namesTakenInMediaStore(baseName))
++        val name = uniqueName(baseName, namesTakenInMediaStore(baseName), extension)
+         val values = ContentValues().apply {
+             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+-            put(MediaStore.MediaColumns.MIME_TYPE, JPEG_MIME_TYPE)
++            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+             put(MediaStore.MediaColumns.RELATIVE_PATH, RELATIVE_PATH)
+             // Hidden from other apps until the bytes are all written.
+             put(MediaStore.MediaColumns.IS_PENDING, 1)
+@@ -150,7 +202,7 @@ class MediaStorePhotoSaver(
+         val row = resolver.insert(collection, values) ?: throw IOException("MediaStore made no row")
+         try {
+             val stream = resolver.openOutputStream(row) ?: throw IOException("No stream for $row")
+-            stream.use { write(it, source, output) }
++            stream.use(writeBytes)
+             val publish = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
+             // Zero rows changed means the picture is still hidden: that is a failed save.
+             if (resolver.update(row, publish, null, null) == 0) throw IOException("Not published")
+@@ -186,19 +238,25 @@ class MediaStorePhotoSaver(
+     }
+ 
+     /**
+-     * Android 8.1 and 9: writes the photo as a new file in `<Pictures>/Kanso/`, then asks the
+-     * media scanner to add it to MediaStore. Returns the file's Uri as text (the scanner gives
+-     * the content Uri only later, in the background). A half-written file is deleted again.
++     * Android 8.1 and 9: lets [writeBytes] write the picture as a new file in `<Pictures>/Kanso/`
++     * named [baseName] with [extension], then asks the media scanner to add it to MediaStore as
++     * [mimeType]. Returns the file's Uri as text (the scanner gives the content Uri only later,
++     * in the background). A half-written file is deleted again.
+      */
+-    private fun writeToPicturesFolder(baseName: String, source: Uri, output: Output): String {
++    private fun writeToPicturesFolder(
++        baseName: String,
++        extension: String,
++        mimeType: String,
++        writeBytes: (OutputStream) -> Unit,
++    ): String {
+         // Deprecated from Android 10, where scoped storage replaces it; here it is the only way.
+         @Suppress("DEPRECATION")
+         val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+         val folder = File(pictures, ALBUM_NAME)
+         if (!folder.isDirectory && !folder.mkdirs()) throw IOException("Cannot make $folder")
+-        val file = createUniqueFile(folder, baseName)
++        val file = createUniqueFile(folder, baseName, extension)
+         try {
+-            FileOutputStream(file).use { write(it, source, output) }
++            FileOutputStream(file).use(writeBytes)
+         } catch (t: Throwable) {
+             file.delete()
+             throw t
+@@ -208,20 +266,20 @@ class MediaStorePhotoSaver(
+         MediaScannerConnection.scanFile(
+             appContext,
+             arrayOf(file.absolutePath),
+-            arrayOf(JPEG_MIME_TYPE),
++            arrayOf(mimeType),
+             null,
+         )
+         return Uri.fromFile(file).toString()
+     }
+ 
+     /**
+-     * Creates and returns a new empty file in [folder] named after [baseName], adding `_1`, `_2`
+-     * ... until the name is free. createNewFile makes the file only if no file of that name
+-     * exists, in one step, so two saves can never pick the same name.
++     * Creates and returns a new empty file in [folder] named after [baseName] with [extension],
++     * adding `_1`, `_2` ... until the name is free. createNewFile makes the file only if no file
++     * of that name exists, in one step, so two saves can never pick the same name.
+      */
+-    private fun createUniqueFile(folder: File, baseName: String): File {
++    private fun createUniqueFile(folder: File, baseName: String, extension: String): File {
+         for (suffix in 0..MAX_SUFFIX) {
+-            val file = File(folder, nameWithSuffix(baseName, suffix))
++            val file = File(folder, nameWithSuffix(baseName, suffix, extension))
+             if (file.createNewFile()) return file
+         }
+         throw IOException("No free name for $baseName in $folder")
+@@ -280,18 +338,61 @@ class MediaStorePhotoSaver(
+         /** Where MediaStore puts the file on Android 10 and later; it ends with a slash. */
+         const val RELATIVE_PATH = "Pictures/Kanso/"
+ 
+-        /** The type of every saved file. */
+-        const val JPEG_MIME_TYPE = "image/jpeg"
++        /**
++         * The JPEG quality of an edited picture, out of 100: high enough that no loss shows, and
++         * still several times smaller than a PNG of a photo. A PNG ignores it.
++         */
++        const val EDITED_JPEG_QUALITY = 95
+ 
+         /** How many numbered names are tried before giving up. */
+         const val MAX_SUFFIX = 9_999
+     }
+ }
+ 
+-/** Returns `[baseName].jpg` for [suffix] 0, else `[baseName]_[suffix].jpg`. */
+-internal fun nameWithSuffix(baseName: String, suffix: Int): String =
+-    if (suffix == 0) "$baseName.jpg" else "${baseName}_$suffix.jpg"
++/** The type of a saved JPEG, told to MediaStore and the media scanner. */
++internal const val JPEG_MIME_TYPE = "image/jpeg"
+ 
+-/** Returns the first name built from [baseName] (see [nameWithSuffix]) that is not in [taken]. */
+-internal fun uniqueName(baseName: String, taken: Set<String>): String =
+-    generateSequence(0) { it + 1 }.map { nameWithSuffix(baseName, it) }.first { it !in taken }
++/** The type of a saved PNG (a picture with see-through pixels, such as a cut-out). */
++internal const val PNG_MIME_TYPE = "image/png"
++
++/** The file extension of a saved JPEG, without its dot. */
++internal const val JPEG_EXTENSION = "jpg"
++
++/** The file extension of a saved PNG, without its dot. */
++internal const val PNG_EXTENSION = "png"
++
++/**
++ * Chooses how an edited picture is written: PNG when [hasAlpha] (the picture has an alpha
++ * channel, so some pixels may be see-through, as in a cut-out), else JPEG.
++ *
++ * Bitmap.hasAlpha only says the picture carries an alpha channel, not that a pixel actually uses
++ * it; checking every pixel would cost a full pass over a large picture, so a picture with the
++ * channel is always kept as a PNG, which loses nothing either way.
++ */
++internal fun saveFormatFor(hasAlpha: Boolean): Bitmap.CompressFormat =
++    if (hasAlpha) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
++
++/** Chooses how [bitmap] is written; see the Boolean overload for the rule. */
++internal fun saveFormatFor(bitmap: Bitmap): Bitmap.CompressFormat = saveFormatFor(bitmap.hasAlpha())
++
++/** Returns the MIME type of a file written in [format]: `image/png` or `image/jpeg`. */
++internal fun mimeTypeFor(format: Bitmap.CompressFormat): String =
++    if (format == Bitmap.CompressFormat.PNG) PNG_MIME_TYPE else JPEG_MIME_TYPE
++
++/** Returns the file extension, without its dot, of a file written in [format]: `png` or `jpg`. */
++internal fun extensionFor(format: Bitmap.CompressFormat): String =
++    if (format == Bitmap.CompressFormat.PNG) PNG_EXTENSION else JPEG_EXTENSION
++
++/**
++ * Returns `[baseName].[extension]` for [suffix] 0, else `[baseName]_[suffix].[extension]`.
++ * [extension] is `jpg` unless a PNG is being saved.
++ */
++internal fun nameWithSuffix(baseName: String, suffix: Int, extension: String = JPEG_EXTENSION): String =
++    if (suffix == 0) "$baseName.$extension" else "${baseName}_$suffix.$extension"
++
++/**
++ * Returns the first name built from [baseName] and [extension] (see [nameWithSuffix]) that is not
++ * in [taken].
++ */
++internal fun uniqueName(baseName: String, taken: Set<String>, extension: String = JPEG_EXTENSION): String =
++    generateSequence(0) { it + 1 }.map { nameWithSuffix(baseName, it, extension) }.first { it !in taken }
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
+index c05c8f3..6fc122d 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt
+@@ -1,7 +1,10 @@
+ package com.phongkaster.kanso.data.photo
+ 
++import android.graphics.Bitmap
++
+ /**
+- * Saves a photo as a new JPEG in the phone's `Pictures/Kanso` album.
++ * Saves a photo, or the picture the person edited, as a new file in the phone's `Pictures/Kanso`
++ * album.
+  *
+  * It is an interface so the screen and its ViewModel can be tested with a fake that writes
+  * nothing; the real one is `MediaStorePhotoSaver`. The original photo is never changed.
+@@ -19,4 +22,13 @@ interface PhotoSaver {
+      * went. It does its work off the main thread and never throws for a bad photo or a full disk.
+      */
+     suspend fun save(sourceUri: String): SaveResult
++
++    /**
++     * Saves [bitmap], the edited picture, exactly as it is (same width and height, no scaling)
++     * and says how it went: a PNG when the bitmap has an alpha channel (`bitmap.hasAlpha()`, as
++     * a cut-out does), else a JPEG at quality 95. The file's extension and type follow that
++     * format. It does its work off the main thread, never changes the original photo, never
++     * recycles [bitmap], and never throws for a full disk; a failed save leaves no file behind.
++     */
++    suspend fun save(bitmap: Bitmap): SaveResult
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/di/AppModule.kt b/app/src/main/java/com/phongkaster/kanso/di/AppModule.kt
+index 06e700d..d4270bb 100644
+--- a/app/src/main/java/com/phongkaster/kanso/di/AppModule.kt
++++ b/app/src/main/java/com/phongkaster/kanso/di/AppModule.kt
+@@ -2,6 +2,7 @@ package com.phongkaster.kanso.di
+ 
+ import androidx.datastore.core.DataStore
+ import androidx.datastore.preferences.core.Preferences
++import com.phongkaster.kanso.data.edit.ProcessorRegistry
+ import com.phongkaster.kanso.data.media.MediaStorePhotoSource
+ import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
+ import com.phongkaster.kanso.data.media.PhotoSource
+@@ -72,9 +73,13 @@ val appModule = module {
+             loader = get(),
+             probe = get(),
+             saver = get(),
++            registry = get(),
+         )
+     }
+ 
++    // Which processor edits the photo for each tool; a tool whose engine is not built yet has none.
++    single { ProcessorRegistry() }
++
+     // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
+     viewModel { params -> SavedViewModel(
+             photoUri = params.get(),
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt
+index d8f50d7..729cc84 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt
+@@ -277,7 +277,7 @@ fun SavedScreen(
+                     val uri = shareableUri(context, photoUri)
+                     if (uri != null) {
+                         val opened = try {
+-                            context.startActivity(shareChooserIntent(uri, chooserTitle))
++                            context.startActivity(shareChooserIntent(uri, chooserTitle, shareMimeType(context, uri)))
+                             true
+                         } catch (_: ActivityNotFoundException) {
+                             // Every phone has the share sheet; this only guards against a broken one.
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt b/app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt
+index ccb0857..9b0ea20 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt
+@@ -15,9 +15,15 @@ import kotlinx.coroutines.withContext
+ import kotlinx.coroutines.withTimeoutOrNull
+ import kotlin.coroutines.resume
+ 
+-/** The type of every photo Kanso saves, and so of every photo it shares. */
++/**
++ * The type of a photo Kanso saves as a JPEG, the usual case: every unedited save and every opaque
++ * edit. It is also the type assumed when a photo's own type cannot be found out.
++ */
+ const val SHARE_MIME_TYPE = "image/jpeg"
+ 
++/** The type of a picture Kanso saves as a PNG: an edit with see-through pixels, such as a cut-out. */
++const val SHARE_PNG_MIME_TYPE = "image/png"
++
+ /** How long [shareableUri] waits for the media scanner before giving up, in milliseconds. */
+ const val DEFAULT_SCAN_TIMEOUT_MILLIS = 5_000L
+ 
+@@ -106,7 +112,8 @@ private suspend fun scanForContentUri(context: Context, path: String, timeoutMil
+             MediaScannerConnection.scanFile(
+                 context.applicationContext,
+                 arrayOf(path),
+-                arrayOf(SHARE_MIME_TYPE),
++                // The scanner is told the file's real type, so a saved PNG is listed as a PNG.
++                arrayOf(shareMimeTypeFor(reportedType = null, fileName = path)),
+             ) { _, scanned ->
+                 // Called once, on a scanner thread; a null Uri means the file could not be added.
+                 if (continuation.isActive) {
+@@ -116,15 +123,71 @@ private suspend fun scanForContentUri(context: Context, path: String, timeoutMil
+         }
+     }
+ 
++/**
++ * Returns the MIME type to share a photo under, given the type its content provider
++ * [reportedType] (null when it reported none) and the photo's [fileName] or path (null when
++ * unknown).
++ *
++ * A MIME type is the short label, such as `image/png`, that tells the receiving app how to read
++ * the bytes; a PNG cut-out sent as `image/jpeg` may be refused or shown without its see-through
++ * background. The provider's own answer wins when it is an image type. Otherwise the extension
++ * decides: `.png` (any case) gives `image/png`, anything else `image/jpeg`, Kanso's usual format.
++ */
++internal fun shareMimeTypeFor(reportedType: String?, fileName: String?): String = when {
++    reportedType != null && reportedType.startsWith("image/") -> reportedType
++    fileName != null && fileName.endsWith(".png", ignoreCase = true) -> SHARE_PNG_MIME_TYPE
++    else -> SHARE_MIME_TYPE
++}
++
++/**
++ * Returns the MIME type of the saved photo at [contentUri], read from the photo itself: first
++ * ContentResolver.getType, which asks MediaStore for the type stored with the photo's row; when
++ * that gives nothing, the photo's file name (its DISPLAY_NAME column, else the Uri's last part)
++ * decides by its extension (see [shareMimeTypeFor]).
++ *
++ * The work runs on Dispatchers.IO, because asking MediaStore is a call into another process.
++ * A refused or failed question falls back to the extension, never throws.
++ */
++suspend fun shareMimeType(context: Context, contentUri: Uri): String = withContext(Dispatchers.IO) {
++    val resolver = context.contentResolver
++    val reported = try {
++        resolver.getType(contentUri)
++    } catch (e: CancellationException) {
++        throw e
++    } catch (_: Exception) {
++        null
++    }
++    if (reported != null && reported.startsWith("image/")) return@withContext reported
++    shareMimeTypeFor(reportedType = null, fileName = displayName(resolver, contentUri) ?: contentUri.lastPathSegment)
++}
++
++/**
++ * Returns the file name MediaStore keeps for the row at [uri] (its DISPLAY_NAME column), or null
++ * when there is none or the question fails.
++ */
++private fun displayName(resolver: ContentResolver, uri: Uri): String? = try {
++    val column = MediaStore.MediaColumns.DISPLAY_NAME
++    resolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
++        if (cursor.moveToFirst()) cursor.getString(cursor.getColumnIndexOrThrow(column)) else null
++    }
++} catch (e: CancellationException) {
++    throw e
++} catch (_: Exception) {
++    null
++}
++
+ /**
+  * Builds the intent that opens Android's share sheet for the photo at [contentUri], with the
+- * sheet titled [title].
++ * sheet titled [title], sent as [mimeType].
+  *
+  * The share sheet (the "chooser") is the system panel listing the apps that can receive a photo:
+  * messages, mail, social apps. The app does not pick one itself. It describes what it wants to
+- * send, an ACTION_SEND intent of type `image/jpeg` carrying the photo's Uri in EXTRA_STREAM, and
+- * wraps it with Intent.createChooser so the person chooses. No package or component is set on
+- * either intent, so no app is preferred or targeted.
++ * send, an ACTION_SEND intent of the photo's own type (`image/jpeg`, or `image/png` for a cut-out;
++ * see [shareMimeType]) carrying the photo's Uri in EXTRA_STREAM, and wraps it with
++ * Intent.createChooser so the person chooses. No package or component is set on either intent,
++ * so no app is preferred or targeted. When [mimeType] is not given, the Uri's own extension
++ * decides (see [shareMimeTypeFor]); a MediaStore content Uri has none, so the caller should pass
++ * the type [shareMimeType] reads.
+  *
+  * The read grant: the receiving app has no permission to read Kanso's photos. The flag
+  * FLAG_GRANT_READ_URI_PERMISSION gives it a one-off right to read exactly this Uri, and only
+@@ -134,10 +197,14 @@ private suspend fun scanForContentUri(context: Context, path: String, timeoutMil
+  *
+  * [contentUri] must be a content Uri (see [shareableUri]); a file Uri would be refused.
+  */
+-fun shareChooserIntent(contentUri: Uri, title: CharSequence): Intent {
++fun shareChooserIntent(
++    contentUri: Uri,
++    title: CharSequence,
++    mimeType: String = shareMimeTypeFor(reportedType = null, fileName = contentUri.lastPathSegment),
++): Intent {
+     val clip = ClipData.newRawUri(null, contentUri)
+     val send = Intent(Intent.ACTION_SEND).apply {
+-        type = SHARE_MIME_TYPE
++        type = mimeType
+         putExtra(Intent.EXTRA_STREAM, contentUri)
+         clipData = clip
+         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolPanel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolPanel.kt
+new file mode 100644
+index 0000000..dde6a72
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolPanel.kt
+@@ -0,0 +1,78 @@
++package com.phongkaster.kanso.ui.tool
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.navigation.Tool
++import com.phongkaster.kanso.ui.theme.KansoTheme
++
++/** Test tag of the Edit tool's controls, in the options strip under the photo. */
++const val EDIT_PANEL_TAG = "edit-panel"
++
++/** Test tag of the Remove background tool's controls, in the options strip under the photo. */
++const val CUTOUT_PANEL_TAG = "cutout-panel"
++
++/** Test tag of the Enhance tool's controls, in the options strip under the photo. */
++const val ENHANCE_PANEL_TAG = "enhance-panel"
++
++/** Test tag of the Retouch tool's controls, in the options strip under the photo. */
++const val RETOUCH_PANEL_TAG = "retouch-panel"
++
++/** Test tag of the Artistic tool's controls, in the options strip under the photo. */
++const val ARTISTIC_PANEL_TAG = "artistic-panel"
++
++/**
++ * The controls of [tool], shown in the options strip under the photo on that tool's screen.
++ *
++ * Each tool has its own panel, picked here by a `when` over the tool. A `when` on an enum must
++ * name every case, so a new tool cannot be added without deciding what its panel is. For now
++ * every panel is an empty, tagged slot; each tool's own task fills in its branch with that
++ * tool's controls, which run their edit through the ViewModel's `apply`.
++ */
++@Composable
++fun ToolPanel(tool: Tool, modifier: Modifier = Modifier) {
++    when (tool) {
++        Tool.EDIT -> Box(modifier.testTag(EDIT_PANEL_TAG))
++        Tool.REMOVE_BACKGROUND -> Box(modifier.testTag(CUTOUT_PANEL_TAG))
++        Tool.ENHANCE -> Box(modifier.testTag(ENHANCE_PANEL_TAG))
++        Tool.RETOUCH -> Box(modifier.testTag(RETOUCH_PANEL_TAG))
++        Tool.ARTISTIC -> Box(modifier.testTag(ARTISTIC_PANEL_TAG))
++    }
++}
++
++/**
++ * Every tool's panel, one under another, drawn once in light and once in dark. The sample data is
++ * simply the list of tools; each panel is still an empty slot, so each is given a fixed height
++ * on a surface to show where it sits. The outer Box fills the preview first, because KansoTheme
++ * would otherwise stretch its single child to the whole screen.
++ */
++@PreviewLightDark
++@Composable
++private fun ToolPanelPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        Box(Modifier.fillMaxSize()) {
++            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
++                Column(
++                    modifier = Modifier.padding(16.dp),
++                    verticalArrangement = Arrangement.spacedBy(8.dp),
++                ) {
++                    Tool.entries.forEach { tool ->
++                        ToolPanel(tool = tool, modifier = Modifier.fillMaxWidth().height(48.dp))
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+index 978479a..6aee7e6 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+@@ -8,6 +8,10 @@ import android.graphics.Paint
+ import android.graphics.Shader
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.result.contract.ActivityResultContracts
++import androidx.compose.animation.AnimatedVisibility
++import androidx.compose.animation.core.animateFloatAsState
++import androidx.compose.animation.fadeIn
++import androidx.compose.animation.fadeOut
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+@@ -33,6 +37,7 @@ import androidx.compose.material3.Button
+ import androidx.compose.material3.ButtonDefaults
+ import androidx.compose.material3.Card
+ import androidx.compose.material3.CenterAlignedTopAppBar
++import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.ElevatedAssistChip
+ import androidx.compose.material3.ExperimentalMaterial3Api
+ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+@@ -43,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
++import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.collectAsState
+@@ -50,6 +56,7 @@ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.remember
+ import androidx.compose.runtime.rememberUpdatedState
+ import androidx.compose.ui.Alignment
++import androidx.compose.ui.ExperimentalComposeUiApi
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.ImageBitmap
+ import androidx.compose.ui.graphics.asImageBitmap
+@@ -64,11 +71,13 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
+ import androidx.compose.ui.semantics.contentDescription
+ import androidx.compose.ui.semantics.liveRegion
+ import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.semantics.testTagsAsResourceId
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+ import com.phongkaster.kanso.R
++import com.phongkaster.kanso.data.edit.EditFailure
+ import com.phongkaster.kanso.data.photo.displayMaxEdgePx
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.navigation.Tool
+@@ -117,9 +126,24 @@ const val TOOL_SAVE_PROGRESS_TAG = "tool-save-progress"
+ /** The test tag on the message about the last save (failed, refused, or kept sideways). */
+ const val SAVE_MESSAGE_TAG = "save-message"
+ 
+-/** The test tag on the options strip under the photo card, which says what the tool will offer. */
++/**
++ * The test tag on the options strip under the photo card, the slot that holds the tool's own
++ * controls (see `ToolPanel`).
++ */
+ const val EDITOR_PANEL_TAG = "editor-panel"
+ 
++/**
++ * The test tag on the progress indicator shown in the middle of the photo card while an edit
++ * runs. It is gone as soon as the edit ends, well or badly.
++ */
++const val TOOL_PROGRESS_TAG = "tool-progress"
++
++/** The test tag on the Undo control at the top right, which takes back the last edit. */
++const val TOOL_UNDO_TAG = "tool-undo"
++
++/** The test tag on the plain-words message shown when an edit did not work. */
++const val TOOL_FAILURE_TAG = "tool-failure"
++
+ /**
+  * A semantics property carrying the Uri (as text) of the photo the image node shows.
+  *
+@@ -133,12 +157,18 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
+  * A tool screen: one tool working on one photo. Each of the five tools has a screen of its own,
+  * opened for that tool and showing only it; this one function draws all five, told by its
+  * [viewModel] which tool it is for. From top to bottom:
+- * - a round Back button at the top left and the tool's name centred beside it;
+- * - a large rounded card holding the photo, as large as fits, over a soft blurred copy of itself
+- *   that fills the rest of the card, with a "Replace" chip floating at the card's bottom;
+- * - the options strip, which for now says what the tool will offer in a later run;
++ * - a round Back button at the top left, the tool's name centred and an Undo control at the right;
++ * - a large rounded card holding the photo (the edited one once an edit is made), as large as
++ *   fits, over a soft blurred copy of itself that fills the rest of the card, with a "Replace"
++ *   chip floating at the card's bottom;
++ * - the options strip, holding the tool's own controls (`ToolPanel`);
+  * - one full-width Save button at the bottom, clear of the phone's gesture area.
+  *
++ * While an edit runs, a progress ring fills in the middle of the card and Save and Undo are
++ * switched off, so a half-made edit cannot be saved by mistake; the screen stays responsive
++ * because the edit itself runs off the main thread (see `ToolViewModel.apply`). When an edit
++ * fails, a plain message under the top of the card says why, and the photo shown is unchanged.
++ *
+  * Passing data in a Navigation 3 key: the screen needs two facts to open, which tool and which
+  * photo. They are not handed over in memory from the gallery; they travel inside the navigation
+  * key, `ToolPhoto(tool, photoUri)`, the value pushed onto the back stack to open this screen. The
+@@ -228,6 +258,11 @@ fun ToolScreen(
+         },
+         onReplace = onReplace,
+         modifier = modifier,
++        // The tool's own controls, drawn in the options strip under the photo card.
++        panel = { ToolPanel(state.tool) },
++        // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
++        onUndo = viewModel::undo,
++        onDismissFailure = viewModel::dismissFailure,
+     )
+ }
+ 
+@@ -235,21 +270,32 @@ fun ToolScreen(
+  * The stateless part of the tool screen (see [ToolScreen] for why there are two): draws [state],
+  * the screen's one snapshot, from top to bottom.
+  *
+- * - The top bar: the round Back button and the tool's name, centred.
++ * - The top bar: the round Back button, the tool's name, centred, and the Undo control at the
++ *   right, usable only when there is an edit to take back and no edit is running.
+  * - The photo card: whatever the photo part of [state] says (a loading indicator while the photo
+- *   is decoded, the photo over its blurred backdrop when ready, a plain message when unreadable),
+- *   the message about the last save at its top when the save part has one, and the "Replace" chip
+- *   at its bottom. It takes all the height the other parts leave.
+- * - The options strip: a short message saying what the tool will offer.
+- * - The Save button, full width, at the bottom.
++ *   is decoded, the photo over its blurred backdrop when ready, a plain message when unreadable);
++ *   the edited photo in place of the original once an edit has been made; a progress ring while
++ *   an edit runs; the messages about the last failed edit and the last save at its top; and the
++ *   "Replace" chip at its bottom. It takes all the height the other parts leave.
++ * - The options strip: [panel], the tool's own controls.
++ * - The Save button, full width, at the bottom, switched off while an edit runs.
+  *
+  * `Scaffold` is Material's frame for a screen: it places a top bar and a bottom bar and hands the
+  * content the space left between them (`innerPadding`), so nothing is drawn under either bar.
+  *
++ * [panel] is a composable lambda, a slot: the caller decides what is drawn there and this function
++ * only decides where. It is empty by default, so tests and previews that do not care about the
++ * tool's controls need not pass one.
++ *
+  * The photo's Uri in [state] only marks the image node for tests. Taps are reported through
+  * callbacks and nothing is changed here: [onBack] for Back, [onSave] for Save (the caller decides
+- * whether the storage permission must be asked for first) and [onReplace] for "Replace".
++ * whether the storage permission must be asked for first), [onReplace] for "Replace", [onUndo]
++ * for Undo and [onDismissFailure] for a tap on the failure message, which hides it.
++ *
++ * The root node sets `testTagsAsResourceId`, still marked experimental (hence the opt-in), so
++ * tools such as uiautomator can find the tags.
+  */
++@OptIn(ExperimentalComposeUiApi::class)
+ @Composable
+ fun ToolContent(
+     state: ToolUiState,
+@@ -257,10 +303,24 @@ fun ToolContent(
+     onSave: () -> Unit,
+     onReplace: () -> Unit = {},
+     modifier: Modifier = Modifier,
++    panel: @Composable () -> Unit = {},
++    onUndo: () -> Unit = {},
++    onDismissFailure: () -> Unit = {},
+ ) {
+     Scaffold(
+-        modifier = modifier.testTag(TOOL_SCREEN_TAG),
+-        topBar = { ToolTopBar(tool = state.tool, onBack = onBack) },
++        modifier = modifier
++            .testTag(TOOL_SCREEN_TAG)
++            // Exposes every test tag below as an Android resource id, so tools outside the app
++            // (UI Automator, a device dump) can find the screen's controls by tag.
++            .semantics { testTagsAsResourceId = true },
++        topBar = {
++            ToolTopBar(
++                tool = state.tool,
++                onBack = onBack,
++                undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle,
++                onUndo = onUndo,
++            )
++        },
+         bottomBar = { SaveBar(state = state, onSave = onSave) },
+     ) { innerPadding ->
+         // innerPadding is the space the two bars and the system bars take. consumeWindowInsets
+@@ -277,30 +337,37 @@ fun ToolContent(
+             PhotoCard(
+                 state = state,
+                 onReplace = onReplace,
++                onDismissFailure = onDismissFailure,
+                 modifier = Modifier
+                     .weight(1f)
+                     .fillMaxWidth(),
+             )
+             Spacer(Modifier.height(12.dp))
+-            EditorPanel(
+-                tool = state.tool,
+-                modifier = Modifier.fillMaxWidth(),
+-            )
++            // The options strip: the slot for the tool's own controls, full width under the card.
++            Box(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .testTag(EDITOR_PANEL_TAG),
++            ) {
++                panel()
++            }
+         }
+     }
+ }
+ 
+ /**
+- * The tool screen's top bar: the round Back button at the left (calls [onBack]) and [tool]'s name
+- * centred across the screen.
++ * The tool screen's top bar: the round Back button at the left (calls [onBack]), [tool]'s name
++ * centred across the screen, and the Undo control at the right (calls [onUndo]; it does nothing
++ * while [undoEnabled] is false).
+  *
+  * `CenterAlignedTopAppBar` is Material 3's top bar whose title sits in the middle of the screen
+  * rather than beside the Back button; it also keeps clear of the status bar at the top. The
+- * tool's name appears exactly once as text on this screen: here.
++ * tool's name appears exactly once as text on this screen: here. Its `actions` slot holds the
++ * controls drawn at the bar's right end.
+  */
+ @OptIn(ExperimentalMaterial3Api::class)
+ @Composable
+-private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
++private fun ToolTopBar(tool: Tool, onBack: () -> Unit, undoEnabled: Boolean, onUndo: () -> Unit) {
+     CenterAlignedTopAppBar(
+         title = {
+             Text(
+@@ -318,9 +385,35 @@ private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
+                     .testTag(TOOL_BACK_TAG),
+             )
+         },
++        actions = {
++            UndoButton(
++                enabled = undoEnabled,
++                onClick = onUndo,
++                modifier = Modifier.padding(end = 8.dp),
++            )
++        },
+     )
+ }
+ 
++/**
++ * The Undo control: the word "Undo" as a text button, calling [onClick] to take back the last
++ * edit, one at a time, down to the original photo. While [enabled] is false (nothing to take
++ * back, or an edit running) it is drawn faint and ignores taps.
++ *
++ * A text button is Material's quietest button, a word with no container, the usual look for a
++ * secondary action in a top bar. Its visible word is also what screen readers say for it.
++ */
++@Composable
++private fun UndoButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
++    TextButton(
++        onClick = onClick,
++        enabled = enabled,
++        modifier = modifier.testTag(TOOL_UNDO_TAG),
++    ) {
++        Text(stringResource(R.string.tool_undo))
++    }
++}
++
+ /**
+  * The bottom of the tool screen: one full-width Save button (calls [onSave]) for [state].
+  *
+@@ -336,7 +429,7 @@ private fun ToolTopBar(tool: Tool, onBack: () -> Unit) {
+  * taller (`union`), then keeps a small margin above that.
+  *
+  * Save is always visible, so the screen does not jump, and can be tapped once the photo is shown
+- * and no save is running. While a save runs it shows a small loading indicator
++ * and neither a save nor an edit is running. While a save runs it shows a small loading indicator
+  * ([SavingIndicator]) and "Saving…".
+  */
+ @Composable
+@@ -354,7 +447,9 @@ private fun SaveBar(state: ToolUiState, onSave: () -> Unit) {
+         Button(
+             onClick = onSave,
+             shapes = ButtonDefaults.shapesFor(height),
+-            enabled = state.photo is ToolUiState.PhotoState.Ready && !saving,
++            // Off while an edit runs too, so a half-made edit can never be saved by mistake.
++            enabled = state.photo is ToolUiState.PhotoState.Ready && !saving &&
++                state.processing is ToolUiState.Processing.Idle,
+             contentPadding = ButtonDefaults.contentPaddingFor(height, hasStartIcon = true),
+             modifier = Modifier
+                 .fillMaxWidth()
+@@ -422,14 +517,25 @@ private fun SavingIndicator() {
+  *
+  * Inside it ([TOOL_BODY_TAG]): a loading indicator while the photo is decoded; the photo when it
+  * is ready, as large as fits, over a [BlurredBackdrop] of itself that fills the rest of the card;
+- * a plain message when it cannot be opened; and the message about the last save, if any, at the
+- * top. The "Replace" chip floats 16 dp above the card's bottom edge over all of it.
++ * a plain message when it cannot be opened; a progress ring ([EditProgress]) while an edit runs;
++ * and, at the top, the message about the last failed edit (a tap hides it, calling
++ * [onDismissFailure]) and the message about the last save, if any. The "Replace" chip floats
++ * 16 dp above the card's bottom edge over all of it.
++ *
++ * Once an edit has been made, the card shows `state.edited` instead of the decoded original; a
++ * failed edit leaves `edited` as it was, so the photo shown never changes on a failure.
+  *
+- * Replace is switched off while a save runs, so the screen cannot be left under a save that has
+- * not finished.
++ * Replace is switched off while a save or an edit runs, so the screen cannot be left under work
++ * that has not finished.
+  */
+ @Composable
+-private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modifier = Modifier) {
++private fun PhotoCard(
++    state: ToolUiState,
++    onReplace: () -> Unit,
++    onDismissFailure: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    val running = state.processing as? ToolUiState.Processing.Running
+     Card(
+         shape = MaterialTheme.shapes.extraLarge,
+         modifier = modifier.testTag(TOOL_CARD_TAG),
+@@ -444,9 +550,11 @@ private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modif
+                 // Decoding takes a moment; meanwhile an indicator moves in the middle of the card.
+                 ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
+                 is ToolUiState.PhotoState.Ready -> {
++                    // The edited photo when there is one, else the decoded original.
++                    val shown = state.edited ?: current.bitmap
+                     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and
+                     // remember keeps the wrapper between redraws.
+-                    val image = remember(current.bitmap) { current.bitmap.asImageBitmap() }
++                    val image = remember(shown) { shown.asImageBitmap() }
+                     BlurredBackdrop(photo = image)
+                     PhotoView(image = image, photoUri = state.photoUri)
+                 }
+@@ -459,14 +567,28 @@ private fun PhotoCard(state: ToolUiState, onReplace: () -> Unit, modifier: Modif
+                         .testTag(TOOL_UNREADABLE_TAG),
+                 )
+             }
+-            saveMessageRes(state.save)?.let { messageRes ->
+-                SaveMessage(
+-                    text = stringResource(messageRes),
+-                    modifier = Modifier.align(Alignment.TopCenter),
+-                )
++            // AnimatedVisibility fades the ring in when an edit starts and out when it ends; while
++            // it fades out the edit is over, so the ring is drawn full.
++            androidx.compose.animation.AnimatedVisibility(visible = running != null, enter = fadeIn(), exit = fadeOut()) {
++                EditProgress(progress = running?.progress ?: 1f)
++            }
++            // The messages stack at the top of the card: the failed edit's, then the save's.
++            Column(
++                modifier = Modifier.align(Alignment.TopCenter),
++                horizontalAlignment = Alignment.CenterHorizontally,
++            ) {
++                state.failure?.let { failure ->
++                    FailureMessage(
++                        text = stringResource(failureMessageRes(failure)),
++                        onDismiss = onDismissFailure,
++                    )
++                }
++                saveMessageRes(state.save)?.let { messageRes ->
++                    SaveMessage(text = stringResource(messageRes))
++                }
+             }
+             ReplaceChip(
+-                enabled = state.save != ToolUiState.SaveState.Saving,
++                enabled = state.save != ToolUiState.SaveState.Saving && running == null,
+                 onClick = onReplace,
+                 modifier = Modifier
+                     .align(Alignment.BottomCenter)
+@@ -531,39 +653,80 @@ private fun PhotoLoadingIndicator() {
+ }
+ 
+ /**
+- * The options strip under the photo card: a short message saying what [tool] will offer once its
+- * controls exist, on a rounded container in the theme's `surfaceContainerLow` colour.
++ * The progress ring in the middle of the photo card while an edit runs, filled to [progress]
++ * (0 = just started, 1 = done).
++ *
++ * It is a determinate `CircularProgressIndicator`: given a value, it draws that share of the ring
++ * and does not move by itself, so it never keeps a test or a preview waiting. The value the edit
++ * reports jumps in steps; `animateFloatAsState` turns each jump into a short smooth glide from the
++ * old value to the new one, so the ring fills steadily. It sits on a small round surface in the
++ * theme's `surfaceContainerHigh` colour, so it stays visible over any photo.
++ *
++ * It shows no text; its content description, which screen readers say, tells that the photo is
++ * being edited, and the indicator itself reports how far along it is.
+  */
+ @Composable
+-private fun EditorPanel(tool: Tool, modifier: Modifier = Modifier) {
++private fun EditProgress(progress: Float) {
++    val description = stringResource(R.string.tool_progress_description)
++    // The animated value follows `progress`, gliding to each new one instead of jumping.
++    val shown by animateFloatAsState(
++        targetValue = progress.coerceIn(0f, 1f),
++        label = "edit progress",
++    )
+     Surface(
+-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+-        shape = MaterialTheme.shapes.large,
+-        modifier = modifier.testTag(EDITOR_PANEL_TAG),
++        color = MaterialTheme.colorScheme.surfaceContainerHigh,
++        shape = CircleShape,
+     ) {
+-        Text(
+-            text = stringResource(panelMessageRes(tool)),
+-            style = MaterialTheme.typography.bodyMedium,
+-            textAlign = TextAlign.Center,
++        CircularProgressIndicator(
++            // A lambda, so only the drawing is redone as the value glides, not the layout.
++            progress = { shown },
+             modifier = Modifier
+-                .fillMaxWidth()
+-                .padding(horizontal = 16.dp, vertical = 12.dp),
++                .padding(12.dp)
++                .size(48.dp)
++                .testTag(TOOL_PROGRESS_TAG)
++                .semantics { contentDescription = description },
+         )
+     }
+ }
+ 
+ /**
+- * Returns the options-strip message for [tool]: what that tool will offer once its controls
+- * exist. Every tool has one, and the `when` has no `else` on purpose: a sixth [Tool] would not
+- * compile until it is given a message here.
++ * Returns the plain-words message for [failure]: what went wrong, and that the photo is
++ * unchanged. The `when` has no `else` on purpose: a new kind of [EditFailure] would not compile
++ * until it is given a message here.
++ */
++private fun failureMessageRes(failure: EditFailure): Int = when (failure) {
++    EditFailure.OutOfMemory -> R.string.tool_failed_out_of_memory
++    EditFailure.NoSubject -> R.string.tool_failed_no_subject
++    EditFailure.NoFace -> R.string.tool_failed_no_face
++    EditFailure.ModelUnavailable -> R.string.tool_failed_model_unavailable
++    EditFailure.Other -> R.string.tool_failed_other
++}
++
++/**
++ * Shows [text], why the last edit did not work, on a card in the theme's error-container colours
++ * at the top of the photo card. A tap on it calls [onDismiss], which hides it; the next edit
++ * replaces it too. Screen readers announce it as soon as it appears.
+  */
+-private fun panelMessageRes(tool: Tool): Int = when (tool) {
+-    Tool.EDIT -> R.string.editor_panel_edit
+-    Tool.REMOVE_BACKGROUND -> R.string.editor_panel_remove_background
+-    Tool.ENHANCE -> R.string.editor_panel_enhance
+-    Tool.RETOUCH -> R.string.editor_panel_retouch
+-    Tool.ARTISTIC -> R.string.editor_panel_artistic
++@Composable
++private fun FailureMessage(text: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
++    // Surface with onClick is a tappable card: it gets press feedback and a button's semantics.
++    Surface(
++        onClick = onDismiss,
++        color = MaterialTheme.colorScheme.errorContainer,
++        contentColor = MaterialTheme.colorScheme.onErrorContainer,
++        shape = MaterialTheme.shapes.medium,
++        modifier = modifier
++            .padding(16.dp)
++            .testTag(TOOL_FAILURE_TAG)
++            // A polite live region: TalkBack reads the message without interrupting itself.
++            .semantics { liveRegion = LiveRegionMode.Polite },
++    ) {
++        Text(
++            text = text,
++            style = MaterialTheme.typography.bodyMedium,
++            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
++        )
++    }
+ }
+ 
+ /**
+@@ -688,12 +851,13 @@ private fun ToolPhotoPreview() {
+             onBack = {},
+             onSave = {},
+             onReplace = {},
++            panel = { ToolPanel(Tool.EDIT) },
+         )
+     }
+ }
+ 
+ /**
+- * The Enhance screen on the same photo: the title and the options strip's message are
++ * The Enhance screen on the same photo: the title and the controls in the options strip are
+  * Enhance's own.
+  */
+ @PreviewLightDark
+@@ -710,6 +874,7 @@ private fun ToolEnhancePreview() {
+             onBack = {},
+             onSave = {},
+             onReplace = {},
++            panel = { ToolPanel(Tool.ENHANCE) },
+         )
+     }
+ }
+@@ -732,6 +897,7 @@ private fun ToolNarrowPhotoPreview() {
+             onBack = {},
+             onSave = {},
+             onReplace = {},
++            panel = { ToolPanel(Tool.RETOUCH) },
+         )
+     }
+ }
+@@ -754,6 +920,7 @@ private fun ToolUnreadablePreview() {
+             onBack = {},
+             onSave = {},
+             onReplace = {},
++            panel = { ToolPanel(Tool.EDIT) },
+         )
+     }
+ }
+@@ -776,6 +943,60 @@ private fun ToolSaveFailedPreview() {
+             onBack = {},
+             onSave = {},
+             onReplace = {},
++            panel = { ToolPanel(Tool.EDIT) },
++        )
++    }
++}
++
++/**
++ * The Remove background screen while an edit runs, a little over half done: the progress ring
++ * in the middle of the photo, and Save, Undo and Replace switched off. The ring has a fixed
++ * value and does not move by itself, so the preview draws one still picture.
++ */
++@PreviewLightDark
++@Composable
++private fun ToolEditingPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        ToolContent(
++            state = ToolUiState(
++                tool = Tool.REMOVE_BACKGROUND,
++                photoUri = SAMPLE_PHOTO_URI,
++                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
++                save = ToolUiState.SaveState.Idle,
++                canUndo = true,
++                processing = ToolUiState.Processing.Running(progress = 0.6f),
++            ),
++            onBack = {},
++            onSave = {},
++            onReplace = {},
++            panel = { ToolPanel(Tool.REMOVE_BACKGROUND) },
++        )
++    }
++}
++
++/**
++ * The Retouch screen after an edit failed because no face was found: the plain message at the
++ * top of the card, the photo unchanged under it, and Undo usable because an earlier edit
++ * (the narrow sample photo standing in for it) can still be taken back.
++ */
++@PreviewLightDark
++@Composable
++private fun ToolEditFailedPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        ToolContent(
++            state = ToolUiState(
++                tool = Tool.RETOUCH,
++                photoUri = SAMPLE_PHOTO_URI,
++                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
++                save = ToolUiState.SaveState.Idle,
++                edited = sampleNarrowPhoto(),
++                canUndo = true,
++                failure = EditFailure.NoFace,
++            ),
++            onBack = {},
++            onSave = {},
++            onReplace = {},
++            panel = { ToolPanel(Tool.RETOUCH) },
+         )
+     }
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+index 062790a..9a3745c 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+@@ -1,6 +1,7 @@
+ package com.phongkaster.kanso.ui.tool
+ 
+ import android.graphics.Bitmap
++import com.phongkaster.kanso.data.edit.EditFailure
+ import com.phongkaster.kanso.navigation.Tool
+ 
+ /**
+@@ -8,7 +9,9 @@ import com.phongkaster.kanso.navigation.Tool
+  * every screen has exactly one, is explained on `HomeUiState`; see there.
+  *
+  * The tool screen's snapshot holds the screen's tool ([tool]), the photo being worked on
+- * ([photoUri]), what is shown in place of the photo ([photo]) and where saving stands ([save]).
++ * ([photoUri]), what is shown in place of the photo ([photo]), where saving stands ([save]) and
++ * the editing part: the edited photo ([edited]), whether an edit can be taken back ([canUndo]),
++ * whether an edit is running ([processing]) and why the last one failed ([failure]).
+  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
+  * this screen: each tool has a screen of its own.
+  *
+@@ -28,8 +31,39 @@ data class ToolUiState(
+     val photo: PhotoState = PhotoState.Loading,
+     /** Where saving the photo stands: nothing yet, running, done, failed or refused. */
+     val save: SaveState = SaveState.Idle,
++    /**
++     * The photo as the person has edited it so far, or null while nothing has been edited (or
++     * every edit has been undone). When it is set, the screen shows it instead of the photo in
++     * [photo], and Save writes it; [photo] itself always keeps the unedited original, so undoing
++     * every edit returns to it.
++     */
++    val edited: Bitmap? = null,
++    /** True when there is an edit to take back, so the screen's Undo control can be used. */
++    val canUndo: Boolean = false,
++    /** Whether an edit is running right now, and how far along it is. */
++    val processing: Processing = Processing.Idle,
++    /**
++     * Why the last edit did not work, or null when there is nothing to report. The photo shown
++     * is unchanged when this is set: a failed edit never replaces it.
++     */
++    val failure: EditFailure? = null,
+ ) {
+ 
++    /**
++     * Whether an edit is running. While one runs, the screen shows its progress and does not let
++     * the person save or undo, so a half-made edit can never be saved by mistake.
++     */
++    sealed interface Processing {
++
++        /** No edit is running. */
++        data object Idle : Processing
++
++        /**
++         * An edit is running; [progress] goes from 0 (just started) to 1 (about to finish).
++         */
++        data class Running(val progress: Float) : Processing
++    }
++
+     /**
+      * What the tool screen shows in place of the photo: still loading, the photo, or a message.
+      */
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+index ae6e9ce..abad916 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+@@ -1,12 +1,21 @@
+ package com.phongkaster.kanso.ui.tool
+ 
++import android.graphics.Bitmap
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
++import com.phongkaster.kanso.data.edit.EditFailure
++import com.phongkaster.kanso.data.edit.EditResult
++import com.phongkaster.kanso.data.edit.ProcessorRegistry
++import com.phongkaster.kanso.data.edit.ToolProcessor
++import com.phongkaster.kanso.data.edit.WorkingSize
+ import com.phongkaster.kanso.data.photo.PhotoLoader
+ import com.phongkaster.kanso.data.photo.PhotoSaver
+ import com.phongkaster.kanso.data.photo.SaveResult
+ import com.phongkaster.kanso.di.ViewModelClearedProbe
+ import com.phongkaster.kanso.navigation.Tool
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.CoroutineDispatcher
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.channels.Channel
+ import kotlinx.coroutines.flow.Flow
+@@ -16,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.receiveAsFlow
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ 
+ /**
+  * Holds the state of a tool screen: [tool] working on the photo named by [photoUri].
+@@ -32,6 +42,13 @@ import kotlinx.coroutines.launch
+  * [loader] decodes the photo; [probe] is told when this ViewModel is cleared, so tests can check
+  * that leaving the screen frees it; [saver] writes the photo into the phone's `Pictures/Kanso`
+  * album when the person taps Save.
++ *
++ * Editing works on a copy held in memory, never on the photo's file: [apply] runs one edit (a
++ * [ToolProcessor]) on the photo as it is now shown, and the result becomes the new shown photo.
++ * Every earlier version is kept, so [undo] can step back one edit at a time all the way to the
++ * original. [registry] finds the processor built for this screen's tool, for [runRegistered].
++ * [workDispatcher] is the background thread pool that shrinks a large photo before an edit, so
++ * even that never runs on the main thread; tests can pass their own.
+  */
+ class ToolViewModel(
+     private val tool: Tool,
+@@ -39,6 +56,8 @@ class ToolViewModel(
+     private val loader: PhotoLoader,
+     private val probe: ViewModelClearedProbe,
+     private val saver: PhotoSaver,
++    private val registry: ProcessorRegistry = ProcessorRegistry(),
++    private val workDispatcher: CoroutineDispatcher = Dispatchers.Default,
+ ) : ViewModel() {
+ 
+     /**
+@@ -59,6 +78,16 @@ class ToolViewModel(
+     /** The decode in progress, if any; a request for a new size replaces it. */
+     private var loadJob: Job? = null
+ 
++    /**
++     * The versions of the photo before each edit, oldest first, so [undo] can step back.
++     *
++     * An entry is the `edited` value that was shown before an edit: null stands for "the unedited
++     * original", which is not copied here because the state's `photo` always keeps it. The
++     * bitmaps live only in memory and only as long as this ViewModel: they are not part of the
++     * state, because the screen never needs to draw them.
++     */
++    private val history = ArrayDeque<Bitmap?>()
++
+     /**
+      * Decodes the photo with its longest edge at most [maxEdgePx] pixels, in the background.
+      *
+@@ -84,6 +113,107 @@ class ToolViewModel(
+         }
+     }
+ 
++    /**
++     * Runs one edit, [processor], on the photo as it is shown now, in the background.
++     *
++     * Nothing happens while another edit is running (one at a time), or while there is no photo
++     * yet. The photo is first shrunk, if it is larger, to the size this tool can handle on a
++     * phone ([WorkingSize.maxEdgeFor]), so a very large photo never runs the phone out of
++     * memory. While the edit runs, the state says how far along it is. When it works, the result
++     * becomes the shown photo and the one before it is kept for [undo]; when it fails, the shown
++     * photo stays exactly as it was and the state says why, in [ToolUiState.failure].
++     */
++    fun apply(processor: ToolProcessor) {
++        val current = mutableState.value
++        if (current.processing is ToolUiState.Processing.Running) return
++        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
++        // What the person sees right now: the last edit, or the original if there is none.
++        val previousEdit = current.edited
++        val shown = previousEdit ?: original
++        mutableState.update {
++            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
++        }
++        viewModelScope.launch {
++            val result = try {
++                // Shrinking is real work on a large photo, so it happens on a background thread.
++                val input = withContext(workDispatcher) {
++                    WorkingSize.fit(shown, WorkingSize.maxEdgeFor(tool))
++                }
++                // The processor moves its own heavy work off the main thread (its contract).
++                processor.process(input) { progress -> reportProgress(progress) }
++            } catch (cancelled: CancellationException) {
++                // Leaving the screen cancels the edit: that is not a failure, so it must go on
++                // up and stop this coroutine rather than be reported.
++                throw cancelled
++            } catch (outOfMemory: OutOfMemoryError) {
++                EditResult.Failed(EditFailure.OutOfMemory)
++            } catch (other: Throwable) {
++                EditResult.Failed(EditFailure.Other)
++            }
++            when (result) {
++                is EditResult.Edited -> {
++                    history.addLast(previousEdit)
++                    mutableState.update {
++                        it.copy(
++                            edited = result.bitmap,
++                            canUndo = true,
++                            failure = null,
++                            processing = ToolUiState.Processing.Idle,
++                        )
++                    }
++                }
++                is EditResult.Failed -> mutableState.update {
++                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
++                }
++            }
++        }
++    }
++
++    /**
++     * Runs the edit built for this screen's tool, if one has been built yet; with none, nothing
++     * happens. A tool's panel that has a single "do it" action calls this.
++     */
++    fun runRegistered() {
++        val processor = registry.processorFor(tool) ?: return
++        apply(processor)
++    }
++
++    /**
++     * Records how far the running edit is, from 0 to 1. A report that arrives after the edit has
++     * ended (a processor may call from its own thread a moment late) is ignored, so it can never
++     * make a finished edit look as if it were running again.
++     */
++    private fun reportProgress(progress: Float) {
++        if (progress.isNaN()) return
++        val clamped = progress.coerceIn(0f, 1f)
++        mutableState.update {
++            if (it.processing is ToolUiState.Processing.Running) {
++                it.copy(processing = ToolUiState.Processing.Running(clamped))
++            } else {
++                it
++            }
++        }
++    }
++
++    /**
++     * Takes back the last edit: the photo shown before it is shown again. Undoing every edit
++     * returns to the unedited original. Nothing happens while an edit runs or when there is
++     * nothing to take back.
++     */
++    fun undo() {
++        if (mutableState.value.processing is ToolUiState.Processing.Running) return
++        if (history.isEmpty()) return
++        val before = history.removeLast()
++        mutableState.update {
++            it.copy(edited = before, canUndo = history.isNotEmpty(), failure = null)
++        }
++    }
++
++    /** Hides the message about the last failed edit, once the person has read it. */
++    fun dismissFailure() {
++        mutableState.update { it.copy(failure = null) }
++    }
++
+     /**
+      * Carries the Uri (as text) of each newly saved photo to the screen, once.
+      *
+@@ -104,13 +234,23 @@ class ToolViewModel(
+ 
+     /**
+      * Saves the photo into `Pictures/Kanso`, in the background. A tap while a save is already
+-     * running is ignored, so one tap never makes two files.
++     * running is ignored, so one tap never makes two files; so is a tap while an edit is running,
++     * so a half-made edit is never saved.
++     *
++     * When the person has edited the photo, the edited photo shown on screen is saved, exactly
++     * at the size they saw it, as a new file; otherwise the original photo is copied as it is.
++     * Either way the original photo's file is never changed.
+      */
+     fun save() {
+-        if (mutableState.value.save == ToolUiState.SaveState.Saving) return
++        val current = mutableState.value
++        if (current.save == ToolUiState.SaveState.Saving) return
++        if (current.processing is ToolUiState.Processing.Running) return
++        // Read once, now, so an edit that lands while the save runs cannot change what is saved.
++        val edited = current.edited
+         mutableState.update { it.copy(save = ToolUiState.SaveState.Saving) }
+         viewModelScope.launch {
+-            when (val result = saver.save(photoUri)) {
++            val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
++            when (result) {
+                 is SaveResult.Saved -> {
+                     mutableState.update {
+                         it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
+diff --git a/app/src/main/res/values/strings_tool.xml b/app/src/main/res/values/strings_tool.xml
+index 5d02db3..ed6e776 100644
+--- a/app/src/main/res/values/strings_tool.xml
++++ b/app/src/main/res/values/strings_tool.xml
+@@ -1,13 +1,19 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+-    <!-- Editor panel: the short message under the photo that says what the selected tool will
+-         offer. One per tool of the editor's toolbar, in toolbar order. -->
+-    <string name="editor_panel_edit">Crop, colour and filter controls are coming in a later run.</string>
+-    <string name="editor_panel_remove_background">Cutting the subject out of its background is coming in a later run.</string>
+-    <string name="editor_panel_enhance">One-tap sharpening and lighting fixes are coming in a later run.</string>
+-    <string name="editor_panel_retouch">Face and skin retouching tools are coming in a later run.</string>
+-    <string name="editor_panel_artistic">Painterly styles and effects are coming in a later run.</string>
+     <!-- Editor photo area: what screen readers say for the loading indicator shown while the
+          photo is being decoded. Never shown as text. -->
+     <string name="tool_loading">Opening your photo</string>
++    <!-- Editor: the Undo control's visible text and what screen readers say for it. It takes
++         back the last edit, one at a time, down to the original photo. -->
++    <string name="tool_undo">Undo</string>
++    <!-- Editor: what screen readers say for the progress indicator shown while an edit runs.
++         Never shown as text. -->
++    <string name="tool_progress_description">Editing your photo</string>
++    <!-- Editor: the message under the photo when an edit did not work. Plain words, no
++         technical terms; the photo shown is always left as it was. One per kind of failure. -->
++    <string name="tool_failed_out_of_memory">This photo is too large to edit on this phone. Try a smaller one. Your photo is unchanged.</string>
++    <string name="tool_failed_no_subject">No person or object stood out in this photo, so nothing was cut out. Your photo is unchanged.</string>
++    <string name="tool_failed_no_face">No face was found in this photo. Try one where a face is clearly visible. Your photo is unchanged.</string>
++    <string name="tool_failed_model_unavailable">This tool could not start on this phone. Your photo is unchanged.</string>
++    <string name="tool_failed_other">Something went wrong and the edit was not made. Your photo is unchanged.</string>
+ </resources>

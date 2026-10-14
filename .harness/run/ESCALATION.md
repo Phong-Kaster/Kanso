@@ -6,7 +6,7 @@
 
 ## D-001 - Approve Run 8's Definition of Done, and which pictures may be re-recorded
 
-- **Status:** pending
+- **Status:** answered
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-14

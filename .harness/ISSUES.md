@@ -1,5 +1,9 @@
 # ISSUES
 
+## Run 8 (the five editing tools edit the photo)
+
+- Phase 1 (T-001) done; no problems yet. Known minor: a late progress report from an earlier edit can move a later edit's ring (`ToolViewModel.reportProgress`); undo history is unbounded.
+
 ## Run 7 (the InFlux layout in Kanso's own colours): ended DONE_PARTIAL, Verifier Iteration 19
 
 - **The Verifier (Iteration 19, 2026-10-13) re-proved every `machine` criterion with fresh runs and found no gap.** 571 tests (0 failed, 0 skipped), 41 pictures unchanged, lint 0 errors, `assembleDebug`, compile, badging and dependencies equal to the base, every Removal grep empty. Pictures 28, 29, 34 and 35 now show the floating bar (T-017, A-029 = `45d4023`): they did not show a defect. Per criterion: `.harness/run/evidence/v19-verifier.md`. The run is `DONE_PARTIAL`, not `DONE`, for two reasons: the Tier-3 assumptions A-025 to A-027 below, and the items under "Awaiting a person, Run 7".

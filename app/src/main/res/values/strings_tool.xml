@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Editor panel: the short message under the photo that says what the selected tool will
-         offer. One per tool of the editor's toolbar, in toolbar order. -->
-    <string name="editor_panel_edit">Crop, colour and filter controls are coming in a later run.</string>
-    <string name="editor_panel_remove_background">Cutting the subject out of its background is coming in a later run.</string>
-    <string name="editor_panel_enhance">One-tap sharpening and lighting fixes are coming in a later run.</string>
-    <string name="editor_panel_retouch">Face and skin retouching tools are coming in a later run.</string>
-    <string name="editor_panel_artistic">Painterly styles and effects are coming in a later run.</string>
     <!-- Editor photo area: what screen readers say for the loading indicator shown while the
          photo is being decoded. Never shown as text. -->
     <string name="tool_loading">Opening your photo</string>
+    <!-- Editor: the Undo control's visible text and what screen readers say for it. It takes
+         back the last edit, one at a time, down to the original photo. -->
+    <string name="tool_undo">Undo</string>
+    <!-- Editor: what screen readers say for the progress indicator shown while an edit runs.
+         Never shown as text. -->
+    <string name="tool_progress_description">Editing your photo</string>
+    <!-- Editor: the message under the photo when an edit did not work. Plain words, no
+         technical terms; the photo shown is always left as it was. One per kind of failure. -->
+    <string name="tool_failed_out_of_memory">This photo is too large to edit on this phone. Try a smaller one. Your photo is unchanged.</string>
+    <string name="tool_failed_no_subject">No person or object stood out in this photo, so nothing was cut out. Your photo is unchanged.</string>
+    <string name="tool_failed_no_face">No face was found in this photo. Try one where a face is clearly visible. Your photo is unchanged.</string>
+    <string name="tool_failed_model_unavailable">This tool could not start on this phone. Your photo is unchanged.</string>
+    <string name="tool_failed_other">Something went wrong and the edit was not made. Your photo is unchanged.</string>
 </resources>

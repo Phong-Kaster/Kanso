@@ -1,6 +1,7 @@
 package com.phongkaster.kanso.tool
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.WindowInsets
@@ -14,6 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -41,20 +44,32 @@ import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.tool.ARTISTIC_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_FAILURE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
+import com.phongkaster.kanso.ui.tool.TOOL_PROGRESS_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
+import com.phongkaster.kanso.ui.tool.ToolContent
+import com.phongkaster.kanso.ui.tool.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolScreen
+import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -81,6 +96,10 @@ import org.robolectric.annotation.GraphicsMode
  * one full-width Save button under that; no toggle anywhere; the photo decoded exactly once.
  * Another test hands the screen the insets of a phone with a 0 dp navigation bar and a bottom
  * gesture zone, and checks that Save stays above the zone.
+ *
+ * Run 8: each tool's options strip holds that tool's own panel, and no text promises a tool "in
+ * a later run"; Undo works only when there is an edit to take back; while an edit runs a progress
+ * ring shows and Save is off; and each kind of failed edit shows its plain message over the photo.
  *
  * The screen runs on the same phone size as the pictures (411 x 891 dp, xxhdpi).
  */
@@ -306,12 +325,15 @@ class ToolScreenTest {
             assertInside(replace, card)
             assertTrue("$tool: Replace $replace is not near the card's bottom ${card.bottom}", card.bottom - replace.bottom <= dp24)
 
-            // The options strip: under the card, with this tool's own message.
+            // The options strip: under the card, holding this tool's own panel.
             val panel = compose.onNodeWithTag(EDITOR_PANEL_TAG).fetchSemanticsNode().boundsInRoot
-            assertTrue("$tool: the strip $panel is not under the card $card", panel.top >= card.bottom - SLACK)
-            val message = context.getString(PANEL_MESSAGES.getValue(tool))
-            assertTrue("\"$message\" does not end as promised", message.endsWith("coming in a later run."))
-            compose.onNode(hasText(message) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG))).assertIsDisplayed()
+            // An empty slot is placed nowhere and measures nothing, so the position is only
+            // checked once a tool's own controls fill the strip.
+            assertTrue("$tool: the strip $panel is not under the card $card", panel.isEmpty || panel.top >= card.bottom - SLACK)
+            // The panel may still be an empty slot (zero tall), so it is checked to exist in the
+            // strip rather than to be displayed.
+            compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
+                .assertExists()
 
             // Save: full width, under the strip.
             val save = compose.onNodeWithTag(TOOL_SAVE_TAG)
@@ -319,7 +341,7 @@ class ToolScreenTest {
                 .assertIsEnabled()
                 .fetchSemanticsNode().boundsInRoot
             assertTrue("$tool: Save $save is not full width", save.left - root.left <= dp24 && root.right - save.right <= dp24)
-            assertTrue("$tool: Save $save is not under the strip $panel", save.top >= panel.bottom - SLACK)
+            assertTrue("$tool: Save $save is not under the strip $panel", panel.isEmpty || save.top >= panel.bottom - SLACK)
 
             // No way to change tools: nothing is a toggle, and the tool is still the key's.
             compose.onAllNodes(isToggleable()).assertCountEquals(0)
@@ -329,25 +351,125 @@ class ToolScreenTest {
     }
 
     /**
-     * Each of the five tools' screens shows its own message in the options strip, a message that
-     * ends "coming in a later run.", is no tool's name, and differs from the others; the other
-     * tools' messages are not on screen meanwhile.
+     * Run 8: each of the five tools' screens (the stateless content, with the tool's own panel in
+     * the slot) shows that tool's panel inside the options strip and no other tool's, and no text
+     * on it still promises the tool is "coming in a later run".
      */
     @Test
-    fun each_tool_shows_its_own_panel_message() {
-        val labels = Tool.entries.map { label(it) }.toSet()
-        val messages = mutableListOf<String>()
-        showEachTool { _, tool, _, _ ->
-            val message = context.getString(PANEL_MESSAGES.getValue(tool))
-            compose.onNode(hasText(message) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG))).assertIsDisplayed()
-            Tool.entries.filter { it != tool }.forEach { other ->
-                compose.onAllNodes(hasText(context.getString(PANEL_MESSAGES.getValue(other)))).assertCountEquals(0)
+    fun each_tool_shows_its_own_panel_and_no_later_run_message() {
+        val photo = ToolFixtures.gradient(600, 400)
+        var state by mutableStateOf(readyState(Tool.entries.first(), photo))
+        compose.setContent {
+            MaterialTheme {
+                ToolContent(state = state, onBack = {}, onSave = {}, panel = { ToolPanel(state.tool) })
             }
-            assertTrue("\"$message\" does not end as promised", message.endsWith("coming in a later run."))
-            assertFalse("\"$message\" is a tool's name", message in labels)
+        }
+        compose.waitForIdle()
+        Tool.entries.forEach { tool ->
+            compose.runOnUiThread { state = readyState(tool, photo) }
+            compose.waitForIdle()
+
+            compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
+                .assertExists()
+            Tool.entries.filter { it != tool }.forEach { other ->
+                compose.onAllNodes(hasTestTag(PANEL_TAGS.getValue(other))).assertCountEquals(0)
+            }
+            compose.onAllNodes(hasText("coming in a later run", substring = true, ignoreCase = true))
+                .assertCountEquals(0)
+        }
+    }
+
+    /**
+     * Undo (`tool-undo`) is switched off while there is nothing to take back, and switched on,
+     * calling onUndo once per tap, once there is.
+     */
+    @Test
+    fun undo_is_enabled_only_when_there_is_an_edit_to_take_back() {
+        val photo = ToolFixtures.gradient(600, 400)
+        var undoCalls = 0
+        var state by mutableStateOf(readyState(Tool.EDIT, photo))
+        compose.setContent {
+            MaterialTheme {
+                ToolContent(state = state, onBack = {}, onSave = {}, onUndo = { undoCalls++ })
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
+
+        compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsEnabled().performClick()
+        compose.waitForIdle()
+        assertEquals(1, undoCalls)
+    }
+
+    /**
+     * While an edit runs, the progress ring (`tool-progress`) is in the photo card at the value
+     * the state reports, and Save and Undo are switched off. The clock is held still from the
+     * start, as the Constraints ask of any test that shows a progress indicator.
+     */
+    @Test
+    fun while_an_edit_runs_save_is_off_and_the_progress_ring_is_shown() {
+        val state = readyState(Tool.REMOVE_BACKGROUND, ToolFixtures.gradient(600, 400)).copy(
+            canUndo = true,
+            processing = ToolUiState.Processing.Running(0.4f),
+        )
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            MaterialTheme {
+                ToolContent(state = state, onBack = {}, onSave = {}, panel = { ToolPanel(state.tool) })
+            }
+        }
+        compose.mainClock.advanceTimeBy(500)
+
+        compose.onNode(hasTestTag(TOOL_PROGRESS_TAG) and hasAnyAncestor(hasTestTag(TOOL_BODY_TAG)))
+            .assertIsDisplayed()
+            .assert(
+                SemanticsMatcher("shows progress 0.4") { node ->
+                    val current = node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo)?.current
+                    current != null && kotlin.math.abs(current - 0.4f) < 0.01f
+                },
+            )
+        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsNotEnabled()
+        // The photo stays on screen under the ring.
+        compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
+    }
+
+    /**
+     * Each kind of failed edit shows its own plain message under `tool-failure`, the photo stays
+     * on screen under it, no progress ring is left, and a tap on the message calls
+     * onDismissFailure.
+     */
+    @Test
+    fun each_failure_shows_its_plain_message_over_the_unchanged_photo() {
+        val photo = ToolFixtures.gradient(600, 400)
+        var dismissCalls = 0
+        var state by mutableStateOf(readyState(Tool.RETOUCH, photo))
+        compose.setContent {
+            MaterialTheme {
+                ToolContent(state = state, onBack = {}, onSave = {}, onDismissFailure = { dismissCalls++ })
+            }
+        }
+        compose.waitForIdle()
+        compose.onAllNodes(hasTestTag(TOOL_FAILURE_TAG)).assertCountEquals(0)
+
+        val messages = mutableSetOf<String>()
+        FAILURE_MESSAGES.entries.forEachIndexed { index, (failure, messageRes) ->
+            compose.runOnUiThread { state = readyState(Tool.RETOUCH, photo).copy(failure = failure) }
+            compose.waitForIdle()
+            val message = context.getString(messageRes)
+            assertTrue("$failure: the message is empty", message.isNotBlank())
+            compose.onNodeWithTag(TOOL_FAILURE_TAG).assertIsDisplayed().assert(hasText(message))
+            compose.onNode(hasTestTag(TOOL_IMAGE_TAG) and SemanticsMatcher.expectValue(TOOL_PHOTO_URI_KEY, PHOTO_URI))
+                .assertIsDisplayed()
+            compose.onAllNodes(hasTestTag(TOOL_PROGRESS_TAG)).assertCountEquals(0)
+            compose.onNodeWithTag(TOOL_FAILURE_TAG).performClick()
+            compose.waitForIdle()
+            assertEquals("$failure: the tap did not dismiss", index + 1, dismissCalls)
             messages += message
         }
-        assertEquals("Two tools share a panel message: $messages", Tool.entries.size, messages.toSet().size)
+        assertEquals("Two failures share a message: $messages", FAILURE_MESSAGES.size, messages.size)
     }
 
     /**
@@ -462,6 +584,10 @@ class ToolScreenTest {
         }
     }
 
+    /** A snapshot of [tool]'s screen with [photo] decoded and shown, nothing edited or saved. */
+    private fun readyState(tool: Tool, photo: Bitmap): ToolUiState =
+        ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = ToolUiState.PhotoState.Ready(photo))
+
     /** Where the photo card is, in the root's pixels. */
     private fun cardBounds(): Rect = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
 
@@ -509,13 +635,22 @@ class ToolScreenTest {
          */
         val GESTURE_ZONE = 40.dp
 
-        /** The options-strip message each tool must show. */
-        val PANEL_MESSAGES = mapOf(
-            Tool.EDIT to R.string.editor_panel_edit,
-            Tool.REMOVE_BACKGROUND to R.string.editor_panel_remove_background,
-            Tool.ENHANCE to R.string.editor_panel_enhance,
-            Tool.RETOUCH to R.string.editor_panel_retouch,
-            Tool.ARTISTIC to R.string.editor_panel_artistic,
+        /** The test tag of each tool's own panel, drawn in the options strip. */
+        val PANEL_TAGS = mapOf(
+            Tool.EDIT to EDIT_PANEL_TAG,
+            Tool.REMOVE_BACKGROUND to CUTOUT_PANEL_TAG,
+            Tool.ENHANCE to ENHANCE_PANEL_TAG,
+            Tool.RETOUCH to RETOUCH_PANEL_TAG,
+            Tool.ARTISTIC to ARTISTIC_PANEL_TAG,
+        )
+
+        /** The plain message each kind of failed edit must show. */
+        val FAILURE_MESSAGES = mapOf(
+            EditFailure.OutOfMemory to R.string.tool_failed_out_of_memory,
+            EditFailure.NoSubject to R.string.tool_failed_no_subject,
+            EditFailure.NoFace to R.string.tool_failed_no_face,
+            EditFailure.ModelUnavailable to R.string.tool_failed_model_unavailable,
+            EditFailure.Other to R.string.tool_failed_other,
         )
     }
 }

@@ -277,7 +277,7 @@ fun SavedScreen(
                     val uri = shareableUri(context, photoUri)
                     if (uri != null) {
                         val opened = try {
-                            context.startActivity(shareChooserIntent(uri, chooserTitle))
+                            context.startActivity(shareChooserIntent(uri, chooserTitle, shareMimeType(context, uri)))
                             true
                         } catch (_: ActivityNotFoundException) {
                             // Every phone has the share sheet; this only guards against a broken one.

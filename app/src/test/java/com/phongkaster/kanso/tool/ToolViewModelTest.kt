@@ -1,18 +1,33 @@
 package com.phongkaster.kanso.tool
 
 import android.app.Application
+import android.graphics.Bitmap
 import android.os.Looper
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.EditResult
+import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.save.FakePhotoSaver
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -27,6 +42,11 @@ import org.robolectric.annotation.Config
  * snapshot to the last, through the photo's decode and a whole save. Loading and saving each
  * change only their own part of the snapshot: the decoded photo stays the very same picture
  * through a save, and it is never asked for again.
+ *
+ * Run 8 adds editing, driven through fake [ToolProcessor]s: an edit's result is shown and can be
+ * undone back to the original, progress shows while one runs (and blocks Save), a failure keeps
+ * the photo as it was, a cancellation is no failure, the photo is shrunk to the tool's working
+ * size first, and Save writes the edited bitmap itself, never the original's file.
  *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
@@ -122,17 +142,316 @@ class ToolViewModelTest {
         assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
     }
 
+    /**
+     * Run 8: an edit that works becomes the shown photo (the original stays in `photo`), Undo
+     * becomes possible, and the next edit works on the last edit rather than on the original.
+     */
+    @Test
+    fun an_edit_sets_the_edited_photo_and_allows_undo() {
+        val original = ToolFixtures.gradient(600, 400)
+        val viewModel = loadedViewModel(original)
+        val first = ToolFixtures.gradient(300, 200)
+        val second = ToolFixtures.twoHalves(300, 200)
+        val firstEdit = FakeProcessor { _, _ -> EditResult.Edited(first) }
+        val secondEdit = FakeProcessor { _, _ -> EditResult.Edited(second) }
+
+        viewModel.apply(firstEdit)
+        runMainThread()
+        var state = viewModel.state.value
+        assertSame(first, state.edited)
+        assertTrue(state.canUndo)
+        assertEquals(ToolUiState.Processing.Idle, state.processing)
+        assertNull(state.failure)
+        assertSame(original, (state.photo as ToolUiState.PhotoState.Ready).bitmap)
+        assertSame("The first edit did not work on the original", original, firstEdit.inputs.single())
+
+        viewModel.apply(secondEdit)
+        runMainThread()
+        state = viewModel.state.value
+        assertSame(second, state.edited)
+        assertTrue(state.canUndo)
+        assertSame("The second edit did not work on the first edit", first, secondEdit.inputs.single())
+    }
+
+    /**
+     * Run 8: two edits, then Undo twice, returns step by step to the unedited original: the first
+     * edit after one Undo, nothing edited and nothing left to undo after the second; a third Undo
+     * changes nothing.
+     */
+    @Test
+    fun undoing_every_edit_returns_to_the_original() {
+        val original = ToolFixtures.gradient(600, 400)
+        val viewModel = loadedViewModel(original)
+        val first = ToolFixtures.gradient(300, 200)
+        val second = ToolFixtures.twoHalves(300, 200)
+        viewModel.apply(FakeProcessor { _, _ -> EditResult.Edited(first) })
+        runMainThread()
+        viewModel.apply(FakeProcessor { _, _ -> EditResult.Edited(second) })
+        runMainThread()
+
+        viewModel.undo()
+        assertSame(first, viewModel.state.value.edited)
+        assertTrue(viewModel.state.value.canUndo)
+
+        viewModel.undo()
+        assertNull(viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+        assertSame(original, (viewModel.state.value.photo as ToolUiState.PhotoState.Ready).bitmap)
+
+        viewModel.undo()
+        assertNull(viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+    }
+
+    /**
+     * Run 8: the progress a running edit reports shows in the state as `Running(progress)`;
+     * meanwhile Save, Undo and a second edit are all ignored (the saver is never called), and when
+     * the edit ends the state is idle again with the result shown.
+     */
+    @Test
+    fun a_running_edit_reports_its_progress_and_blocks_save() {
+        val saver = FakePhotoSaver()
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), saver)
+        val halfway = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val result = ToolFixtures.gradient(300, 200)
+        val gated = FakeProcessor { _, onProgress ->
+            onProgress(0.25f)
+            halfway.await()
+            onProgress(0.75f)
+            finish.await()
+            EditResult.Edited(result)
+        }
+        val other = FakeProcessor { input, _ -> EditResult.Edited(input) }
+
+        viewModel.apply(gated)
+        runMainThread()
+        assertEquals(ToolUiState.Processing.Running(0.25f), viewModel.state.value.processing)
+
+        viewModel.save()
+        viewModel.undo()
+        viewModel.apply(other)
+        runMainThread()
+        assertEquals(ToolUiState.SaveState.Idle, viewModel.state.value.save)
+        assertTrue("Save ran during an edit", saver.calls.isEmpty() && saver.bitmapCalls.isEmpty())
+        assertTrue("A second edit ran during the first", other.inputs.isEmpty())
+
+        halfway.complete(Unit)
+        runMainThread()
+        assertEquals(ToolUiState.Processing.Running(0.75f), viewModel.state.value.processing)
+
+        finish.complete(Unit)
+        runMainThread()
+        assertEquals(ToolUiState.Processing.Idle, viewModel.state.value.processing)
+        assertSame(result, viewModel.state.value.edited)
+    }
+
+    /**
+     * Run 8: an edit that fails, whether it returns a failure (no face), throws
+     * `OutOfMemoryError` or throws anything else, sets the matching failure and leaves the photo
+     * and the last edit exactly as they were, with Undo still possible.
+     */
+    @Test
+    fun a_failed_edit_sets_the_failure_and_keeps_the_photo_and_the_edit() {
+        val original = ToolFixtures.gradient(600, 400)
+        val viewModel = loadedViewModel(original)
+        val kept = ToolFixtures.gradient(300, 200)
+        viewModel.apply(FakeProcessor { _, _ -> EditResult.Edited(kept) })
+        runMainThread()
+
+        val cases = listOf(
+            EditFailure.NoFace to FakeProcessor { _, _ -> EditResult.Failed(EditFailure.NoFace) },
+            EditFailure.OutOfMemory to FakeProcessor { _, _ -> throw OutOfMemoryError("test") },
+            EditFailure.Other to FakeProcessor { _, _ -> throw IllegalStateException("test") },
+        )
+        cases.forEach { (failure, processor) ->
+            viewModel.apply(processor)
+            runMainThread()
+            val state = viewModel.state.value
+            assertEquals(failure, state.failure)
+            assertSame("$failure replaced the shown edit", kept, state.edited)
+            assertSame(original, (state.photo as ToolUiState.PhotoState.Ready).bitmap)
+            assertTrue(state.canUndo)
+            assertEquals(ToolUiState.Processing.Idle, state.processing)
+        }
+
+        viewModel.dismissFailure()
+        assertNull(viewModel.state.value.failure)
+    }
+
+    /**
+     * Run 8: a cancelled edit is not a failure. Leaving the screen (its ViewModelStore cleared)
+     * while an edit waits cancels it, and no failure is recorded; a processor that throws
+     * `CancellationException` itself records none either, and the photo stays as it was.
+     */
+    @Test
+    fun a_cancelled_edit_is_not_a_failure() {
+        val original = ToolFixtures.gradient(600, 400)
+        val never = CompletableDeferred<Unit>()
+        val stored = storedViewModel(loadedViewModel(original))
+        val viewModelStore = stored.first
+        val viewModel = stored.second
+        viewModel.apply(FakeProcessor { _, _ -> never.await(); EditResult.Edited(original) })
+        runMainThread()
+        viewModelStore.clear()
+        runMainThread()
+        assertNull(viewModel.state.value.failure)
+        assertNull(viewModel.state.value.edited)
+
+        val other = loadedViewModel(original)
+        other.apply(FakeProcessor { _, _ -> throw CancellationException("left the screen") })
+        runMainThread()
+        assertNull(other.state.value.failure)
+        assertNull(other.state.value.edited)
+        assertSame(original, (other.state.value.photo as ToolUiState.PhotoState.Ready).bitmap)
+    }
+
+    /**
+     * Run 8: before an edit the photo is shrunk to the tool's working size, keeping its shape:
+     * a 4000 x 3000 photo reaches Enhance at 512 x 384 and Remove background at 2000 x 1500,
+     * while the decoded original itself is left at its own size.
+     */
+    @Test
+    fun an_edit_works_on_the_photo_fitted_to_the_tool_s_working_size() {
+        val expected = mapOf(
+            Tool.ENHANCE to (WorkingSize.maxEdgeFor(Tool.ENHANCE) to 384),
+            Tool.REMOVE_BACKGROUND to (WorkingSize.maxEdgeFor(Tool.REMOVE_BACKGROUND) to 1500),
+        )
+        assertEquals(512, WorkingSize.maxEdgeFor(Tool.ENHANCE))
+        assertEquals(2000, WorkingSize.maxEdgeFor(Tool.REMOVE_BACKGROUND))
+        expected.forEach { (tool, size) ->
+            val original = Bitmap.createBitmap(4000, 3000, Bitmap.Config.RGB_565)
+            val viewModel = loadedViewModel(original, tool = tool)
+            val processor = FakeProcessor { input, _ -> EditResult.Edited(input) }
+            viewModel.apply(processor)
+            runMainThread()
+
+            val input = processor.inputs.single()
+            assertEquals("$tool: width", size.first, input.width)
+            assertEquals("$tool: height", size.second, input.height)
+            assertEquals(4000, original.width)
+            assertEquals(3000, original.height)
+        }
+    }
+
+    /**
+     * Run 8: after an edit, Save hands the saver the edited bitmap itself, at its own size, and
+     * never the photo's Uri, so the original file is never written; an unedited photo is still
+     * saved from its Uri.
+     */
+    @Test
+    fun save_after_an_edit_saves_the_edited_bitmap_and_not_the_original() {
+        val original = ToolFixtures.gradient(600, 400)
+        val edited = ToolFixtures.gradient(640, 480)
+
+        val uneditedSaver = FakePhotoSaver()
+        val unedited = loadedViewModel(original, uneditedSaver)
+        unedited.save()
+        runMainThread()
+        assertEquals(listOf(PHOTO_URI), uneditedSaver.calls.toList())
+        assertTrue(uneditedSaver.bitmapCalls.isEmpty())
+
+        val saver = FakePhotoSaver()
+        val viewModel = loadedViewModel(original, saver)
+        viewModel.apply(FakeProcessor { _, _ -> EditResult.Edited(edited) })
+        runMainThread()
+        viewModel.save()
+        runMainThread()
+
+        val saved = saver.bitmapCalls.single()
+        assertSame(edited, saved)
+        assertEquals(640, saved.width)
+        assertEquals(480, saved.height)
+        assertNotSame(original, saved)
+        assertTrue("The original's Uri was saved after an edit", saver.calls.isEmpty())
+        assertEquals(ToolUiState.SaveState.Saved(keptOriginalOrientation = false), viewModel.state.value.save)
+    }
+
+    /**
+     * Run 8: `runRegistered` runs the processor the registry holds for the screen's tool, and does
+     * nothing on a screen whose tool has none.
+     */
+    @Test
+    fun run_registered_runs_the_tool_s_own_processor() {
+        val result = ToolFixtures.gradient(300, 200)
+        val registry = ProcessorRegistry(mapOf(Tool.ENHANCE to FakeProcessor { _, _ -> EditResult.Edited(result) }))
+
+        val enhance = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.ENHANCE, registry = registry)
+        enhance.runRegistered()
+        runMainThread()
+        assertSame(result, enhance.state.value.edited)
+
+        val edit = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.EDIT, registry = registry)
+        edit.runRegistered()
+        runMainThread()
+        assertNull(edit.state.value.edited)
+        assertEquals(ToolUiState.Processing.Idle, edit.state.value.processing)
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
+     * A [ToolProcessor] for tests: records every input it is given and answers with [block],
+     * which may report progress, wait, return a result or throw.
+     */
+    private class FakeProcessor(
+        private val block: suspend (input: Bitmap, onProgress: (Float) -> Unit) -> EditResult,
+    ) : ToolProcessor {
+
+        /** Every input bitmap this processor was given, oldest first. */
+        val inputs = CopyOnWriteArrayList<Bitmap>()
+
+        /** Records [input] and runs [block] on it. */
+        override suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult {
+            inputs += input
+            return block(input, onProgress)
+        }
+    }
+
+    /**
+     * Builds the ViewModel on [tool] for [photo] through a [FakePhotoLoader], loads the photo and
+     * checks it is shown, so an edit can run on it at once.
+     */
+    private fun loadedViewModel(
+        photo: Bitmap,
+        saver: PhotoSaver = NoSavePhotoSaver(),
+        tool: Tool = Tool.EDIT,
+        registry: ProcessorRegistry = ProcessorRegistry(),
+    ): ToolViewModel {
+        val viewModel = toolViewModel(FakePhotoLoader(app, photo), saver, tool, registry)
+        viewModel.load(MAX_EDGE_PX)
+        runMainThread()
+        assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
+        return viewModel
+    }
+
+    /**
+     * Puts [viewModel] in a new ViewModelStore, the way a navigation entry keeps it, and returns
+     * the store (clearing it is what leaving the screen does) with the stored ViewModel.
+     */
+    private fun storedViewModel(viewModel: ToolViewModel): Pair<ViewModelStore, ToolViewModel> {
+        val store = ViewModelStore()
+        val factory = object : ViewModelProvider.Factory {
+            /** Hands out the ViewModel given. */
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return viewModel as T
+            }
+        }
+        return store to ViewModelProvider(store, factory)[ToolViewModel::class.java]
+    }
+
+    /**
      * Builds the ViewModel on [tool] (Edit by default) for [PHOTO_URI] with [loader], the way the
-     * app's Koin recipe does but by hand, with a probe nobody reads and [saver] (by default one
-     * that writes nothing and fails every save).
+     * app's Koin recipe does but by hand, with a probe nobody reads, [saver] (by default one
+     * that writes nothing and fails every save) and [registry]. Shrinking before an edit runs on
+     * `Dispatchers.Unconfined`, in place on the test's thread, so the test needs no other thread.
      */
     private fun toolViewModel(
         loader: FakePhotoLoader,
         saver: PhotoSaver = NoSavePhotoSaver(),
         tool: Tool = Tool.EDIT,
+        registry: ProcessorRegistry = ProcessorRegistry(),
     ): ToolViewModel =
         ToolViewModel(
             tool = tool,
@@ -140,6 +459,8 @@ class ToolViewModelTest {
             loader = loader,
             probe = ViewModelClearedProbe(),
             saver = saver,
+            registry = registry,
+            workDispatcher = Dispatchers.Unconfined,
         )
 
     /** Runs everything waiting in the main thread's queue, where the ViewModel's jobs end. */
