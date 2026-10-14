@@ -1,2 +1,0 @@
-R.string.gallery_album_label
-R.string.gallery_body_placeholder

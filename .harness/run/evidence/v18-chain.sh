@@ -1,1 +1,0 @@
-cd /d/Valve/Personal/Kanso && timeout 1500 ./gradlew cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue > .harness/run/evidence/p9-whole.log 2>&1; echo rc=$? > .harness/run/evidence/p9-whole.exit
