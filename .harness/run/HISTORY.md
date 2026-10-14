@@ -36,3 +36,6 @@
 
 ## Iteration 8 (2026-10-14)
 T-008: one Capable Worker rewrote README (intro, Edit/Remove background/Enhance sections, upright, engine table, saving) and `readme-paths.sh` (by heading, 79 paths). Greps for DoD 31/R2 empty, script exits 0. No code touched, so no build run. PARTIAL-candidate recorded.
+
+### Iteration 9 - 2026-10-14 (Verifier)
+- Fresh build/test/lint (`evidence/v9-full.log`): 690 tests, 17 failed, all `ToolScreenshotTest` pictures; build, lint, ABIs, manifest, diffs, README greps and `readme-paths.sh` hold (DoD 31, R2 now pass). `recordRoborazziDebug` tried again: denied. A13 focus `com.languagelearning.app`: 7, 9, 11, 13 not driven. No gap the engine can close; DONE_PARTIAL. Evidence: `evidence/v9-verifier.md`.

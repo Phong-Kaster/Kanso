@@ -1,6 +1,6 @@
 # RESUME BLOCK
 
-- **Stage:** PARTIAL-candidate recorded (Iteration 8). T-008 complete. The next invocation is the Verifier: re-prove every machine criterion (DoD 31 and R2 now should pass), drive device criteria 7, 9, 11, 13 if the A13 is free (`-Op focus` first), then report `DONE_PARTIAL` if only the 17 unrecorded pictures (DoD 27) remain.
+- **Stage:** run ended DONE_PARTIAL (Verifier, Iteration 9). Nothing executable. A later run can close DoD 27 once a person records the 17 `ToolScreenshotTest` pictures, and 7, 9, 11, 13 once the A13 or an emulator is free.
 - **Next Phase:** none
 - **Queued decisions:** 0
 - **Abandoned / unreachable:** none

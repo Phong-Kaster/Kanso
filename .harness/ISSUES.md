@@ -2,7 +2,21 @@
 
 ## Run 8 (the five editing tools edit the photo)
 
-- Verifier, Iteration 7 found the README stale; fixed by T-008 in Iteration 8 (greps empty, `readme-paths.sh` exit 0), awaiting the Verifier's re-check. Device criteria 7, 9, 11, 13 still not driven: the Galaxy A13 was in use and no emulator was running. Evidence: `.harness/run/evidence/v7-verifier.md`.
+- **The Verifier (Iteration 9, 2026-10-14) re-proved every `machine` criterion with a fresh run and ended the run `DONE_PARTIAL`.** Everything holds except DoD 27: 690 tests, and the only 17 failures are the `ToolScreenshotTest` pictures below. Build, lint, the three ABIs, the manifest (no network permission), the unchanged dependencies, engine and `reference/`, and the README (DoD 31, R2: greps empty, 79 paths, 0 missing) all hold. Recording the pictures was tried again and denied. Evidence: `.harness/run/evidence/v9-verifier.md`. `.harness/run/` stays on the branch (no Cleanup Commit).
+- **The Galaxy A13 was not driven:** at the check, `com.languagelearning.app` had focus, and no emulator was running.
+
+### Awaiting a person, Run 8
+
+Nothing below has been looked at by a person, and the four device items were **not driven** by a machine either.
+
+- [ ] Run 8 7 Remove background on a real person: **not driven** (A13 in use). Install the debug build, put a photo of a person in `Pictures`, open Remove background on it and wait. Expect within 60 s the person cut out over a checkerboard with no download. Save, and the saved PNG has transparent corners. Look at the cut edge around hair and shoulders.
+- [ ] Run 8 9 Enhance on a large photo: **not driven** (no operation places a test photo). Open Enhance on a 4000x3000 photo. Expect a progress indication, no freeze or crash, a result within 120 s, and a saved file larger than 512 px on its long edge. Look at the detail with the compare control.
+- [ ] Run 8 11 Retouch on a portrait: **not driven.** Open Retouch on a portrait with one face, strength at maximum. Expect within 60 s smoother skin, eyes still sharp. Then open a landscape: expect "No face found in this photo. Nothing was changed."
+- [ ] Run 8 13 Artistic: **not driven.** Open Artistic on a photo, choose Warm wash at full strength. Expect within 120 s a picture that looks painted and no crash. Choose Ink: expect a different picture. Strength 0 gives the photo back.
+- [ ] Run 8 24 Tool layout, light and dark: open each of the five tools on a photo. Expect the photo in its rounded card, the tool's controls under it, one full-width Save at the bottom, nothing hidden behind the bar or system buttons.
+- [ ] Run 8 26 Progress and compare: run Remove background and Enhance on a large photo. Expect a visible progress indication while they work, the cut-out clearly over a checkerboard, and Enhance's compare control easy to find.
+- [ ] Run 8 32 README matches the app: read "Editing features" and "How each editing feature works" in `README.md`, then use each tool. Expect every sentence you check to be true; note any that is not.
+- [ ] Run 8 35 All five tools on the A13: on the phone, open each tool on a gallery photo, edit, Save, open the result in My edits. Expect no crash, progress on the slow tools, and the saved photo showing the edit.
 
 - [ ] Run 8 Phase 4: `ToolScreenshotTest` pictures 45-54 (new) have no baseline and 16, 17, 22, 23, 40, 41, 42 still differ, because `recordRoborazziDebug` is denied (D-001 approved recording them). Run `./gradlew :app:recordRoborazziDebug --tests "*ToolScreenshotTest*"`, open each picture in `app/src/test/screenshots/` and commit if right: 45-46 Remove background, 47-48 Retouch, 49-50 Artistic, 51-52 Edit free crop, 53-54 Enhance after a run.
 

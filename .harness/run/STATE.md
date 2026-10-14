@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** phase 5 done; PARTIAL-candidate recorded (Iteration 8)
-- **PARTIAL-candidate:** yes (T-008 fixed README; 17 pictures unrecorded, record denied; devices 7, 9, 11, 13 not driven)
+- **Stage:** Verifier (Iteration 9): DONE_PARTIAL
+- **PARTIAL-candidate:** consumed by the Verifier, Iteration 9 (evidence/v9-verifier.md): every machine criterion holds except 27 (17 pictures unrecorded, record denied); 7, 9, 11, 13 not driven (A13 in use)
 - **Loop Branch:** loop/kanso-editing-tools
-- **Next Phase:** none (Verifier)
+- **Next Phase:** none; run ended DONE_PARTIAL
 - **DONE-candidate:** no
 
 ## Progress
