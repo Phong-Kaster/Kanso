@@ -61,14 +61,15 @@ class EngineStylizer(
     companion object {
 
         /**
-         * The blend ratio handed to the engine, meant as "the photo painted fully in the style";
-         * the Artistic processor makes every weaker strength itself by mixing in Kotlin.
+         * The blend ratio handed to the engine: 0 paints the photo fully in the style image's
+         * style; the Artistic processor makes every weaker strength itself by mixing in Kotlin.
          *
-         * Unverified: the engine's class files do not say which end of the ratio is full style
-         * (1 might instead mean "all original"). It is named once, here, so the device run
-         * (DoD 13) can confirm it or flip it in one place.
+         * The ratio blends the style image's style with the photo's own: at 1 the engine keeps
+         * the photo's own style and ignores the style image. Run 8 shipped 1, and on the
+         * emulator (2026-10-14) Warm wash, Mosaic and Ink gave pixel-identical pictures. Retica,
+         * where the engine comes from, starts its blend slider at 0 (`ArtisticUiState`).
          */
-        const val FULL_STYLE_RATIO = 1f
+        const val FULL_STYLE_RATIO = 0f
 
         /**
          * Returns [style]'s picture from the app's assets ([ArtisticStyle.assetPath]), or, when
