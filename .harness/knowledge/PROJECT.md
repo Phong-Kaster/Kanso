@@ -62,6 +62,14 @@
 - **Never** create a file under `.harness/archive/` with a shell redirect, `cp` or `sed`: the permission rules deny every later read, edit and delete there, so a mistake cannot be repaired. The Write tool is refused there too (Iteration 15: "File is in a directory that is denied by your permission settings"), so until the rules change (Suggestion S-013) nothing can be archived: leave `.harness/ISSUES.md` whole. An open item must never reach the archive — evidence: Iteration 12, where an untracked `ISSUES-run-1-6.md` holding 39 open items was left for a person to delete.
 - **Never** finish a Phase that adds, edits, renames or removes a test without appending each change, with its reason, to `.harness/run/evidence/test-edits.md`: DoD 35 lists every base test name missing at HEAD from it, and rebuilding it at the end needed a task of its own (T-014) — evidence: the Iteration 12 Verifier found it missing after five Phases.
 
+- **Never** call the engine (`libs/*.aar`, `opencv/`) from a host JVM test or assume its API from Retica's call sites alone: GL, LiteRT, MediaPipe and OpenCV are native and cannot load under Robolectric, and the AARs ship no source; put each engine step behind an `app/` interface, test with a fake, and read the class files before the first call - evidence: Run 8 bootstrap (analysts, 2026-10-14).
+- **Never** use ML Kit *subject* segmentation (a Play-services model that downloads at first use) or any other model that fetches at runtime: the PRD is offline-only; the selfie-segmentation model is bundled - evidence: `core/localml/build.gradle.kts:64`, Run 8 DoD Q2.
+- **Never** hand an unscaled photo to Enhance: Real-ESRGAN upscales 4x, so a 4000x3000 input asks for about 768 MB - evidence: Run 8 bootstrap, Retica `EnhanceViewModel`.
+
+## Repository class
+
+Product (real users rely on it; one initial skeleton long gone; Runs 1-7 shipped features, tests and a README).
+
 ## Reference index
 
 One line per topic under `.harness/knowledge/reference/`; open a topic only when your task touches it.

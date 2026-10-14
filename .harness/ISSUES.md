@@ -292,3 +292,7 @@ Defects found, not fixed:
 - All four figures are from a debug build; measure a release build before deciding what to fix.
 
 - Phase 1a (Iteration 5): no fresh-context review was run on the T-001/T-002 diff (time); picture compare files not copied to `evidence/baseline-diffs/phase1/`.
+
+## Run 8 (loop/kanso-editing-tools)
+
+No issues yet. Bootstrap only; D-001 (the DoD approval) is pending.
