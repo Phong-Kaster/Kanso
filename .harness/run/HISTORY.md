@@ -39,3 +39,6 @@ T-008: one Capable Worker rewrote README (intro, Edit/Remove background/Enhance 
 
 ### Iteration 9 - 2026-10-14 (Verifier)
 - Fresh build/test/lint (`evidence/v9-full.log`): 690 tests, 17 failed, all `ToolScreenshotTest` pictures; build, lint, ABIs, manifest, diffs, README greps and `readme-paths.sh` hold (DoD 31, R2 now pass). `recordRoborazziDebug` tried again: denied. A13 focus `com.languagelearning.app`: 7, 9, 11, 13 not driven. No gap the engine can close; DONE_PARTIAL. Evidence: `evidence/v9-verifier.md`.
+
+### Iteration 10 - 2026-10-14 (Verifier, re-check after 6956f78)
+- The 17 pictures are recorded; `testDebugUnitTest` + `verifyRoborazziDebug` exit 0 (evidence/v10-full.log), so DoD 27 holds. Device criteria 7, 9, 11, 13 still not driven; signatures outstanding. DONE_PARTIAL.

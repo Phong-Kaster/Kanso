@@ -2,6 +2,8 @@
 
 ## Run 8 (the five editing tools edit the photo)
 
+- **Iteration 10 (2026-10-14): DoD 27 now holds.** The 17 `ToolScreenshotTest` pictures were recorded in `6956f78` (via the record wrapper) and re-verified: `testDebugUnitTest` + `verifyRoborazziDebug` exit 0 (`.harness/run/evidence/v10-full.log`). The two unticked picture items below (Phase 4, Phase 2) are therefore only awaiting a person to look at the pictures; the engine looked at all 17 in `6956f78`. Device items 7, 9, 11, 13 remain not driven. Run stays `DONE_PARTIAL`.
+
 - **The Verifier (Iteration 9, 2026-10-14) re-proved every `machine` criterion with a fresh run and ended the run `DONE_PARTIAL`.** Everything holds except DoD 27: 690 tests, and the only 17 failures are the `ToolScreenshotTest` pictures below. Build, lint, the three ABIs, the manifest (no network permission), the unchanged dependencies, engine and `reference/`, and the README (DoD 31, R2: greps empty, 79 paths, 0 missing) all hold. Recording the pictures was tried again and denied. Evidence: `.harness/run/evidence/v9-verifier.md`. `.harness/run/` stays on the branch (no Cleanup Commit).
 - **The Galaxy A13 was not driven:** at the check, `com.languagelearning.app` had focus, and no emulator was running.
 
