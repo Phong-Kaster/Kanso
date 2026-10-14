@@ -18,3 +18,7 @@
 - Review (Capable) found no blocker beyond README (done) and listed majors in ISSUES.md.
 - Evidence p2-full-2.log: 648 tests, 7 failed (ToolScreenshotTest baselines, re-record denied). Lint ran without a reported failure.
 
+
+## Iteration 4 (Phase 3 attempted: T-005, T-006) - no progress, reverted
+- Both Capable Workers died on an API session limit (HTTP 429, resets 6:10pm Bangkok) before finishing. Their partial files and the Iteration's ViewModel/ToolScreen edits did not compile together and were unverified, so all were reverted to the last checkpoint; no attempt is counted against T-005 or T-006 (environment failure, not task failure).
+- Plan kept for the retry: processors expose `@Volatile var strength` (Retouch) and `style`/`strength` (Artistic); `ToolViewModel.apply(processor, fromOriginal)` and `runRegistered(fromOriginal, configure)` so slider tools mix against the untouched photo; `ToolPanel` gets `onRunConfigured`. Artistic style images: draw 5 256x256 WebP with Python/PIL (available) into `app/src/main/assets/styles/`. Engine facts: DetectFaceLandmarkUC.invoke(Bitmap) -> List<List<UnifyPoint>>; StyleTransferInceptionV3BlendUC.invoke(photo, styleBitmap, ratio).
