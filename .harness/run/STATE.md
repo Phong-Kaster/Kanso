@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** phase 5 (T-008 README), filed by the Verifier in Iteration 7
-- **PARTIAL-candidate:** no (cleared by the Verifier, Iteration 7: DoD 31 and R2 fail, README stale; see evidence/v7-verifier.md)
+- **Stage:** phase 5 done; PARTIAL-candidate recorded (Iteration 8)
+- **PARTIAL-candidate:** yes (T-008 fixed README; 17 pictures unrecorded, record denied; devices 7, 9, 11, 13 not driven)
 - **Loop Branch:** loop/kanso-editing-tools
-- **Next Phase:** T-008
+- **Next Phase:** none (Verifier)
 - **DONE-candidate:** no
 
 ## Progress
@@ -19,7 +19,7 @@
 | T-005 | complete | data/edit/retouch, RetouchPanel | evidence/p3-full-2.log |
 | T-006 | complete | data/edit/artistic, ArtisticPanel, assets/styles | evidence/p3-full-2.log |
 | T-007 | partial | ToolScreenshotTest, baselines, README | evidence/v7-full.log (17 pictures unrecorded) |
-| T-008 | pending | README.md, evidence/readme-paths.sh | - |
+| T-008 | complete | README.md, evidence/readme-paths.sh | readme-paths.sh exit 0 |
 
 ## Assumptions
 

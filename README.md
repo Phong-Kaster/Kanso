@@ -7,17 +7,20 @@ The manifest removes the `INTERNET` and `ACCESS_NETWORK_STATE` permissions that 
 libraries would otherwise merge in (`app/src/main/AndroidManifest.xml`). A photo only leaves the
 phone when you send it to another app with Share.
 
-This README describes **what the code on branch `loop/kanso-influx-layout` actually does**. It is
-not a roadmap. Where the UI promises something the code does not do yet, this file says so.
+This README describes **what the code on branch `loop/kanso-editing-tools` actually does**. It is
+not a roadmap. Where the code does something only in part, or a step has not yet been checked on a
+phone, this file says so.
 
-> **Current state, in one paragraph.** The app shell works from start to end: Home, a photo
-> gallery for each tool, the camera, a screen for each tool, saving into `Pictures/Kanso`, a Saved
-> screen with Share, the My edits tab and Settings. **No tool edits pixels yet.** Each of the five
-> tool screens decodes the photo, shows it, and when you tap Save writes a copy of the *original*
-> photo (only turned upright, see below). The panel under the photo says the tool's controls are
-> "coming in a later run". The image engine in `core/` and `libs/` (OpenGL, OpenCV, TensorFlow Lite
-> / LiteRT, MediaPipe, ML Kit) is compiled into the APK, but nothing in `app/` calls its editing
-> code.
+> **Current state, in one paragraph.** The app works from start to end: Home, a photo gallery for
+> each tool, the camera, a screen for each tool, saving into `Pictures/Kanso`, a Saved screen with
+> Share, the My edits tab and Settings. **All five tools edit the photo.** Edit crops, turns, flips,
+> adjusts colour and applies filters in plain Kotlin; Remove background, Enhance, Retouch and
+> Artistic call the image engine's bundled on-device models (`libs/localml.aar`, through
+> `core/localml`) and OpenCV, from one wrapper file each in `app/` (`Engine*.kt`). Nothing is
+> downloaded. Each edit is one Undo step, and Save writes the picture shown on screen as a new file
+> (a JPEG, or a PNG for a cut-out with a transparent background). An unedited photo is saved as a
+> copy of the original, only turned upright. The engine calls have been built and tested with fakes
+> on the computer; what the real models return has not yet been checked on a phone.
 
 ---
 
@@ -28,7 +31,7 @@ not a roadmap. Where the UI promises something the code does not do yet, this fi
 | Feature | Where you reach it | State | What really happens |
 |---|---|---|---|
 | **Edit** (crop, colour, filters) | Home shortcut, a "Recent edits" photo, the Camera button, "Edit" in the photo viewer | **Works** (not yet on a device) | `ui/tool/EditPanel.kt` sends each change as an `EditProcessor` (`data/edit/edit/`) to `ToolViewModel.apply` on a background thread: crop (free, 1:1, 4:3, 3:4, 16:9, 9:16), quarter turns, flips, then brightness/contrast/saturation/warmth (colour matrix, applied when the slider is let go, then back to the middle), then one of 7 filters built on the CPU from look-up images bundled in the engine AARs, with an intensity. Working size: 2000 px long edge. Each change is one Undo step; Save writes the shown result. Out of memory shows a message and keeps the photo. |
-| **Remove background** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `CutoutPanel` runs `CutoutProcessor` with `EngineSegmenter`, which calls the bundled selfie-segmentation model of `libs/localml.aar` (no download) through OpenCV; the photo is first shrunk to 2000 px. `MaskCompositor` makes pixels the mask calls background fully transparent; the result is shown over a checkerboard and saved as PNG. No subject shows its own message. |
+| **Remove background** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `CutoutPanel` runs `CutoutProcessor` with `EngineSegmenter`, which loads OpenCV and calls the engine's `SelfieSegmentationUC` (`libs/localml.aar`), backed by ML Kit's selfie-segmentation model, which ships inside the app (no download); the photo is first shrunk to 2000 px. `MaskCompositor` makes pixels the mask calls background fully transparent; the result is shown over a checkerboard and saved as PNG. No subject shows its own message. |
 | **Enhance** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `EnhancePanel` runs `EnhanceProcessor`: the photo is shrunk to 512 px, `EngineUpscaler` runs the bundled Real-ESRGAN model (4x, so up to 2048 px) with progress, then `AutoLighting` lifts a dark photo toward mid-tones (a well-lit one is left alone). Press and hold the compare control to see the original. |
 | **Retouch** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `RetouchPanel` (a strength slider, default 100%, and "Smooth skin") runs `RetouchProcessor`: the photo is shrunk to 2000 px, `EngineFaceFinder` finds faces with the bundled MediaPipe landmark model of `libs/localml.aar` (no download), `EngineSkinSmoother` runs an OpenCV bilateral filter on each face rectangle only, and the smoothed picture is blended over the original by the strength in Kotlin (0 = the photo unchanged). No face shows "No face found in this photo. Nothing was changed." Retica's own Retouch screen was object removal; Kanso's Retouch is skin smoothing only. |
 | **Artistic** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `ArtisticPanel` (four style chips: Warm wash, Cool wash, Mosaic, Ink; a strength slider; "Apply style") runs `ArtisticProcessor`: the photo is shrunk to 1024 px, `EngineStylizer` runs the bundled Inception V3 style-prediction and style-transfer models once per style, and the styled picture is blended with the photo by the strength in Kotlin, so moving the slider does not run the model again. The four style images are drawn, not Retica's (`app/src/main/assets/styles/*.webp`, drawn by `StyleImages` as a fallback). Whether the engine's ratio 1 means "full style" (`FULL_STYLE_RATIO`) is unverified until a device run. |
@@ -50,8 +53,10 @@ not a roadmap. Where the UI promises something the code does not do yet, this fi
 
 ## How each editing feature works
 
-All five tools share one screen, one ViewModel and one pipeline. They differ only in their title
-and in the message in the panel under the photo.
+All five tools share one screen (`ui/tool/ToolScreen.kt`), one ViewModel
+(`ui/tool/ToolViewModel.kt`) and one way of running an edit. They differ in their title, in the
+panel of controls under the photo (`ui/tool/ToolPanel.kt` picks it), and in the processor that
+does the edit (`data/edit/`). The shared part comes first, then one section per tool.
 
 ### The shared tool pipeline (Edit, Remove background, Enhance, Retouch, Artistic)
 
@@ -74,9 +79,12 @@ Paths below are under `app/src/main/java/com/phongkaster/kanso/` unless they sta
 
 **2. Building the screen** (`di/AppModule.kt`, `ui/tool/ToolViewModel.kt`)
 
-Koin builds one `ToolViewModel(tool, photoUri, loader = PhotoLoader, probe, saver = PhotoSaver)` per
-`ToolPhoto` entry. The ViewModel is scoped to that navigation entry and cleared when the entry is
-popped. It depends on nothing from `core/`.
+Koin builds one `ToolViewModel(tool, photoUri, loader = PhotoLoader, probe, saver = PhotoSaver,
+registry = ProcessorRegistry)` per `ToolPhoto` entry. The ViewModel is scoped to that navigation
+entry and cleared when the entry is popped. It imports nothing from `core/` itself: the
+`ProcessorRegistry` (`data/edit/ProcessorRegistry.kt`), built once in `di/AppModule.kt`, holds the
+processor of Remove background, Enhance, Retouch and Artistic, each built on its engine wrapper.
+Edit has no registry entry: its panel builds a new `EditProcessor` for each change.
 
 **3. Decoding for display** (`data/photo/PhotoLoader.kt`)
 
@@ -96,20 +104,38 @@ popped. It depends on nothing from `core/`.
 
 **4. What the screen shows** (`ui/tool/ToolScreen.kt`)
 
-A Back button and the tool's name; the photo in a rounded card over a blurred copy of itself; a
+A Back button and the tool's name; the photo (the last edit, or the original) in a rounded card
+over a blurred copy of itself, or over a checkerboard (`ui/tool/Checkerboard.kt`) when Remove
+background's result has transparent parts; a
 "Replace" chip, which goes back to this tool's gallery (`replaceWithGallery`); an Undo button
 (`tool-undo`, top right); a progress ring (`tool-progress`) and a plain-words failure message
 (`tool-failure`) when an edit runs or fails; the tool's panel (`ToolPanel.kt`);
-and a full-width Save button, disabled while an edit runs. The pipeline every tool uses: `ToolViewModel.apply(processor)` shrinks the shown bitmap to
-the tool's working size (`data/edit/WorkingSize.kt`), runs a `ToolProcessor` off the main thread
-with progress, and on success keeps the result as the shown photo and the previous one for Undo; a
-failure (`EditFailure`) leaves the photo as it was.
+and a full-width Save button, disabled while an edit runs.
 
-**5. Saving** (`ToolViewModel.save()` → `data/photo/MediaStorePhotoSaver.kt`)
+**5. Running an edit** (`ToolViewModel.apply`, `data/edit/ToolProcessor.kt`)
+
+- A panel either hands the ViewModel a processor it built (Edit, through `apply`) or asks it to run
+  the tool's registered one (`runRegistered`; Retouch and Artistic first set their strength and
+  style on it). One edit runs at a time: a tap while one runs is ignored.
+- `apply` shrinks the bitmap to the tool's working size (`data/edit/WorkingSize.kt`: Edit 2000 px,
+  Remove background 2000 px, Enhance 512 px, Retouch 2000 px, Artistic 1024 px on the longest
+  edge), then runs the `ToolProcessor` on `Dispatchers.Default`, reporting progress (0 to 1) to the
+  progress ring. Edit, Remove background and Enhance work on the photo as now shown (the last
+  edit); Retouch and Artistic always start again from the original.
+- On success the result becomes the shown photo and the one before it is kept for Undo, in memory
+  only. A slider re-run of Retouch or Artistic replaces its last result instead of adding an Undo
+  step.
+- A failure comes back as an `EditFailure` (`data/edit/EditFailure.kt`): out of memory, no
+  subject, no face, model unavailable, or other. The screen shows its message and the photo and
+  Undo stay as they were. Leaving the screen cancels a running edit.
+
+**6. Saving** (`ToolViewModel.save()` → `data/photo/MediaStorePhotoSaver.kt`)
 
 - `ToolViewModel.save()` calls `saver.save(photoUri)` with the **original Uri** for an unedited
-  photo, and `saver.save(bitmap)` with the shown edited bitmap otherwise (JPEG q95, or PNG when the
-  bitmap has an alpha channel; same name scheme, same size as shown). A second tap while a save is running is ignored.
+  photo, and `saver.save(bitmap)` with the shown edited bitmap otherwise (JPEG quality 95, or a
+  lossless PNG when the bitmap has an alpha channel; same name scheme, at exactly the size shown,
+  not scaled back up). A second tap while a save is running, or a tap while an edit runs, is
+  ignored.
 - On Android 8.1 and 9 (API 27–28), `needsWritePermission()` is true until
   `WRITE_EXTERNAL_STORAGE` is granted, so the screen asks first. A refusal shows "Kanso needs
   permission to write to your storage to save the photo. Nothing was saved." Android 10+ asks for
@@ -118,8 +144,84 @@ failure (`EditFailure`) leaves the photo as it was.
 - On success the ViewModel sends the new Uri through a `Channel` (delivered once), and the nav host
   replaces everything above Home with `Saved(tool, uri)`.
 
-**Result:** whichever tool you open, the saved file is the original photo, turned upright if it had
-an EXIF rotation, and otherwise identical byte for byte.
+**Result:** after an edit, the saved file is the picture shown on screen, at its working size (at
+most 2000 px for Edit, Remove background and Retouch, 2048 px for Enhance, 1024 px for Artistic,
+and for all but Enhance never larger than the photo as decoded for display in step 3).
+With no edit (or after undoing every edit), the saved file is the original photo, turned upright if
+it had an EXIF rotation, and otherwise identical byte for byte.
+
+### Edit (`data/edit/edit/`, `ui/tool/EditPanel.kt`)
+
+1. `EditPanel` keeps what its controls show (`EditSettings`) and turns each change into a new
+   `EditProcessor` holding that one change only, which `ToolScreen` passes to
+   `ToolViewModel.apply`. A crop shape, a quarter turn or a flip is applied when tapped; the four
+   colour sliders (brightness, contrast, saturation, warmth) when you let go, after which they spring
+   back to the middle; a filter when its chip is tapped, at the intensity slider's value; a free
+   crop when you tap "Crop" under its two range sliders. Each is one Undo step.
+2. `ToolViewModel` shrinks the shown photo to 2000 px (`WorkingSize.EDIT`) and runs the processor
+   on `Dispatchers.Default`; `EditProcessor` runs on `Dispatchers.Default` itself too.
+3. `EditProcessor` works on the pixels as one `IntArray`, in this order: crop (free, or the
+   largest centred 1:1, 4:3, 3:4, 16:9 or 9:16 rectangle, `CropRatio.kt`); quarter turns; flips;
+   one colour matrix built from the four sliders (contrast around mid-grey, saturation, warmth
+   shifting red against blue by up to 40, brightness by up to 80, on a 0-255 scale), skipped when
+   all four are in the middle; then the filter, mixed with the unfiltered colour by the intensity.
+4. The filters (`FilterPreset.kt`, `FilterLut.kt`) are 7 look-up images bundled in the engine's
+   AARs and merged into the app's assets at build time: `lookup/lookup_light.png` from
+   `libs/imageprocessor.aar` (a 64-level colour cube) and six `filter_materials/map/*Map.png` curve
+   strips from `libs/editimage.aar` (1977, Kelvin, Nashville, Walden, Hudson, Amaro), read as one
+   tone curve per channel. They are decoded once and kept. No engine code runs: the look-up is done
+   in Kotlin on the CPU.
+5. The result is a new opaque ARGB_8888 bitmap, so Save writes a JPEG at the size shown.
+6. Failure: out of memory gives the out-of-memory message; a filter image that cannot be read
+   gives "Something went wrong and the edit was not made. Your photo is unchanged." The photo stays
+   as it was.
+
+### Remove background (`data/edit/cutout/`, `ui/tool/CutoutPanel.kt`)
+
+1. `CutoutPanel` shows one button, "Cut out the subject", which calls
+   `ToolViewModel.runRegistered()`; the registry holds `CutoutProcessor(EngineSegmenter())`.
+2. `ToolViewModel` shrinks the shown photo to 2000 px (`WorkingSize.REMOVE_BACKGROUND`), and
+   `CutoutProcessor` shrinks it again if needed, so the engine never gets a larger one. It runs on
+   `Dispatchers.Default`.
+3. `EngineSegmenter` loads OpenCV's native library (`OpenCVLoader.initLocal()`), builds the
+   engine's `SelfieSegmentationUC` (`libs/localml.aar`, through `core/localml`) once and keeps it,
+   and calls it with the photo. That use case runs ML Kit's selfie-segmentation model, which
+   `core/localml/build.gradle.kts` pulls in as a library that ships the model in the APK (no
+   download). The engine's subject-segmentation paths use a Play-services model that downloads on
+   first use, so Kanso never calls them. The selfie model is trained on people.
+4. The engine's picture is scaled to the photo's size if needed and read as one foreground
+   probability per pixel: from its alpha channel when it has see-through pixels, else from its
+   brightness. What the engine really returns is still to be checked on a phone.
+5. No mask, or no pixel at 0.5 or above: "No person or object stood out in this photo, so nothing
+   was cut out. Your photo is unchanged."
+6. `MaskCompositor` keeps every pixel's colour and sets its alpha from the mask: 0 up to 0.4, 255
+   from 0.6, a straight ramp between, so the outline is soft. The result has an alpha channel; the
+   screen shows it over a checkerboard, and Save writes it as a PNG (`image/png`) at the size shown.
+7. Failure: out of memory gives the out-of-memory message; OpenCV or the engine failing to load or
+   throwing gives "This tool could not start on this phone. Your photo is unchanged."
+
+### Enhance (`data/edit/enhance/`, `ui/tool/EnhancePanel.kt`)
+
+1. `EnhancePanel` shows one button, "Upscale and brighten", which calls
+   `ToolViewModel.runRegistered()`; the registry holds `EnhanceProcessor(EngineUpscaler(context))`.
+2. `ToolViewModel` and then `EnhanceProcessor` shrink the photo to 512 px (`WorkingSize.ENHANCE`),
+   because the model makes it four times wider and taller: an unshrunk 4000 x 3000 photo would ask
+   for about 768 MB. It runs on `Dispatchers.Default`.
+3. `EngineUpscaler` builds a new `EnhanceImageUC` (`libs/localml.aar`, through `core/localml`) for
+   each run, waits for its `initModel()`, and collects its progress stream until it reports a
+   result or an error. The model, `realesrgan_64x64_float16.tflite` (Real-ESRGAN, run by
+   TensorFlow Lite), is bundled in the AAR's assets: no download. Its progress fills the first 90%
+   of the ring. The output is up to 2048 px on its longest edge.
+4. `AutoLighting` measures the mean luminance. Below 110 (of 255) it applies a gamma curve to red,
+   green and blue chosen to bring the mean toward 128, never stronger than gamma 0.4 and never
+   darkening a pixel; a photo at 110 or above is left alone. Plain Kotlin.
+5. The result is marked opaque, so Save writes a JPEG at the size shown (up to 2048 px).
+6. Once there is a result, the panel shows a comparison picture above its button
+   (`ui/tool/EnhanceCompare.kt`) with a "Hold to see the original" control: holding it fades the
+   picture to the photo before Enhance, letting go fades back (a screen-reader double tap flips
+   between the two).
+7. Failure: out of memory gives the out-of-memory message; a model that will not load, or an error
+   from the engine, gives "This tool could not start on this phone. Your photo is unchanged."
 
 ### Retouch (`data/edit/retouch/`, `ui/tool/RetouchPanel.kt`)
 
@@ -140,10 +242,12 @@ an EXIF rotation, and otherwise identical byte for byte.
 5. Mix in Kotlin: strength 0 gives the (1024 px) photo, 1 the styled picture. Opaque result, saved as JPEG at the size shown.
 6. Failures as for Retouch.
 
-### Turn upright: the one pixel change Kanso makes
+### Turn upright: saving an unedited photo
 
-This is the only image transformation in the app's code today. It happens in two places, on
-purpose separately:
+This is the only change made to a photo that no tool has edited: Save then copies the original,
+turned upright if its EXIF tag says so. (An edited picture is already upright, because every tool
+works on the decoded, turned bitmap, and is saved as it is shown; see step 6 above.) Turning
+upright happens in two places, on purpose separately:
 
 | | On display | On save |
 |---|---|---|
@@ -155,39 +259,50 @@ purpose separately:
 | Out of memory | "Cannot be opened" message | Original bytes copied with their tag; the screen says "Saved. This photo is very large, so it was copied as it is and some apps may show it sideways." |
 
 Camera shots go through this path too. `CameraXController` writes the rotation into the JPEG's EXIF
-instead of turning the pixels, so a kept shot saved from a tool screen is normally decoded at full
-size, turned, and re-encoded at quality 95.
+instead of turning the pixels, so a kept shot saved unedited from a tool screen is normally decoded
+at full size, turned, and re-encoded at quality 95.
 
-### The image engine in `core/` and `libs/`: built, but not called
+### The image engine in `core/` and `libs/`: what each tool calls
 
 `app/build.gradle.kts` depends on every engine module (`:core:colorpicker`, `:core:common`,
 `:core:editimage`, `:core:gallery`, `:core:imagecrop`, `:core:imageprocessor`, `:core:localml`,
 `:core:overlaybrush`) and on `:opencv`, so all of them, with their native libraries and bundled
-assets, are packed into the APK. Searching `app/src/main` for imports from these modules finds
-exactly three:
+assets, are packed into the APK. Only a few files in `app/src/main` import from them, and every
+editing call goes through one wrapper file per engine step, so the rest of the app is tested on
+the computer with fakes (the engine is native code and cannot load there):
 
-- `com.photo.gallery.data.repository.MediaRepository` and `com.photo.gallery.model.GalleryBucket`
-  (`core/gallery`), used by `data/media/MediaStorePhotoSource.kt` for the gallery;
-- `com.library.colorpicker.HSVColorPicker` (`core/colorpicker`), used by
-  `ui/settings/SettingsScreen.kt` for the custom theme colour.
+| Tool | Wrapper file in `app/` | Engine class it calls | Module | Model or library (all bundled, none downloaded) |
+|---|---|---|---|---|
+| Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `core/imageprocessor`, `core/editimage` (assets only) | Filter look-up images `lookup/lookup_light.png` and `filter_materials/map/*Map.png` |
+| Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`; `OpenCVLoader` | `core/localml`; `opencv/` | ML Kit selfie segmentation (its library ships the model) |
+| Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `core/localml` | `realesrgan_64x64_float16.tflite` (TensorFlow Lite) |
+| Retouch | `data/edit/retouch/EngineFaceFinder.kt` | `DetectFaceLandmarkUC` (with `UnifyPoint` from `core/common`) | `core/localml` | `face_landmarker.task` |
+| Retouch | `data/edit/retouch/EngineSkinSmoother.kt` | `Imgproc.bilateralFilter`, `Utils`, `Mat` | `opencv/` | OpenCV, no model |
+| Artistic | `data/edit/artistic/EngineStylizer.kt` | `StylePredictInceptionV3UC`, `StyleTransferInceptionV3BlendUC` | `core/localml` | `image_stylization_inceptionv3_dr_predict.tflite`, `image_stylization_inceptionv3_dr_transfer.tflite` |
 
-Nothing calls the editing parts. This is what they hold:
+Outside editing, `data/media/MediaStorePhotoSource.kt` uses `core/gallery`'s `MediaRepository` and
+`GalleryBucket` for the gallery, and `ui/settings/SettingsScreen.kt` uses `core/colorpicker`'s
+`HSVColorPicker` for the custom theme colour. This is what the engine modules hold:
 
 | Module | Source in repo | What it contains (by its files and build script) | Called by Kanso? |
 |---|---|---|---|
-| `core/imagecrop` | Yes (Kotlin) | A Compose image cropper (`ImageCropper`, `CropState`, `CropShapes`, …) | No |
-| `core/common` | Yes (Kotlin) | Shared Compose widgets and utilities (`BitmapUtil`, `TransformableImage`, sliders, sheets) | No |
-| `core/editimage` | No: wraps `libs/editimage.aar` (9.3 MB) | Prebuilt; its assets include filter look-up maps under `assets/filter_materials/` | No |
-| `core/imageprocessor` | No: wraps `libs/imageprocessor.aar` | Prebuilt; its assets include LUTs (`assets/lookup/`) and GLSL shaders (`assets/shaders/`) | No |
+| `core/imagecrop` | Yes (Kotlin) | A Compose image cropper (`ImageCropper`, `CropState`, `CropShapes`, …) | No: Edit's crop is Kanso's own |
+| `core/common` | Yes (Kotlin) | Shared Compose widgets and utilities (`BitmapUtil`, `TransformableImage`, sliders, sheets) | Only its `UnifyPoint` type, the face points Retouch reads |
+| `core/editimage` | No: wraps `libs/editimage.aar` (9.3 MB) | Prebuilt; its assets include filter look-up maps under `assets/filter_materials/` | No code; Edit reads six of its `filter_materials/map/` images |
+| `core/imageprocessor` | No: wraps `libs/imageprocessor.aar` | Prebuilt; its assets include LUTs (`assets/lookup/`) and GLSL shaders (`assets/shaders/`) | No code; Edit reads its `lookup/lookup_light.png` image |
 | `core/overlaybrush` | No: wraps `libs/overlaybrush.aar` | Prebuilt; its assets include brush stamps (`assets/brush_materials/`) | No |
-| `core/localml` | No: wraps `libs/localml.aar` (23 MB) | Prebuilt; declares ML Kit (face mesh, pose, selfie and subject segmentation), MediaPipe Tasks Vision, LiteRT (+GPU) and `libs/tensorflow-lite-select-tf-ops.aar` | No |
+| `core/localml` | No: wraps `libs/localml.aar` (23 MB) | Prebuilt; declares ML Kit (face mesh, pose, selfie and subject segmentation), MediaPipe Tasks Vision, LiteRT (+GPU) and `libs/tensorflow-lite-select-tf-ops.aar` | Yes: Remove background, Enhance, Retouch and Artistic (table above) |
+| `opencv/` | Yes (OpenCV Android SDK) | OpenCV's Java API and native libraries | Yes: Remove background loads it, Retouch filters with it |
 
 The AI models are **bundled inside `libs/localml.aar`**, not downloaded. Its `assets/` holds
 `face_landmarker.task`, `hifill_inpaint_512_int8.tflite`,
 `image_stylization_inceptionv3_dr_predict.tflite`, `image_stylization_inceptionv3_dr_transfer.tflite`,
-`magic_touch.tflite` and `realesrgan_64x64_float16.tflite`. What these prebuilt libraries do with
-them happens inside the AARs. This repository has no source for them, and Kanso does not call
-them, so this README makes no claim about how they process an image.
+`magic_touch.tflite` and `realesrgan_64x64_float16.tflite`. Kanso uses four of them (the face,
+style and Real-ESRGAN models); `hifill_inpaint_512_int8.tflite` and `magic_touch.tflite` are packed
+in the APK but not called. The selfie-segmentation model comes with ML Kit's library rather than
+with these assets. The AARs ship no source, so what happens inside each engine call is known only
+from its class files and from Retica's calls; this README describes what Kanso passes in and what
+it does with the answer, and where the answer's exact form is unverified it says so.
 
 `reference/retica-app/` shows how the original Retica app called these libraries. It is not built,
 and nothing in Kanso imports it, so its behaviour is not Kanso's.
@@ -234,9 +349,9 @@ and nothing in Kanso imports it, so its behaviour is not Kanso's.
 | | |
 |---|---|
 | **Folder** | `Pictures/Kanso/` |
-| **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`; `_1`, `_2`, … (up to 9 999) when that name is taken. An existing file is never overwritten. |
-| **MIME type written** | `image/jpeg` |
-| **Content** | Upright re-encoded JPEG at quality 95, or the original bytes (see [Turn upright](#turn-upright-the-one-pixel-change-kanso-makes)) |
+| **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`, or `.png` for an edited picture with an alpha channel; `_1`, `_2`, … (up to 9 999) when that name is taken. An existing file is never overwritten. |
+| **MIME type written** | `image/jpeg` for an unedited photo and an opaque edited picture; `image/png` for an edited picture with an alpha channel (a Remove background cut-out) |
+| **Content** | Unedited photo: upright re-encoded JPEG at quality 95, or the original bytes (see [Turn upright](#turn-upright-saving-an-unedited-photo)). Edited picture (`save(bitmap)`): the bitmap shown on screen, at the size shown, never scaled or turned, compressed as JPEG quality 95 when opaque (`EDITED_JPEG_QUALITY`) or as a lossless PNG keeping its transparency when it has an alpha channel (`saveFormatFor`). |
 | **Original photo** | Opened only for reading. Never changed. |
 
 - **Android 10+ (API 29+):** inserts a MediaStore row with `RELATIVE_PATH = Pictures/Kanso/` and
@@ -257,9 +372,11 @@ and nothing in Kanso imports it, so its behaviour is not Kanso's.
 
 - **Saved screen:** decodes the new photo with the same `PhotoLoader`. **Share**
   (`ui/saved/SharePhoto.kt`) needs a `content://` Uri. On Android 8.1–9 it looks up the file's row
-  by `DATA`, and if that fails it asks the media scanner (waiting up to 5 s). It then opens
-  `Intent.createChooser(ACTION_SEND, image/jpeg)` with `FLAG_GRANT_READ_URI_PERMISSION` and the Uri
-  in `ClipData`. If no content Uri is found, the share sheet does not open. "Edit another" opens
+  by `DATA`, and if that fails it asks the media scanner (waiting up to 5 s). It then reads the
+  photo's type (`shareMimeType`): the type MediaStore reports when it is an image type, else
+  `image/png` for a name ending `.png` and `image/jpeg` otherwise, so a cut-out is shared as a
+  PNG. It opens `Intent.createChooser(ACTION_SEND, <that type>)` with
+  `FLAG_GRANT_READ_URI_PERMISSION` and the Uri in `ClipData`. If no content Uri is found, the share sheet does not open. "Edit another" opens
   the same tool's gallery.
 - **My edits** and Home's **Recent edits** (`data/media/MediaStoreSavedPhotoSource.kt`) query
   MediaStore for `RELATIVE_PATH = 'Pictures/Kanso/'` (API 29+), or for a `_data` path match under
@@ -318,7 +435,7 @@ camera (through a fake `CameraController`), settings, previews and screenshots. 
 | Path | What it is |
 |---|---|
 | `app/` | The Kanso app, written by Foreman. |
-| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. Only `core/gallery` and `core/colorpicker` are called by the app today. |
+| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor` (see [the engine section](#the-image-engine-in-core-and-libs-what-each-tool-calls)). |
 | `libs/` | Those prebuilt libraries (AARs), plus two TensorFlow Lite AARs. `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. No build file references `tensorflow-lite.aar`. |
 | `opencv/` | The OpenCV Android SDK module the engine depends on. |
 | `reference/retica-app/` | Retica's original app code, **read-only**: how the engine's use cases are called. It is not built, and nothing in Kanso imports it. Its build file, signing configuration and advertising code were left behind. |

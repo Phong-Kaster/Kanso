@@ -33,3 +33,6 @@
 
 ## Iteration 7 (Verifier, PARTIAL-candidate)
 - Fresh build, 690 tests (17 failed: only the unrecorded `ToolScreenshotTest` pictures), lint, ABIs, manifest, diffs: hold. DoD 31 and R2 fail: README intro, saving, upright and engine sections describe the pre-Run-8 app, and Edit, Remove background, Enhance have no pipeline subsection. Filed T-008, cleared PARTIAL-candidate. Device criteria 7, 9, 11, 13 not driven: A13 in use, no emulator. Evidence: evidence/v7-verifier.md.
+
+## Iteration 8 (2026-10-14)
+T-008: one Capable Worker rewrote README (intro, Edit/Remove background/Enhance sections, upright, engine table, saving) and `readme-paths.sh` (by heading, 79 paths). Greps for DoD 31/R2 empty, script exits 0. No code touched, so no build run. PARTIAL-candidate recorded.
