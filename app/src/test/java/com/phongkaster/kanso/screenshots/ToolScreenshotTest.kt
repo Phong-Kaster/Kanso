@@ -207,7 +207,8 @@ class ToolScreenshotTest {
 
     /** Taps Enhance's run button and waits for the compare control to appear. */
     private fun runEnhance() {
-        compose.onNodeWithTag(ENHANCE_RUN_TAG).performScrollTo().performClick()
+        // Enhance's panel does not scroll (unlike Edit's), so the button is tapped where it is.
+        compose.onNodeWithTag(ENHANCE_RUN_TAG).performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(hasTestTag(ENHANCE_COMPARE_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
