@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -38,11 +39,50 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  *
  * Each tool has its own panel, picked here by a `when` over the tool. A `when` on an enum must
  * name every case, so a new tool cannot be added without deciding what its panel is. For now
- * every panel is an empty, tagged slot; each tool's own task fills in its branch with that
- * tool's controls, which run their edit through the ViewModel's `apply`.
+ * Edit, Remove background and Enhance have their controls; Retouch and Artistic are still empty,
+ * tagged slots. [onApply] runs a processor the panel built (Edit) and [onRun] runs the one the
+ * registry holds for the tool (Remove background, Enhance), both through the ViewModel; [state]
+ * gives the panel the photos and whether an edit is running. With the defaults a preview or test
+ * gets the panel without any edit behind it.
  */
 @Composable
-fun ToolPanel(tool: Tool, modifier: Modifier = Modifier) {
+fun ToolPanel(
+    tool: Tool,
+    modifier: Modifier = Modifier,
+    state: ToolUiState? = null,
+    onApply: (ToolProcessor) -> Unit = {},
+    onRun: () -> Unit = {},
+) {
+    // With no state (a preview, or a test of the screen's frame) the slot stays an empty, tagged
+    // box, so those pictures show the frame and not a tool's controls; the real screen passes it.
+    if (state == null) {
+        EmptyPanel(tool, modifier)
+        return
+    }
+    val idle = state.processing is ToolUiState.Processing.Idle
+    when (tool) {
+        Tool.EDIT -> EditPanel(onApply = onApply, modifier = modifier)
+        // The checkerboard is drawn behind the photo by the screen, so the panel draws none.
+        Tool.REMOVE_BACKGROUND -> CutoutPanel(
+            onRun = onRun,
+            modifier = modifier,
+            enabled = idle,
+            showCheckerboard = false,
+        )
+        Tool.ENHANCE -> EnhancePanel(
+            onRun = onRun,
+            original = (state.photo as? ToolUiState.PhotoState.Ready)?.bitmap,
+            enhanced = state.edited,
+            modifier = modifier,
+        )
+        Tool.RETOUCH -> Box(modifier.testTag(RETOUCH_PANEL_TAG))
+        Tool.ARTISTIC -> Box(modifier.testTag(ARTISTIC_PANEL_TAG))
+    }
+}
+
+/** The empty, tagged slot of [tool]'s panel: the place its controls go, with none drawn. */
+@Composable
+private fun EmptyPanel(tool: Tool, modifier: Modifier) {
     when (tool) {
         Tool.EDIT -> Box(modifier.testTag(EDIT_PANEL_TAG))
         Tool.REMOVE_BACKGROUND -> Box(modifier.testTag(CUTOUT_PANEL_TAG))

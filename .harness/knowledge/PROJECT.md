@@ -86,3 +86,7 @@ One line per topic under `.harness/knowledge/reference/`; open a topic only when
 - `reference/api-digest-3.md` — API digest part 3 (sections H, I, Not, J) — read when a task calls those Material3, Navigation 3 or Compose animation APIs.
 - `reference/api-digest-4.md` — API digest part 4 (sections K, L, M, N, O, P) — read when a task calls those Material3, Navigation 3 or Compose animation APIs.
 - `reference/api-digest-5.md` — API digest part 5 (sections Q, R) — read when a task calls those Material3, Navigation 3 or Compose animation APIs.
+- `reference/engine-digest-run8.md` — javap of localml.aar's enhance and removebackground classes, bundled model and look-up assets — read when touching: Remove background, Enhance, Edit filters.
+- `reference/engine-edit.md` — Edit: look-up image shapes and how FilterLut reads them — read when touching: Edit filters.
+- `reference/engine-cutout.md` — Remove background: SelfieSegmentationUC use and the unverified Boolean — read when touching: Remove background.
+- `reference/engine-enhance.md` — Enhance: EnhanceImageUC flow, progress, initModel — read when touching: Enhance.

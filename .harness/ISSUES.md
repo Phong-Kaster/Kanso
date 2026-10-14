@@ -2,6 +2,8 @@
 
 ## Run 8 (the five editing tools edit the photo)
 
+- [ ] Run 8 Phase 2: 7 `ToolScreenshotTest` pictures (16, 17, 22, 23, 40, 41, 42) differ from their baselines because Edit and Enhance panels now draw real controls. The agent cannot re-record (`recordRoborazziDebug` is denied); open `app/build/outputs/roborazzi/*_compare.png`, and if the new pictures are right, re-record them (or let T-007 do it).
+- Phase 2 review, not fixed: Edit panel stays enabled while an edit runs, so a quick second tap or a slider release is dropped by `ToolViewModel.apply`; `AutoLighting.meanLuminance` unused; Enhance engine object is never closed and `initModel` failure may not reach `ModelUnavailable` (device check, DoD 9); Cutout mask from an opaque engine result falls back to brightness (device check, DoD 7); checkerboard also fills the letterbox margins; README "How each editing feature works" traces still to write (T-007).
 - Phase 1 (T-001) done; no problems yet. Known minor: a late progress report from an earlier edit can move a later edit's ring (`ToolViewModel.reportProgress`); undo history is unbounded.
 
 ## Run 7 (the InFlux layout in Kanso's own colours): ended DONE_PARTIAL, Verifier Iteration 19

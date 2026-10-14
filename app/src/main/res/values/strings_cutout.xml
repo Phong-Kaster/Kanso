@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Remove background's one action. It must not read "Remove background": the tool's name
+         appears only once on the tool screen, in the top bar. -->
+    <string name="cutout_run">Cut out the subject</string>
+</resources>

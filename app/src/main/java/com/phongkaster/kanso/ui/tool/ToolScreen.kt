@@ -258,7 +258,14 @@ fun ToolScreen(
         onReplace = onReplace,
         modifier = modifier,
         // The tool's own controls, drawn in the options strip under the photo card.
-        panel = { ToolPanel(state.tool) },
+        panel = {
+            ToolPanel(
+                tool = state.tool,
+                state = state,
+                onApply = viewModel::apply,
+                onRun = viewModel::runRegistered,
+            )
+        },
         // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
         onUndo = viewModel::undo,
         onDismissFailure = viewModel::dismissFailure,
@@ -554,7 +561,13 @@ private fun PhotoCard(
                     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and
                     // remember keeps the wrapper between redraws.
                     val image = remember(shown) { shown.asImageBitmap() }
-                    BlurredBackdrop(photo = image)
+                    if (state.tool == Tool.REMOVE_BACKGROUND && shown.hasAlpha()) {
+                        // A cut-out has see-through parts: show a checkerboard behind them
+                        // instead of the blurred copy of the photo.
+                        Checkerboard(Modifier.fillMaxSize())
+                    } else {
+                        BlurredBackdrop(photo = image)
+                    }
                     PhotoView(image = image, photoUri = state.photoUri)
                 }
                 ToolUiState.PhotoState.Unreadable -> Text(

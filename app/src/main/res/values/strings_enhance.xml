@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Enhance panel: the button that runs Enhance on the photo (a larger, better-lit copy).
+         Must never equal the tool's name, which is the screen's title. -->
+    <string name="enhance_run">Upscale and brighten</string>
+    <!-- Enhance panel: the control the person holds down to see the original photo instead of
+         the enhanced one; letting go shows the enhanced one again. -->
+    <string name="enhance_hold">Hold to see the original</string>
+    <!-- Enhance panel: what screen readers say for the comparison picture while it shows the
+         photo as it was before Enhance. Never shown as text. -->
+    <string name="enhance_compare_original">The photo before Enhance</string>
+    <!-- Enhance panel: what screen readers say for the comparison picture while it shows the
+         enhanced photo. Never shown as text. -->
+    <string name="enhance_compare_enhanced">The photo after Enhance</string>
+</resources>
