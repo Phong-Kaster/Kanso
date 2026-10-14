@@ -2,6 +2,8 @@
 
 ## Run 8 (the five editing tools edit the photo)
 
+- [ ] Run 8 Phase 4: `ToolScreenshotTest` pictures 45-54 (new) have no baseline and 16, 17, 22, 23, 40, 41, 42 still differ, because `recordRoborazziDebug` is denied (D-001 approved recording them). Run `./gradlew :app:recordRoborazziDebug --tests "*ToolScreenshotTest*"`, open each picture in `app/src/test/screenshots/` and commit if right: 45-46 Remove background, 47-48 Retouch, 49-50 Artistic, 51-52 Edit free crop, 53-54 Enhance after a run.
+
 - Phase 3 review, not fixed: `ArtisticProcessor` (a Koin single) keeps its last styled picture and input until the next run; `FULL_STYLE_RATIO = 1f` and the Retouch face-box/OpenCV smoothing are unverified on a device (DoD 11, 13); the Artistic style WebPs were drawn with PIL, so `StyleImages` (the fallback) looks similar but not identical; Artistic at strength 0 yields the 1024 px copy.
 
 - [ ] Run 8 Phase 2: 7 `ToolScreenshotTest` pictures (16, 17, 22, 23, 40, 41, 42) differ from their baselines because Edit and Enhance panels now draw real controls. The agent cannot re-record (`recordRoborazziDebug` is denied); open `app/build/outputs/roborazzi/*_compare.png`, and if the new pictures are right, re-record them (or let T-007 do it).

@@ -27,3 +27,6 @@
 - Two parallel Capable Workers (Retouch, Artistic). Iteration wired ToolViewModel (`fromOriginal`, `runRegistered(configure)`, one Undo step per slider session), ToolScreen (`retouch-no-face` node, onRetouch/onStylize), ToolPanel, AppModule, no-face text per DoD 10, README rows and traces; drew the 4 style WebPs with Python/PIL (`assets/styles/`); fixed `initModel` nullable and a KDoc gap.
 - Review (Capable) majors fixed: engine gets a copy of the photo, undo history no longer grows per slider run, configure not applied during a run. Left: ArtisticProcessor cache lives on the singleton until replaced (ISSUES).
 - Evidence: p3-full-2.log 0 failed (screenshot verify not rerun: 7 known baselines), lint rc 0.
+
+## Iteration 6 (Phase 4: T-007)
+- Added pictures 45-54 tests and BrightenedProcessor; readme-paths.sh passes. 690 tests, 17 failed, all screenshot baselines (record denied). PARTIAL-candidate recorded.

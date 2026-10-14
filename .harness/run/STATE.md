@@ -2,7 +2,8 @@
 
 ## Current
 
-- **Stage:** phase 3 done
+- **Stage:** phase 4 partial (T-007 awaits baselines)
+- **PARTIAL-candidate:** yes (Iteration 6): no executable task remains; 17 pictures unrecorded
 - **Loop Branch:** loop/kanso-editing-tools
 - **Next Phase:** T-007
 - **DONE-candidate:** no
@@ -17,7 +18,7 @@
 | T-004 | complete | data/edit/enhance, EnhancePanel | evidence/p2-full-2.log |
 | T-005 | complete | data/edit/retouch, RetouchPanel | evidence/p3-full-2.log |
 | T-006 | complete | data/edit/artistic, ArtisticPanel, assets/styles | evidence/p3-full-2.log |
-| T-007 | pending | ToolScreenshotTest, baselines, README | - |
+| T-007 | partial | ToolScreenshotTest, baselines, README | - |
 
 ## Assumptions
 
