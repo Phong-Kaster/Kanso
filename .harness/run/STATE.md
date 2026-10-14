@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** phase 4 partial (T-007 awaits baselines)
-- **PARTIAL-candidate:** yes (Iteration 6): no executable task remains; 17 pictures unrecorded
+- **Stage:** phase 5 (T-008 README), filed by the Verifier in Iteration 7
+- **PARTIAL-candidate:** no (cleared by the Verifier, Iteration 7: DoD 31 and R2 fail, README stale; see evidence/v7-verifier.md)
 - **Loop Branch:** loop/kanso-editing-tools
-- **Next Phase:** T-007
+- **Next Phase:** T-008
 - **DONE-candidate:** no
 
 ## Progress
@@ -18,7 +18,8 @@
 | T-004 | complete | data/edit/enhance, EnhancePanel | evidence/p2-full-2.log |
 | T-005 | complete | data/edit/retouch, RetouchPanel | evidence/p3-full-2.log |
 | T-006 | complete | data/edit/artistic, ArtisticPanel, assets/styles | evidence/p3-full-2.log |
-| T-007 | partial | ToolScreenshotTest, baselines, README | - |
+| T-007 | partial | ToolScreenshotTest, baselines, README | evidence/v7-full.log (17 pictures unrecorded) |
+| T-008 | pending | README.md, evidence/readme-paths.sh | - |
 
 ## Assumptions
 

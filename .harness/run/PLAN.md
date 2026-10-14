@@ -37,3 +37,7 @@ Tasks larger than 6 files are dispatched in slices (production first, tests last
 - GL beauty shader may not run offscreen; fallback is OpenCV (T-005).
 - Device checks need the A13 or the emulator free; if neither can be driven, the Verifier reports "not driven" and DONE is impossible (DONE_PARTIAL).
 - Moving `ToolUiState`/`ToolViewModel` signatures breaks tests that build them by name or position (new parameters last, defaulted).
+
+## Phase 5 (added by the Verifier, Iteration 7)
+
+- T-008 README tells what the five tools really do. Scope: `README.md`, `.harness/run/evidence/readme-paths.sh`. Tier: Capable.

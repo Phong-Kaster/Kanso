@@ -30,3 +30,6 @@
 
 ## Iteration 6 (Phase 4: T-007)
 - Added pictures 45-54 tests and BrightenedProcessor; readme-paths.sh passes. 690 tests, 17 failed, all screenshot baselines (record denied). PARTIAL-candidate recorded.
+
+## Iteration 7 (Verifier, PARTIAL-candidate)
+- Fresh build, 690 tests (17 failed: only the unrecorded `ToolScreenshotTest` pictures), lint, ABIs, manifest, diffs: hold. DoD 31 and R2 fail: README intro, saving, upright and engine sections describe the pre-Run-8 app, and Edit, Remove background, Enhance have no pipeline subsection. Filed T-008, cleared PARTIAL-candidate. Device criteria 7, 9, 11, 13 not driven: A13 in use, no emulator. Evidence: evidence/v7-verifier.md.
