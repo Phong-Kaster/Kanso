@@ -12,6 +12,7 @@ import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
+import com.phongkaster.kanso.launcher.LauncherIconSwitcher
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.camera.CameraController
@@ -53,6 +54,9 @@ val appModule = module {
 
     // The My edits tab's ViewModel reads that list each time the tab appears.
     viewModel { MyEditsViewModel(savedPhotos = get(), probe = get()) }
+
+    // Switches the launcher icon's background to follow the theme colour.
+    single { LauncherIconSwitcher(androidContext()) }
 
     // Decodes one photo for the tool screen: upright and no bigger than the screen needs.
     single { PhotoLoader(androidContext()) }
