@@ -89,4 +89,7 @@ One line per topic under `.harness/knowledge/reference/`; open a topic only when
 - `reference/engine-digest-run8.md` — javap of localml.aar's enhance and removebackground classes, bundled model and look-up assets — read when touching: Remove background, Enhance, Edit filters.
 - `reference/engine-edit.md` — Edit: look-up image shapes and how FilterLut reads them — read when touching: Edit filters.
 - `reference/engine-cutout.md` — Remove background: SelfieSegmentationUC use and the unverified Boolean — read when touching: Remove background.
+- `reference/engine-retouch.md` — Retouch: face finder, OpenCV bilateral smoother, blend — read when touching: Retouch.
+- `reference/engine-artistic.md` — Artistic: style models, style images, cache, mix — read when touching: Artistic.
+- `reference/engine-phase3-facts.md` — javap facts for face and style engine classes — read when touching: Retouch, Artistic.
 - `reference/engine-enhance.md` — Enhance: EnhanceImageUC flow, progress, initModel — read when touching: Enhance.

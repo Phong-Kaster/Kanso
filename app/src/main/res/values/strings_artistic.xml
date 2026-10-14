@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Artistic panel: the names of the painterly styles, shown on the style chips.
+         None may equal the tool's name, which is the screen's title. -->
+    <string name="artistic_style_warm_wash">Warm wash</string>
+    <string name="artistic_style_cool_wash">Cool wash</string>
+    <string name="artistic_style_mosaic">Mosaic</string>
+    <string name="artistic_style_ink">Ink</string>
+    <!-- Artistic panel: the label above the strength slider, and what screen readers say for the
+         slider. 0 keeps the original photo, the far end paints it fully in the style. -->
+    <string name="artistic_strength">Style strength</string>
+    <!-- Artistic panel: the button that paints the photo in the chosen style. -->
+    <string name="artistic_apply">Apply style</string>
+</resources>

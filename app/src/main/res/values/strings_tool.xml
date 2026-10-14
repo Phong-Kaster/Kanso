@@ -13,7 +13,7 @@
          technical terms; the photo shown is always left as it was. One per kind of failure. -->
     <string name="tool_failed_out_of_memory">This photo is too large to edit on this phone. Try a smaller one. Your photo is unchanged.</string>
     <string name="tool_failed_no_subject">No person or object stood out in this photo, so nothing was cut out. Your photo is unchanged.</string>
-    <string name="tool_failed_no_face">No face was found in this photo. Try one where a face is clearly visible. Your photo is unchanged.</string>
+    <string name="tool_failed_no_face">No face found in this photo. Nothing was changed.</string>
     <string name="tool_failed_model_unavailable">This tool could not start on this phone. Your photo is unchanged.</string>
     <string name="tool_failed_other">Something went wrong and the edit was not made. Your photo is unchanged.</string>
 </resources>

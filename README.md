@@ -30,10 +30,8 @@ not a roadmap. Where the UI promises something the code does not do yet, this fi
 | **Edit** (crop, colour, filters) | Home shortcut, a "Recent edits" photo, the Camera button, "Edit" in the photo viewer | **Works** (not yet on a device) | `ui/tool/EditPanel.kt` sends each change as an `EditProcessor` (`data/edit/edit/`) to `ToolViewModel.apply` on a background thread: crop (free, 1:1, 4:3, 3:4, 16:9, 9:16), quarter turns, flips, then brightness/contrast/saturation/warmth (colour matrix, applied when the slider is let go, then back to the middle), then one of 7 filters built on the CPU from look-up images bundled in the engine AARs, with an intensity. Working size: 2000 px long edge. Each change is one Undo step; Save writes the shown result. Out of memory shows a message and keeps the photo. |
 | **Remove background** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `CutoutPanel` runs `CutoutProcessor` with `EngineSegmenter`, which calls the bundled selfie-segmentation model of `libs/localml.aar` (no download) through OpenCV; the photo is first shrunk to 2000 px. `MaskCompositor` makes pixels the mask calls background fully transparent; the result is shown over a checkerboard and saved as PNG. No subject shows its own message. |
 | **Enhance** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `EnhancePanel` runs `EnhanceProcessor`: the photo is shrunk to 512 px, `EngineUpscaler` runs the bundled Real-ESRGAN model (4x, so up to 2048 px) with progress, then `AutoLighting` lifts a dark photo toward mid-tones (a well-lit one is left alone). Press and hold the compare control to see the original. |
-| **Retouch** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
-| **Artistic** | Home carousel banner and shortcut | **UI only** | Same as Edit. Its controls panel is an empty slot until this tool is built (Run 8). |
-| **Turn upright (EXIF orientation)** | Automatic, on display and on Save | **Works** | The only change Kanso makes to pixels today. See [below](#turn-upright-the-one-pixel-change-kanso-makes). |
-| Engine features in `core/` (crop UI, filters, brushes, AI models) | Nowhere | **Not wired** | Compiled into the APK; no code in `app/` calls them. See [The image engine](#the-image-engine-in-core-and-libs-built-but-not-called). |
+| **Retouch** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `RetouchPanel` (a strength slider, default 100%, and "Smooth skin") runs `RetouchProcessor`: the photo is shrunk to 2000 px, `EngineFaceFinder` finds faces with the bundled MediaPipe landmark model of `libs/localml.aar` (no download), `EngineSkinSmoother` runs an OpenCV bilateral filter on each face rectangle only, and the smoothed picture is blended over the original by the strength in Kotlin (0 = the photo unchanged). No face shows "No face found in this photo. Nothing was changed." Retica's own Retouch screen was object removal; Kanso's Retouch is skin smoothing only. |
+| **Artistic** | Home carousel banner and shortcut | **Works** (engine output unverified on a device) | `ArtisticPanel` (four style chips: Warm wash, Cool wash, Mosaic, Ink; a strength slider; "Apply style") runs `ArtisticProcessor`: the photo is shrunk to 1024 px, `EngineStylizer` runs the bundled Inception V3 style-prediction and style-transfer models once per style, and the styled picture is blended with the photo by the strength in Kotlin, so moving the slider does not run the model again. The four style images are drawn, not Retica's (`app/src/main/assets/styles/*.webp`, drawn by `StyleImages` as a fallback). Whether the engine's ratio 1 means "full style" (`FULL_STYLE_RATIO`) is unverified until a device run. |
 
 ### Other features
 
@@ -101,9 +99,8 @@ popped. It depends on nothing from `core/`.
 A Back button and the tool's name; the photo in a rounded card over a blurred copy of itself; a
 "Replace" chip, which goes back to this tool's gallery (`replaceWithGallery`); an Undo button
 (`tool-undo`, top right); a progress ring (`tool-progress`) and a plain-words failure message
-(`tool-failure`) when an edit runs or fails; the tool's panel slot (`ToolPanel.kt`, empty for now);
-and a full-width Save button, disabled while an edit runs. **No tool has controls yet.** The
-pipeline they will use is in place: `ToolViewModel.apply(processor)` shrinks the shown bitmap to
+(`tool-failure`) when an edit runs or fails; the tool's panel (`ToolPanel.kt`);
+and a full-width Save button, disabled while an edit runs. The pipeline every tool uses: `ToolViewModel.apply(processor)` shrinks the shown bitmap to
 the tool's working size (`data/edit/WorkingSize.kt`), runs a `ToolProcessor` off the main thread
 with progress, and on success keeps the result as the shown photo and the previous one for Undo; a
 failure (`EditFailure`) leaves the photo as it was.
@@ -123,6 +120,25 @@ failure (`EditFailure`) leaves the photo as it was.
 
 **Result:** whichever tool you open, the saved file is the original photo, turned upright if it had
 an EXIF rotation, and otherwise identical byte for byte.
+
+### Retouch (`data/edit/retouch/`, `ui/tool/RetouchPanel.kt`)
+
+1. `RetouchPanel` (strength slider 0-1, default 1) calls `ToolViewModel.runRegistered(fromOriginal = true)`, which sets `RetouchProcessor.strength` and runs it on the untouched photo, so moving the slider and applying again replaces the last result (one Undo step for the whole slider session).
+2. `ToolViewModel` shrinks the photo to 2000 px (`WorkingSize.RETOUCH`) and runs `RetouchProcessor` on `Dispatchers.Default`.
+3. `EngineFaceFinder` (built once, kept) calls `DetectFaceLandmarkUC` (bundled `face_landmarker.task`) and turns each face's landmark points into a bounding box padded 10%.
+4. No face: `EditFailure.NoFace`; the screen shows the message in a node tagged `retouch-no-face`, and the photo and Undo are untouched.
+5. `EngineSkinSmoother` filters each face rectangle with OpenCV `bilateralFilter` (not the engine's GL beauty shader, which needs an OpenGL thread). Mats are released after use.
+6. The Kotlin blend `out = original + strength * (smoothed - original)` is applied to every pixel; the result is opaque, so Save writes a JPEG at the size shown.
+7. Failure: out of memory shows the out-of-memory message; a model or OpenCV that will not load shows the model message; the photo stays as it was.
+
+### Artistic (`data/edit/artistic/`, `ui/tool/ArtisticPanel.kt`)
+
+1. `ArtisticPanelHost` keeps the chosen style and strength and calls `runRegistered(fromOriginal = true)` which sets them on `ArtisticProcessor`. The original's working-size copy is made once, so the same bitmap reaches the processor every time.
+2. The photo is shrunk to 1024 px (`WorkingSize.ARTISTIC`), run on `Dispatchers.Default`.
+3. `ArtisticProcessor` remembers the last styled picture for the same input and style: a new strength re-mixes only.
+4. Otherwise `EngineStylizer` loads the style image (`assets/styles/<id>.webp`, or draws it with `StyleImages`) and calls `StyleTransferInceptionV3BlendUC` (bundled `image_stylization_inceptionv3_dr_*.tflite`) on a copy of the photo.
+5. Mix in Kotlin: strength 0 gives the (1024 px) photo, 1 the styled picture. Opaque result, saved as JPEG at the size shown.
+6. Failures as for Retouch.
 
 ### Turn upright: the one pixel change Kanso makes
 

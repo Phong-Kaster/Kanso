@@ -22,3 +22,8 @@
 ## Iteration 4 (Phase 3 attempted: T-005, T-006) - no progress, reverted
 - Both Capable Workers died on an API session limit (HTTP 429, resets 6:10pm Bangkok) before finishing. Their partial files and the Iteration's ViewModel/ToolScreen edits did not compile together and were unverified, so all were reverted to the last checkpoint; no attempt is counted against T-005 or T-006 (environment failure, not task failure).
 - Plan kept for the retry: processors expose `@Volatile var strength` (Retouch) and `style`/`strength` (Artistic); `ToolViewModel.apply(processor, fromOriginal)` and `runRegistered(fromOriginal, configure)` so slider tools mix against the untouched photo; `ToolPanel` gets `onRunConfigured`. Artistic style images: draw 5 256x256 WebP with Python/PIL (available) into `app/src/main/assets/styles/`. Engine facts: DetectFaceLandmarkUC.invoke(Bitmap) -> List<List<UnifyPoint>>; StyleTransferInceptionV3BlendUC.invoke(photo, styleBitmap, ratio).
+
+## Iteration 5 (Phase 3: T-005, T-006, retry of Iteration 4)
+- Two parallel Capable Workers (Retouch, Artistic). Iteration wired ToolViewModel (`fromOriginal`, `runRegistered(configure)`, one Undo step per slider session), ToolScreen (`retouch-no-face` node, onRetouch/onStylize), ToolPanel, AppModule, no-face text per DoD 10, README rows and traces; drew the 4 style WebPs with Python/PIL (`assets/styles/`); fixed `initModel` nullable and a KDoc gap.
+- Review (Capable) majors fixed: engine gets a copy of the photo, undo history no longer grows per slider run, configure not applied during a run. Left: ArtisticProcessor cache lives on the singleton until replaced (ISSUES).
+- Evidence: p3-full-2.log 0 failed (screenshot verify not rerun: 7 known baselines), lint rc 0.

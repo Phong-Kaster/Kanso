@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.artistic.ArtisticStyle
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -38,10 +39,10 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * The controls of [tool], shown in the options strip under the photo on that tool's screen.
  *
  * Each tool has its own panel, picked here by a `when` over the tool. A `when` on an enum must
- * name every case, so a new tool cannot be added without deciding what its panel is. For now
- * Edit, Remove background and Enhance have their controls; Retouch and Artistic are still empty,
- * tagged slots. [onApply] runs a processor the panel built (Edit) and [onRun] runs the one the
- * registry holds for the tool (Remove background, Enhance), both through the ViewModel; [state]
+ * name every case, so a new tool cannot be added without deciding what its panel is. [onApply]
+ * runs a processor the panel built (Edit) and [onRun] runs the one the registry holds for the
+ * tool (Remove background, Enhance). [onRetouch] and [onStylize] run Retouch and Artistic with
+ * the strength (and style) the person set, all through the ViewModel; [state]
  * gives the panel the photos and whether an edit is running. With the defaults a preview or test
  * gets the panel without any edit behind it.
  */
@@ -52,6 +53,8 @@ fun ToolPanel(
     state: ToolUiState? = null,
     onApply: (ToolProcessor) -> Unit = {},
     onRun: () -> Unit = {},
+    onRetouch: (strength: Float) -> Unit = {},
+    onStylize: (style: ArtisticStyle, strength: Float) -> Unit = { _, _ -> },
 ) {
     // With no state (a preview, or a test of the screen's frame) the slot stays an empty, tagged
     // box, so those pictures show the frame and not a tool's controls; the real screen passes it.
@@ -75,8 +78,8 @@ fun ToolPanel(
             enhanced = state.edited,
             modifier = modifier,
         )
-        Tool.RETOUCH -> Box(modifier.testTag(RETOUCH_PANEL_TAG))
-        Tool.ARTISTIC -> Box(modifier.testTag(ARTISTIC_PANEL_TAG))
+        Tool.RETOUCH -> RetouchPanel(onApply = onRetouch, modifier = modifier, enabled = idle)
+        Tool.ARTISTIC -> ArtisticPanelHost(onApply = onStylize, modifier = modifier, enabled = idle)
     }
 }
 

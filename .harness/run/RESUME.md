@@ -1,12 +1,12 @@
 # RESUME BLOCK
 
-- **Stage:** phase 2 done (T-001..T-004 complete); next Phase 3
-- **Next Phase:** T-005 (Retouch), T-006 (Artistic) - scopes in each task file. The Iteration wires `ui/tool/ToolPanel.kt` (replace the Retouch/Artistic branches; `ToolPanel(tool, modifier, state, onApply, onRun)`, with `state == null` giving empty tagged slots for previews), `di/AppModule.kt` (`ProcessorRegistry(mapOf(Tool.REMOVE_BACKGROUND to ..., Tool.ENHANCE to ...))`) and README rows.
-- **Seam (pointers):** `data/edit/{ToolProcessor,EditResult,EditFailure,WorkingSize,ProcessorRegistry}.kt`; examples to copy: `data/edit/enhance/*` (interface + Engine* wrapper + fake-tested processor), `ui/tool/EnhancePanel.kt`; engine facts `knowledge/reference/engine-digest-run8.md` (javap in `/c/Program Files/Java/jdk-24/bin/javap.exe -p -cp <unzipped classes.jar>`); Workers cannot unzip AARs, so the Iteration extracts what they need first (`/tmp/aar/<name>/cls`). Test tips: `ToolViewModel(..., workDispatcher = Dispatchers.Unconfined)` and `shadowOf(Looper.getMainLooper()).idle()` inside `waitUntil`.
+- **Stage:** phase 3 done (T-001..T-006 complete); next Phase 4 = T-007 only
+- **Next Phase:** T-007 (pictures, README audit, a11y/preview tests for all five panels) - scope in its task file. Record only the pictures D-001 lists (new from 45: Remove background, Retouch, Artistic light+dark = 6; Edit and Enhance with controls light+dark = 4; plus re-record 16,17,22,23,40,41,42 - DECISIONS.md "Baselines" lists them; if `recordRoborazziDebug` is denied, say so in ISSUES). README rows and traces for all five already written in Iteration 5; T-007 audits them (paths) and writes `evidence/readme-paths.sh`.
+- **Seam:** `ToolViewModel.runRegistered(fromOriginal, configure)`; `ToolPanel(tool, modifier, state, onApply, onRun, onRetouch, onStylize)`; panels `EditPanel`, `CutoutPanel`, `EnhancePanel`, `RetouchPanel`, `ArtisticPanel(Host)`.
 - **Queued decisions:** 0
 - **Abandoned / unreachable:** none
 - **Open red:** 7 `ToolScreenshotTest` pictures (16,17,22,23,40,41,42) differ: baselines not re-recorded (command denied); listed in ISSUES.md.
 - **Verified commands:** build `cd /d/Valve/Personal/Kanso && ./gradlew :app:assembleDebug` | test `./gradlew :app:testDebugUnitTest :app:verifyRoborazziDebug` | lint `./gradlew :app:lintDebug` (run under `timeout`)
-- **Criteria:** read DoD 10-16, 17, 22 with Grep by number when briefing Phase 3 (`.harness/run/DoD.md`).
+- **Criteria:** read DoD 24-27, 31-33 and 25 with Grep by number (`.harness/run/DoD.md`).
 - **Model tiers:** fast: `sonnet` | capable: `opus`
-- **Notes:** Workers read `.harness/` only under `knowledge/reference/`; for the verbatim Constraints Brief copy PROJECT.md Constraints (lines 3-67) and shared rules into temporary `reference/_brief-*.md` and delete them before the commit.
+- **Notes:** Workers read `.harness/` only under `knowledge/reference/`; copy PROJECT.md Constraints (lines 3-67) to a temporary `reference/_brief-constraints.md` and delete before commit.

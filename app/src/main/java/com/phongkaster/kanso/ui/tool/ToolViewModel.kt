@@ -123,13 +123,15 @@ class ToolViewModel(
      * becomes the shown photo and the one before it is kept for [undo]; when it fails, the shown
      * photo stays exactly as it was and the state says why, in [ToolUiState.failure].
      */
-    fun apply(processor: ToolProcessor) {
+    fun apply(processor: ToolProcessor, fromOriginal: Boolean = false) {
         val current = mutableState.value
         if (current.processing is ToolUiState.Processing.Running) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         // What the person sees right now: the last edit, or the original if there is none.
         val previousEdit = current.edited
-        val shown = previousEdit ?: original
+        // A slider tool (Retouch, Artistic) re-runs from the untouched photo, so moving its
+        // strength replaces the last result instead of stacking a second smoothing on top.
+        val shown = if (fromOriginal) original else previousEdit ?: original
         mutableState.update {
             it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
         }
@@ -137,7 +139,7 @@ class ToolViewModel(
             val result = try {
                 // Shrinking is real work on a large photo, so it happens on a background thread.
                 val input = withContext(workDispatcher) {
-                    WorkingSize.fit(shown, WorkingSize.maxEdgeFor(tool))
+                    if (fromOriginal) fittedOriginal(shown) else WorkingSize.fit(shown, WorkingSize.maxEdgeFor(tool))
                 }
                 // The processor moves its own heavy work off the main thread (its contract), and
                 // running it on the work dispatcher makes that hold even if one forgets.
@@ -158,7 +160,11 @@ class ToolViewModel(
             }
             when (result) {
                 is EditResult.Edited -> {
-                    history.addLast(previousEdit)
+                    // A slider re-run replaces the slider's last result, so it adds no Undo step
+                    // (and no 12 MB picture) of its own: Undo then goes back past the whole slider
+                    // session, to what was there before it.
+                    if (!(fromOriginal && lastEditWasFromOriginal)) history.addLast(previousEdit)
+                    lastEditWasFromOriginal = fromOriginal
                     mutableState.update {
                         it.copy(
                             edited = result.bitmap,
@@ -175,13 +181,38 @@ class ToolViewModel(
         }
     }
 
+    /** True while the shown edit came from a run on the original photo (a slider tool's result). */
+    private var lastEditWasFromOriginal = false
+
+    /**
+     * The original photo and its working-size copy, remembered by [fittedOriginal].
+     */
+    private var fittedOriginalCache: Pair<Bitmap, Bitmap>? = null
+
+    /**
+     * The working-size copy of the original photo, made once and handed back on every later call,
+     * so a processor that caches by bitmap (Artistic keeps its styled picture) sees the same
+     * object each time a strength slider moves and does not run its model again.
+     */
+    private fun fittedOriginal(original: Bitmap): Bitmap {
+        fittedOriginalCache?.let { (source, fitted) -> if (source === original) return fitted }
+        val fitted = WorkingSize.fit(original, WorkingSize.maxEdgeFor(tool))
+        fittedOriginalCache = original to fitted
+        return fitted
+    }
+
     /**
      * Runs the edit built for this screen's tool, if one has been built yet; with none, nothing
-     * happens. A tool's panel that has a single "do it" action calls this.
+     * happens. A tool's panel that has a single "do it" action calls this. A tool with settings
+     * (a strength, a style) passes [configure], which sets them on the registered processor just
+     * before it runs, and [fromOriginal] true to run on the untouched photo (see [apply]).
      */
-    fun runRegistered() {
+    fun runRegistered(fromOriginal: Boolean = false, configure: (ToolProcessor) -> Unit = {}) {
         val processor = registry.processorFor(tool) ?: return
-        apply(processor)
+        // A tap during a run is ignored by apply, so its settings must not reach the processor.
+        if (mutableState.value.processing is ToolUiState.Processing.Running) return
+        configure(processor)
+        apply(processor, fromOriginal)
     }
 
     /**
@@ -210,6 +241,7 @@ class ToolViewModel(
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
         if (history.isEmpty()) return
         val before = history.removeLast()
+        lastEditWasFromOriginal = false
         mutableState.update {
             it.copy(edited = before, canUndo = history.isNotEmpty(), failure = null)
         }

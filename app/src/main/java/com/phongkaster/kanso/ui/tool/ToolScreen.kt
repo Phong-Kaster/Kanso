@@ -77,6 +77,8 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
@@ -142,6 +144,9 @@ const val TOOL_UNDO_TAG = "tool-undo"
 
 /** The test tag on the plain-words message shown when an edit did not work. */
 const val TOOL_FAILURE_TAG = "tool-failure"
+
+/** Test tag of the node around the failure card when no face was found (the Retouch tool). */
+const val RETOUCH_NO_FACE_TAG = "retouch-no-face"
 
 /**
  * A semantics property carrying the Uri (as text) of the photo the image node shows.
@@ -263,7 +268,20 @@ fun ToolScreen(
                 tool = state.tool,
                 state = state,
                 onApply = viewModel::apply,
-                onRun = viewModel::runRegistered,
+                onRun = { viewModel.runRegistered() },
+                onRetouch = { strength ->
+                    viewModel.runRegistered(fromOriginal = true) { processor ->
+                        (processor as? RetouchProcessor)?.strength = strength
+                    }
+                },
+                onStylize = { style, strength ->
+                    viewModel.runRegistered(fromOriginal = true) { processor ->
+                        (processor as? ArtisticProcessor)?.let {
+                            it.style = style
+                            it.strength = strength
+                        }
+                    }
+                },
             )
         },
         // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
@@ -590,10 +608,16 @@ private fun PhotoCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 state.failure?.let { failure ->
-                    FailureMessage(
-                        text = stringResource(failureMessageRes(failure)),
-                        onDismiss = onDismissFailure,
-                    )
+                    // The no-face message also sits in a node of its own, tagged for Retouch, the
+                    // one tool that can fail this way; its card keeps the common failure tag.
+                    Box(
+                        if (failure == EditFailure.NoFace) Modifier.testTag(RETOUCH_NO_FACE_TAG) else Modifier,
+                    ) {
+                        FailureMessage(
+                            text = stringResource(failureMessageRes(failure)),
+                            onDismiss = onDismissFailure,
+                        )
+                    }
                 }
                 saveMessageRes(state.save)?.let { messageRes ->
                     SaveMessage(text = stringResource(messageRes))

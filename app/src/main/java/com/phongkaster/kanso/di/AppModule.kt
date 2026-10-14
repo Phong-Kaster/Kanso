@@ -7,7 +7,12 @@ import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.cutout.CutoutProcessor
 import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
 import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
+import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+import com.phongkaster.kanso.data.edit.artistic.EngineStylizer
 import com.phongkaster.kanso.data.edit.enhance.EnhanceProcessor
+import com.phongkaster.kanso.data.edit.retouch.EngineFaceFinder
+import com.phongkaster.kanso.data.edit.retouch.EngineSkinSmoother
+import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.media.MediaStorePhotoSource
 import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
 import com.phongkaster.kanso.data.media.PhotoSource
@@ -88,6 +93,8 @@ val appModule = module {
             mapOf(
                 Tool.REMOVE_BACKGROUND to CutoutProcessor(EngineSegmenter()),
                 Tool.ENHANCE to EnhanceProcessor(EngineUpscaler(androidContext())),
+                Tool.RETOUCH to RetouchProcessor(EngineFaceFinder(androidContext()), EngineSkinSmoother()),
+                Tool.ARTISTIC to ArtisticProcessor(EngineStylizer(androidContext())),
             ),
         )
     }

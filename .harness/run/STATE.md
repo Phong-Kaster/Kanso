@@ -2,9 +2,9 @@
 
 ## Current
 
-- **Stage:** phase 2 done
+- **Stage:** phase 3 done
 - **Loop Branch:** loop/kanso-editing-tools
-- **Next Phase:** T-005, T-006
+- **Next Phase:** T-007
 - **DONE-candidate:** no
 
 ## Progress
@@ -15,8 +15,8 @@
 | T-002 | complete | data/edit/edit, EditPanel | evidence/p2-full-2.log |
 | T-003 | complete | data/edit/cutout, CutoutPanel | evidence/p2-full-2.log |
 | T-004 | complete | data/edit/enhance, EnhancePanel | evidence/p2-full-2.log |
-| T-005 | pending | data/edit/retouch, RetouchPanel | - |
-| T-006 | pending | data/edit/artistic, ArtisticPanel, assets/styles | - |
+| T-005 | complete | data/edit/retouch, RetouchPanel | evidence/p3-full-2.log |
+| T-006 | complete | data/edit/artistic, ArtisticPanel, assets/styles | evidence/p3-full-2.log |
 | T-007 | pending | ToolScreenshotTest, baselines, README | - |
 
 ## Assumptions
