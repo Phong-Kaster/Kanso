@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
@@ -259,7 +260,8 @@ fun ToolScreen(
 
     ToolContent(
         state = state,
-        onBack = onBack,
+        // The top bar's Back follows the same rule as the system Back (see the BackHandler below).
+        onBack = { if (!(state.tool == Tool.EDIT && viewModel.onBackPressed())) onBack() },
         onSave = {
             if (viewModel.needsWritePermission()) {
                 writePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -274,7 +276,6 @@ fun ToolScreen(
             ToolPanel(
                 tool = state.tool,
                 state = state,
-                onApply = viewModel::apply,
                 onRun = { viewModel.runRegistered() },
                 onRetouch = { strength ->
                     viewModel.runRegistered(fromOriginal = true) { processor ->
@@ -299,17 +300,38 @@ fun ToolScreen(
         onOpenTool = viewModel::openTool,
         onCompare = viewModel::setComparing,
         // The Edit screen only: the open tool's controls, drawn in the sheet under the photo.
-        // They are switched off while an edit runs and while Compare shows the original.
+        // They are switched off only while Compare shows the original: a render in progress must
+        // not disable a slider the finger is still on. Every change goes to the ViewModel's one
+        // settings session, which re-renders from the original photo.
         editSheet = { tool ->
             ToolPanel(
                 tool = Tool.EDIT,
                 state = state,
                 openTool = tool,
-                enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
-                onApply = viewModel::apply,
+                enabled = !state.comparing,
+                onEditChange = viewModel::changeSettings,
+                onEditPreview = viewModel::previewSettings,
+                onEditCommit = viewModel::commitSettings,
+                onEditRatio = viewModel::chooseCropRatio,
             )
         },
     )
+
+    // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
+    // leaving. BackHandler takes over the system Back only while it is enabled, so the other
+    // tools keep the plain back behaviour.
+    BackHandler(enabled = state.tool == Tool.EDIT && (state.openTool != null || !state.settings.isNeutral)) {
+        if (!viewModel.onBackPressed()) onBack()
+    }
+    if (state.discardPrompt) {
+        DiscardChangesDialog(
+            onDiscard = {
+                viewModel.confirmDiscard()
+                onBack()
+            },
+            onKeepEditing = viewModel::dismissDiscardPrompt,
+        )
+    }
 }
 
 /**
@@ -1130,14 +1152,10 @@ private fun SampleEditSheet(tool: EditTool, enabled: Boolean) {
     EditPanelContent(
         openTool = tool,
         settings = EditSettings(),
+        onChange = {},
+        onPreview = {},
+        onCommit = {},
         onRatio = {},
-        onFreeCropChange = {},
-        onFreeCropApply = {},
-        onTurn = {},
-        onFlip = {},
-        onSettingsChange = {},
-        onAdjustFinished = {},
-        onFilter = {},
         enabled = enabled,
     )
 }

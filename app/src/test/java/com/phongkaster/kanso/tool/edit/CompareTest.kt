@@ -182,7 +182,8 @@ class CompareTest {
         compose.waitForIdle()
 
         // The ViewModel refuses an edit and an undo while comparing.
-        viewModel.apply(EditProcessor(EditSettings(brightness = EditSettings.MIN), FilterLut.Source { null }))
+        // Run 9: Edit's changes go through the settings session; Compare must refuse them.
+        viewModel.changeSettings(EditSettings(brightness = EditSettings.MIN)) { EditProcessor(it, FilterLut.Source { null }) }
         viewModel.undo()
         shadowOf(Looper.getMainLooper()).idle()
         compose.waitForIdle()
@@ -270,8 +271,12 @@ class CompareTest {
                             tool = Tool.EDIT,
                             state = state,
                             openTool = tool,
-                            enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
-                            onApply = viewModel::apply,
+                            // Run 9: wired as ToolScreen wires it - every change goes to the settings session.
+                            enabled = !state.comparing,
+                            onEditChange = viewModel::changeSettings,
+                            onEditPreview = viewModel::previewSettings,
+                            onEditCommit = viewModel::commitSettings,
+                            onEditRatio = viewModel::chooseCropRatio,
                         )
                     },
                 )
@@ -289,6 +294,9 @@ class CompareTest {
     private fun makeEdit(viewModel: ToolViewModel): Bitmap {
         compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(EditSettings.MAX) }
+        // Run 9: the semantics action only moves the slider (a preview); letting go is the commit
+        // that makes it one Undo step.
+        viewModel.commitSettings()
         compose.waitUntil(timeoutMillis = 5_000) {
             // The processor works on a real background thread; its result comes back through the
             // main looper, which a Robolectric test must let run itself.

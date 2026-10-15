@@ -7,10 +7,20 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.CropRatio
@@ -23,16 +33,24 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_FLIP_HORIZONTAL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_FLIP_VERTICAL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_INTENSITY_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_RIGHT_TAG
 import com.phongkaster.kanso.ui.tool.EditPanel
-import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
-import com.phongkaster.kanso.ui.tool.ToolContent
+import com.phongkaster.kanso.ui.tool.EditPanelContent
+import com.phongkaster.kanso.ui.tool.EditToolRow
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.editFilterTag
 import com.phongkaster.kanso.ui.tool.editRatioTag
+import com.phongkaster.kanso.ui.tool.editSliderValueTag
+import com.phongkaster.kanso.ui.tool.editToolDotTag
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -45,20 +63,25 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.math.abs
 
 /**
- * Checks on Android 15 that the person sees each Edit change on the photo as they make it (DoD 5).
+ * Checks on Android 15 the Edit tool's controls and what they do to the photo (DoD 2, 5, 14, 16).
  *
- * The test draws the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] on a
- * fake 120 x 80 photo, with the real Edit panel in its Edit sheet slot (`editSheet`, drawn for the
- * tool opened with the ViewModel's `openTool`) handing the real Edit processor to the ViewModel's
- * `apply`. The photo the screen shows (the image node [TOOL_IMAGE_TAG]) is the
- * state's `edited` bitmap once an edit is made, so that is the bitmap read here. Within 5 s of
- * real time:
+ * Most tests draw the real Edit panel (`EditPanel`) for a real [ToolViewModel] on a fake 120 x 80
+ * photo: the panel shows the sheet of the tool opened with the ViewModel's `openTool`, draws the
+ * session's settings from the ViewModel's state, and hands each change with the real Edit
+ * processor to the ViewModel (`changeSettings`, `previewSettings`, `commitSettings`,
+ * `chooseCropRatio`), as the screen does. The photo the screen shows is the state's `edited`
+ * bitmap once an edit is made, so that is the bitmap read here. Within 5 s of real time:
  *
  * - brightness pushed to its maximum and let go makes the shown photo brighter on average;
  * - the 1:1 chip makes the shown photo square;
- * - a filter chip changes the shown photo's colours. The filter's look-up comes from a generated
- *   inverting strip handed to the panel, so this test checks the panel's wiring, not the assets
- *   (`EditFilterTest` checks those).
+ * - a filter chip changes the shown photo's colours, and dragging its intensity changes them
+ *   again while the finger is still down. The filter's look-up comes from a generated inverting
+ *   strip handed to the panel, so this test checks the panel's wiring, not the assets
+ *   (`EditFilterTest` checks those);
+ * - brightness set to 70 is still 70 when Adjust is opened again after another sheet.
+ *
+ * Two tests draw stateless parts with the settings held by the test: the Rotate sheet's four
+ * buttons (one action each) and the row of tools' "changed" dots.
  *
  * The photo is decoded before the screen is drawn, so the loading indicator (which animates
  * forever) is never on screen.
@@ -76,6 +99,9 @@ class EditToolTest {
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
 
+    /** The settings the stateless tests draw, held by the test as the ViewModel holds them. */
+    private var heldSettings by mutableStateOf(EditSettings())
+
     /**
      * Stops Koin after each test: KansoApplication starts it for every Robolectric test, and its
      * state outlives the test inside the same JVM.
@@ -88,7 +114,9 @@ class EditToolTest {
     /**
      * Brightness at its maximum, let go, makes the shown photo brighter on average.
      *
-     * Run 9: brightness lives in the Adjust sheet now, so the test opens Adjust first.
+     * Run 9: brightness lives in the Adjust sheet now, so the test opens Adjust first; the slider
+     * now hands whole settings to the ViewModel's `previewSettings`/`commitSettings` instead of a
+     * one-off change to the removed `apply`, and the photo is rendered from the original.
      */
     @Test
     fun brightness_brightens_the_shown_photo() {
@@ -103,7 +131,8 @@ class EditToolTest {
     /**
      * The 1:1 chip makes the shown 120 x 80 photo square.
      *
-     * Run 9: the crop chips live in the Crop sheet now, so the test opens Crop first.
+     * Run 9: the crop chips live in the Crop sheet now, so the test opens Crop first; a chip now
+     * goes to the ViewModel's `chooseCropRatio`, which sets the centred square crop rectangle.
      */
     @Test
     fun a_crop_ratio_changes_the_shape_of_the_shown_photo() {
@@ -119,7 +148,8 @@ class EditToolTest {
     /**
      * A filter chip changes the colours of the shown photo.
      *
-     * Run 9: the filter chips live in the Filters sheet now, so the test opens Filters first.
+     * Run 9: the filter chips live in the Filters sheet now, so the test opens Filters first; a
+     * chip is now one action through the ViewModel's `changeSettings`.
      */
     @Test
     fun a_filter_changes_the_colours_of_the_shown_photo() {
@@ -131,17 +161,155 @@ class EditToolTest {
         assertTrue("the filter barely changed the colours ($change)", change > 3.0)
     }
 
+    /**
+     * DoD 16: dragging the filter's intensity changes the shown photo while the finger is still
+     * down; lifting it keeps the result and leaves an Undo step.
+     */
+    @Test
+    fun the_filter_intensity_changes_the_photo_while_dragged() {
+        val viewModel = show(EditTool.FILTERS)
+        compose.onNodeWithTag(editFilterTag(FilterPreset.KELVIN)).performSemanticsAction(SemanticsActions.OnClick)
+        val full = waitForEdit(viewModel, previous = null)
+        val fullMeans = channelMeans(full)
+
+        val slider = compose.onNodeWithTag(EDIT_INTENSITY_TAG)
+        slider.performTouchInput {
+            // Intensity 100 has the thumb at the right end; starting in the middle and moving
+            // left lowers it well below 100.
+            down(center)
+            repeat(DRAG_STEPS) { moveBy(Offset(-width * DRAG_STEP_FRACTION, 0f)) }
+        }
+        val dragged = waitForEdit(viewModel, previous = full)
+        assertTrue(
+            "the intensity did not fall while dragged",
+            viewModel.state.value.settings.filterIntensity < 0.9f,
+        )
+        val draggedMeans = channelMeans(dragged)
+        val change = (0..2).maxOf { abs(draggedMeans[it] - fullMeans[it]) }
+        assertTrue("the drag barely changed the photo ($change)", change > 3.0)
+
+        slider.performTouchInput { up() }
+        compose.waitForIdle()
+        assertTrue(viewModel.state.value.canUndo)
+        assertEquals(FilterPreset.KELVIN, viewModel.state.value.settings.filter)
+    }
+
+    /**
+     * DoD 5 through the real ViewModel: brightness set to 70 is still 70, on the slider and in
+     * its number, after Filters is opened and then Adjust again (each opening draws a new sheet).
+     */
+    @Test
+    fun brightness_70_is_still_70_when_adjust_is_opened_again() {
+        val viewModel = show(EditTool.ADJUST)
+        compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.7f) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(editSliderValueTag(EDIT_BRIGHTNESS_TAG)).assertTextEquals("70")
+
+        compose.runOnIdle { viewModel.openTool(EditTool.FILTERS) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG).assertDoesNotExist()
+        compose.runOnIdle { viewModel.openTool(EditTool.ADJUST) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(editSliderValueTag(EDIT_BRIGHTNESS_TAG)).assertTextEquals("70")
+        val slider = compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG).fetchSemanticsNode()
+        assertEquals(0.7f, slider.config[SemanticsProperties.ProgressBarRangeInfo].current, 0.0001f)
+        assertEquals(0.7f, viewModel.state.value.settings.brightness, 0.0001f)
+    }
+
+    /**
+     * DoD 14: the Rotate sheet offers Turn left, Turn right, Flip across and Flip upside down,
+     * and each tap is exactly one action (`onChange`, never `onPreview`) with the expected
+     * settings: a quarter turn each way, then each flip on.
+     */
+    @Test
+    fun rotate_offers_four_actions_each_calling_on_change_once() {
+        val changes = mutableListOf<EditSettings>()
+        var previews = 0
+        compose.setContent {
+            MaterialTheme {
+                EditPanelContent(
+                    openTool = EditTool.ROTATE,
+                    settings = heldSettings,
+                    onChange = { new ->
+                        changes += new
+                        heldSettings = new
+                    },
+                    onPreview = { previews++ },
+                    onCommit = {},
+                    onRatio = {},
+                )
+            }
+        }
+        compose.waitForIdle()
+        val buttons = listOf(
+            EDIT_ROTATE_LEFT_TAG to "Turn left",
+            EDIT_ROTATE_RIGHT_TAG to "Turn right",
+            EDIT_FLIP_HORIZONTAL_TAG to "Flip across",
+            EDIT_FLIP_VERTICAL_TAG to "Flip upside down",
+        )
+        buttons.forEachIndexed { index, (tag, name) ->
+            compose.onNodeWithTag(tag).assert(hasText(name))
+            // The row scrolls sideways, so the tap goes through the semantics action.
+            compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)
+            compose.waitForIdle()
+            assertEquals("$name made ${changes.size - index} actions", index + 1, changes.size)
+        }
+        // Run 9 review: turns wrap into 0..3, so one turn left is 3 (the same as -1) and the turn
+        // right after it comes back to 0.
+        assertEquals(3, changes[0].quarterTurns)
+        assertEquals(0, changes[1].quarterTurns)
+        assertTrue(changes[2].flipHorizontal)
+        assertFalse(changes[2].flipVertical)
+        assertTrue(changes[3].flipHorizontal && changes[3].flipVertical)
+        assertEquals("a button is never a slider drag", 0, previews)
+    }
+
+    /**
+     * DoD 2: the row of tools shows a small dot ("Changed") only on a tool whose settings are not
+     * neutral: none for the starting settings, Adjust for a brightness change, Rotate for a
+     * quarter turn but not for a full turn, Filters for a filter, Crop for a cropped rectangle.
+     */
+    @Test
+    fun a_dot_marks_only_the_tools_whose_settings_are_not_neutral() {
+        compose.setContent {
+            MaterialTheme {
+                EditToolRow(openTool = null, enabled = true, onOpen = {}, settings = heldSettings)
+            }
+        }
+        compose.waitForIdle()
+        assertDots(emptySet())
+
+        setHeld(EditSettings(brightness = 0.4f))
+        assertDots(setOf(EditTool.ADJUST))
+        compose.onNodeWithTag(editToolDotTag(EditTool.ADJUST), useUnmergedTree = true)
+            .assert(hasContentDescription("Changed"))
+
+        setHeld(EditSettings(brightness = 0.4f, quarterTurns = 4))
+        assertDots(setOf(EditTool.ADJUST))
+        setHeld(EditSettings(brightness = 0.4f, quarterTurns = 1))
+        assertDots(setOf(EditTool.ADJUST, EditTool.ROTATE))
+        setHeld(EditSettings(filter = FilterPreset.KELVIN))
+        assertDots(setOf(EditTool.FILTERS))
+        setHeld(EditSettings(crop = EditSettings.CropRect(0.1f, 0f, 1f, 1f)))
+        assertDots(setOf(EditTool.CROP))
+        setHeld(EditSettings())
+        assertDots(emptySet())
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
      * Builds the Edit screen's ViewModel on the fake photo, decodes the photo, opens [open]'s
-     * sheet, and draws `ToolContent` with the Edit panel in its sheet slot. Returns the ViewModel.
+     * sheet, and draws the Edit panel for whichever tool the ViewModel has open. Returns the
+     * ViewModel.
      *
-     * Run 9: the Edit screen no longer shows every control at once; each of its four tools (Crop,
-     * Rotate, Adjust, Filters) has its own sheet under the photo, drawn through `editSheet` only
-     * while that tool is open. So each test opens the tool whose control it uses, through the
-     * ViewModel's own `openTool`, and the sheet hands the real panel's processor to the real
-     * `apply`, as the app does: the slider, chip, processor and shown photo are still all real.
+     * Run 9: the host no longer draws `ToolContent` with `EditPanel(onApply = viewModel::apply)`:
+     * that API is gone (the panel now hands whole settings to the session calls), and the tool
+     * screen's sheet slot is being rewired outside this test. The test draws the panel itself, as
+     * the screen's sheet area does: from the ViewModel's settings, drawn afresh (`key`) for each
+     * tool opened. The slider, chip, processor, ViewModel and shown photo are still all real.
      */
     private fun show(open: EditTool): ToolViewModel {
         val viewModel = ToolViewModel(
@@ -161,24 +329,41 @@ class EditToolTest {
         val filters = invertingSource()
         compose.setContent {
             MaterialTheme {
-                // collectAsState redraws the screen whenever the ViewModel's state changes.
+                // collectAsState redraws the panel whenever the ViewModel's state changes.
                 val state by viewModel.state.collectAsState()
-                ToolContent(
-                    state = state,
-                    onBack = {},
-                    onSave = {},
-                    onUndo = viewModel::undo,
-                    onOpenTool = viewModel::openTool,
-                    onCompare = viewModel::setComparing,
-                    // The open tool's controls, as ToolScreen draws them, with the test's filters.
-                    editSheet = { tool ->
-                        EditPanel(openTool = tool, onApply = viewModel::apply, filterSource = filters)
-                    },
-                )
+                val tool = state.openTool
+                if (tool != null) {
+                    key(tool) {
+                        EditPanel(
+                            openTool = tool,
+                            settings = state.settings,
+                            onChange = viewModel::changeSettings,
+                            onPreview = viewModel::previewSettings,
+                            onCommit = viewModel::commitSettings,
+                            onRatio = viewModel::chooseCropRatio,
+                            enabled = !state.comparing,
+                            filterSource = filters,
+                        )
+                    }
+                }
             }
         }
         compose.waitForIdle()
         return viewModel
+    }
+
+    /** Hands [settings] to the stateless tests' host and waits for the redraw. */
+    private fun setHeld(settings: EditSettings) {
+        compose.runOnIdle { heldSettings = settings }
+        compose.waitForIdle()
+    }
+
+    /** Asserts that the row of tools shows a dot on exactly the tools in [expected]. */
+    private fun assertDots(expected: Set<EditTool>) {
+        EditTool.entries.forEach { tool ->
+            val dot = compose.onNodeWithTag(editToolDotTag(tool), useUnmergedTree = true)
+            if (tool in expected) dot.assertExists("$tool should carry a dot") else dot.assertDoesNotExist()
+        }
     }
 
     /**
@@ -215,8 +400,8 @@ class EditToolTest {
 
     /** The fake 120 x 80 photo: mid-grey on the left, a moderate orange on the right. */
     private fun photo(): Bitmap {
-        val width = 120
-        val height = 80
+        val width = PHOTO_WIDTH
+        val height = PHOTO_HEIGHT
         val data = IntArray(width * height) { index ->
             if (index % width < width / 2) rgb(128, 128, 128) else rgb(180, 120, 80)
         }
@@ -250,9 +435,21 @@ class EditToolTest {
         )
     }
 
-    /** The made-up Uri of the fake photo. */
+    /** The made-up photo and how the finger moves in the drag test. */
     private companion object {
         /** A content Uri no real photo has; the fake loader ignores it. */
         const val PHOTO_URI = "content://media/external/images/media/42"
+
+        /** The fake photo's width in pixels. */
+        const val PHOTO_WIDTH = 120
+
+        /** The fake photo's height in pixels. */
+        const val PHOTO_HEIGHT = 80
+
+        /** The number of moves in one drag. */
+        const val DRAG_STEPS = 5
+
+        /** Each move's length as a fraction of the slider's width. */
+        const val DRAG_STEP_FRACTION = 0.07f
     }
 }

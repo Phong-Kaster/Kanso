@@ -239,7 +239,7 @@ class EditToolRowTest {
                             state = state,
                             openTool = tool,
                             enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
-                            onApply = viewModel::apply,
+                            // Run 9: Edit's controls no longer take onApply (settings session instead).
                         )
                     },
                 )

@@ -329,3 +329,8 @@ Defects found, not fixed:
 ## Run 8 (loop/kanso-editing-tools)
 
 No issues yet. Bootstrap only; D-001 (the DoD approval) is pending.
+
+## Run 9 (loop/kanso-real-editor)
+
+- Carried (T-004): choosing a fixed crop ratio and then turning the photo does not re-fit the rectangle, so the chip stays marked while the shape is rotated (`EditSession.cropRatioChosen`, `EditPanel` onTurn).
+- README and `docs/features/edit.md` still describe the old Edit tool (T-007 rewrites them; CLAUDE.md asks for the same change, deferred by plan).

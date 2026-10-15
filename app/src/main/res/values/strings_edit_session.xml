@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The number shown beside an Edit slider's name, such as 70 or -20. -->
+    <string name="edit_session_slider_value">%1$d</string>
+    <!-- Read by a screen reader for the dot on a tool whose settings change the photo. -->
+    <string name="edit_session_tool_changed">Changed</string>
+    <!-- The question asked when leaving the Edit screen with changes. -->
+    <string name="edit_session_discard_title">Discard your changes?</string>
+    <string name="edit_session_discard_confirm">Discard</string>
+    <string name="edit_session_discard_keep">Keep editing</string>
+</resources>

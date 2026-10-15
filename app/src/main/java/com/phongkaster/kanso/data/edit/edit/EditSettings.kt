@@ -1,23 +1,34 @@
 package com.phongkaster.kanso.data.edit.edit
 
 /**
- * Everything one run of the Edit tool can do to a photo, as one immutable value: a crop, quarter
- * turns, flips, four colour sliders and a filter. [EditProcessor] applies it, in this order:
- * crop, turn, flip, colour sliders, filter.
+ * Everything the Edit screen has done to the photo so far, as one immutable value: the crop
+ * rectangle, quarter turns, flips, four colour sliders and a filter. There is one such value for
+ * the whole editing session (held by [EditSession]); every tap or slider move makes a new one.
  *
  * Immutable means a value never changes after it is made; a change makes a new value with
  * `copy(...)`. That is what Compose wants for state (a new value is a visible change) and what
  * lets a processor hold its settings safely while it runs on another thread.
  *
- * The default value changes nothing: no crop, no turn, no flip, every slider at its middle and no
- * filter. The Edit panel uses the same class twice: once for what its controls show right now,
- * and once, built fresh, for the single change it hands to the processor (see `EditPanel`).
+ * **The whole state, never a change.** [EditProcessor] always renders a complete value against the
+ * ORIGINAL photo, so a value describes the finished picture, not a step towards it: choosing a
+ * second filter replaces the first one (it does not pile on top), and a slider at 70 means 70, not
+ * "70 more". That is also why Undo can simply go back to an earlier value (see [EditSession]).
+ *
+ * The default value changes nothing: the whole photo, no turn, no flip, every slider at its middle
+ * and no filter ([isNeutral]).
  */
 data class EditSettings(
-    /** The crop shape, or null for no crop. [CropRatio.FREE] uses [freeCrop]. */
+    /**
+     * The rectangle of the original photo to keep, as fractions of its width and height. Every
+     * crop is this one rectangle, whatever ratio was chosen: a fixed ratio simply sets a rectangle
+     * of that shape (see [EditSession.cropRatioChosen]). [CropRect.FULL] keeps the whole photo.
+     */
+    val crop: CropRect = CropRect.FULL,
+    /**
+     * The shape the crop handles are locked to, or null (or [CropRatio.FREE]) when the person may
+     * drag them to any shape. It only constrains how [crop] is edited; the processor never reads it.
+     */
     val cropRatio: CropRatio? = null,
-    /** The rectangle a free crop keeps, as fractions of the photo's width and height. */
-    val freeCrop: CropRect = CropRect.FULL,
     /**
      * How many quarter turns to turn the photo: positive is clockwise (to the right), negative
      * anticlockwise. Four turns, in either direction, give the photo back as it was.
@@ -35,7 +46,7 @@ data class EditSettings(
     val saturation: Float = MIDDLE,
     /** Warmth, from [MIN] (cooler, bluer) through [MIDDLE] (unchanged) to [MAX] (warmer, redder). */
     val warmth: Float = MIDDLE,
-    /** The colour filter to lay over the photo; [FilterPreset.NONE] for none. */
+    /** The one colour filter laid over the photo; [FilterPreset.NONE] for none. */
     val filter: FilterPreset = FilterPreset.NONE,
     /**
      * How strongly the filter is applied, from 0 (not at all: the photo as it was) to 1 (fully).
@@ -51,6 +62,31 @@ data class EditSettings(
     /** True when a filter is chosen and its intensity is above 0, so it changes the photo. */
     val hasFilter: Boolean
         get() = filter != FilterPreset.NONE && filterIntensity > 0f
+
+    /**
+     * True when nothing is changed: every tool's controls change nothing right now (see
+     * [isNeutral] for one tool). A crop shape that is only locked, four turns that come back
+     * round, or a filter at intensity 0 therefore still count as neutral, matching the dots on the
+     * tool row. The screen uses it to know whether there is anything to save or to lose.
+     */
+    val isNeutral: Boolean
+        get() = EditTool.entries.all { isNeutral(it) }
+
+    /**
+     * True when the controls of [tool]'s sheet change nothing right now, so the tool row can mark
+     * the tools that do hold a change:
+     *
+     * - [EditTool.CROP]: the crop keeps the whole photo;
+     * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
+     * - [EditTool.ADJUST]: all four sliders sit at their middle;
+     * - [EditTool.FILTERS]: no filter, or one at intensity 0.
+     */
+    fun isNeutral(tool: EditTool): Boolean = when (tool) {
+        EditTool.CROP -> crop == CropRect.FULL
+        EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
+        EditTool.ADJUST -> !hasColourChange
+        EditTool.FILTERS -> !hasFilter
+    }
 
     /**
      * A rectangle inside the photo, each edge given as a fraction from 0 to 1 of the photo's

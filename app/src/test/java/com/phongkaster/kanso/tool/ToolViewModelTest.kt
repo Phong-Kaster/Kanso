@@ -13,7 +13,9 @@ import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
@@ -24,6 +26,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -51,6 +55,14 @@ import org.robolectric.annotation.Config
  *
  * Run 9 adds the Edit screen's sheets and Compare: `openTool` opens, closes and switches the one
  * open tool sheet, and while Compare is on no edit is applied and none is undone.
+ *
+ * Run 9 (T-002) makes the Edit screen a real editor: its settings are one object rendered from the
+ * original every time, so the stacking `apply` path and its picture history now belong to the
+ * other tools only. The Run 8 editing tests therefore run on Retouch (whose working size, 2000,
+ * keeps the 600 x 400 test photo as the same object), and new tests cover the Edit session: the
+ * newest settings win over a render still running, Back closes a sheet or asks to discard, and
+ * Save writes the rendered settings or, with none, the original. Undo across the Edit sheets is
+ * in `edit/EditUndoTest`.
  *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
@@ -400,7 +412,8 @@ class ToolViewModelTest {
      */
     @Test
     fun open_tool_opens_toggles_and_switches_the_sheet_and_close_tool_closes_it() {
-        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400))
+        // Run 9: the default tool of loadedViewModel is now Retouch; the sheets are Edit's.
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.EDIT)
         assertNull(viewModel.state.value.openTool)
 
         viewModel.openTool(EditTool.ADJUST)
@@ -432,7 +445,9 @@ class ToolViewModelTest {
     fun while_comparing_apply_and_undo_change_nothing_until_compare_is_off() {
         val original = ToolFixtures.gradient(600, 400)
         val result = ToolFixtures.gradient(300, 200)
-        val registry = ProcessorRegistry(mapOf(Tool.EDIT to FakeProcessor { _, _ -> EditResult.Edited(result) }))
+        // Run 9: `apply` is the other tools' path (the Edit screen ignores it), so this runs on
+        // Retouch, the default tool of loadedViewModel, and registers Retouch's processor.
+        val registry = ProcessorRegistry(mapOf(Tool.RETOUCH to FakeProcessor { _, _ -> EditResult.Edited(result) }))
         val viewModel = loadedViewModel(original, registry = registry)
         val first = ToolFixtures.twoHalves(300, 200)
         val edit = FakeProcessor { _, _ -> EditResult.Edited(first) }
@@ -468,7 +483,182 @@ class ToolViewModelTest {
         assertSame(original, (viewModel.state.value.photo as ToolUiState.PhotoState.Ready).bitmap)
     }
 
+    /**
+     * Run 9, DoD 18 and 6: a slider released while an earlier change is still being rendered is
+     * not lost. A filter chip starts a render that hangs; the person drags a slider and lets go
+     * meanwhile. The newest settings are rendered and shown, the hung render finishing late
+     * changes nothing, every render starts from the original photo, and the chip and the drag are
+     * one undo entry each.
+     */
+    @Test
+    fun a_slider_released_while_a_render_runs_is_not_lost() {
+        val original = ToolFixtures.gradient(600, 400)
+        val viewModel = loadedViewModel(original, tool = Tool.EDIT)
+        val chip = EditSettings(filter = FilterPreset.KELVIN)
+        val hung = CompletableDeferred<Unit>()
+        val renderer = SettingsRenderer(gates = mapOf(chip to hung))
+
+        viewModel.changeSettings(chip, renderer.processorFor)
+        runMainThread()
+        assertTrue(viewModel.state.value.processing is ToolUiState.Processing.Running)
+        assertNull(viewModel.state.value.edited)
+
+        val released = chip.copy(brightness = 0.4f)
+        viewModel.previewSettings(chip.copy(brightness = 0.2f), renderer.processorFor)
+        viewModel.previewSettings(released, renderer.processorFor)
+        viewModel.commitSettings()
+        runMainThread()
+        var state = viewModel.state.value
+        assertEquals(released, state.settings)
+        assertEquals("The released slider was not rendered", released, renderer.settingsOf(state.edited))
+        assertEquals(ToolUiState.Processing.Idle, state.processing)
+
+        // The first render finishes late: it is out of date, so it must change nothing.
+        hung.complete(Unit)
+        runMainThread()
+        state = viewModel.state.value
+        assertEquals("A late render overwrote the newest one", released, renderer.settingsOf(state.edited))
+        assertEquals(ToolUiState.Processing.Idle, state.processing)
+        assertNull(state.failure)
+        assertTrue("A render did not start from the original", renderer.inputs.all { it === original })
+
+        viewModel.undo()
+        runMainThread()
+        assertEquals(chip, viewModel.state.value.settings)
+        assertEquals(chip, renderer.settingsOf(viewModel.state.value.edited))
+        viewModel.undo()
+        runMainThread()
+        assertEquals(EditSettings(), viewModel.state.value.settings)
+        assertNull(viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+    }
+
+    /**
+     * Run 9, DoD 12: Back on the Edit screen closes an open sheet first (even with changes made);
+     * with changes and no sheet it asks "Discard your changes?" and stays; "Keep editing" hides the
+     * question and keeps every change; "Discard" hides it too (the screen then leaves). With no
+     * changes, at first or after undoing them all, Back asks nothing and says to leave.
+     */
+    @Test
+    fun back_closes_the_sheet_then_asks_to_discard_changes_and_never_without_changes() {
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.EDIT)
+        val renderer = SettingsRenderer()
+        assertFalse("Back without changes did not leave", viewModel.onBackPressed())
+        assertFalse(viewModel.state.value.discardPrompt)
+
+        viewModel.openTool(EditTool.ADJUST)
+        assertTrue(viewModel.onBackPressed())
+        assertNull("Back did not close the open sheet", viewModel.state.value.openTool)
+        assertFalse(viewModel.state.value.discardPrompt)
+
+        val turned = EditSettings(quarterTurns = 1)
+        viewModel.changeSettings(turned, renderer.processorFor)
+        runMainThread()
+        viewModel.openTool(EditTool.ROTATE)
+        assertTrue(viewModel.onBackPressed())
+        assertNull(viewModel.state.value.openTool)
+        assertFalse("Back asked to discard while a sheet was open", viewModel.state.value.discardPrompt)
+
+        assertTrue(viewModel.onBackPressed())
+        assertTrue("Back with changes did not ask to discard them", viewModel.state.value.discardPrompt)
+        viewModel.dismissDiscardPrompt()
+        assertFalse(viewModel.state.value.discardPrompt)
+        assertEquals("Keep editing lost the changes", turned, viewModel.state.value.settings)
+        assertEquals(turned, renderer.settingsOf(viewModel.state.value.edited))
+
+        assertTrue(viewModel.onBackPressed())
+        assertTrue(viewModel.state.value.discardPrompt)
+        viewModel.confirmDiscard()
+        assertFalse(viewModel.state.value.discardPrompt)
+
+        viewModel.undo()
+        runMainThread()
+        assertFalse("Back asked about changes that were all undone", viewModel.onBackPressed())
+        assertFalse(viewModel.state.value.discardPrompt)
+    }
+
+    /**
+     * Run 9: on the Edit screen Save writes the rendered settings (the edited bitmap itself, never
+     * the original's Uri); with the settings back at neutral (every change undone) there is no
+     * edited photo, so Save copies the original from its Uri.
+     */
+    @Test
+    fun edit_save_writes_the_rendered_settings_and_neutral_settings_save_the_original() {
+        val original = ToolFixtures.gradient(600, 400)
+        val renderer = SettingsRenderer()
+
+        val saver = FakePhotoSaver()
+        val viewModel = loadedViewModel(original, saver, tool = Tool.EDIT)
+        val flipped = EditSettings(flipHorizontal = true, contrast = 0.3f)
+        viewModel.changeSettings(flipped, renderer.processorFor)
+        runMainThread()
+        val edited = viewModel.state.value.edited
+        assertEquals(flipped, renderer.settingsOf(edited))
+        viewModel.save()
+        runMainThread()
+        assertSame(edited, saver.bitmapCalls.single())
+        assertTrue("The original's Uri was saved after an edit", saver.calls.isEmpty())
+
+        val neutralSaver = FakePhotoSaver()
+        val neutral = loadedViewModel(original, neutralSaver, tool = Tool.EDIT)
+        neutral.changeSettings(flipped, renderer.processorFor)
+        runMainThread()
+        neutral.undo()
+        runMainThread()
+        assertNull(neutral.state.value.edited)
+        neutral.save()
+        runMainThread()
+        assertEquals(listOf(PHOTO_URI), neutralSaver.calls.toList())
+        assertTrue(neutralSaver.bitmapCalls.isEmpty())
+    }
+
+    /**
+     * Run 9: the Edit screen ignores the stacking `apply` path: a processor handed to it never
+     * runs and nothing is edited, so no change can be baked into the photo behind the settings.
+     */
+    @Test
+    fun the_edit_screen_ignores_apply() {
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.EDIT)
+        val processor = FakeProcessor { input, _ -> EditResult.Edited(input) }
+        viewModel.apply(processor)
+        runMainThread()
+        assertTrue(processor.inputs.isEmpty())
+        assertNull(viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
+
+    /**
+     * Stands in for the Edit panel's recipe `{ settings -> EditProcessor(settings, filters) }`,
+     * with no engine: each processor it builds records the settings and the input it was given
+     * and answers with a new small bitmap, remembered with its settings so a test can ask which
+     * settings the shown picture was rendered from. A render whose settings are in [gates] waits
+     * for its gate first, and ignores being cancelled while it waits, as a real processor that
+     * does not check for cancellation would.
+     */
+    private class SettingsRenderer(private val gates: Map<EditSettings, CompletableDeferred<Unit>> = emptyMap()) {
+
+        /** Every input bitmap a render was given, oldest first. */
+        val inputs = CopyOnWriteArrayList<Bitmap>()
+
+        /** Each picture rendered, with the settings it was rendered from. */
+        private val results = CopyOnWriteArrayList<Pair<Bitmap, EditSettings>>()
+
+        /** Builds the processor for one set of settings, as the ViewModel asks for each render. */
+        val processorFor: (EditSettings) -> ToolProcessor = { settings ->
+            FakeProcessor { input, _ ->
+                inputs += input
+                gates[settings]?.let { gate -> withContext(NonCancellable) { gate.await() } }
+                val picture = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                results += picture to settings
+                EditResult.Edited(picture)
+            }
+        }
+
+        /** The settings [bitmap] was rendered from, or null for a picture this did not render. */
+        fun settingsOf(bitmap: Bitmap?): EditSettings? = results.firstOrNull { it.first === bitmap }?.second
+    }
 
     /**
      * A [ToolProcessor] for tests: records every input it is given and answers with [block],
@@ -491,11 +681,15 @@ class ToolViewModelTest {
     /**
      * Builds the ViewModel on [tool] for [photo] through a [FakePhotoLoader], loads the photo and
      * checks it is shown, so an edit can run on it at once.
+     *
+     * Run 9: the default tool is Retouch, not Edit. The Run 8 tests that use the default drive the
+     * stacking `apply` path, which the Edit screen no longer takes (it renders its settings from
+     * the original instead); Retouch still does, at a working size that keeps the test photo whole.
      */
     private fun loadedViewModel(
         photo: Bitmap,
         saver: PhotoSaver = NoSavePhotoSaver(),
-        tool: Tool = Tool.EDIT,
+        tool: Tool = Tool.RETOUCH,
         registry: ProcessorRegistry = ProcessorRegistry(),
     ): ToolViewModel {
         val viewModel = toolViewModel(FakePhotoLoader(app, photo), saver, tool, registry)

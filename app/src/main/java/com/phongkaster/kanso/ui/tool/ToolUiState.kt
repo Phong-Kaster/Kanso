@@ -2,6 +2,7 @@ package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.navigation.Tool
 
@@ -14,7 +15,8 @@ import com.phongkaster.kanso.navigation.Tool
  * the editing part: the edited photo ([edited]), whether an edit can be taken back ([canUndo]),
  * whether an edit is running ([processing]) and why the last one failed ([failure]).
  * The Edit screen also keeps here which of its tool sheets is open ([openTool]) and whether the
- * person is comparing with the original ([comparing]), so the whole screen reads one snapshot.
+ * person is comparing with the original ([comparing]), its current settings ([settings]) and
+ * whether it is asking to discard them ([discardPrompt]), so the whole screen reads one snapshot.
  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
  * this screen: each tool has a screen of its own.
  *
@@ -38,7 +40,8 @@ data class ToolUiState(
      * The photo as the person has edited it so far, or null while nothing has been edited (or
      * every edit has been undone). When it is set, the screen shows it instead of the photo in
      * [photo], and Save writes it; [photo] itself always keeps the unedited original, so undoing
-     * every edit returns to it.
+     * every edit returns to it. On the Edit screen it is always [settings] rendered from the
+     * original, and null whenever those settings are neutral.
      */
     val edited: Bitmap? = null,
     /** True when there is an edit to take back, so the screen's Undo control can be used. */
@@ -61,6 +64,17 @@ data class ToolUiState(
      * of the edit, and every editing control is disabled until it is switched off again.
      */
     val comparing: Boolean = false,
+    /**
+     * The Edit screen's settings as they are now: crop, turn, flips, the four sliders and the
+     * filter, one object for the whole visit. The sheets draw every control from it, and the photo
+     * is this applied to the original. Other tools' screens leave it at its neutral default.
+     */
+    val settings: EditSettings = EditSettings(),
+    /**
+     * True while the Edit screen asks "Discard your changes?" after Back was pressed with changes
+     * made; it goes false again with Discard or Keep editing.
+     */
+    val discardPrompt: Boolean = false,
 ) {
 
     /**

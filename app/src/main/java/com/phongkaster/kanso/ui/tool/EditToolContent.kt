@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
@@ -94,7 +95,13 @@ fun EditToolContent(
                 .weight(1f - PHOTO_SHARE)
                 .fillMaxWidth(),
         ) {
-            EditToolRow(openTool = state.openTool, enabled = !state.comparing, onOpen = onOpenTool)
+            // The session's settings tell the row which tools hold a change (their dot).
+            EditToolRow(
+                openTool = state.openTool,
+                enabled = !state.comparing,
+                onOpen = onOpenTool,
+                settings = state.settings,
+            )
             EditSheetArea(
                 openTool = state.openTool,
                 sheet = sheet,
@@ -179,7 +186,10 @@ private fun SampleEditToolContent(state: ToolUiState) {
     }
 }
 
-/** The Edit screen body with Adjust's sheet open and an edit to undo, in light and in dark. */
+/**
+ * The Edit screen body with Adjust's sheet open and an edit to undo, in light and in dark: the
+ * sample settings raise brightness, so Adjust's entry carries the "changed" dot.
+ */
 @PreviewLightDark
 @Composable
 private fun EditToolContentPreview() {
@@ -189,6 +199,7 @@ private fun EditToolContentPreview() {
             photoUri = "content://sample/photo/1",
             canUndo = true,
             openTool = EditTool.ADJUST,
+            settings = EditSettings(brightness = 0.3f),
         ),
     )
 }

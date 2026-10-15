@@ -2,9 +2,9 @@
 
 ## Current
 
-- **Stage:** executing (Phase 1 done)
+- **Stage:** executing (Phase 2 done)
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** T-002
+- **Next Phase:** T-003
 - **DONE-candidate:** no
 
 ## Progress
@@ -12,7 +12,7 @@
 | Task | Status | Evidence |
 |---|---|---|
 | T-001 | complete | evidence/p1-final.log |
-| T-002 | pending | - |
+| T-002 | complete | evidence/p2-final4.log |
 | T-003 | pending | - |
 | T-004 | pending | - |
 | T-005 | pending | - |

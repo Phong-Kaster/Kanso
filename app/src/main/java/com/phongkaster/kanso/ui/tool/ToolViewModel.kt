@@ -8,6 +8,9 @@ import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.EditSession
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.PhotoSaver
@@ -44,12 +47,21 @@ import kotlinx.coroutines.withContext
  * that leaving the screen frees it; [saver] writes the photo into the phone's `Pictures/Kanso`
  * album when the person taps Save.
  *
- * Editing works on a copy held in memory, never on the photo's file: [apply] runs one edit (a
- * [ToolProcessor]) on the photo as it is now shown, and the result becomes the new shown photo.
- * Every earlier version is kept, so [undo] can step back one edit at a time all the way to the
- * original. [registry] finds the processor built for this screen's tool, for [runRegistered].
- * [workDispatcher] is the background thread pool that shrinks a large photo before an edit, so
- * even that never runs on the main thread; tests can pass their own.
+ * Editing works on a copy held in memory, never on the photo's file, in one of two ways.
+ *
+ * - **The Edit screen** keeps one [EditSettings] object for the whole visit, inside an
+ *   [EditSession] (the settings plus the earlier settings Undo can go back to). Every change goes
+ *   through [changeSettings] (one action: a chip, a turn, a crop), [previewSettings] (a slider
+ *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]. After each one
+ *   the WHOLE settings are rendered again from the ORIGINAL photo, so nothing is ever stacked on
+ *   an earlier result; [undo] just goes back to earlier settings and renders those.
+ * - **The other tools** (Remove background, Enhance, Retouch, Artistic) use [apply]: it runs one
+ *   edit (a [ToolProcessor]) on the photo as it is now shown, the result becomes the new shown
+ *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
+ *
+ * [registry] finds the processor built for this screen's tool, for [runRegistered].
+ * [workDispatcher] is the background thread pool that shrinks a large photo and runs the edits,
+ * so neither ever runs on the main thread; tests can pass their own.
  */
 class ToolViewModel(
     private val tool: Tool,
@@ -111,6 +123,9 @@ class ToolViewModel(
             // update { } changes only the photo part of the snapshot as it is right now, so a
             // decode that finishes while a save runs leaves the save part alone.
             mutableState.update { it.copy(photo = shown) }
+            // Settings chosen before the photo arrived (or kept from a smaller decode) are drawn
+            // on the newly decoded original now.
+            if (tool == Tool.EDIT && photo != null) renderSettings()
         }
     }
 
@@ -125,8 +140,12 @@ class ToolViewModel(
      * photo stays exactly as it was and the state says why, in [ToolUiState.failure].
      * Nothing happens either while the person is comparing with the original
      * ([ToolUiState.comparing]): every editing control is disabled then.
+     *
+     * The Edit screen never uses this (Run 9): it would stack one change on the last result.
+     * There, a call does nothing; its changes go through [changeSettings] and the calls beside it.
      */
     fun apply(processor: ToolProcessor, fromOriginal: Boolean = false) {
+        if (tool == Tool.EDIT) return
         val current = mutableState.value
         if (current.comparing) return
         if (current.processing is ToolUiState.Processing.Running) return
@@ -191,6 +210,7 @@ class ToolViewModel(
     /**
      * The original photo and its working-size copy, remembered by [fittedOriginal].
      */
+    @Volatile
     private var fittedOriginalCache: Pair<Bitmap, Bitmap>? = null
 
     /**
@@ -239,12 +259,24 @@ class ToolViewModel(
     }
 
     /**
-     * Takes back the last edit: the photo shown before it is shown again. Undoing every edit
-     * returns to the unedited original. Nothing happens while an edit runs, while the person is
-     * comparing with the original, or when there is nothing to take back.
+     * Takes back the last edit. Nothing happens while the person is comparing with the original,
+     * or when there is nothing to take back.
+     *
+     * On the Edit screen this goes back one action of the session (a slider release, a chip, a
+     * crop, a turn), whichever sheet it came from, and the photo is rendered again from the
+     * original with the earlier settings; it works even while a render runs, because the newest
+     * render always wins. On the other tools' screens the photo shown before the last edit is shown
+     * again (undoing every edit returns to the original), and nothing happens while an edit runs.
      */
     fun undo() {
         if (mutableState.value.comparing) return
+        if (tool == Tool.EDIT) {
+            // A drag still under way counts as an action of its own, so it is settled first.
+            if (!session.commit().canUndo) return
+            publishSession(session.undo())
+            renderSettings()
+            return
+        }
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
         if (history.isEmpty()) return
         val before = history.removeLast()
@@ -266,6 +298,179 @@ class ToolViewModel(
     /** Closes the open tool sheet, if any, leaving the photo and the row of tools. */
     fun closeTool() {
         mutableState.update { it.copy(openTool = null) }
+    }
+
+    // --- The Edit screen's session ---------------------------------------------------------------
+
+    /**
+     * The Edit screen's settings and its undo entries, for the whole visit. It is immutable: each
+     * change replaces it with a new session, and [publishSession] copies what the screen needs
+     * into the state. Other tools never change it.
+     */
+    private var session = EditSession()
+
+    /**
+     * The last recipe the Edit panel gave for turning settings into a processor, kept so that
+     * [undo] (which the panel does not call) can render the earlier settings the same way.
+     */
+    private var processorFor: ((EditSettings) -> ToolProcessor)? = null
+
+    /** The render of the Edit settings in progress, if any; a newer render cancels it. */
+    private var renderJob: Job? = null
+
+    /**
+     * Counts the Edit renders started. Each render remembers its own number, and only the render
+     * holding the newest number may change the state: an older one that is still finishing (a
+     * processor may not stop the moment it is cancelled) is simply dropped. It is read from the
+     * work thread too, so `@Volatile` makes every thread see the newest value.
+     */
+    @Volatile
+    private var renderGeneration = 0
+
+    /**
+     * One action on the Edit screen (a filter chip, a quarter turn, a flip, a finished crop) made
+     * the settings [new]: it becomes one undo entry and the photo is rendered again from the
+     * original. [processorFor] builds the processor that draws a set of settings. Nothing happens
+     * while comparing, when every control is disabled.
+     */
+    fun changeSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
+        if (mutableState.value.comparing) return
+        this.processorFor = processorFor
+        publishSession(session.change(new))
+        renderSettings()
+    }
+
+    /**
+     * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it, but
+     * no undo entry is made until [commitSettings]. Nothing happens while comparing.
+     */
+    fun previewSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
+        if (mutableState.value.comparing) return
+        this.processorFor = processorFor
+        publishSession(session.preview(new))
+        renderSettings()
+    }
+
+    /**
+     * The finger let go of a slider: the whole drag becomes one undo entry. The settings do not
+     * change, so nothing is rendered again; the render the last drag step started goes on and,
+     * being the newest, is the one shown. This works even while comparing, so a drag is never left
+     * half recorded.
+     */
+    fun commitSettings() {
+        publishSession(session.commit())
+    }
+
+    /**
+     * The person chose the crop shape [ratio] (null or Free unlocks it), as one action: a fixed
+     * ratio sets the largest centred rectangle of that shape inside the photo. The photo's shape
+     * is read from the decoded original, before any turn, which is what [EditSession.cropRatioChosen]
+     * expects. Nothing happens before the photo is decoded, or while comparing.
+     */
+    fun chooseCropRatio(ratio: CropRatio?, processorFor: (EditSettings) -> ToolProcessor) {
+        val current = mutableState.value
+        if (current.comparing) return
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val photoAspect = original.width.toFloat() / original.height
+        this.processorFor = processorFor
+        publishSession(session.cropRatioChosen(ratio, photoAspect))
+        renderSettings()
+    }
+
+    /**
+     * The system Back on the Edit screen, answered in steps: an open sheet is closed first; then,
+     * with changes made, the "Discard your changes?" question is asked; with no changes the answer
+     * is false, which tells the caller to leave the screen. True means Back was handled here.
+     */
+    fun onBackPressed(): Boolean {
+        val current = mutableState.value
+        if (current.openTool != null) {
+            closeTool()
+            return true
+        }
+        if (!session.settings.isNeutral) {
+            mutableState.update { it.copy(discardPrompt = true) }
+            return true
+        }
+        return false
+    }
+
+    /** "Keep editing": hides the discard question and leaves every change as it was. */
+    fun dismissDiscardPrompt() {
+        mutableState.update { it.copy(discardPrompt = false) }
+    }
+
+    /**
+     * "Discard": hides the question; the caller then leaves the screen, and this ViewModel, with
+     * its changes, is cleared with it. The photo's file was never touched, so nothing is undone.
+     */
+    fun confirmDiscard() {
+        mutableState.update { it.copy(discardPrompt = false) }
+    }
+
+    /** Makes [new] the current session and shows its settings and whether Undo can be used. */
+    private fun publishSession(new: EditSession) {
+        session = new
+        mutableState.update { it.copy(settings = new.settings, canUndo = new.canUndo) }
+    }
+
+    /**
+     * Renders the session's current settings from the ORIGINAL photo, in the background.
+     *
+     * The latest settings always win: a new render cancels the one before it, and the generation
+     * number stops a render that finishes late from changing the state, so a slider released while
+     * another change is still being drawn is never lost. Neutral settings need no render at all:
+     * the edited photo becomes null, so the screen shows the original and Save copies its file.
+     * A failure keeps the photo shown as it was and says why.
+     */
+    private fun renderSettings() {
+        val settings = session.settings
+        val generation = ++renderGeneration
+        renderJob?.cancel()
+        renderJob = null
+        if (settings.isNeutral) {
+            mutableState.update {
+                it.copy(edited = null, failure = null, processing = ToolUiState.Processing.Idle)
+            }
+            return
+        }
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val build = processorFor ?: return
+        mutableState.update {
+            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
+        }
+        renderJob = viewModelScope.launch {
+            val result = try {
+                withContext(workDispatcher) {
+                    // Always the original, shrunk once to the working size: never an earlier result.
+                    val input = fittedOriginal(original)
+                    build(settings).process(input) { progress ->
+                        if (generation == renderGeneration) reportProgress(progress)
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                // A newer render cancelled this one, or the screen was left. Only the newest
+                // render may say the work is over: an older one leaves the state to the newer.
+                if (generation == renderGeneration) {
+                    mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
+                }
+                throw cancelled
+            } catch (outOfMemory: OutOfMemoryError) {
+                EditResult.Failed(EditFailure.OutOfMemory)
+            } catch (other: Throwable) {
+                EditResult.Failed(EditFailure.Other)
+            }
+            // A newer render has started since: this result is out of date.
+            if (generation != renderGeneration) return@launch
+            when (result) {
+                is EditResult.Edited -> mutableState.update {
+                    it.copy(edited = result.bitmap, failure = null, processing = ToolUiState.Processing.Idle)
+                }
+                is EditResult.Failed -> mutableState.update {
+                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
+                }
+            }
+        }
     }
 
     /**
