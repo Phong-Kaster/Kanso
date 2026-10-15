@@ -6,7 +6,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 9
 
-- **Status:** pending
+- **Status:** answered
 - **Type:** DoD approval
 - **Iteration:** 1
 - **Timestamp:** 2026-10-15
@@ -34,4 +34,4 @@ Approve after reading criteria 9-11 and 22, and A-001 to A-004.
 
 ### Decision
 
-Answered in `.harness/run/DECISIONS.md`.
+Answered in DECISIONS.md: approved as written; criterion 22 re-records the listed baselines (2026-10-15).

@@ -1,0 +1,128 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+
+> Configure project :opencv
+Configure OpenCV with Kotlin
+OpenCV: 4.12.0-dev D:\Valve\Personal\Kanso\opencv\build.gradle
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :opencv:preBuild UP-TO-DATE
+> Task :opencv:preDebugBuild UP-TO-DATE
+> Task :opencv:processDebugNavigationResources UP-TO-DATE
+> Task :core:colorpicker:preBuild UP-TO-DATE
+> Task :core:colorpicker:preDebugBuild UP-TO-DATE
+> Task :core:colorpicker:processDebugNavigationResources UP-TO-DATE
+> Task :core:common:preBuild UP-TO-DATE
+> Task :core:common:preDebugBuild UP-TO-DATE
+> Task :core:common:processDebugNavigationResources UP-TO-DATE
+> Task :core:editimage:preBuild UP-TO-DATE
+> Task :core:editimage:preDebugBuild UP-TO-DATE
+> Task :core:editimage:processDebugNavigationResources UP-TO-DATE
+> Task :core:gallery:preBuild UP-TO-DATE
+> Task :core:gallery:preDebugBuild UP-TO-DATE
+> Task :core:gallery:processDebugNavigationResources UP-TO-DATE
+> Task :core:imagecrop:preBuild UP-TO-DATE
+> Task :core:imagecrop:preDebugBuild UP-TO-DATE
+> Task :core:imagecrop:processDebugNavigationResources UP-TO-DATE
+> Task :core:imageprocessor:preBuild UP-TO-DATE
+> Task :core:imageprocessor:preDebugBuild UP-TO-DATE
+> Task :core:imageprocessor:processDebugNavigationResources UP-TO-DATE
+> Task :core:localml:preBuild UP-TO-DATE
+> Task :core:localml:preDebugBuild UP-TO-DATE
+> Task :core:localml:generateDebugEmptyResourceFiles UP-TO-DATE
+> Task :core:overlaybrush:preBuild UP-TO-DATE
+> Task :core:overlaybrush:preDebugBuild UP-TO-DATE
+> Task :core:overlaybrush:processDebugNavigationResources UP-TO-DATE
+> Task :app:processDebugNavigationResources
+> Task :opencv:generateDebugBuildConfig UP-TO-DATE
+> Task :opencv:generateDebugResources UP-TO-DATE
+> Task :opencv:packageDebugResources UP-TO-DATE
+> Task :opencv:parseDebugLocalResources UP-TO-DATE
+> Task :opencv:generateDebugRFile UP-TO-DATE
+> Task :opencv:compileDebugKotlin UP-TO-DATE
+> Task :opencv:javaPreCompileDebug UP-TO-DATE
+> Task :opencv:compileDebugJavaWithJavac UP-TO-DATE
+> Task :opencv:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:colorpicker:generateDebugResources UP-TO-DATE
+> Task :core:colorpicker:packageDebugResources UP-TO-DATE
+> Task :core:colorpicker:parseDebugLocalResources UP-TO-DATE
+> Task :core:colorpicker:generateDebugRFile UP-TO-DATE
+> Task :app:parseDebugLocalResources
+> Task :core:colorpicker:compileDebugKotlin UP-TO-DATE
+> Task :core:colorpicker:javaPreCompileDebug UP-TO-DATE
+> Task :core:colorpicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:colorpicker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:common:generateDebugResources UP-TO-DATE
+> Task :core:common:packageDebugResources UP-TO-DATE
+> Task :core:common:parseDebugLocalResources UP-TO-DATE
+> Task :core:common:generateDebugRFile UP-TO-DATE
+> Task :app:generateDebugRFile
+> Task :core:common:compileDebugKotlin UP-TO-DATE
+> Task :core:common:javaPreCompileDebug UP-TO-DATE
+> Task :core:common:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:common:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:generateDebugResources UP-TO-DATE
+> Task :core:editimage:packageDebugResources UP-TO-DATE
+> Task :core:editimage:parseDebugLocalResources UP-TO-DATE
+> Task :core:editimage:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:generateDebugResources UP-TO-DATE
+> Task :core:imageprocessor:packageDebugResources UP-TO-DATE
+> Task :core:imageprocessor:parseDebugLocalResources UP-TO-DATE
+> Task :core:imageprocessor:generateDebugRFile UP-TO-DATE
+> Task :core:imageprocessor:compileDebugKotlin NO-SOURCE
+> Task :core:imageprocessor:javaPreCompileDebug UP-TO-DATE
+> Task :core:imageprocessor:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imageprocessor:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:editimage:compileDebugKotlin NO-SOURCE
+> Task :core:editimage:javaPreCompileDebug UP-TO-DATE
+> Task :core:editimage:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:editimage:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:gallery:generateDebugResources UP-TO-DATE
+> Task :core:gallery:packageDebugResources UP-TO-DATE
+> Task :core:gallery:parseDebugLocalResources UP-TO-DATE
+> Task :core:gallery:generateDebugRFile UP-TO-DATE
+> Task :core:gallery:compileDebugKotlin UP-TO-DATE
+> Task :core:gallery:javaPreCompileDebug UP-TO-DATE
+> Task :core:gallery:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:gallery:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:imagecrop:generateDebugResources UP-TO-DATE
+> Task :core:imagecrop:packageDebugResources UP-TO-DATE
+> Task :core:imagecrop:parseDebugLocalResources UP-TO-DATE
+> Task :core:imagecrop:generateDebugRFile UP-TO-DATE
+> Task :core:imagecrop:compileDebugKotlin UP-TO-DATE
+> Task :core:imagecrop:javaPreCompileDebug UP-TO-DATE
+> Task :core:imagecrop:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:imagecrop:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:localml:mergeDebugMlModels UP-TO-DATE
+> Task :core:localml:generateDebugMlModelClass UP-TO-DATE
+> Task :core:localml:compileDebugKotlin NO-SOURCE
+> Task :core:localml:javaPreCompileDebug UP-TO-DATE
+> Task :core:localml:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:localml:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:overlaybrush:generateDebugResources UP-TO-DATE
+> Task :core:overlaybrush:packageDebugResources UP-TO-DATE
+> Task :core:overlaybrush:parseDebugLocalResources UP-TO-DATE
+> Task :core:overlaybrush:generateDebugRFile UP-TO-DATE
+> Task :core:overlaybrush:compileDebugKotlin NO-SOURCE
+> Task :core:overlaybrush:javaPreCompileDebug UP-TO-DATE
+> Task :core:overlaybrush:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:overlaybrush:bundleLibCompileToJarDebug UP-TO-DATE
+
+> Task :app:compileDebugKotlin
+w: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt:372:13 'fun RangeSlider(value: ClosedFloatingPointRange<Float>, onValueChange: (ClosedFloatingPointRange<Float>) -> Unit, modifier: Modifier = ..., enabled: Boolean = ..., valueRange: ClosedFloatingPointRange<Float> = ..., steps: Int = ..., onValueChangeFinished: (() -> Unit)? = ..., colors: SliderColors = ...): Unit' is deprecated. Use the RangeSlider overload that accepts RangeSliderState, onValueChange, and onValueChangeFinished instead.
+w: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt:385:13 'fun RangeSlider(value: ClosedFloatingPointRange<Float>, onValueChange: (ClosedFloatingPointRange<Float>) -> Unit, modifier: Modifier = ..., enabled: Boolean = ..., valueRange: ClosedFloatingPointRange<Float> = ..., steps: Int = ..., onValueChangeFinished: (() -> Unit)? = ..., colors: SliderColors = ...): Unit' is deprecated. Use the RangeSlider overload that accepts RangeSliderState, onValueChange, and onValueChangeFinished instead.
+w: file:///D:/Valve/Personal/Kanso/app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt:498:9 'fun Slider(value: Float, onValueChange: (Float) -> Unit, modifier: Modifier = ..., enabled: Boolean = ..., valueRange: ClosedFloatingPointRange<Float> = ..., steps: Int = ..., onValueChangeFinished: (() -> Unit)? = ..., colors: SliderColors = ..., interactionSource: MutableInteractionSource = ...): Unit' is deprecated. Use the Slider overload that accepts SliderState, onValueChange, and onValueChangeFinished instead.
+
+[Incubating] Problems report is available at: file:///D:/Valve/Personal/Kanso/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 39s
+74 actionable tasks: 6 executed, 68 up-to-date
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.6.0/userguide/configuration_cache_enabling.html

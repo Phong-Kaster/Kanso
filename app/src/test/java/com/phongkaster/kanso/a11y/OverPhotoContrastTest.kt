@@ -30,6 +30,7 @@ import com.phongkaster.kanso.ui.saved.SavedPhoto
 import com.phongkaster.kanso.ui.saved.SavedUiState
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import java.util.Locale
@@ -132,13 +133,13 @@ class OverPhotoContrastTest {
 
     // --- Tool screens ----------------------------------------------------------------------
 
-    /** The Edit screen in light mode: "Replace" reads on its chip over a white and a black photo. */
+    /** The Edit screen in light mode: its Undo icon reads on the pill over a white and a black photo. */
     @Test
     fun tool_screen_edit_reads_over_white_and_black_photos_in_light() {
         checkToolScreen(ThemeMode.Light, Tool.EDIT)
     }
 
-    /** The Edit screen in dark mode: "Replace" reads on its chip over a white and a black photo. */
+    /** The Edit screen in dark mode: its Undo icon reads on the pill over a white and a black photo. */
     @Test
     fun tool_screen_edit_reads_over_white_and_black_photos_in_dark() {
         checkToolScreen(ThemeMode.Dark, Tool.EDIT)
@@ -282,6 +283,8 @@ class OverPhotoContrastTest {
                         photoUri = PHOTO_URI,
                         photo = ToolUiState.PhotoState.Ready(photo),
                         save = ToolUiState.SaveState.Idle,
+                        // Run 9: Edit's Undo sits in the pill over the photo, so it must be enabled to be read.
+                        canUndo = tool == Tool.EDIT,
                     ),
                     onBack = {},
                     onSave = {},
@@ -289,6 +292,13 @@ class OverPhotoContrastTest {
                 )
             },
             measure = { bitmap ->
+                // Run 9: the Edit screen has no Replace chip (A-007); what floats over its photo is
+                // the Undo/Compare pill, so its Undo icon is measured against the pill instead.
+                if (tool == Tool.EDIT) {
+                    return@checkOverPhotos listOf(
+                        Measure("undo icon on the pill", roundButtonContrast(bitmap, nodeRect(TOOL_UNDO_TAG)), ICON_MIN_CONTRAST),
+                    )
+                }
                 val word = compose.onNode(
                     hasText(replace) and hasAnyAncestor(hasTestTag(TOOL_REPLACE_TAG)),
                     useUnmergedTree = true,

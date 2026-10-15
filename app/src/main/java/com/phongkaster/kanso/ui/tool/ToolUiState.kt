@@ -2,6 +2,7 @@ package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.navigation.Tool
 
 /**
@@ -12,6 +13,8 @@ import com.phongkaster.kanso.navigation.Tool
  * ([photoUri]), what is shown in place of the photo ([photo]), where saving stands ([save]) and
  * the editing part: the edited photo ([edited]), whether an edit can be taken back ([canUndo]),
  * whether an edit is running ([processing]) and why the last one failed ([failure]).
+ * The Edit screen also keeps here which of its tool sheets is open ([openTool]) and whether the
+ * person is comparing with the original ([comparing]), so the whole screen reads one snapshot.
  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
  * this screen: each tool has a screen of its own.
  *
@@ -47,6 +50,17 @@ data class ToolUiState(
      * is unchanged when this is set: a failed edit never replaces it.
      */
     val failure: EditFailure? = null,
+    /**
+     * The Edit screen's tool whose sheet is open under the photo, or null when every sheet is
+     * closed. Only one sheet is open at a time; its entry in the row of tools is highlighted.
+     * Other tools' screens never open one, so for them this stays null.
+     */
+    val openTool: EditTool? = null,
+    /**
+     * True while the Compare switch is on: the screen shows the untouched original photo instead
+     * of the edit, and every editing control is disabled until it is switched off again.
+     */
+    val comparing: Boolean = false,
 ) {
 
     /**

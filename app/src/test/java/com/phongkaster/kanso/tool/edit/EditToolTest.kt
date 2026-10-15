@@ -15,6 +15,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.di.ViewModelClearedProbe
@@ -47,8 +48,9 @@ import kotlin.math.abs
  * Checks on Android 15 that the person sees each Edit change on the photo as they make it (DoD 5).
  *
  * The test draws the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] on a
- * fake 120 x 80 photo, with the real Edit panel in its panel slot handing the real Edit processor
- * to the ViewModel's `apply`. The photo the screen shows (the image node [TOOL_IMAGE_TAG]) is the
+ * fake 120 x 80 photo, with the real Edit panel in its Edit sheet slot (`editSheet`, drawn for the
+ * tool opened with the ViewModel's `openTool`) handing the real Edit processor to the ViewModel's
+ * `apply`. The photo the screen shows (the image node [TOOL_IMAGE_TAG]) is the
  * state's `edited` bitmap once an edit is made, so that is the bitmap read here. Within 5 s of
  * real time:
  *
@@ -83,10 +85,14 @@ class EditToolTest {
         stopKoin()
     }
 
-    /** Brightness at its maximum, let go, makes the shown photo brighter on average. */
+    /**
+     * Brightness at its maximum, let go, makes the shown photo brighter on average.
+     *
+     * Run 9: brightness lives in the Adjust sheet now, so the test opens Adjust first.
+     */
     @Test
     fun brightness_brightens_the_shown_photo() {
-        val viewModel = show()
+        val viewModel = show(EditTool.ADJUST)
         val before = meanLuminance(shown(viewModel))
         compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(EditSettings.MAX) }
@@ -94,10 +100,14 @@ class EditToolTest {
         assertTrue("brightness: $before -> ${meanLuminance(after)}", meanLuminance(after) > before)
     }
 
-    /** The 1:1 chip makes the shown 120 x 80 photo square. */
+    /**
+     * The 1:1 chip makes the shown 120 x 80 photo square.
+     *
+     * Run 9: the crop chips live in the Crop sheet now, so the test opens Crop first.
+     */
     @Test
     fun a_crop_ratio_changes_the_shape_of_the_shown_photo() {
-        val viewModel = show()
+        val viewModel = show(EditTool.CROP)
         val before = shown(viewModel)
         assertNotEquals(before.width, before.height)
         compose.onNodeWithTag(editRatioTag(CropRatio.SQUARE)).performSemanticsAction(SemanticsActions.OnClick)
@@ -106,10 +116,14 @@ class EditToolTest {
         assertEquals(before.height, after.height)
     }
 
-    /** A filter chip changes the colours of the shown photo. */
+    /**
+     * A filter chip changes the colours of the shown photo.
+     *
+     * Run 9: the filter chips live in the Filters sheet now, so the test opens Filters first.
+     */
     @Test
     fun a_filter_changes_the_colours_of_the_shown_photo() {
-        val viewModel = show()
+        val viewModel = show(EditTool.FILTERS)
         val before = channelMeans(shown(viewModel))
         compose.onNodeWithTag(editFilterTag(FilterPreset.KELVIN)).performSemanticsAction(SemanticsActions.OnClick)
         val after = channelMeans(waitForEdit(viewModel, previous = null))
@@ -120,10 +134,16 @@ class EditToolTest {
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
-     * Builds the Edit screen's ViewModel on the fake photo, decodes the photo, and draws
-     * `ToolContent` with the Edit panel in its slot. Returns the ViewModel.
+     * Builds the Edit screen's ViewModel on the fake photo, decodes the photo, opens [open]'s
+     * sheet, and draws `ToolContent` with the Edit panel in its sheet slot. Returns the ViewModel.
+     *
+     * Run 9: the Edit screen no longer shows every control at once; each of its four tools (Crop,
+     * Rotate, Adjust, Filters) has its own sheet under the photo, drawn through `editSheet` only
+     * while that tool is open. So each test opens the tool whose control it uses, through the
+     * ViewModel's own `openTool`, and the sheet hands the real panel's processor to the real
+     * `apply`, as the app does: the slider, chip, processor and shown photo are still all real.
      */
-    private fun show(): ToolViewModel {
+    private fun show(open: EditTool): ToolViewModel {
         val viewModel = ToolViewModel(
             Tool.EDIT,
             PHOTO_URI,
@@ -136,6 +156,8 @@ class EditToolTest {
         viewModel.load(1000)
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
+        viewModel.openTool(open)
+        assertEquals(open, viewModel.state.value.openTool)
         val filters = invertingSource()
         compose.setContent {
             MaterialTheme {
@@ -145,8 +167,13 @@ class EditToolTest {
                     state = state,
                     onBack = {},
                     onSave = {},
-                    panel = { EditPanel(onApply = viewModel::apply, filterSource = filters) },
                     onUndo = viewModel::undo,
+                    onOpenTool = viewModel::openTool,
+                    onCompare = viewModel::setComparing,
+                    // The open tool's controls, as ToolScreen draws them, with the test's filters.
+                    editSheet = { tool ->
+                        EditPanel(openTool = tool, onApply = viewModel::apply, filterSource = filters)
+                    },
                 )
             }
         }

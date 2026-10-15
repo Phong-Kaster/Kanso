@@ -2,7 +2,8 @@
 
 ## Run 9 (the Edit screen becomes a real editor)
 
-- Queued: D-001, approval of the Definition of Done (`.harness/run/ESCALATION.md`). Nothing else yet. Assumptions A-001 to A-008 are in `.harness/run/ASSUMPTIONS.md`.
+- D-001 answered (approved). Assumptions A-001 to A-008 are in `.harness/run/ASSUMPTIONS.md`.
+- Phase 1 review, not fixed yet: Edit panel state (filter intensity, free-crop rectangle) resets when the person switches sheets (T-002 moves it into the ViewModel); `ToolViewModel.closeTool()` has no production caller (T-002 wires Back); Save stays enabled and saves the edit while Compare shows the original (T-006 replaces Save with Done); README and `docs/features/edit.md`, `tool-screen.md` still describe the old Edit frame (T-007/T-008).
 
 ## Run 8 (the five editing tools edit the photo)
 

@@ -43,6 +43,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -84,9 +85,6 @@ const val EDIT_FREE_HEIGHT_TAG = "edit-free-height"
 /** Test tag of the free crop's "Crop" button, which applies the rectangle. */
 const val EDIT_FREE_APPLY_TAG = "edit-free-apply"
 
-/** The tallest the Edit panel grows; beyond it, its controls scroll, so the photo stays large. */
-private val PANEL_MAX_HEIGHT = 260.dp
-
 /** The width of a slider's label, so the four sliders line up. */
 private val LABEL_WIDTH = 96.dp
 
@@ -100,9 +98,15 @@ fun editRatioTag(ratio: CropRatio): String = "edit-ratio-${ratio.name}"
 fun editFilterTag(preset: FilterPreset): String = "edit-filter-${preset.name}"
 
 /**
- * The Edit tool's controls, for the options strip of the Edit screen: crop shapes, quarter turns
- * and flips, four colour sliders, and filters with an intensity. Each change is handed to
- * [onApply] as an [EditProcessor], which the screen's ViewModel runs on the photo shown.
+ * The Edit tool's controls for one sheet of the Edit screen: the group of [openTool] only, which
+ * is crop shapes (Crop), quarter turns and flips (Rotate), four colour sliders (Adjust), or
+ * filters with an intensity (Filters). Each change is handed to [onApply] as an [EditProcessor],
+ * which the screen's ViewModel runs on the photo shown. While [enabled] is false (the Compare
+ * switch is on) every control is disabled.
+ *
+ * The panel's state is kept in this composable, which each sheet draws afresh, so switching to
+ * another sheet and back starts it again (for example the filter intensity returns to full). The
+ * settings session of a later step moves this state into the ViewModel to keep it.
  *
  * **Why each change is applied on its own.** The ViewModel runs every processor on the photo as
  * it is shown now, which already holds every earlier edit, and keeps each result as one step Undo
@@ -126,8 +130,10 @@ fun editFilterTag(preset: FilterPreset): String = "edit-filter-${preset.name}"
  */
 @Composable
 fun EditPanel(
+    openTool: EditTool,
     onApply: (ToolProcessor) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     filterSource: FilterLut.Source? = null,
 ) {
     // The real look-up source reads the assets through the application's context, made once.
@@ -143,6 +149,7 @@ fun EditPanel(
     val commit: (EditSettings) -> Unit = { change -> onApply(EditProcessor(change, filters)) }
 
     EditPanelContent(
+        openTool = openTool,
         settings = settings,
         onRatio = { ratio ->
             if (ratio == CropRatio.FREE) {
@@ -195,6 +202,7 @@ fun EditPanel(
                 commit(EditSettings(filter = preset, filterIntensity = settings.filterIntensity))
             }
         },
+        enabled = enabled,
         modifier = modifier,
     )
 }
@@ -203,11 +211,12 @@ fun EditPanel(
  * The stateless part of the Edit panel (see [EditPanel] for what each control does): draws
  * [settings] and reports every touch through a callback, changing nothing itself.
  *
- * From top to bottom: the crop chips, with the free crop's two range sliders under them while
- * Free is chosen; the turn and flip buttons; the brightness, contrast, saturation and warmth
- * sliders (the middle is "no change"); the filter chips and the intensity slider. Taller than
- * [PANEL_MAX_HEIGHT], it scrolls. Chips, buttons and sliders all keep Material's 48 dp minimum
- * touch target.
+ * It draws only the group of [openTool]: for Crop, the crop chips, with the free crop's two range
+ * sliders under them while Free is chosen; for Rotate, the turn and flip buttons; for Adjust, the
+ * brightness, contrast, saturation and warmth sliders (the middle is "no change"); for Filters,
+ * the filter chips and the intensity slider. Its height is given by the sheet around it; when the
+ * group is taller than that, it scrolls. Chips, buttons and sliders all keep Material's 48 dp
+ * minimum touch target, and each is disabled while [enabled] is false.
  *
  * [onRatio] is a crop chip tapped; [onFreeCropChange] a new free rectangle and [onFreeCropApply]
  * its "Crop" button; [onTurn] a quarter turn (+1 right, -1 left); [onFlip] a flip (true: left to
@@ -216,6 +225,7 @@ fun EditPanel(
  */
 @Composable
 fun EditPanelContent(
+    openTool: EditTool,
     settings: EditSettings,
     onRatio: (CropRatio) -> Unit,
     onFreeCropChange: (EditSettings.CropRect) -> Unit,
@@ -225,70 +235,93 @@ fun EditPanelContent(
     onSettingsChange: (EditSettings) -> Unit,
     onAdjustFinished: () -> Unit,
     onFilter: (FilterPreset) -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
             .testTag(EDIT_PANEL_TAG)
             .fillMaxWidth()
-            // The height limit comes before the scroll, so the scroll knows how much it shows.
-            .heightIn(max = PANEL_MAX_HEIGHT)
+            // The sheet around the panel sets its height; the scroll reaches whatever does not fit.
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        CropChips(freeOpen = settings.cropRatio == CropRatio.FREE, onRatio = onRatio)
-        // AnimatedVisibility grows the free crop controls in and shrinks them out (Compose's own
-        // animation API), instead of making the panel jump.
-        AnimatedVisibility(visible = settings.cropRatio == CropRatio.FREE) {
-            FreeCropControls(rect = settings.freeCrop, onChange = onFreeCropChange, onApply = onFreeCropApply)
+        when (openTool) {
+            EditTool.CROP -> {
+                CropChips(
+                    freeOpen = settings.cropRatio == CropRatio.FREE,
+                    enabled = enabled,
+                    onRatio = onRatio,
+                )
+                // AnimatedVisibility grows the free crop controls in and shrinks them out
+                // (Compose's own animation API), instead of making the panel jump.
+                AnimatedVisibility(visible = settings.cropRatio == CropRatio.FREE) {
+                    FreeCropControls(
+                        rect = settings.freeCrop,
+                        enabled = enabled,
+                        onChange = onFreeCropChange,
+                        onApply = onFreeCropApply,
+                    )
+                }
+            }
+            EditTool.ROTATE -> TurnButtons(enabled = enabled, onTurn = onTurn, onFlip = onFlip)
+            EditTool.ADJUST -> {
+                LabelledSlider(
+                    label = R.string.edit_tool_brightness,
+                    value = settings.brightness,
+                    onValueChange = { onSettingsChange(settings.copy(brightness = it)) },
+                    tag = EDIT_BRIGHTNESS_TAG,
+                    enabled = enabled,
+                    onValueChangeFinished = onAdjustFinished,
+                )
+                LabelledSlider(
+                    label = R.string.edit_tool_contrast,
+                    value = settings.contrast,
+                    onValueChange = { onSettingsChange(settings.copy(contrast = it)) },
+                    tag = EDIT_CONTRAST_TAG,
+                    enabled = enabled,
+                    onValueChangeFinished = onAdjustFinished,
+                )
+                LabelledSlider(
+                    label = R.string.edit_tool_saturation,
+                    value = settings.saturation,
+                    onValueChange = { onSettingsChange(settings.copy(saturation = it)) },
+                    tag = EDIT_SATURATION_TAG,
+                    enabled = enabled,
+                    onValueChangeFinished = onAdjustFinished,
+                )
+                LabelledSlider(
+                    label = R.string.edit_tool_warmth,
+                    value = settings.warmth,
+                    onValueChange = { onSettingsChange(settings.copy(warmth = it)) },
+                    tag = EDIT_WARMTH_TAG,
+                    enabled = enabled,
+                    onValueChangeFinished = onAdjustFinished,
+                )
+            }
+            EditTool.FILTERS -> {
+                FilterChips(enabled = enabled, onFilter = onFilter)
+                LabelledSlider(
+                    label = R.string.edit_tool_filter_intensity,
+                    value = settings.filterIntensity,
+                    onValueChange = { onSettingsChange(settings.copy(filterIntensity = it)) },
+                    tag = EDIT_INTENSITY_TAG,
+                    enabled = enabled,
+                    valueRange = 0f..1f,
+                )
+            }
         }
-        TurnButtons(onTurn = onTurn, onFlip = onFlip)
-        LabelledSlider(
-            label = R.string.edit_tool_brightness,
-            value = settings.brightness,
-            onValueChange = { onSettingsChange(settings.copy(brightness = it)) },
-            tag = EDIT_BRIGHTNESS_TAG,
-            onValueChangeFinished = onAdjustFinished,
-        )
-        LabelledSlider(
-            label = R.string.edit_tool_contrast,
-            value = settings.contrast,
-            onValueChange = { onSettingsChange(settings.copy(contrast = it)) },
-            tag = EDIT_CONTRAST_TAG,
-            onValueChangeFinished = onAdjustFinished,
-        )
-        LabelledSlider(
-            label = R.string.edit_tool_saturation,
-            value = settings.saturation,
-            onValueChange = { onSettingsChange(settings.copy(saturation = it)) },
-            tag = EDIT_SATURATION_TAG,
-            onValueChangeFinished = onAdjustFinished,
-        )
-        LabelledSlider(
-            label = R.string.edit_tool_warmth,
-            value = settings.warmth,
-            onValueChange = { onSettingsChange(settings.copy(warmth = it)) },
-            tag = EDIT_WARMTH_TAG,
-            onValueChangeFinished = onAdjustFinished,
-        )
-        FilterChips(onFilter = onFilter)
-        LabelledSlider(
-            label = R.string.edit_tool_filter_intensity,
-            value = settings.filterIntensity,
-            onValueChange = { onSettingsChange(settings.copy(filterIntensity = it)) },
-            tag = EDIT_INTENSITY_TAG,
-            valueRange = 0f..1f,
-        )
     }
 }
 
 /**
  * One row of crop chips, scrolling sideways if the screen is narrow. Free is a filter chip,
  * marked selected while its rectangle controls are open ([freeOpen]); each fixed shape is an
- * action chip that crops at once. A tap calls [onRatio] with the chip's shape.
+ * action chip that crops at once. A tap calls [onRatio] with the chip's shape; while [enabled] is
+ * false every chip is disabled.
  */
 @Composable
-private fun CropChips(freeOpen: Boolean, onRatio: (CropRatio) -> Unit) {
+private fun CropChips(freeOpen: Boolean, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -303,12 +336,14 @@ private fun CropChips(freeOpen: Boolean, onRatio: (CropRatio) -> Unit) {
                     selected = freeOpen,
                     onClick = { onRatio(ratio) },
                     label = { Text(text = label, maxLines = 1) },
+                    enabled = enabled,
                     modifier = Modifier.testTag(editRatioTag(ratio)),
                 )
             } else {
                 AssistChip(
                     onClick = { onRatio(ratio) },
                     label = { Text(text = label, maxLines = 1) },
+                    enabled = enabled,
                     modifier = Modifier.testTag(editRatioTag(ratio)),
                 )
             }
@@ -321,6 +356,7 @@ private fun CropChips(freeOpen: Boolean, onRatio: (CropRatio) -> Unit) {
  * bottom edges, each as a fraction of the photo, and a "Crop" button that applies the rectangle
  * ([onApply]). A range slider has two thumbs, one per edge. A move that would make the rectangle
  * narrower than [MIN_FREE_SPAN] is ignored; any other calls [onChange] with the new [rect].
+ * While [enabled] is false the sliders and the button are disabled.
  *
  * The range slider is still marked experimental in some Material 3 versions, hence the opt-in.
  */
@@ -328,6 +364,7 @@ private fun CropChips(freeOpen: Boolean, onRatio: (CropRatio) -> Unit) {
 @Composable
 private fun FreeCropControls(
     rect: EditSettings.CropRect,
+    enabled: Boolean,
     onChange: (EditSettings.CropRect) -> Unit,
     onApply: () -> Unit,
 ) {
@@ -341,6 +378,7 @@ private fun FreeCropControls(
                     }
                 },
                 valueRange = 0f..1f,
+                enabled = enabled,
                 modifier = Modifier.fillMaxWidth().testTag(EDIT_FREE_WIDTH_TAG),
             )
         }
@@ -353,11 +391,13 @@ private fun FreeCropControls(
                     }
                 },
                 valueRange = 0f..1f,
+                enabled = enabled,
                 modifier = Modifier.fillMaxWidth().testTag(EDIT_FREE_HEIGHT_TAG),
             )
         }
         FilledTonalButton(
             onClick = onApply,
+            enabled = enabled,
             modifier = Modifier
                 .align(Alignment.End)
                 .testTag(EDIT_FREE_APPLY_TAG),
@@ -370,10 +410,10 @@ private fun FreeCropControls(
 /**
  * The turn and flip buttons in one row, scrolling sideways if the screen is narrow: "Turn left"
  * and "Turn right" call [onTurn] with -1 and +1 quarter turns, the two flips call [onFlip] (true
- * for left to right, false for top to bottom).
+ * for left to right, false for top to bottom). While [enabled] is false all four are disabled.
  */
 @Composable
-private fun TurnButtons(onTurn: (Int) -> Unit, onFlip: (Boolean) -> Unit) {
+private fun TurnButtons(enabled: Boolean, onTurn: (Int) -> Unit, onFlip: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,16 +421,32 @@ private fun TurnButtons(onTurn: (Int) -> Unit, onFlip: (Boolean) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(onClick = { onTurn(-1) }, modifier = Modifier.testTag(EDIT_ROTATE_LEFT_TAG)) {
+        OutlinedButton(
+            onClick = { onTurn(-1) },
+            enabled = enabled,
+            modifier = Modifier.testTag(EDIT_ROTATE_LEFT_TAG),
+        ) {
             Text(text = stringResource(R.string.edit_tool_rotate_left), maxLines = 1)
         }
-        OutlinedButton(onClick = { onTurn(1) }, modifier = Modifier.testTag(EDIT_ROTATE_RIGHT_TAG)) {
+        OutlinedButton(
+            onClick = { onTurn(1) },
+            enabled = enabled,
+            modifier = Modifier.testTag(EDIT_ROTATE_RIGHT_TAG),
+        ) {
             Text(text = stringResource(R.string.edit_tool_rotate_right), maxLines = 1)
         }
-        OutlinedButton(onClick = { onFlip(true) }, modifier = Modifier.testTag(EDIT_FLIP_HORIZONTAL_TAG)) {
+        OutlinedButton(
+            onClick = { onFlip(true) },
+            enabled = enabled,
+            modifier = Modifier.testTag(EDIT_FLIP_HORIZONTAL_TAG),
+        ) {
             Text(text = stringResource(R.string.edit_tool_flip_horizontal), maxLines = 1)
         }
-        OutlinedButton(onClick = { onFlip(false) }, modifier = Modifier.testTag(EDIT_FLIP_VERTICAL_TAG)) {
+        OutlinedButton(
+            onClick = { onFlip(false) },
+            enabled = enabled,
+            modifier = Modifier.testTag(EDIT_FLIP_VERTICAL_TAG),
+        ) {
             Text(text = stringResource(R.string.edit_tool_flip_vertical), maxLines = 1)
         }
     }
@@ -398,10 +454,11 @@ private fun TurnButtons(onTurn: (Int) -> Unit, onFlip: (Boolean) -> Unit) {
 
 /**
  * One row of filter chips, scrolling sideways: one action chip per filter of [FilterPreset]
- * except None (taking a filter back is Undo's job). A tap calls [onFilter] with the chip's filter.
+ * except None (taking a filter back is Undo's job). A tap calls [onFilter] with the chip's filter;
+ * while [enabled] is false every chip is disabled.
  */
 @Composable
-private fun FilterChips(onFilter: (FilterPreset) -> Unit) {
+private fun FilterChips(enabled: Boolean, onFilter: (FilterPreset) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -413,6 +470,7 @@ private fun FilterChips(onFilter: (FilterPreset) -> Unit) {
             AssistChip(
                 onClick = { onFilter(preset) },
                 label = { Text(text = stringResource(filterLabel(preset)), maxLines = 1) },
+                enabled = enabled,
                 modifier = Modifier.testTag(editFilterTag(preset)),
             )
         }
@@ -422,8 +480,9 @@ private fun FilterChips(onFilter: (FilterPreset) -> Unit) {
 /**
  * A slider with its [label] on the left, at least 48 dp tall: shows [value] within [valueRange]
  * (by default the colour sliders' range, whose middle means no change), calls [onValueChange]
- * while it moves and [onValueChangeFinished] when the person lets go. [tag] is its test tag. The
- * slider also carries the label as its description, so a screen reader names it.
+ * while it moves and [onValueChangeFinished] when the person lets go. [tag] is its test tag; while
+ * [enabled] is false the slider is disabled. The slider also carries the label as its
+ * description, so a screen reader names it.
  */
 @Composable
 private fun LabelledSlider(
@@ -431,6 +490,7 @@ private fun LabelledSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     tag: String,
+    enabled: Boolean,
     valueRange: ClosedFloatingPointRange<Float> = EditSettings.MIN..EditSettings.MAX,
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
@@ -441,6 +501,7 @@ private fun LabelledSlider(
             onValueChange = onValueChange,
             valueRange = valueRange,
             onValueChangeFinished = onValueChangeFinished,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(tag)
@@ -498,19 +559,19 @@ private fun filterLabel(preset: FilterPreset): Int = when (preset) {
 }
 
 /**
- * The Edit panel as it looks mid-edit, in light and in dark: brightness pushed up a little and the
- * filter intensity at 70%, with the free crop closed. The sample data is a plain [EditSettings];
- * nothing is read from assets and every callback does nothing. The outer Box fills the preview
- * first, because KansoTheme would otherwise stretch its single child to the whole screen.
+ * One sample sheet for the previews: the panel showing [openTool]'s group for the sample
+ * [settings], enabled or not, on the sheet's colour. Nothing is read from assets and every
+ * callback does nothing. The outer Box fills the preview first, because KansoTheme would
+ * otherwise stretch its single child to the whole screen.
  */
-@PreviewLightDark
 @Composable
-private fun EditPanelPreview() {
+private fun SampleEditPanel(openTool: EditTool, settings: EditSettings, enabled: Boolean = true) {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                 EditPanelContent(
-                    settings = EditSettings(brightness = 0.3f, filterIntensity = 0.7f),
+                    openTool = openTool,
+                    settings = settings,
                     onRatio = {},
                     onFreeCropChange = {},
                     onFreeCropApply = {},
@@ -519,6 +580,7 @@ private fun EditPanelPreview() {
                     onSettingsChange = {},
                     onAdjustFinished = {},
                     onFilter = {},
+                    enabled = enabled,
                     modifier = Modifier.padding(16.dp),
                 )
             }
@@ -527,31 +589,50 @@ private fun EditPanelPreview() {
 }
 
 /**
- * The Edit panel with Free chosen, in light and in dark: the two range sliders show a sample
+ * The Adjust sheet as it looks mid-edit, in light and in dark: brightness pushed up a little,
+ * the other three sliders in the middle.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelPreview() {
+    SampleEditPanel(openTool = EditTool.ADJUST, settings = EditSettings(brightness = 0.3f))
+}
+
+/**
+ * The Crop sheet with Free chosen, in light and in dark: the two range sliders show a sample
  * rectangle that keeps the middle of the photo, with the "Crop" button under them.
  */
 @PreviewLightDark
 @Composable
 private fun EditPanelFreeCropPreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        Box(Modifier.fillMaxSize()) {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                EditPanelContent(
-                    settings = EditSettings(
-                        cropRatio = CropRatio.FREE,
-                        freeCrop = EditSettings.CropRect(0.1f, 0.2f, 0.9f, 0.8f),
-                    ),
-                    onRatio = {},
-                    onFreeCropChange = {},
-                    onFreeCropApply = {},
-                    onTurn = {},
-                    onFlip = {},
-                    onSettingsChange = {},
-                    onAdjustFinished = {},
-                    onFilter = {},
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
-        }
-    }
+    SampleEditPanel(
+        openTool = EditTool.CROP,
+        settings = EditSettings(
+            cropRatio = CropRatio.FREE,
+            freeCrop = EditSettings.CropRect(0.1f, 0.2f, 0.9f, 0.8f),
+        ),
+    )
+}
+
+/** The Rotate sheet, in light and in dark: the two turn buttons and the two flips. */
+@PreviewLightDark
+@Composable
+private fun EditPanelRotatePreview() {
+    SampleEditPanel(openTool = EditTool.ROTATE, settings = EditSettings())
+}
+
+/** The Filters sheet, in light and in dark: the filter chips and the intensity at 70%. */
+@PreviewLightDark
+@Composable
+private fun EditPanelFiltersPreview() {
+    SampleEditPanel(openTool = EditTool.FILTERS, settings = EditSettings(filterIntensity = 0.7f))
+}
+
+/**
+ * The Crop sheet while Compare is on, in light and in dark: every chip is disabled and faint.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelDisabledPreview() {
+    SampleEditPanel(openTool = EditTool.CROP, settings = EditSettings(), enabled = false)
 }

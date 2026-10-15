@@ -6,7 +6,7 @@
 
 ## Status
 
-- [ ] APPROVED — approve via the pending `.harness/run/ESCALATION.md` (D-001); edit criteria freely before approving.
+- [x] APPROVED — approve via the pending `.harness/run/ESCALATION.md` (D-001); edit criteria freely before approving.
       Approval covers the Verification Class of each criterion, not only its wording, **and the full list of pictures criterion 22 re-records**.
 
 ## Acceptance Criteria

@@ -2,24 +2,24 @@
 
 ## Current
 
-- **Stage:** escalated (awaiting DoD approval, D-001)
+- **Stage:** executing (Phase 1 done)
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** T-001 (after D-001 is answered)
+- **Next Phase:** T-002
 - **DONE-candidate:** no
 
 ## Progress
 
-| Task | Status | Declared File Scope | Evidence |
-|---|---|---|---|
-| T-001 | blocked (D-001) | ui/tool Edit layout | - |
-| T-002 | blocked | settings session | - |
-| T-003 | blocked | live preview | - |
-| T-004 | blocked | cropper | - |
-| T-005 | blocked | ui/result | - |
-| T-006 | blocked | Done | - |
-| T-007 | blocked | docs | - |
-| T-008 | blocked | docs | - |
-| T-009 | blocked | pictures | - |
+| Task | Status | Evidence |
+|---|---|---|
+| T-001 | complete | evidence/p1-final.log |
+| T-002 | pending | - |
+| T-003 | pending | - |
+| T-004 | pending | - |
+| T-005 | pending | - |
+| T-006 | pending | - |
+| T-007 | pending | - |
+| T-008 | pending | - |
+| T-009 | pending | - |
 
 ## Assumptions
 

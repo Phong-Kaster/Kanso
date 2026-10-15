@@ -2,13 +2,13 @@
 
 > Derived cache; loses to task files and git.
 
-- **Stage:** escalated (D-001 DoD approval pending)
-- **Next Phase:** T-001 - scope: see `TASKS/T-001.md` (Edit layout; Iteration first adds the row/pill icon drawables and updates PreviewsRenderTest/PreviewCoverageTest names)
-- **Queued decisions:** 1 (D-001) blocks T-001..T-009
-- **Abandoned:** none
-- **Unreachable:** none
-- **Verified commands:** build: `cd /d/Valve/Personal/Kanso && timeout 1500 ./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` (always under `timeout`, from the repo root) | lint: `./gradlew :app:lintDebug` | pictures: `verifyRoborazziDebug`; record only through `.harness/loop/bin/foreman-record-baselines.ps1`
-- **Criteria the next Phase cites:** DoD 1, 2, 3, 8, 21, R4 (quote from DoD.md when dispatching; first confirm D-001 answered and APPROVED ticked).
-- **Open issues touching the next Phase's files:** Run 8 "Phase 2 review, not fixed: Edit panel stays enabled while an edit runs, so a quick second tap or a slider release is dropped by `ToolViewModel.apply`" (ISSUES.md; fixed by T-002).
-- **Reference topics the next Phase touches:** `reference/engine-edit.md`, `reference/run7-facts.md`, `reference/run9-facts.md`
-- **Model tiers (resolved from models.json):** fast: `sonnet` | capable: `opus`
+- **Stage:** executing; Phase 1 (T-001) complete
+- **Next Phase:** T-002 - scope in `TASKS/T-002.md` (slice in <=6 files; Worker Briefs need the Constraints: copy at `.harness/knowledge/reference/constraints-verbatim.md`, regenerate from PROJECT.md)
+- **Queued decisions:** 0
+- **Abandoned / unreachable:** none
+- **Verified commands:** build: `cd /d/Valve/Personal/Kanso && timeout 1500 ./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` | lint: `./gradlew :app:lintDebug` | pictures: `verifyRoborazziDebug`; record only via `.harness/loop/bin/foreman-record-baselines.ps1 -Module app -Tests <filter>`
+- **Criteria T-002 cites:** DoD 2 (dot), 5, 6, 7, 12, 14, 15, 16, 18, 25, R1, R2 (quote from DoD.md with Grep when dispatching)
+- **Carried review notes for T-002:** EditPanel state lives in a composable that AnimatedContent recreates per sheet (move into the session in the ViewModel); `closeTool()` unused in production (wire to Back); old tests assuming stacking/spring-back rewritten with reasons; renamed tests in test-edits.md.
+- **Phase 1 facts:** on Edit `TOOL_CARD_TAG` = the 60% photo area; `EDITOR_PANEL_TAG`/`EDIT_PANEL_TAG` exist only while a sheet is open; `ToolContent(editSheet=…)`; Edit's Undo is in `EDIT_PILL_TAG` (still `TOOL_UNDO_TAG`); `ToolScreenshotTest.openFreeCrop` opens the Crop sheet first.
+- **Reference topics:** `reference/engine-edit.md`, `reference/run9-facts.md`
+- **Model tiers:** fast: `sonnet` | capable: `opus`

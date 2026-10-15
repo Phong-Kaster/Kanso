@@ -45,13 +45,16 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.ARTISTIC_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
 import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
@@ -100,6 +103,10 @@ import org.robolectric.annotation.GraphicsMode
  * Run 8: each tool's options strip holds that tool's own panel, and no text promises a tool "in
  * a later run"; Undo works only when there is an edit to take back; while an edit runs a progress
  * ring shows and Save is off; and each kind of failed edit shows its plain message over the photo.
+ *
+ * Run 9: the Edit screen became a real editor: no Replace chip, a row of four tools under the
+ * photo whose sheet holds the Edit panel (the strip exists only while a sheet is open), and Undo
+ * in a pill on the photo next to a Compare switch. The checks above follow that layout on Edit.
  *
  * The screen runs on the same phone size as the pictures (411 x 891 dp, xxhdpi).
  */
@@ -273,6 +280,10 @@ class ToolScreenTest {
      * under that. Nothing on it is a toggle, its state's tool stays the key's tool, and its photo
      * is decoded exactly once.
      *
+     * Run 9: the Edit screen has no Replace chip (checked absent there, present on the other
+     * four), its strip appears once a tool sheet is opened (the test opens Adjust), and its one
+     * toggle is the Compare switch in the pill on the photo.
+     *
      * One screen is drawn at a time; the test hands it each tool's ViewModel in turn, as opening
      * each tool's screen from its own key would.
      */
@@ -318,12 +329,25 @@ class ToolScreenTest {
             compose.onNode(hasTestTag(TOOL_IMAGE_TAG) and SemanticsMatcher.expectValue(TOOL_PHOTO_URI_KEY, PHOTO_URI))
                 .assertIsDisplayed()
 
-            // Replace: inside the card, its bottom near the card's bottom.
-            val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG)
-                .assert(hasText(context.getString(R.string.tool_screen_replace)))
-                .fetchSemanticsNode().boundsInRoot
-            assertInside(replace, card)
-            assertTrue("$tool: Replace $replace is not near the card's bottom ${card.bottom}", card.bottom - replace.bottom <= dp24)
+            // Run 9 (A-007): the Edit screen has no Replace chip; every other tool keeps it.
+            if (tool == Tool.EDIT) {
+                compose.onAllNodes(hasTestTag(TOOL_REPLACE_TAG)).assertCountEquals(0)
+                compose.onAllNodes(hasText(context.getString(R.string.tool_screen_replace))).assertCountEquals(0)
+            } else {
+                // Replace: inside the card, its bottom near the card's bottom.
+                val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG)
+                    .assert(hasText(context.getString(R.string.tool_screen_replace)))
+                    .fetchSemanticsNode().boundsInRoot
+                assertInside(replace, card)
+                assertTrue("$tool: Replace $replace is not near the card's bottom ${card.bottom}", card.bottom - replace.bottom <= dp24)
+            }
+
+            // Run 9: the Edit screen's options strip exists only while one of its tool sheets is
+            // open, so the test opens Adjust (as a tap on it would) before looking for the strip.
+            if (tool == Tool.EDIT) {
+                compose.runOnUiThread { viewModel.openTool(EditTool.ADJUST) }
+                compose.waitForIdle()
+            }
 
             // The options strip: under the card, holding this tool's own panel.
             val panel = compose.onNodeWithTag(EDITOR_PANEL_TAG).fetchSemanticsNode().boundsInRoot
@@ -344,7 +368,15 @@ class ToolScreenTest {
             assertTrue("$tool: Save $save is not under the strip $panel", panel.isEmpty || save.top >= panel.bottom - SLACK)
 
             // No way to change tools: nothing is a toggle, and the tool is still the key's.
-            compose.onAllNodes(isToggleable()).assertCountEquals(0)
+            // Run 9: on Edit the one toggle is the pill's Compare switch, which shows the
+            // original photo and changes no tool; any other toggle still fails.
+            if (tool == Tool.EDIT) {
+                compose.onAllNodes(isToggleable()).assertCountEquals(1)
+                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG)))
+                    .assertExists()
+            } else {
+                compose.onAllNodes(isToggleable()).assertCountEquals(0)
+            }
             assertEquals(tool, viewModel.state.value.tool)
             assertEquals("$tool: the photo was not decoded exactly once", 1, loader.requestedEdges.size)
         }
@@ -354,19 +386,28 @@ class ToolScreenTest {
      * Run 8: each of the five tools' screens (the stateless content, with the tool's own panel in
      * the slot) shows that tool's panel inside the options strip and no other tool's, and no text
      * on it still promises the tool is "coming in a later run".
+     *
+     * Run 9: the Edit screen draws its panel in the open tool's sheet (`editSheet`), not in the
+     * `panel` slot, so the content is given both slots and Edit's state has Adjust open.
      */
     @Test
     fun each_tool_shows_its_own_panel_and_no_later_run_message() {
         val photo = ToolFixtures.gradient(600, 400)
-        var state by mutableStateOf(readyState(Tool.entries.first(), photo))
+        var state by mutableStateOf(panelState(Tool.entries.first(), photo))
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = state, onBack = {}, onSave = {}, panel = { ToolPanel(state.tool) })
+                ToolContent(
+                    state = state,
+                    onBack = {},
+                    onSave = {},
+                    panel = { ToolPanel(state.tool) },
+                    editSheet = { open -> ToolPanel(Tool.EDIT, openTool = open) },
+                )
             }
         }
         compose.waitForIdle()
         Tool.entries.forEach { tool ->
-            compose.runOnUiThread { state = readyState(tool, photo) }
+            compose.runOnUiThread { state = panelState(tool, photo) }
             compose.waitForIdle()
 
             compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
@@ -382,6 +423,9 @@ class ToolScreenTest {
     /**
      * Undo (`tool-undo`) is switched off while there is nothing to take back, and switched on,
      * calling onUndo once per tap, once there is.
+     *
+     * Run 9: on the Edit screen Undo moved from the top bar into the pill on the photo, so the
+     * test also checks there is exactly one Undo and that it is the pill's.
      */
     @Test
     fun undo_is_enabled_only_when_there_is_an_edit_to_take_back() {
@@ -394,6 +438,8 @@ class ToolScreenTest {
             }
         }
         compose.waitForIdle()
+        compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG)).assertCountEquals(1)
+        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
 
         compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }
@@ -493,6 +539,9 @@ class ToolScreenTest {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
         // Built here, before the screen is drawn: lint forbids building a ViewModel while drawing.
         val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, loader, ViewModelClearedProbe(), NoSavePhotoSaver())
+        // Run 9: the Edit screen's options strip exists only while a tool sheet is open, so
+        // Adjust (the tallest sheet, four sliders) is opened for the strip to be measured.
+        viewModel.openTool(EditTool.ADJUST)
         var composeView: View? = null
         var seenZonePx = -1
         var seenNavigationBarPx = -1
@@ -583,6 +632,13 @@ class ToolScreenTest {
             check(index, tool, viewModels.getValue(tool), loaders.getValue(tool))
         }
     }
+
+    /**
+     * Like [readyState], with the Edit screen's Adjust sheet open, so Edit's panel is drawn.
+     * Run 9: the Edit panel is drawn only while one of its tool sheets is open.
+     */
+    private fun panelState(tool: Tool, photo: Bitmap): ToolUiState =
+        readyState(tool, photo).let { if (tool == Tool.EDIT) it.copy(openTool = EditTool.ADJUST) else it }
 
     /** A snapshot of [tool]'s screen with [photo] decoded and shown, nothing edited or saved. */
     private fun readyState(tool: Tool, photo: Bitmap): ToolUiState =

@@ -78,6 +78,8 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -167,6 +169,11 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  *   chip floating at the card's bottom;
  * - the options strip, holding the tool's own controls (`ToolPanel`);
  * - one full-width Save button at the bottom, clear of the phone's gesture area.
+ *
+ * The Edit screen differs (see [ToolContent]): its photo keeps 60% of the height, with no
+ * "Replace" chip; under it a row of four tools (Crop, Rotate, Adjust, Filters) each opens its
+ * controls in a sheet below; and Undo sits with a Compare switch in a pill at the photo's bottom
+ * right instead of in the top bar.
  *
  * While an edit runs, a progress ring fills in the middle of the card and Save and Undo are
  * switched off, so a half-made edit cannot be saved by mistake; the screen stays responsive
@@ -287,6 +294,21 @@ fun ToolScreen(
         // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
         onUndo = viewModel::undo,
         onDismissFailure = viewModel::dismissFailure,
+        // The Edit screen only: a tap on Crop, Rotate, Adjust or Filters opens (or closes) that
+        // tool's sheet, and the pill's Compare switch shows the original photo while it is on.
+        onOpenTool = viewModel::openTool,
+        onCompare = viewModel::setComparing,
+        // The Edit screen only: the open tool's controls, drawn in the sheet under the photo.
+        // They are switched off while an edit runs and while Compare shows the original.
+        editSheet = { tool ->
+            ToolPanel(
+                tool = Tool.EDIT,
+                state = state,
+                openTool = tool,
+                enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
+                onApply = viewModel::apply,
+            )
+        },
     )
 }
 
@@ -318,6 +340,15 @@ fun ToolScreen(
  *
  * The root node sets `testTagsAsResourceId`, still marked experimental (hence the opt-in), so
  * tools such as uiautomator can find the tags.
+ *
+ * **The Edit screen is laid out differently.** Its body is [EditToolContent]: the photo card fixed
+ * at 60% of the height below the top bar (without the "Replace" chip), the row of four tools
+ * (Crop, Rotate, Adjust, Filters) under it, and the open tool's sheet in the rest. [editSheet] is
+ * the slot for that sheet's controls; it is given the open tool, so one lambda serves all four.
+ * [panel] is not used on Edit. The Undo control moves from the top bar into the pill floating at
+ * the photo's bottom right, next to the Compare switch: [onCompare] is called with its new value,
+ * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
+ * row tapped. The other four tools never call these three.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -330,7 +361,11 @@ fun ToolContent(
     panel: @Composable () -> Unit = {},
     onUndo: () -> Unit = {},
     onDismissFailure: () -> Unit = {},
+    onOpenTool: (EditTool) -> Unit = {},
+    onCompare: (Boolean) -> Unit = {},
+    editSheet: @Composable (EditTool) -> Unit = {},
 ) {
+    val isEdit = state.tool == Tool.EDIT
     Scaffold(
         modifier = modifier
             .testTag(TOOL_SCREEN_TAG)
@@ -341,6 +376,8 @@ fun ToolContent(
             ToolTopBar(
                 tool = state.tool,
                 onBack = onBack,
+                // On Edit, Undo lives in the pill on the photo instead, so there is only one.
+                showUndo = !isEdit,
                 undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle,
                 onUndo = onUndo,
             )
@@ -349,31 +386,61 @@ fun ToolContent(
     ) { innerPadding ->
         // innerPadding is the space the two bars and the system bars take. consumeWindowInsets
         // tells the content below that those insets are already dealt with.
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
-                .padding(horizontal = 16.dp),
-        ) {
-            // weight(1f) gives the card all the height the options strip leaves, so the photo is
-            // as large as it can be.
-            PhotoCard(
+        val bodyModifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .consumeWindowInsets(innerPadding)
+            .padding(horizontal = 16.dp)
+        if (isEdit) {
+            EditToolContent(
                 state = state,
-                onReplace = onReplace,
-                onDismissFailure = onDismissFailure,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                onOpenTool = onOpenTool,
+                onUndo = onUndo,
+                onCompare = onCompare,
+                photo = {
+                    PhotoCard(
+                        state = state,
+                        onReplace = onReplace,
+                        onDismissFailure = onDismissFailure,
+                        showReplace = false,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                },
+                sheet = { tool ->
+                    // The same options-strip tag as the other tools' panels carry, so the open
+                    // tool's controls are found in the same place on every tool screen.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(EDITOR_PANEL_TAG),
+                    ) {
+                        editSheet(tool)
+                    }
+                },
+                modifier = bodyModifier,
             )
-            Spacer(Modifier.height(12.dp))
-            // The options strip: the slot for the tool's own controls, full width under the card.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(EDITOR_PANEL_TAG),
-            ) {
-                panel()
+        } else {
+            Column(modifier = bodyModifier) {
+                // weight(1f) gives the card all the height the options strip leaves, so the photo
+                // is as large as it can be.
+                PhotoCard(
+                    state = state,
+                    onReplace = onReplace,
+                    onDismissFailure = onDismissFailure,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+                // The options strip: the slot for the tool's own controls, full width under the
+                // card.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(EDITOR_PANEL_TAG),
+                ) {
+                    panel()
+                }
             }
         }
     }
@@ -382,7 +449,8 @@ fun ToolContent(
 /**
  * The tool screen's top bar: the round Back button at the left (calls [onBack]), [tool]'s name
  * centred across the screen, and the Undo control at the right (calls [onUndo]; it does nothing
- * while [undoEnabled] is false).
+ * while [undoEnabled] is false). With [showUndo] false (the Edit screen, whose Undo sits in the
+ * pill on the photo) the right end stays empty, so the screen never has two Undo controls.
  *
  * `CenterAlignedTopAppBar` is Material 3's top bar whose title sits in the middle of the screen
  * rather than beside the Back button; it also keeps clear of the status bar at the top. The
@@ -391,7 +459,13 @@ fun ToolContent(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolTopBar(tool: Tool, onBack: () -> Unit, undoEnabled: Boolean, onUndo: () -> Unit) {
+private fun ToolTopBar(
+    tool: Tool,
+    onBack: () -> Unit,
+    showUndo: Boolean,
+    undoEnabled: Boolean,
+    onUndo: () -> Unit,
+) {
     CenterAlignedTopAppBar(
         title = {
             Text(
@@ -410,11 +484,13 @@ private fun ToolTopBar(tool: Tool, onBack: () -> Unit, undoEnabled: Boolean, onU
             )
         },
         actions = {
-            UndoButton(
-                enabled = undoEnabled,
-                onClick = onUndo,
-                modifier = Modifier.padding(end = 8.dp),
-            )
+            if (showUndo) {
+                UndoButton(
+                    enabled = undoEnabled,
+                    onClick = onUndo,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
         },
     )
 }
@@ -547,10 +623,13 @@ private fun SavingIndicator() {
  * 16 dp above the card's bottom edge over all of it.
  *
  * Once an edit has been made, the card shows `state.edited` instead of the decoded original; a
- * failed edit leaves `edited` as it was, so the photo shown never changes on a failure.
+ * failed edit leaves `edited` as it was, so the photo shown never changes on a failure. While
+ * `state.comparing` is on (the Edit screen's Compare switch), the card shows the decoded original
+ * instead, untouched; `edited` is kept, so turning Compare off brings the edited photo back.
  *
  * Replace is switched off while a save or an edit runs, so the screen cannot be left under work
- * that has not finished.
+ * that has not finished. With [showReplace] false (the Edit screen) no Replace chip is drawn at
+ * all, so the bottom right of the photo is free for the Undo and Compare pill.
  */
 @Composable
 private fun PhotoCard(
@@ -558,6 +637,7 @@ private fun PhotoCard(
     onReplace: () -> Unit,
     onDismissFailure: () -> Unit,
     modifier: Modifier = Modifier,
+    showReplace: Boolean = true,
 ) {
     val running = state.processing as? ToolUiState.Processing.Running
     Card(
@@ -574,8 +654,9 @@ private fun PhotoCard(
                 // Decoding takes a moment; meanwhile an indicator moves in the middle of the card.
                 ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
                 is ToolUiState.PhotoState.Ready -> {
-                    // The edited photo when there is one, else the decoded original.
-                    val shown = state.edited ?: current.bitmap
+                    // The edited photo when there is one, else the decoded original; while Compare
+                    // is on, always the original, so the person sees what they started from.
+                    val shown = if (state.comparing) current.bitmap else state.edited ?: current.bitmap
                     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and
                     // remember keeps the wrapper between redraws.
                     val image = remember(shown) { shown.asImageBitmap() }
@@ -623,13 +704,15 @@ private fun PhotoCard(
                     SaveMessage(text = stringResource(messageRes))
                 }
             }
-            ReplaceChip(
-                enabled = state.save != ToolUiState.SaveState.Saving && running == null,
-                onClick = onReplace,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 16.dp),
-            )
+            if (showReplace) {
+                ReplaceChip(
+                    enabled = state.save != ToolUiState.SaveState.Saving && running == null,
+                    onClick = onReplace,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp),
+                )
+            }
         }
     }
 }
@@ -1033,6 +1116,81 @@ private fun ToolEditFailedPreview() {
             onSave = {},
             onReplace = {},
             panel = { ToolPanel(Tool.RETOUCH) },
+        )
+    }
+}
+
+/**
+ * The sheet content the Edit previews draw: the stateless Edit panel for [tool] with its controls
+ * at rest, every touch ignored, and [enabled] passed through. It is the stateless half on purpose,
+ * so a preview never reads the app's assets for the filter images.
+ */
+@Composable
+private fun SampleEditSheet(tool: EditTool, enabled: Boolean) {
+    EditPanelContent(
+        openTool = tool,
+        settings = EditSettings(),
+        onRatio = {},
+        onFreeCropChange = {},
+        onFreeCropApply = {},
+        onTurn = {},
+        onFlip = {},
+        onSettingsChange = {},
+        onAdjustFinished = {},
+        onFilter = {},
+        enabled = enabled,
+    )
+}
+
+/**
+ * The Edit screen with Adjust's sheet open and an edit to undo, drawn once in light and once in
+ * dark: the photo in its fixed 60%, the Undo and Compare pill at its bottom right, no "Replace"
+ * chip, the row of four tools and Adjust's sliders in the sheet under it.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolEditSheetPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Idle,
+                edited = sampleNarrowPhoto(),
+                canUndo = true,
+                openTool = EditTool.ADJUST,
+            ),
+            onBack = {},
+            onSave = {},
+            editSheet = { tool -> SampleEditSheet(tool, enabled = true) },
+        )
+    }
+}
+
+/**
+ * The Edit screen while Compare is on, in light and in dark: the card shows the untouched original
+ * (the wide sample) although an edit (the narrow sample) has been made, and the row of tools,
+ * Undo and the open sheet's sliders are all switched off.
+ */
+@PreviewLightDark
+@Composable
+private fun ToolEditComparingPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        ToolContent(
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                save = ToolUiState.SaveState.Idle,
+                edited = sampleNarrowPhoto(),
+                canUndo = true,
+                openTool = EditTool.ADJUST,
+                comparing = true,
+            ),
+            onBack = {},
+            onSave = {},
+            editSheet = { tool -> SampleEditSheet(tool, enabled = false) },
         )
     }
 }

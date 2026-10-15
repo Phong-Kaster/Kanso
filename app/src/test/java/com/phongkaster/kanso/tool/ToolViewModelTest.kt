@@ -13,6 +13,7 @@ import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
@@ -47,6 +48,9 @@ import org.robolectric.annotation.Config
  * undone back to the original, progress shows while one runs (and blocks Save), a failure keeps
  * the photo as it was, a cancellation is no failure, the photo is shrunk to the tool's working
  * size first, and Save writes the edited bitmap itself, never the original's file.
+ *
+ * Run 9 adds the Edit screen's sheets and Compare: `openTool` opens, closes and switches the one
+ * open tool sheet, and while Compare is on no edit is applied and none is undone.
  *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
@@ -386,6 +390,82 @@ class ToolViewModelTest {
         runMainThread()
         assertNull(edit.state.value.edited)
         assertEquals(ToolUiState.Processing.Idle, edit.state.value.processing)
+    }
+
+    /**
+     * Run 9: the Edit screen's row of tools works as toggles through `openTool`: no sheet is open
+     * at first; opening a tool opens its sheet; opening the same tool again closes it; opening
+     * another while one is open switches to it; and `closeTool` closes whatever is open. Opening
+     * and closing sheets never touches the photo or the edit.
+     */
+    @Test
+    fun open_tool_opens_toggles_and_switches_the_sheet_and_close_tool_closes_it() {
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400))
+        assertNull(viewModel.state.value.openTool)
+
+        viewModel.openTool(EditTool.ADJUST)
+        assertEquals(EditTool.ADJUST, viewModel.state.value.openTool)
+
+        viewModel.openTool(EditTool.ADJUST)
+        assertNull("A second tap on the open tool did not close its sheet", viewModel.state.value.openTool)
+
+        viewModel.openTool(EditTool.CROP)
+        viewModel.openTool(EditTool.FILTERS)
+        assertEquals("Opening another tool did not switch to it", EditTool.FILTERS, viewModel.state.value.openTool)
+
+        viewModel.closeTool()
+        assertNull(viewModel.state.value.openTool)
+        // Closing with nothing open is harmless.
+        viewModel.closeTool()
+        assertNull(viewModel.state.value.openTool)
+
+        assertNull(viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+    }
+
+    /**
+     * Run 9: while Compare is on, every editing call is ignored: `apply` runs no processor and
+     * leaves nothing edited, `runRegistered` runs nothing either, and `undo` takes nothing back.
+     * Comparing never loses the edit. Switching Compare off makes apply and undo work again.
+     */
+    @Test
+    fun while_comparing_apply_and_undo_change_nothing_until_compare_is_off() {
+        val original = ToolFixtures.gradient(600, 400)
+        val result = ToolFixtures.gradient(300, 200)
+        val registry = ProcessorRegistry(mapOf(Tool.EDIT to FakeProcessor { _, _ -> EditResult.Edited(result) }))
+        val viewModel = loadedViewModel(original, registry = registry)
+        val first = ToolFixtures.twoHalves(300, 200)
+        val edit = FakeProcessor { _, _ -> EditResult.Edited(first) }
+
+        viewModel.setComparing(true)
+        assertTrue(viewModel.state.value.comparing)
+        viewModel.apply(edit)
+        viewModel.runRegistered()
+        runMainThread()
+        assertTrue("A processor ran while comparing", edit.inputs.isEmpty())
+        assertNull("An edit landed while comparing", viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+        assertEquals(ToolUiState.Processing.Idle, viewModel.state.value.processing)
+
+        viewModel.setComparing(false)
+        assertFalse(viewModel.state.value.comparing)
+        viewModel.apply(edit)
+        runMainThread()
+        assertSame("Apply did not work again once Compare was off", first, viewModel.state.value.edited)
+        assertTrue(viewModel.state.value.canUndo)
+
+        viewModel.setComparing(true)
+        // Comparing keeps the edit: it only changes what the screen shows.
+        assertSame(first, viewModel.state.value.edited)
+        viewModel.undo()
+        assertSame("Undo took an edit back while comparing", first, viewModel.state.value.edited)
+        assertTrue(viewModel.state.value.canUndo)
+
+        viewModel.setComparing(false)
+        viewModel.undo()
+        assertNull("Undo did not work again once Compare was off", viewModel.state.value.edited)
+        assertFalse(viewModel.state.value.canUndo)
+        assertSame(original, (viewModel.state.value.photo as ToolUiState.PhotoState.Ready).bitmap)
     }
 
     // --- Helpers -----------------------------------------------------------------------------

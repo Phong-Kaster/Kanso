@@ -8,6 +8,7 @@ import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.photo.SaveResult
@@ -122,9 +123,12 @@ class ToolViewModel(
      * memory. While the edit runs, the state says how far along it is. When it works, the result
      * becomes the shown photo and the one before it is kept for [undo]; when it fails, the shown
      * photo stays exactly as it was and the state says why, in [ToolUiState.failure].
+     * Nothing happens either while the person is comparing with the original
+     * ([ToolUiState.comparing]): every editing control is disabled then.
      */
     fun apply(processor: ToolProcessor, fromOriginal: Boolean = false) {
         val current = mutableState.value
+        if (current.comparing) return
         if (current.processing is ToolUiState.Processing.Running) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         // What the person sees right now: the last edit, or the original if there is none.
@@ -209,8 +213,10 @@ class ToolViewModel(
      */
     fun runRegistered(fromOriginal: Boolean = false, configure: (ToolProcessor) -> Unit = {}) {
         val processor = registry.processorFor(tool) ?: return
-        // A tap during a run is ignored by apply, so its settings must not reach the processor.
+        // A tap during a run, or while comparing, is ignored by apply, so its settings must not
+        // reach the processor.
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
+        if (mutableState.value.comparing) return
         configure(processor)
         apply(processor, fromOriginal)
     }
@@ -234,10 +240,11 @@ class ToolViewModel(
 
     /**
      * Takes back the last edit: the photo shown before it is shown again. Undoing every edit
-     * returns to the unedited original. Nothing happens while an edit runs or when there is
-     * nothing to take back.
+     * returns to the unedited original. Nothing happens while an edit runs, while the person is
+     * comparing with the original, or when there is nothing to take back.
      */
     fun undo() {
+        if (mutableState.value.comparing) return
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
         if (history.isEmpty()) return
         val before = history.removeLast()
@@ -245,6 +252,29 @@ class ToolViewModel(
         mutableState.update {
             it.copy(edited = before, canUndo = history.isNotEmpty(), failure = null)
         }
+    }
+
+    /**
+     * Opens the sheet of the Edit screen's [tool] under the photo, closing any other one, since
+     * only one sheet is open at a time. Tapping the tool whose sheet is already open closes it
+     * again, so the row's entries work as toggles.
+     */
+    fun openTool(tool: EditTool) {
+        mutableState.update { it.copy(openTool = if (it.openTool == tool) null else tool) }
+    }
+
+    /** Closes the open tool sheet, if any, leaving the photo and the row of tools. */
+    fun closeTool() {
+        mutableState.update { it.copy(openTool = null) }
+    }
+
+    /**
+     * Switches Compare [on] or off. While it is on, the screen shows the untouched original and
+     * every editing control is disabled ([apply] and [undo] do nothing); switching it off shows
+     * the edit again. The edit itself is never touched, so nothing is lost by comparing.
+     */
+    fun setComparing(on: Boolean) {
+        mutableState.update { it.copy(comparing = on) }
     }
 
     /** Hides the message about the last failed edit, once the person has read it. */

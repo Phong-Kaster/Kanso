@@ -28,6 +28,8 @@ import com.phongkaster.kanso.ui.tool.ENHANCE_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.ENHANCE_RUN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.editRatioTag
+import com.phongkaster.kanso.ui.tool.editToolTag
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -197,8 +199,12 @@ class ToolScreenshotTest {
         capture("54_tool_enhance_done_dark.png")
     }
 
-    /** Taps the Free crop chip, which opens the rectangle sliders. */
+    /**
+     * Opens the Crop sheet from the row of tools, then taps the Free crop chip, which opens the
+     * rectangle sliders. Run 9: Edit's controls now live in sheets, so the sheet is opened first.
+     */
     private fun openFreeCrop() {
+        compose.onNodeWithTag(editToolTag(EditTool.CROP)).performClick()
         compose.onNodeWithTag(editRatioTag(CropRatio.FREE)).performScrollTo().performClick()
     }
 
