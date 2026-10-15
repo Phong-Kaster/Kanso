@@ -2,19 +2,34 @@ package com.phongkaster.kanso.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.cutout.CutoutProcessor
+import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
+import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
+import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+import com.phongkaster.kanso.data.edit.artistic.EngineStylizer
+import com.phongkaster.kanso.data.edit.enhance.EnhanceProcessor
+import com.phongkaster.kanso.data.edit.retouch.EngineFaceFinder
+import com.phongkaster.kanso.data.edit.retouch.EngineSkinSmoother
+import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.media.MediaStorePhotoSource
+import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
 import com.phongkaster.kanso.data.media.PhotoSource
+import com.phongkaster.kanso.data.media.SavedPhotoSource
 import com.phongkaster.kanso.data.photo.MediaStorePhotoSaver
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
+import com.phongkaster.kanso.launcher.LauncherIconSwitcher
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.CameraXController
+import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
 import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -39,10 +54,20 @@ import org.koin.dsl.module
 val appModule = module {
     single { ViewModelClearedProbe() }
 
-    viewModel { HomeViewModel(probe = get()) }
+    viewModel { HomeViewModel(probe = get(), savedPhotos = get()) }
 
     // The photo library behind one small interface, so tests can swap in a fake list of photos.
     single<PhotoSource> { MediaStorePhotoSource(androidContext()) }
+
+    // The photos Kanso itself saved (the Pictures/Kanso folder), behind one small interface so tests
+    // can swap in a fake list. It never asks for a permission.
+    single<SavedPhotoSource> { MediaStoreSavedPhotoSource(androidContext()) }
+
+    // The My edits tab's ViewModel reads that list each time the tab appears.
+    viewModel { MyEditsViewModel(savedPhotos = get(), probe = get()) }
+
+    // Switches the launcher icon's background to follow the theme colour.
+    single { LauncherIconSwitcher(androidContext()) }
 
     // Decodes one photo for the tool screen: upright and no bigger than the screen needs.
     single { PhotoLoader(androidContext()) }
@@ -58,11 +83,30 @@ val appModule = module {
             loader = get(),
             probe = get(),
             saver = get(),
+            registry = get(),
+        )
+    }
+
+    // Which processor edits the photo for each tool; a tool whose engine is not built yet has none.
+    single {
+        ProcessorRegistry(
+            mapOf(
+                Tool.REMOVE_BACKGROUND to CutoutProcessor(EngineSegmenter()),
+                Tool.ENHANCE to EnhanceProcessor(EngineUpscaler(androidContext())),
+                Tool.RETOUCH to RetouchProcessor(EngineFaceFinder(androidContext()), EngineSkinSmoother()),
+                Tool.ARTISTIC to ArtisticProcessor(EngineStylizer(androidContext())),
+            ),
         )
     }
 
     // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
-    viewModel { params -> SavedViewModel(photoUri = params.get(), loader = get(), probe = get()) }
+    viewModel { params -> SavedViewModel(
+            photoUri = params.get(),
+            loader = get(),
+            probe = get(),
+            // The photo viewer passes `true` as a second parameter; Saved passes only the Uri.
+            viewer = params.getOrNull<Boolean>() ?: false,
+        ) }
 
     // Writes the finished photo into Pictures/Kanso on the phone.
     single<PhotoSaver> { MediaStorePhotoSaver(androidContext()) }

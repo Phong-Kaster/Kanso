@@ -2,6 +2,7 @@ package com.phongkaster.kanso.navigation
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,6 +24,8 @@ import com.phongkaster.kanso.ui.home.HomeContent
 import com.phongkaster.kanso.ui.home.HomeScreen
 import com.phongkaster.kanso.ui.home.HomeUiState
 import com.phongkaster.kanso.ui.home.HomeViewModel
+import com.phongkaster.kanso.ui.myedits.MyEditsScreen
+import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
 import com.phongkaster.kanso.ui.saved.SavedScreen
 import com.phongkaster.kanso.ui.saved.SavedViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
@@ -39,8 +42,13 @@ import org.koin.core.parameter.parametersOf
  * MainActivity calls this once inside its theme. It does not start Koin; KansoApplication does
  * that before any screen exists, so the `koinViewModel()` calls below always find it.
  *
- * Back behaviour: Back on a tool screen or on Settings pops it and shows Home again; Back on
- * Home (the only key left) closes the app.
+ * Back behaviour: Back on a tool screen pops it; Back on Settings or My edits (a tab, which sits
+ * directly above Home) shows Home again; Back on Home (the only key left) closes the app.
+ *
+ * The three tabs (Home, My edits, Settings) are shown inside [KansoTabShell], which floats the tab
+ * bar over whichever tab is on top and hides it on every other screen. Each tab is a key on the
+ * same back stack: picking a tab clears the stack down to Home and adds the tab's key, so tabs
+ * never pile up (see BackStackActions.kt).
  */
 @Composable
 fun KansoNavHost(modifier: Modifier = Modifier) {
@@ -72,34 +80,69 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
         rememberViewModelStoreNavEntryDecorator<NavKey>(),
     )
 
-    // The drawing itself is done by the stateless KansoNavDisplay below; this function only
-    // gathers what it needs (the saved back stack, Back handling, decorators and screens).
-    KansoNavDisplay(
-        backStack = backStack,
+    // The key on top decides two things the shell needs: whether the bar is shown (only over a
+    // tab) and which tab looks selected.
+    val top = backStack.lastOrNull()
+
+    // The fade between two tabs is per-entry metadata, built once from the theme's motion scheme
+    // (read here because MaterialTheme.motionScheme only works while Compose is drawing).
+    val tabMetadata = kansoTabEntryMetadata(MaterialTheme.motionScheme)
+
+    // The floating bar covers the bottom of a tab screen, so each tab screen leaves this much
+    // room under its content (the bar, its margins and the system bars).
+    val tabPadding = PaddingValues(bottom = tabBarClearance())
+
+    // The shell draws the screens and floats the tab bar over them; the drawing of the screens
+    // themselves is done by the stateless KansoNavDisplay inside it. This function only gathers
+    // what it needs (the saved back stack, Back handling, decorators and screens).
+    KansoTabShell(
+        showBar = top != null && isTabKey(top),
+        selected = KansoTab.entries.firstOrNull { it.key == top } ?: KansoTab.HOME,
+        // Picking a tab clears the stack down to Home and adds that tab's key. Only act while a
+        // tab is on top, so a tap during a move to another screen cannot disturb the stack.
+        onTabSelected = { tab -> if (top != null && isTabKey(top)) backStack.selectTab(tab) },
+        // The Camera button opens the camera; a shot that is kept opens the Edit tool's
+        // screen. Only act while a tab is on top, so a fast double tap opens one camera.
+        onCamera = { if (backStack.lastOrNull()?.let(::isTabKey) == true) backStack.add(Camera(Tool.EDIT)) },
         modifier = modifier,
+    ) {
+        KansoNavDisplay(
+        backStack = backStack,
         // Called on system Back (and predictive back); goBack above decides what that means.
         onBack = goBack,
         entryDecorators = entryDecorators,
         // The entry provider maps each kind of key to the composable that draws it.
         entryProvider = entryProvider<NavKey> {
-            entry<Home> {
+            entry<Home>(metadata = tabMetadata) {
                 // koinViewModel asks Koin for the ViewModel, stored in this entry's ViewModelStore:
                 // the first call builds it, later calls (after rotation, say) return the same one.
                 val viewModel = koinViewModel<HomeViewModel>()
                 HomeScreen(
                     viewModel = viewModel,
-                    // "Open a photo" is the main action: it opens the gallery to pick from, and the
-                    // photo picked there opens in the editor with the Edit tool selected.
-                    onOpenPhoto = { if (backStack.last() == Home) backStack.add(Gallery(Tool.EDIT)) },
-                    // The Camera shortcut opens the camera instead; a shot that is kept opens the
-                    // editor with the Edit tool selected.
-                    onCameraClick = { if (backStack.last() == Home) backStack.add(Camera(Tool.EDIT)) },
-                    // Every tool card opens the photo gallery, and the photo picked there opens
-                    // in the editor with that tool selected.
+                    // Every banner, "Try now" button and round tool shortcut opens that tool's
+                    // photo gallery, and the photo picked there opens that tool's own screen.
                     onToolClick = { tool ->
                         if (backStack.last() == Home) backStack.add(Gallery(tool))
                     },
-                    onSettingsClick = { if (backStack.last() == Home) backStack.add(Settings) },
+                    // A recent photo opens in the Edit tool; the arrow opens the My edits tab.
+                    // Both act only while Home is still on top, like the tool buttons above.
+                    onRecentClick = { photoUri ->
+                        if (backStack.last() == Home) backStack.add(ToolPhoto(Tool.EDIT, photoUri))
+                    },
+                    onSeeAllEdits = { if (backStack.last() == Home) backStack.selectTab(KansoTab.MY_EDITS) },
+                    contentPadding = tabPadding,
+                )
+            }
+            entry<MyEdits>(metadata = tabMetadata) {
+                val viewModel = koinViewModel<MyEditsViewModel>()
+                MyEditsScreen(
+                    viewModel = viewModel,
+                    // A tapped photo opens full screen in the viewer, above the grid: Back
+                    // returns to My edits. Only act while My edits is still on top.
+                    onPhotoClick = { photoUri ->
+                        if (backStack.last() == MyEdits) backStack.add(EditedPhoto(photoUri))
+                    },
+                    contentPadding = tabPadding,
                 )
             }
             entry<Camera> { key ->
@@ -145,16 +188,17 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 ToolScreen(
                     viewModel = viewModel,
                     onBack = goBack,
+                    // Replace: back to this tool's gallery to pick another photo, with Back
+                    // from there still going where Back from this screen went.
+                    onReplace = { if (backStack.last() == key) backStack.replaceWithGallery(key.tool) },
                     // A saved photo replaces everything above Home with the Saved screen, so
                     // Back from Saved goes to Home, not to the tool screen. Only act while the
-                    // tool screen is on top. The editor can switch tools in place, so the Saved
-                    // key carries the tool selected when the person saved (read from the
-                    // ViewModel's state, not the key's first tool): "Edit another" then opens
-                    // that tool's gallery.
+                    // tool screen is on top. The Saved key carries this screen's tool, so
+                    // "Edit another" opens that tool's gallery.
                     onSaved = { photoUri ->
                         if (backStack.last() == key) {
                             while (backStack.size > 1) backStack.removeLastOrNull()
-                            backStack.add(Saved(viewModel.state.value.tool, photoUri))
+                            backStack.add(Saved(key.tool, photoUri))
                         }
                     },
                 )
@@ -175,18 +219,38 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                             backStack.add(Gallery(key.tool))
                         }
                     },
-                    onHome = { if (backStack.last() == key) backStack.removeLastOrNull() },
+                    onClose = { if (backStack.last() == key) backStack.closeToHome() },
                 )
             }
-            entry<Settings> {
+            entry<EditedPhoto> { key ->
+                // The viewer is the Saved screen in its viewer form: the same layout, the title
+                // "My edits" and "Edit" instead of "Edit another". The `viewer` Koin parameter
+                // tells the ViewModel which form to show.
+                val viewModel = koinViewModel<SavedViewModel>(
+                    parameters = { parametersOf(key.photoUri, true) },
+                )
+                SavedScreen(
+                    viewModel = viewModel,
+                    onShare = {},
+                    // Edit opens this photo in the Edit tool, above the viewer.
+                    onEditAnother = {
+                        if (backStack.last() == key) backStack.add(ToolPhoto(Tool.EDIT, key.photoUri))
+                    },
+                    // Close goes Home; system Back (goBack) pops to the My edits grid.
+                    onClose = { if (backStack.last() == key) backStack.closeToHome() },
+                )
+            }
+            // Settings is a tab: no Back arrow, the bar's Home tab (or system Back) leaves it.
+            entry<Settings>(metadata = tabMetadata) {
                 val viewModel = koinViewModel<SettingsViewModel>()
                 SettingsScreen(
                     viewModel = viewModel,
-                    onBack = goBack,
+                    contentPadding = tabPadding,
                 )
             }
         },
-    )
+        )
+    }
 }
 
 /**
@@ -246,12 +310,12 @@ fun KansoNavDisplay(
 }
 
 /**
- * Sample data for the preview: the two groups of cards the real Home shows, the AI tools and then
- * Edit.
+ * Sample data for the preview: the four carousel tools and the five shortcut tools the real Home
+ * shows.
  */
 private val sampleHomeState = HomeUiState(
-    aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-    editTools = listOf(Tool.EDIT),
+    carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+    shortcutTools = Tool.entries,
 )
 
 /**
@@ -274,10 +338,7 @@ private fun KansoNavHostPreview() {
                 entry<Home> {
                     HomeContent(
                         state = sampleHomeState,
-                        onOpenPhoto = {},
-                        onCameraClick = {},
                         onToolClick = {},
-                        onSettingsClick = {},
                     )
                 }
             },

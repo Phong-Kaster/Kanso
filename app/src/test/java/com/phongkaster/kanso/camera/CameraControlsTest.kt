@@ -302,8 +302,8 @@ class CameraControlsTest {
      * exactly as before the press.
      *
      * The test pauses Compose's clock before showing anything, so time moves only when the test
-     * moves it, and draws the screen into a bitmap at chosen moments, as `ToolSelectionAnimationTest`
-     * does (Compose's captureToImage times out under Robolectric here). Each time the test clock
+     * moves it, and draws the screen into a bitmap at chosen moments, as `GalleryGridTest`
+     * does for the photo cells (Compose's captureToImage times out under Robolectric here). Each time the test clock
      * moves, Robolectric's own clock moves by as much, so Android's ripple behind the press (an
      * Android drawable that runs on that clock, not on Compose's) plays out and fades like on a
      * phone, instead of being left frozen mid-way.

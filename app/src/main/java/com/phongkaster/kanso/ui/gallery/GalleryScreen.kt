@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -32,19 +34,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,6 +71,8 @@ import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.common.RoundBackButton
+import com.phongkaster.kanso.ui.common.RoundIconButton
 import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
 import com.phongkaster.kanso.ui.permission.PermissionAccess
 import com.phongkaster.kanso.ui.permission.PermissionGate
@@ -141,8 +141,20 @@ private val CELL_GAP = 4.dp
  */
 private val GRID_PADDING = 8.dp
 
-/** The size of the top bar's back button: Android's smallest comfortable touch target. */
+/** The size of the top bar's round buttons: Android's smallest comfortable touch target. */
 private val TOP_BAR_BUTTON_SIZE = 48.dp
+
+/** The space between a top bar button and the screen's edge. */
+private val TOP_BAR_EDGE = 16.dp
+
+/** The space between a top bar button and the title. */
+private val TOP_BAR_GAP = 8.dp
+
+/** The least height of the top bar, below the status bar. */
+private val TOP_BAR_HEIGHT = 64.dp
+
+/** The test tag on the top bar's round Back button. */
+const val GALLERY_BACK_TAG = "gallery-back"
 
 /** The content type shared by every photo cell (see [PhotoGrid]). */
 private const val PHOTO_CELL_CONTENT_TYPE = "photo"
@@ -347,22 +359,11 @@ fun GalleryContent(
  * The gallery's top bar: the back arrow (calls [onBack]), the [title] and, at the right end, the
  * camera button (calls [onOpenCamera]).
  *
- * Both buttons are Material 3 Expressive icon buttons. Given `shapes` (a set of shapes) instead
- * of one shape, an icon button changes its shape while a finger is on it: the round button
- * squares its corners a little, and Material animates between the two with the theme's motion
- * scheme, so a press feels physical. `IconButtonDefaults.shapes()` is the standard pair.
- *
- * - Back is a plain icon button: an arrow with no container, as the start of a top bar usually
- *   has. It is given 48 dp, the smallest touch target Android recommends, for its drawn shape as
- *   well as its touch area (the shape would otherwise be 40 dp).
- * - The camera button is a *filled tonal* icon button: it sits on a soft circle of the theme's
- *   secondary container colour, which marks it as the screen's one extra action without the
- *   weight of a filled primary button. Material keeps its touch area at least 48 dp by itself.
- *
- * Both icons are Material Symbols drawables drawn with `Icon(painterResource(...))`. The files
- * paint white; `Icon` tints them with the content colour the bar or the button provides, so they
- * show in light and in dark. Their content descriptions are the buttons' spoken names: "Back",
- * and "Take a photo" for the camera, which a test reads.
+ * Both buttons are the app's shared round buttons (`RoundBackButton` and `RoundIconButton`, in
+ * `ui/common`): 48 dp circles on the theme's soft secondary container colour that square their
+ * corners a little while pressed, the same as on the tool screens. Their content descriptions are
+ * the buttons' spoken names: "Back", and "Take a photo" for the camera, which a test reads. The
+ * back button carries the tag [GALLERY_BACK_TAG], the camera button [GALLERY_CAMERA_TAG].
  *
  * The title uses `titleLargeEmphasized`, one of the "Emphasized" text styles Material 3
  * Expressive adds: the size of `titleLarge`, but bolder, so the title stands out. The title may
@@ -370,46 +371,48 @@ fun GalleryContent(
  * phone; only a longer text than that ends with an ellipsis, rather than pushing the camera
  * button off the bar.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GalleryTopBar(title: String, onBack: () -> Unit, onOpenCamera: () -> Unit) {
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLargeEmphasized,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        navigationIcon = {
-            IconButton(
-                onClick = onBack,
-                shapes = IconButtonDefaults.shapes(),
-                modifier = Modifier.size(TOP_BAR_BUTTON_SIZE),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = stringResource(R.string.back),
-                )
-            }
-        },
-        // actions are the buttons at the right end of the top bar.
-        actions = {
-            FilledTonalIconButton(
-                onClick = onOpenCamera,
-                shapes = IconButtonDefaults.shapes(),
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .testTag(GALLERY_CAMERA_TAG),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_photo_camera),
-                    contentDescription = stringResource(R.string.gallery_open_camera),
-                )
-            }
-        },
-    )
+    // A Box stacks its children, so the title can sit in the exact middle of the bar while the
+    // two buttons are pinned to its ends. (A TopAppBar would centre the title only in the space
+    // the buttons leave, which is not the window's middle when the two ends differ.)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Keep clear of the status bar, which the Scaffold no longer does for a custom bar.
+            .windowInsetsPadding(WindowInsets.statusBars.only(WindowInsetsSides.Top))
+            .heightIn(min = TOP_BAR_HEIGHT),
+    ) {
+        RoundBackButton(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = TOP_BAR_EDGE)
+                .testTag(GALLERY_BACK_TAG),
+        )
+        // The same space on both sides (edge + button + gap) keeps the title centred on the
+        // window and stops it running under either button, down to a 320 dp wide phone, where
+        // it takes two lines.
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLargeEmphasized,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = TOP_BAR_EDGE + TOP_BAR_BUTTON_SIZE + TOP_BAR_GAP),
+        )
+        RoundIconButton(
+            onClick = onOpenCamera,
+            iconRes = R.drawable.ic_photo_camera,
+            contentDescription = stringResource(R.string.gallery_open_camera),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = TOP_BAR_EDGE)
+                .testTag(GALLERY_CAMERA_TAG),
+        )
+    }
 }
 
 /**
@@ -696,12 +699,19 @@ private fun PhotoCell(
  * background colour until the picture is ready. Coil reads the photo through its content URI.
  * It has no preview of its own: a preview cannot read the phone's photos, so the gallery's
  * previews draw a coloured square in its place (see [GalleryContent]).
+ *
+ * It is `internal` (visible to the whole app, not only this file) because My edits draws its
+ * tiles with it too. [contentDescription] is what a screen reader says for the picture: by
+ * default "Photo" and the file name, as the gallery wants; My edits passes null, because its
+ * tile already carries its own description ("Edited photo" and the date) and a second one on the
+ * same tile would be read out as well.
  */
 @Composable
-private fun PhotoThumbnail(
+internal fun PhotoThumbnail(
     photo: Photo,
     sizePx: Int,
     modifier: Modifier = Modifier,
+    contentDescription: String? = stringResource(R.string.gallery_photo_description, photo.name),
 ) {
     val context = LocalContext.current
     // The request is remembered so it is not rebuilt each time the cell is drawn again.
@@ -718,7 +728,7 @@ private fun PhotoThumbnail(
     }
     AsyncImage(
         model = request,
-        contentDescription = stringResource(R.string.gallery_photo_description, photo.name),
+        contentDescription = contentDescription,
         contentScale = ContentScale.Crop,
         modifier = modifier,
     )

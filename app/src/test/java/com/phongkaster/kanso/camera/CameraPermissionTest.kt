@@ -15,11 +15,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -28,6 +26,8 @@ import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.gallery.RecordingRegistry
+import com.phongkaster.kanso.navigation.KANSO_CAMERA_BUTTON_TAG
+import com.phongkaster.kanso.navigation.tapCameraButton
 import com.phongkaster.kanso.ui.camera.CAMERA_REFUSED_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_SCREEN_TAG
 import com.phongkaster.kanso.ui.camera.CAMERA_SETTINGS_BUTTON_TAG
@@ -114,18 +114,20 @@ class CameraPermissionTest {
         stopKoin()
     }
 
-    /** Launching the app requests nothing; tapping the Camera tile requests CAMERA only. */
+    /**
+     * Launching the app requests nothing; tapping the round Camera button beside the floating tab
+     * bar (found by its tag, `nav-camera`) requests CAMERA only.
+     */
     @Test
     fun launch_asks_for_nothing_and_opening_the_camera_asks_for_camera() {
         ActivityScenario.launch(MainActivity::class.java).use { main ->
             loadKoinModules(module { factory<CameraController> { FakeCameraController() } })
-            val cameraLabel = app.getString(R.string.tool_camera)
             compose.waitUntil(timeoutMillis = 10_000) {
-                compose.onAllNodesWithText(cameraLabel).fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithTag(KANSO_CAMERA_BUTTON_TAG).fetchSemanticsNodes().isNotEmpty()
             }
             main.onActivity { assertNull(shadowOf(it).lastRequestedPermission) }
 
-            compose.onNodeWithText(cameraLabel).performScrollTo().performClick()
+            tapCameraButton(compose)
             compose.waitUntil(timeoutMillis = 10_000) {
                 compose.onAllNodesWithTag(CAMERA_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
             }

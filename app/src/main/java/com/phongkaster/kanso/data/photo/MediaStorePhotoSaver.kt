@@ -24,7 +24,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Saves a photo as a new, upright JPEG in the phone's `Pictures/Kanso` album.
+ * Saves a photo as a new, upright JPEG in the phone's `Pictures/Kanso` album, or an edited
+ * picture as it is: a JPEG when it is opaque, a PNG when it has see-through pixels (a cut-out).
  *
  * MediaStore and scoped storage, in plain words:
  *
@@ -48,8 +49,8 @@ import kotlinx.coroutines.withContext
  * it is, tag included, and the result says so ([SaveResult.Saved.keptOriginalOrientation]).
  *
  * The original photo is only ever opened for reading; it is never changed. Every save makes a
- * new file named `Kanso_<yyyyMMdd_HHmmss>.jpg`, with `_1`, `_2` ... added when that name is
- * taken, so an existing picture is never overwritten.
+ * new file named `Kanso_<yyyyMMdd_HHmmss>.jpg` (`.png` for a picture with see-through pixels),
+ * with `_1`, `_2` ... added when that name is taken, so an existing picture is never overwritten.
  *
  * [context] gives the ContentResolver; [decoder] decodes a turned photo at full size (tests pass
  * one that runs out of memory); [now] tells the time in milliseconds, used for the file name.
@@ -86,10 +87,12 @@ class MediaStorePhotoSaver(
             val output = prepare(source) ?: return@withContext SaveResult.Failed
             try {
                 val baseName = FILE_PREFIX + SimpleDateFormat(TIME_PATTERN, Locale.US).format(Date(now()))
+                // An unedited photo is always a JPEG: its own bytes, or its pixels turned upright.
+                val writePhoto: (OutputStream) -> Unit = { write(it, source, output) }
                 val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    writeToMediaStore(baseName, source, output)
+                    writeToMediaStore(baseName, JPEG_EXTENSION, JPEG_MIME_TYPE, writePhoto)
                 } else {
-                    writeToPicturesFolder(baseName, source, output)
+                    writeToPicturesFolder(baseName, JPEG_EXTENSION, JPEG_MIME_TYPE, writePhoto)
                 }
                 SaveResult.Saved(saved, output.keptOriginalOrientation)
             } finally {
@@ -100,6 +103,49 @@ class MediaStorePhotoSaver(
         } catch (_: Exception) {
             // Missing photo, access taken away, full disk, MediaStore refusing the row: all mean
             // "not saved", which the screen says plainly.
+            SaveResult.Failed
+        } catch (_: OutOfMemoryError) {
+            SaveResult.Failed
+        }
+    }
+
+    /**
+     * Saves [bitmap], the picture the person edited, exactly as it is: no scaling, no turning.
+     *
+     * The format follows the picture (see [saveFormatFor]): a picture with an alpha channel, such
+     * as a cut-out whose background was removed, is written as a PNG, the only common format
+     * that keeps see-through pixels; any other picture is written as a JPEG at quality 95, which
+     * is far smaller and looks the same to the eye. The file name, its extension (`.jpg` or
+     * `.png`) and the type MediaStore and the media scanner are told (`image/jpeg` or
+     * `image/png`) all follow that choice, in the same `Pictures/Kanso` album and with the same
+     * `Kanso_<yyyyMMdd_HHmmss>` naming as [save] for an unedited photo.
+     *
+     * The work runs on Dispatchers.IO so the screen keeps drawing. The bitmap is only read: it is
+     * not recycled, because the screen is still showing it. The original photo is not touched at
+     * all. Any failure gives [SaveResult.Failed], and the half-written row or file is deleted.
+     */
+    override suspend fun save(bitmap: Bitmap): SaveResult = withContext(Dispatchers.IO) {
+        try {
+            val format = saveFormatFor(bitmap)
+            val extension = extensionFor(format)
+            val mimeType = mimeTypeFor(format)
+            val baseName = FILE_PREFIX + SimpleDateFormat(TIME_PATTERN, Locale.US).format(Date(now()))
+            val writeBitmap: (OutputStream) -> Unit = { stream ->
+                // compress encodes the pixels as they are; PNG is lossless and ignores the quality.
+                if (!bitmap.compress(format, EDITED_JPEG_QUALITY, stream)) {
+                    throw IOException("The $mimeType encoder failed")
+                }
+            }
+            val saved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                writeToMediaStore(baseName, extension, mimeType, writeBitmap)
+            } else {
+                writeToPicturesFolder(baseName, extension, mimeType, writeBitmap)
+            }
+            SaveResult.Saved(saved)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Full disk, access taken away, MediaStore refusing the row, the encoder failing.
             SaveResult.Failed
         } catch (_: OutOfMemoryError) {
             SaveResult.Failed
@@ -131,18 +177,24 @@ class MediaStorePhotoSaver(
     }
 
     /**
-     * Android 10 and later: adds a pending row to MediaStore in `Pictures/Kanso/`, writes the
-     * photo into it, then publishes it. Returns the new row's content Uri as text. If anything
-     * fails after the row exists, the row is deleted again and the error is passed on.
+     * Android 10 and later: adds a pending row to MediaStore in `Pictures/Kanso/`, named
+     * [baseName] with [extension] and typed [mimeType], lets [writeBytes] write the picture into
+     * it, then publishes it. Returns the new row's content Uri as text. If anything fails after
+     * the row exists, the row is deleted again and the error is passed on.
      */
     @RequiresApi(Build.VERSION_CODES.Q)
-    private fun writeToMediaStore(baseName: String, source: Uri, output: Output): String {
+    private fun writeToMediaStore(
+        baseName: String,
+        extension: String,
+        mimeType: String,
+        writeBytes: (OutputStream) -> Unit,
+    ): String {
         // VOLUME_EXTERNAL_PRIMARY is the phone's main shared storage, where the gallery looks.
         val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val name = uniqueName(baseName, namesTakenInMediaStore(baseName))
+        val name = uniqueName(baseName, namesTakenInMediaStore(baseName), extension)
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, JPEG_MIME_TYPE)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
             put(MediaStore.MediaColumns.RELATIVE_PATH, RELATIVE_PATH)
             // Hidden from other apps until the bytes are all written.
             put(MediaStore.MediaColumns.IS_PENDING, 1)
@@ -150,7 +202,7 @@ class MediaStorePhotoSaver(
         val row = resolver.insert(collection, values) ?: throw IOException("MediaStore made no row")
         try {
             val stream = resolver.openOutputStream(row) ?: throw IOException("No stream for $row")
-            stream.use { write(it, source, output) }
+            stream.use(writeBytes)
             val publish = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
             // Zero rows changed means the picture is still hidden: that is a failed save.
             if (resolver.update(row, publish, null, null) == 0) throw IOException("Not published")
@@ -186,19 +238,25 @@ class MediaStorePhotoSaver(
     }
 
     /**
-     * Android 8.1 and 9: writes the photo as a new file in `<Pictures>/Kanso/`, then asks the
-     * media scanner to add it to MediaStore. Returns the file's Uri as text (the scanner gives
-     * the content Uri only later, in the background). A half-written file is deleted again.
+     * Android 8.1 and 9: lets [writeBytes] write the picture as a new file in `<Pictures>/Kanso/`
+     * named [baseName] with [extension], then asks the media scanner to add it to MediaStore as
+     * [mimeType]. Returns the file's Uri as text (the scanner gives the content Uri only later,
+     * in the background). A half-written file is deleted again.
      */
-    private fun writeToPicturesFolder(baseName: String, source: Uri, output: Output): String {
+    private fun writeToPicturesFolder(
+        baseName: String,
+        extension: String,
+        mimeType: String,
+        writeBytes: (OutputStream) -> Unit,
+    ): String {
         // Deprecated from Android 10, where scoped storage replaces it; here it is the only way.
         @Suppress("DEPRECATION")
         val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
         val folder = File(pictures, ALBUM_NAME)
         if (!folder.isDirectory && !folder.mkdirs()) throw IOException("Cannot make $folder")
-        val file = createUniqueFile(folder, baseName)
+        val file = createUniqueFile(folder, baseName, extension)
         try {
-            FileOutputStream(file).use { write(it, source, output) }
+            FileOutputStream(file).use(writeBytes)
         } catch (t: Throwable) {
             file.delete()
             throw t
@@ -208,20 +266,20 @@ class MediaStorePhotoSaver(
         MediaScannerConnection.scanFile(
             appContext,
             arrayOf(file.absolutePath),
-            arrayOf(JPEG_MIME_TYPE),
+            arrayOf(mimeType),
             null,
         )
         return Uri.fromFile(file).toString()
     }
 
     /**
-     * Creates and returns a new empty file in [folder] named after [baseName], adding `_1`, `_2`
-     * ... until the name is free. createNewFile makes the file only if no file of that name
-     * exists, in one step, so two saves can never pick the same name.
+     * Creates and returns a new empty file in [folder] named after [baseName] with [extension],
+     * adding `_1`, `_2` ... until the name is free. createNewFile makes the file only if no file
+     * of that name exists, in one step, so two saves can never pick the same name.
      */
-    private fun createUniqueFile(folder: File, baseName: String): File {
+    private fun createUniqueFile(folder: File, baseName: String, extension: String): File {
         for (suffix in 0..MAX_SUFFIX) {
-            val file = File(folder, nameWithSuffix(baseName, suffix))
+            val file = File(folder, nameWithSuffix(baseName, suffix, extension))
             if (file.createNewFile()) return file
         }
         throw IOException("No free name for $baseName in $folder")
@@ -280,18 +338,61 @@ class MediaStorePhotoSaver(
         /** Where MediaStore puts the file on Android 10 and later; it ends with a slash. */
         const val RELATIVE_PATH = "Pictures/Kanso/"
 
-        /** The type of every saved file. */
-        const val JPEG_MIME_TYPE = "image/jpeg"
+        /**
+         * The JPEG quality of an edited picture, out of 100: high enough that no loss shows, and
+         * still several times smaller than a PNG of a photo. A PNG ignores it.
+         */
+        const val EDITED_JPEG_QUALITY = 95
 
         /** How many numbered names are tried before giving up. */
         const val MAX_SUFFIX = 9_999
     }
 }
 
-/** Returns `[baseName].jpg` for [suffix] 0, else `[baseName]_[suffix].jpg`. */
-internal fun nameWithSuffix(baseName: String, suffix: Int): String =
-    if (suffix == 0) "$baseName.jpg" else "${baseName}_$suffix.jpg"
+/** The type of a saved JPEG, told to MediaStore and the media scanner. */
+internal const val JPEG_MIME_TYPE = "image/jpeg"
 
-/** Returns the first name built from [baseName] (see [nameWithSuffix]) that is not in [taken]. */
-internal fun uniqueName(baseName: String, taken: Set<String>): String =
-    generateSequence(0) { it + 1 }.map { nameWithSuffix(baseName, it) }.first { it !in taken }
+/** The type of a saved PNG (a picture with see-through pixels, such as a cut-out). */
+internal const val PNG_MIME_TYPE = "image/png"
+
+/** The file extension of a saved JPEG, without its dot. */
+internal const val JPEG_EXTENSION = "jpg"
+
+/** The file extension of a saved PNG, without its dot. */
+internal const val PNG_EXTENSION = "png"
+
+/**
+ * Chooses how an edited picture is written: PNG when [hasAlpha] (the picture has an alpha
+ * channel, so some pixels may be see-through, as in a cut-out), else JPEG.
+ *
+ * Bitmap.hasAlpha only says the picture carries an alpha channel, not that a pixel actually uses
+ * it; checking every pixel would cost a full pass over a large picture, so a picture with the
+ * channel is always kept as a PNG, which loses nothing either way.
+ */
+internal fun saveFormatFor(hasAlpha: Boolean): Bitmap.CompressFormat =
+    if (hasAlpha) Bitmap.CompressFormat.PNG else Bitmap.CompressFormat.JPEG
+
+/** Chooses how [bitmap] is written; see the Boolean overload for the rule. */
+internal fun saveFormatFor(bitmap: Bitmap): Bitmap.CompressFormat = saveFormatFor(bitmap.hasAlpha())
+
+/** Returns the MIME type of a file written in [format]: `image/png` or `image/jpeg`. */
+internal fun mimeTypeFor(format: Bitmap.CompressFormat): String =
+    if (format == Bitmap.CompressFormat.PNG) PNG_MIME_TYPE else JPEG_MIME_TYPE
+
+/** Returns the file extension, without its dot, of a file written in [format]: `png` or `jpg`. */
+internal fun extensionFor(format: Bitmap.CompressFormat): String =
+    if (format == Bitmap.CompressFormat.PNG) PNG_EXTENSION else JPEG_EXTENSION
+
+/**
+ * Returns `[baseName].[extension]` for [suffix] 0, else `[baseName]_[suffix].[extension]`.
+ * [extension] is `jpg` unless a PNG is being saved.
+ */
+internal fun nameWithSuffix(baseName: String, suffix: Int, extension: String = JPEG_EXTENSION): String =
+    if (suffix == 0) "$baseName.$extension" else "${baseName}_$suffix.$extension"
+
+/**
+ * Returns the first name built from [baseName] and [extension] (see [nameWithSuffix]) that is not
+ * in [taken].
+ */
+internal fun uniqueName(baseName: String, taken: Set<String>, extension: String = JPEG_EXTENSION): String =
+    generateSequence(0) { it + 1 }.map { nameWithSuffix(baseName, it, extension) }.first { it !in taken }

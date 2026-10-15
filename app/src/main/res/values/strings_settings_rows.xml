@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one-line descriptions under the titles of Settings' rows (Run 7, T-007). Kept short: a
+     colour row also holds a swatch and a radio button, so on a narrow phone little width is left. -->
+<resources>
+    <!-- Under "System default": the theme follows the phone's own light or dark setting. -->
+    <string name="settings_rows_system_description">Follows your phone</string>
+    <!-- Under "Light": the app always uses its light colours. -->
+    <string name="settings_rows_light_description">Always light</string>
+    <!-- Under "Dark": the app always uses its dark colours. -->
+    <string name="settings_rows_dark_description">Always dark</string>
+    <!-- Under "Kanso blue": the app's own colour, what a fresh install shows. -->
+    <string name="settings_rows_kanso_blue_description">The app\'s own blue</string>
+    <!-- Under "From wallpaper": colours taken from the phone's wallpaper (Android 12 and later). -->
+    <string name="settings_rows_wallpaper_description">Your wallpaper\'s tones</string>
+    <!-- Under "Custom colour": the colour is picked in the colour picker below the group. -->
+    <string name="settings_rows_custom_description">Any colour you pick</string>
+</resources>

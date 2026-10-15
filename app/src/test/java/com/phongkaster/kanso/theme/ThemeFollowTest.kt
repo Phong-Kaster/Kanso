@@ -28,7 +28,10 @@ import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -54,10 +57,21 @@ import com.phongkaster.kanso.ui.gallery.GALLERY_BODY_TAG
 import com.phongkaster.kanso.ui.gallery.GALLERY_GRID_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryContent
 import com.phongkaster.kanso.ui.gallery.GalleryUiState
+import com.phongkaster.kanso.ui.home.HOME_CAROUSEL_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_EMPTY_TAG
+import com.phongkaster.kanso.ui.home.HOME_RECENT_TAG
 import com.phongkaster.kanso.ui.home.HomeContent
 import com.phongkaster.kanso.ui.home.HomeUiState
+import com.phongkaster.kanso.ui.home.homeBannerTag
+import com.phongkaster.kanso.ui.home.homeCarouselDotTag
+import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
+import com.phongkaster.kanso.ui.myedits.MyEditsContent
+import com.phongkaster.kanso.ui.myedits.MyEditsUiState
+import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.PermissionAccess
 import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
+import com.phongkaster.kanso.ui.saved.SAVED_SCRIM_TAG
 import com.phongkaster.kanso.ui.saved.SavedContent
 import com.phongkaster.kanso.ui.saved.SavedPhoto
 import com.phongkaster.kanso.ui.saved.SavedUiState
@@ -67,8 +81,7 @@ import com.phongkaster.kanso.ui.settings.SettingsUiState
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
-import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import kotlin.math.abs
@@ -119,6 +132,18 @@ import org.robolectric.annotation.GraphicsMode
  * colours by design (the picker card is DoD 16's one named exception), so no pixel is read
  * there; the Saved success mark is the theme's primary colour, so its row is sampled at the
  * screen's left edge, well clear of it.
+ *
+ * Run 7's screens and states (DoD 23) are checked the same way, with Kanso blue in Light and in
+ * Dark: Home with recent photos and Home empty, My edits with photos and empty, each of the five
+ * tool screens with a ready photo, and the photo opened from My edits. Home and My edits have no
+ * top bar, so their top pixel (above Home's title, above My edits' first row) must be the
+ * scheme's `background`, as their background pixel must. The original fourteen checks are kept
+ * as they were.
+ *
+ * Home's carousel banners are checked too: each of the four is swiped to the front in turn (the
+ * carousel only composes the banners in view), and one pixel inside its padding must equal the
+ * scheme's `primaryContainer`, `secondaryContainer` or `tertiaryContainer`, for Kanso blue and
+ * for a custom #2E7D32, each in Light and in Dark.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -230,6 +255,152 @@ class ThemeFollowTest {
         checkCameraLive(ThemeMode.Dark)
     }
 
+    // --- Run 7's screens and states (DoD 23) -----------------------------------------------
+
+    /** Home with recent photos in light mode: light top and background beside the photo strip. */
+    @Test
+    fun home_with_recent_photos_follows_the_light_theme() {
+        checkHomeWithTop(ThemeMode.Light, withPhotos = true)
+    }
+
+    /** Home with recent photos in dark mode: dark top and background beside the photo strip. */
+    @Test
+    fun home_with_recent_photos_follows_the_dark_theme() {
+        checkHomeWithTop(ThemeMode.Dark, withPhotos = true)
+    }
+
+    /** Home with no recent photo in light mode: light top and background beside the message. */
+    @Test
+    fun home_empty_follows_the_light_theme() {
+        checkHomeWithTop(ThemeMode.Light, withPhotos = false)
+    }
+
+    /** Home with no recent photo in dark mode: dark top and background beside the message. */
+    @Test
+    fun home_empty_follows_the_dark_theme() {
+        checkHomeWithTop(ThemeMode.Dark, withPhotos = false)
+    }
+
+    /** My edits with photos in light mode: light top and background beside the grid. */
+    @Test
+    fun my_edits_with_photos_follows_the_light_theme() {
+        checkMyEditsWithPhotos(ThemeMode.Light)
+    }
+
+    /** My edits with photos in dark mode: dark top and background beside the grid. */
+    @Test
+    fun my_edits_with_photos_follows_the_dark_theme() {
+        checkMyEditsWithPhotos(ThemeMode.Dark)
+    }
+
+    /** My edits with nothing saved in light mode: light top and background beside the message. */
+    @Test
+    fun my_edits_empty_follows_the_light_theme() {
+        checkMyEditsEmpty(ThemeMode.Light)
+    }
+
+    /** My edits with nothing saved in dark mode: dark top and background beside the message. */
+    @Test
+    fun my_edits_empty_follows_the_dark_theme() {
+        checkMyEditsEmpty(ThemeMode.Dark)
+    }
+
+    /** The Edit screen with a ready photo in light mode. */
+    @Test
+    fun tool_screen_edit_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.EDIT)
+    }
+
+    /** The Edit screen with a ready photo in dark mode. */
+    @Test
+    fun tool_screen_edit_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.EDIT)
+    }
+
+    /** The Remove background screen with a ready photo in light mode. */
+    @Test
+    fun tool_screen_remove_background_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.REMOVE_BACKGROUND)
+    }
+
+    /** The Remove background screen with a ready photo in dark mode. */
+    @Test
+    fun tool_screen_remove_background_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.REMOVE_BACKGROUND)
+    }
+
+    /** The Enhance screen with a ready photo in light mode. */
+    @Test
+    fun tool_screen_enhance_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.ENHANCE)
+    }
+
+    /** The Enhance screen with a ready photo in dark mode. */
+    @Test
+    fun tool_screen_enhance_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.ENHANCE)
+    }
+
+    /** The Retouch screen with a ready photo in light mode. */
+    @Test
+    fun tool_screen_retouch_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.RETOUCH)
+    }
+
+    /** The Retouch screen with a ready photo in dark mode. */
+    @Test
+    fun tool_screen_retouch_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.RETOUCH)
+    }
+
+    /** The Artistic screen with a ready photo in light mode. */
+    @Test
+    fun tool_screen_artistic_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.ARTISTIC)
+    }
+
+    /** The Artistic screen with a ready photo in dark mode. */
+    @Test
+    fun tool_screen_artistic_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.ARTISTIC)
+    }
+
+    /** The photo opened from My edits (Saved's viewer form) in light mode. */
+    @Test
+    fun photo_opened_from_my_edits_follows_the_light_theme() {
+        checkViewer(ThemeMode.Light)
+    }
+
+    /** The photo opened from My edits (Saved's viewer form) in dark mode. */
+    @Test
+    fun photo_opened_from_my_edits_follows_the_dark_theme() {
+        checkViewer(ThemeMode.Dark)
+    }
+
+    /** Home's four carousel banners in light mode with Kanso blue: each in a theme container colour. */
+    @Test
+    fun carousel_banners_follow_kanso_blue_in_light() {
+        checkBanners(ThemeMode.Light, ThemeColour.KansoBlue)
+    }
+
+    /** Home's four carousel banners in dark mode with Kanso blue: each in a theme container colour. */
+    @Test
+    fun carousel_banners_follow_kanso_blue_in_dark() {
+        checkBanners(ThemeMode.Dark, ThemeColour.KansoBlue)
+    }
+
+    /** Home's four carousel banners in light mode with Custom #2E7D32: each in a container colour. */
+    @Test
+    fun carousel_banners_follow_a_custom_green_in_light() {
+        checkBanners(ThemeMode.Light, ThemeColour.Custom(seedArgb = CUSTOM_GREEN_ARGB))
+    }
+
+    /** Home's four carousel banners in dark mode with Custom #2E7D32: each in a container colour. */
+    @Test
+    fun carousel_banners_follow_a_custom_green_in_dark() {
+        checkBanners(ThemeMode.Dark, ThemeColour.Custom(seedArgb = CUSTOM_GREEN_ARGB))
+    }
+
     // --- One screen each -------------------------------------------------------------------
 
     /**
@@ -240,10 +411,7 @@ class ThemeFollowTest {
         show(mode) {
             HomeContent(
                 state = HOME_STATE,
-                onOpenPhoto = {},
-                onCameraClick = {},
                 onToolClick = {},
-                onSettingsClick = {},
             )
         }
         assertFollows(
@@ -299,40 +467,39 @@ class ThemeFollowTest {
     }
 
     /**
-     * Draws the editor on Edit in [mode] with a ready landscape photo and checks the top bar and
-     * a background pixel in the photo area above the photo, halfway between the area's top and
-     * the photo's. A landscape photo on a portrait screen fills the width and leaves that band of
-     * background above and below it; the test checks the band is there before reading it.
+     * Draws the screen of [tool] (Edit unless told otherwise) in [mode] with a ready landscape
+     * photo and checks the top bar and a background pixel left of the photo card, level with its
+     * middle. The card keeps 16 dp from the screen's edges; the test checks that margin is there
+     * before reading it.
      */
-    private fun checkEditor(mode: ThemeMode) {
+    private fun checkEditor(mode: ThemeMode, tool: Tool = Tool.EDIT) {
         val state = ToolUiState(
-            tool = Tool.EDIT,
+            tool = tool,
             photoUri = PHOTO_URI,
             photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
             save = ToolUiState.SaveState.Idle,
         )
         show(mode) {
-            ToolContent(state = state, onBack = {}, onSave = {}, onSelectTool = {})
+            ToolContent(state = state, onBack = {}, onSave = {})
         }
-        val body = nodeRect(TOOL_BODY_TAG)
-        val photo = nodeRect(TOOL_IMAGE_TAG)
+        val card = nodeRect(TOOL_CARD_TAG)
         assertTrue(
-            "The photo must leave a band of background above it (photo area top ${body.top}, " +
-                "photo top ${photo.top}), or this test reads the wrong place",
-            photo.top - body.top >= MIN_BAND_PX,
+            "The card must leave a margin at the screen's left edge (card left ${card.left}), " +
+                "or this test reads the wrong place",
+            card.left >= MIN_BAND_PX,
         )
         assertFollows(
-            screen = "Editor with a ready photo",
+            screen = "Tool screen ${tool.name} with a ready photo",
             mode = mode,
             topBar = topBarSpot(mode),
             background = Spot(
-                place = "background above the photo, in the middle of the screen",
-                x = rootSize().width / 2,
-                y = ((body.top + photo.top) / 2f).roundToInt(),
+                place = "background left of the photo card, level with its middle",
+                x = (card.left / 2f).roundToInt(),
+                y = ((card.top + card.bottom) / 2f).roundToInt(),
                 expected = scheme(mode).background,
                 role = "background",
             ),
-            contentTop = body.top,
+            contentTop = card.top,
         )
     }
 
@@ -342,9 +509,14 @@ class ThemeFollowTest {
      * the mark sits in the middle, so that pixel is background and well clear of the mark.
      */
     private fun checkSaved(mode: ThemeMode) {
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
+        // Saved now draws the photo over a blurred copy of itself, so the screen's colours come
+        // from the photo. A photo in the theme's own background colour makes the backdrop, and the
+        // shade (the theme's surface over it), read as the theme's colours: what this test follows.
+        val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
+        themed.eraseColor(scheme(mode).background.toArgb())
+        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed))
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onHome = {})
+            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
         }
         val mark = nodeRect(SAVED_MARK_TAG)
         assertFollows(
@@ -373,7 +545,6 @@ class ThemeFollowTest {
             SettingsContent(
                 state = SettingsUiState(themeMode = mode, themeColour = ThemeColour.KansoBlue),
                 wallpaperColour = null,
-                onBack = {},
                 onThemeModeSelected = {},
                 onKansoBlueChosen = {},
                 onWallpaperChosen = {},
@@ -475,12 +646,262 @@ class ThemeFollowTest {
         )
     }
 
+    /**
+     * Draws Home in [mode], with five recent photos when [withPhotos] and with none otherwise (the
+     * strip's message), and checks a pixel at the top of the screen and a background pixel at the
+     * screen's left edge, level with the middle of the recent strip or of its message: Home's
+     * column keeps 16 dp from the edges, and the strip's cards start there.
+     *
+     * Home has no top bar: its title is the first item of its column, below the top edge. The top
+     * pixel, in the middle of the screen's top edge and above the title, must be the scheme's
+     * `background`, the colour Home's Scaffold fills its body with.
+     */
+    private fun checkHomeWithTop(mode: ThemeMode, withPhotos: Boolean) {
+        if (withPhotos) useSolidColourThumbnails()
+        val state = if (withPhotos) HOME_STATE.copy(recentPhotos = photos().take(5)) else HOME_STATE
+        show(mode) {
+            HomeContent(state = state, onToolClick = {})
+        }
+        val recent = nodeRect(if (withPhotos) HOME_RECENT_TAG else HOME_RECENT_EMPTY_TAG)
+        assertFollows(
+            screen = if (withPhotos) "Home with recent photos" else "Home empty",
+            mode = mode,
+            topBar = topSpot(expected =scheme(mode).background, role = "background"),
+            background = Spot(
+                place = "background at the left edge, level with the recent edits",
+                x = EDGE_X_PX,
+                y = recent.center.y.roundToInt(),
+                expected = scheme(mode).background,
+                role = "background",
+            ),
+            contentTop = nodeRect(HOME_CAROUSEL_TAG).top,
+        )
+    }
+
+    /**
+     * Draws My edits in [mode] with twelve saved photos and checks a pixel at the top of the
+     * screen and a background pixel at the screen's left edge, level with the first row of tiles:
+     * the grid keeps 8 dp from the edges. My edits has no top bar, so the top pixel must be the
+     * scheme's `background`, the colour its Scaffold fills its body with.
+     */
+    private fun checkMyEditsWithPhotos(mode: ThemeMode) {
+        useSolidColourThumbnails()
+        show(mode) {
+            MyEditsContent(state = MyEditsUiState(photos = photos(), loading = false), onPhotoClick = {})
+        }
+        val firstTile = nodeRect(myEditsTileTag(0))
+        assertFollows(
+            screen = "My edits with photos",
+            mode = mode,
+            topBar = topSpot(expected =scheme(mode).background, role = "background"),
+            background = Spot(
+                place = "background at the left edge, level with the first row of tiles",
+                x = EDGE_X_PX,
+                y = firstTile.center.y.roundToInt(),
+                expected = scheme(mode).background,
+                role = "background",
+            ),
+            contentTop = firstTile.top,
+        )
+    }
+
+    /**
+     * Draws My edits in [mode] with nothing saved and checks a pixel at the top of the screen and
+     * a background pixel at the screen's left edge, level with the middle of the "no edits yet"
+     * message, which keeps 24 dp from the edges.
+     */
+    private fun checkMyEditsEmpty(mode: ThemeMode) {
+        show(mode) {
+            MyEditsContent(state = MyEditsUiState(photos = emptyList(), loading = false), onPhotoClick = {})
+        }
+        val message = nodeRect(MY_EDITS_EMPTY_TAG)
+        assertFollows(
+            screen = "My edits empty",
+            mode = mode,
+            topBar = topSpot(expected =scheme(mode).background, role = "background"),
+            background = Spot(
+                place = "background at the left edge, level with the middle of the message",
+                x = EDGE_X_PX,
+                y = message.center.y.roundToInt(),
+                expected = scheme(mode).background,
+                role = "background",
+            ),
+            contentTop = message.top,
+        )
+    }
+
+    /**
+     * Draws the photo opened from My edits (Saved's viewer form: no mark, no "saved" line) in
+     * [mode] over a plain red photo and checks two pixels of the top shade, at the middle of its
+     * top edge and at its left edge: each must be the theme's `surface`, at the shade's
+     * [VIEWER_SHADE_ALPHA], laid over the red.
+     *
+     * Why red, and why the shade. Once the photo is decoded the viewer shows no plain background
+     * at all: a blurred copy of the photo fills the window behind the sharp photo, so every pixel
+     * outside the shade is the photo's colour. A photo painted in the theme's own background colour
+     * would make those pixels "follow the theme" whatever the screen did; a red photo, a colour no
+     * Kanso blue role has, cannot match a theme colour by construction. The one thing the viewer
+     * paints from the theme over the photo is the top shade, so that is what is read, and the
+     * colour it must show is worked out by blending the theme's surface over the red, as the
+     * screen's drawing does. Before reading, the test checks that the red does change the blend
+     * (a shade that ignored the photo, a plain surface, would fail too) and that both pixels lie
+     * inside the shade, in the band where it holds its full strength.
+     */
+    private fun checkViewer(mode: ThemeMode) {
+        val red = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
+        red.eraseColor(VIEWER_PHOTO_ARGB)
+        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(red), viewer = true)
+        show(mode) {
+            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+        }
+        val shade = nodeRect(SAVED_SCRIM_TAG)
+        val photo = nodeRect(SAVED_PHOTO_TAG)
+        val surface = scheme(mode).surface
+        val expected = blendOver(surface, VIEWER_SHADE_ALPHA, Color(VIEWER_PHOTO_ARGB))
+        // The shade holds its full strength over the status bar and 64 dp below it (SCRIM_HOLD), so its top
+        // [VIEWER_SHADE_HOLD] is inside that band whatever height the status bar has.
+        val holdBottom = shade.top + with(compose.density) { VIEWER_SHADE_HOLD.toPx() }
+        val shadeY = TOP_BAR_Y_PX
+        assertTrue(
+            "The viewer's shade pixels at y $shadeY must lie inside its full-strength band " +
+                "(${shade.top} to $holdBottom), or this test reads the wrong place",
+            shadeY >= shade.top && shadeY < holdBottom,
+        )
+        assertTrue(
+            "The red photo must change the shade's blend (expected ${hex(expected)}, surface ${hex(surface)}), " +
+                "or this test cannot tell a shade over the photo from a plain surface",
+            !isNear(expected, surface, VIEWER_SHADE_TOLERANCE),
+        )
+        assertFollows(
+            screen = "Photo opened from My edits",
+            mode = mode,
+            topBar = Spot(
+                place = "top shade, middle of its top edge",
+                x = rootSize().width / 2,
+                y = shadeY,
+                expected = expected,
+                role = "surface at alpha $VIEWER_SHADE_ALPHA over the red photo",
+                tolerance = VIEWER_SHADE_TOLERANCE,
+            ),
+            background = Spot(
+                place = "top shade at the left edge",
+                x = EDGE_X_PX,
+                y = shadeY,
+                expected = expected,
+                role = "surface at alpha $VIEWER_SHADE_ALPHA over the red photo",
+                tolerance = VIEWER_SHADE_TOLERANCE,
+            ),
+            contentTop = photo.top,
+        )
+    }
+
+    /**
+     * Returns [top] drawn at [alpha] (0 to 1) over the opaque [bottom], as the screen's drawing
+     * blends a see-through colour: each channel is top x alpha + bottom x (1 - alpha). The alpha
+     * is first rounded to the 8 bits (0 to 255) a drawn colour carries.
+     */
+    private fun blendOver(top: Color, alpha: Float, bottom: Color): Color {
+        val a = (alpha * 255f).roundToInt() / 255f
+        return Color(
+            red = top.red * a + bottom.red * (1f - a),
+            green = top.green * a + bottom.green * (1f - a),
+            blue = top.blue * a + bottom.blue * (1f - a),
+            alpha = 1f,
+        )
+    }
+
+    /**
+     * Draws Home in [mode] with [colour] and brings each of the carousel's four banners to the
+     * front in turn, swiping as a finger would (the carousel only composes the banners in view).
+     * For each banner it reads one pixel [BANNER_SPOT_INSET] inside its left edge, level with its
+     * middle, inside the banner's padding where no text, button or icon is drawn, and fails unless
+     * that pixel equals the scheme's `primaryContainer`, `secondaryContainer` or
+     * `tertiaryContainer` within [TOLERANCE] per channel. Every problem is listed in one failure.
+     */
+    private fun checkBanners(mode: ThemeMode, colour: ThemeColour) {
+        show(mode, colour) {
+            HomeContent(state = HOME_STATE, onToolClick = {})
+        }
+        val colours = scheme(mode, colour)
+        val containers = listOf(
+            "primaryContainer" to colours.primaryContainer,
+            "secondaryContainer" to colours.secondaryContainer,
+            "tertiaryContainer" to colours.tertiaryContainer,
+        )
+        val insetPx = with(compose.density) { BANNER_SPOT_INSET.toPx() }
+        val problems = mutableListOf<String>()
+        HOME_STATE.carouselTools.forEachIndexed { index, tool ->
+            if (index > 0) swipeCarouselLeft()
+            val dot = compose.onNodeWithTag(homeCarouselDotTag(index), useUnmergedTree = true).fetchSemanticsNode()
+            if (dot.config.getOrNull(SemanticsProperties.StateDescription) == null) {
+                problems += "after $index swipe(s) banner ${index + 1} (${tool.name}) is not the one in front"
+                return@forEachIndexed
+            }
+            val banner = nodeRect(homeBannerTag(tool))
+            // A neighbouring banner can peek over one edge, so try the left edge, then the right.
+            val candidates = listOf(
+                "$BANNER_SPOT_INSET inside its left edge" to (banner.left + insetPx),
+                "$BANNER_SPOT_INSET inside its right edge" to (banner.right - insetPx),
+            ).map { (edge, x) ->
+                Spot(
+                    place = "banner ${index + 1} (${tool.name}), $edge, level with its middle",
+                    x = x.roundToInt(),
+                    y = banner.center.y.roundToInt(),
+                    expected = containers.first().second,
+                    role = "a container colour",
+                )
+            }
+            val spot = candidates.firstOrNull { nodesUnder(it, ignoreTag = homeBannerTag(tool)).isEmpty() }
+                ?: candidates.first().also { first ->
+                    nodesUnder(first, ignoreTag = homeBannerTag(tool)).forEach { node ->
+                        problems += "the ${first.place} at (${first.x}, ${first.y}) lies on $node, " +
+                            "not on the banner's plain background: the test must read another pixel"
+                    }
+                }
+            val drawn = drawnColours(listOf(spot)).single()
+            if (containers.none { (_, expected) -> isNear(expected, drawn) }) {
+                problems += "the ${spot.place} at (${spot.x}, ${spot.y}) is drawn ${hex(drawn)}, expected one of " +
+                    containers.joinToString { (role, expected) -> "$role ${hex(expected)}" } +
+                    " within $TOLERANCE per channel"
+            }
+        }
+        assertTrue(
+            "Home's carousel banners in $mode with $colour do not follow the theme:\n" + problems.joinToString("\n"),
+            problems.isEmpty(),
+        )
+    }
+
     // --- Helpers ---------------------------------------------------------------------------
+
+    /**
+     * Swipes Home's carousel once to the left, as a finger would, and waits until it settles: a
+     * slow drag of under one banner's width moves it one banner forward, never a fling past it.
+     */
+    private fun swipeCarouselLeft() {
+        compose.onNodeWithTag(HOME_CAROUSEL_TAG).performTouchInput {
+            swipeLeft(startX = width * 0.85f, endX = width * 0.4f, durationMillis = 1_000)
+        }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Returns the top pixel of a screen with no top bar: the middle of the screen,
+     * [TOP_BAR_Y_PX] below its top edge, which must be [expected], the scheme's colour called
+     * [role].
+     */
+    private fun topSpot(expected: Color, role: String): Spot = Spot(
+        place = "top of the screen, middle of its top edge",
+        x = rootSize().width / 2,
+        y = TOP_BAR_Y_PX,
+        expected = expected,
+        role = role,
+    )
 
     /**
      * One pixel the test reads: [place] says in words where it is, ([x], [y]) is where, in the
      * screen's pixels from its top-left corner, and [expected] is the theme colour it must show,
-     * the scheme's colour called [role].
+     * the scheme's colour called [role]. [tolerance] is how far per channel the drawn pixel may be
+     * from it: [TOLERANCE] for a colour painted as it is, more for one worked out by blending.
      */
     private data class Spot(
         val place: String,
@@ -488,10 +909,18 @@ class ThemeFollowTest {
         val y: Int,
         val expected: Color,
         val role: String,
+        val tolerance: Int = TOLERANCE,
     )
 
-    /** Returns Kanso blue in [mode]'s look, the scheme KansoTheme hands to every screen. */
-    private fun scheme(mode: ThemeMode): ColorScheme = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
+    /**
+     * Returns [colour] (Kanso blue unless told otherwise) in [mode]'s look, the scheme KansoTheme
+     * hands to every screen: a custom colour's scheme is generated from its seed, as KansoTheme
+     * does. The tests never ask for the wallpaper choice.
+     */
+    private fun scheme(mode: ThemeMode, colour: ThemeColour = ThemeColour.KansoBlue): ColorScheme {
+        val seed = if (colour is ThemeColour.Custom) Color(colour.seedArgb) else KANSO_BLUE_SEED
+        return seedColorScheme(seed, dark = mode == ThemeMode.Dark)
+    }
 
     /**
      * Returns the top-bar pixel for [mode]: the middle of the screen, [TOP_BAR_Y_PX] below the
@@ -507,12 +936,13 @@ class ThemeFollowTest {
     )
 
     /**
-     * Draws [content] inside KansoTheme in [mode], with Kanso blue, and waits until the screen
-     * has settled. Nothing the tests draw keeps moving, so the clock runs by itself.
+     * Draws [content] inside KansoTheme in [mode], with [colour] (Kanso blue unless told
+     * otherwise), and waits until the screen has settled. Nothing the tests draw keeps moving, so
+     * the clock runs by itself.
      */
-    private fun show(mode: ThemeMode, content: @Composable () -> Unit) {
+    private fun show(mode: ThemeMode, colour: ThemeColour = ThemeColour.KansoBlue, content: @Composable () -> Unit) {
         compose.setContent {
-            KansoTheme(themeMode = mode) {
+            KansoTheme(themeMode = mode, themeColour = colour) {
                 content()
             }
         }
@@ -559,9 +989,9 @@ class ThemeFollowTest {
 
         val drawn = drawnColours(spots)
         spots.zip(drawn).forEach { (spot, colour) ->
-            if (!isNear(spot.expected, colour)) {
+            if (!isNear(spot.expected, colour, spot.tolerance)) {
                 problems += "the ${spot.place} at (${spot.x}, ${spot.y}) is drawn ${hex(colour)}, " +
-                    "expected the theme's ${spot.role} ${hex(spot.expected)} within $TOLERANCE per channel"
+                    "expected the theme's ${spot.role} ${hex(spot.expected)} within ${spot.tolerance} per channel"
             }
         }
 
@@ -586,11 +1016,13 @@ class ThemeFollowTest {
     /**
      * Returns a description of every node placed on screen that shows text, a picture (a content
      * description) or a control and covers [spot], from the unmerged tree, where every text and
-     * icon is a node of its own.
+     * icon is a node of its own. The node tagged [ignoreTag], if given, is left out: a test that
+     * reads a tappable card's own background passes the card's tag.
      */
-    private fun nodesUnder(spot: Spot): List<String> {
+    private fun nodesUnder(spot: Spot, ignoreTag: String? = null): List<String> {
         val point = Offset(spot.x + 0.5f, spot.y + 0.5f)
         return compose.onAllNodes(SHOWS_SOMETHING, useUnmergedTree = true).fetchSemanticsNodes()
+            .filter { node -> ignoreTag == null || node.config.getOrNull(SemanticsProperties.TestTag) != ignoreTag }
             .filter { node -> isPlaced(node) && Rect(node.positionInRoot, node.size.toSize()).contains(point) }
             .map { node -> describe(node) }
     }
@@ -658,14 +1090,15 @@ class ThemeFollowTest {
     }
 
     /**
-     * Tells whether [actual] equals [expected] within [TOLERANCE] in each of its alpha, red,
-     * green and blue channels (0 to 255). An undrawn, see-through pixel never passes.
+     * Tells whether [actual] equals [expected] within [tolerance] ([TOLERANCE] unless told
+     * otherwise) in each of its alpha, red, green and blue channels (0 to 255). An undrawn,
+     * see-through pixel never passes.
      */
-    private fun isNear(expected: Color, actual: Color): Boolean {
+    private fun isNear(expected: Color, actual: Color, tolerance: Int = TOLERANCE): Boolean {
         val wanted = expected.toArgb()
         val drawn = actual.toArgb()
         return listOf(24, 16, 8, 0).all { shift ->
-            abs(((wanted shr shift) and 0xFF) - ((drawn shr shift) and 0xFF)) <= TOLERANCE
+            abs(((wanted shr shift) and 0xFF) - ((drawn shr shift) and 0xFF)) <= tolerance
         }
     }
 
@@ -723,8 +1156,39 @@ class ThemeFollowTest {
          */
         const val MIN_BAND_PX = 12f
 
-        /** The made-up Uri the editor and Saved say their photo came from. */
+        /**
+         * The photo colour [checkViewer] uses, pure opaque red (#FFFF0000): no role of the Kanso
+         * blue schemes is red, so no pixel of the photo can pass for a theme colour.
+         */
+        val VIEWER_PHOTO_ARGB = 0xFFFF0000.toInt()
+
+        /** The alpha of Saved's top shade where it holds full strength (`SCRIM_TOP_ALPHA` in SavedScreen.kt). */
+        const val VIEWER_SHADE_ALPHA = 0.85f
+
+        /**
+         * How far per channel a shade pixel may be from the blend [checkViewer] works out: the
+         * blend's 8-bit rounding and the gradient's dithering can each move a channel by 1 or 2.
+         */
+        const val VIEWER_SHADE_TOLERANCE = 4
+
+        /**
+         * How far below the top of Saved's shade it still holds full strength, at least: its hold
+         * is 64 dp below the status bar (`SCRIM_HOLD`); 7 dp keeps clear of the status bar itself.
+         */
+        val VIEWER_SHADE_HOLD = 7.dp
+
+        /** The made-up Uri the tool screens and Saved say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"
+
+        /** The Custom seed colour the banner checks use, #2E7D32 (a deep green), as an ARGB number. */
+        val CUSTOM_GREEN_ARGB = 0xFF2E7D32.toInt()
+
+        /**
+         * How far inside a banner's left edge its background pixel is read: inside its 16 dp
+         * padding, where no text, button or icon is drawn, and level with its middle, well clear
+         * of its rounded corners.
+         */
+        val BANNER_SPOT_INSET = 8.dp
 
         /** Matches a node that shows text, a picture (it has a description) or a control. */
         val SHOWS_SOMETHING = SemanticsMatcher("shows text, a picture or a control") { node ->
@@ -738,8 +1202,8 @@ class ThemeFollowTest {
 
         /** Home's two groups of tools, as `HomeViewModel` builds them. */
         val HOME_STATE = HomeUiState(
-            aiTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-            editTools = listOf(Tool.EDIT),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            shortcutTools = Tool.entries,
         )
 
         /** The three albums of the sample photo library. */

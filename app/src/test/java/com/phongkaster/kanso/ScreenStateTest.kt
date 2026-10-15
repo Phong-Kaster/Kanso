@@ -20,7 +20,7 @@ import org.junit.Test
  * Checks that every screen is built the one way CLAUDE.md asks for (DoD 12), so a later change
  * cannot quietly give a screen a second source of state:
  *
- * - The screen packages under `ui/` hold exactly the six screen ViewModels.
+ * - The screen packages under `ui/` hold exactly the seven screen ViewModels.
  * - Each ViewModel gives out exactly one StateFlow, and it is a StateFlow of the screen's own
  *   UiState (`HomeViewModel` gives out a `StateFlow<HomeUiState>`). A one-shot Flow of events
  *   that is not a StateFlow, such as ToolViewModel's `savedEvents`, and plain read-only values
@@ -44,11 +44,11 @@ import org.junit.Test
 class ScreenStateTest {
 
     /**
-     * The `ui` package holds exactly the six screen ViewModels, one per screen. A seventh, or one
+     * The `ui` package holds exactly the seven screen ViewModels, one per screen. An eighth, or one
      * gone missing, means a screen was added or removed without this test being brought along.
      */
     @Test
-    fun the_screen_packages_hold_exactly_the_six_view_models() {
+    fun the_screen_packages_hold_exactly_the_seven_view_models() {
         assertEquals(
             "The screen packages under ui/ must hold exactly one ViewModel per screen",
             EXPECTED_VIEW_MODELS,
@@ -756,13 +756,14 @@ class ScreenStateTest {
         /** The package that holds one sub-package per screen. */
         const val UI_PACKAGE = "com.phongkaster.kanso.ui"
 
-        /** The six screens' ViewModels, as `folder/ClassName` under the `ui` package. */
+        /** The seven screens' ViewModels, as `folder/ClassName` under the `ui` package. */
         val EXPECTED_VIEW_MODELS = setOf(
             "home/HomeViewModel",
             "gallery/GalleryViewModel",
             "camera/CameraViewModel",
             "tool/ToolViewModel",
             "saved/SavedViewModel",
+            "myedits/MyEditsViewModel",
             "settings/SettingsViewModel",
         )
 

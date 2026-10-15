@@ -1,73 +1,63 @@
-# Kanso — Run 6: Material 3 Expressive, with blue as Kanso's colour
+# Kanso — Run 8: the five editing tools edit the photo
 
-Kanso looks bare: plain text rows, no icons, no motion. I want it to be a **Material 3 Expressive**
-app: Google's own design language, built from Material3 1.5.0 (made available by Run 5), in light and
-dark, with blue as Kanso's colour. The design follows the Material 3 Expressive guidance and its
-components, not another app. In particular, Kanso is **not** a copy of Adobe Lightroom or any other
-photo editor.
+Today none of Kanso's editing tools changes a photo. Edit, Remove background, Enhance, Retouch and
+Artistic each open the photo, show "coming in a later run", and Save writes an upright copy of the
+original (see `README.md`, "How each editing feature works"). The image engine that can do the work is
+already compiled into the app — `core/imagecrop`, `core/common`, `core/editimage`,
+`core/imageprocessor`, `core/overlaybrush`, `core/localml`, `opencv/`, with their AARs and bundled
+models in `libs/` — but nothing in `app/` calls it.
+
+**This run makes all five tools really edit the photo, on the device, with that engine** (decided by
+me, 2026-10-14). What a person sees on Save must be what they edited.
 
 ## What this run delivers
 
-1. **Material 3 Expressive as the design system.**
-   - `MaterialExpressiveTheme` and the expressive `MotionScheme` (spring motion).
-   - Expressive typography, shapes and components wherever Material 3 Expressive has one for the job,
-     before anything hand-made: `ButtonGroup`, the floating toolbars, `LoadingIndicator` /
-     `ContainedLoadingIndicator`, the wavy progress indicators, toggle buttons and icon buttons that
-     change shape when pressed or selected, and `MaterialShapes` with shape morphing.
-2. **Blue by default, in light and dark.**
-   - A fresh install uses a "Kanso blue" scheme generated from one blue seed.
-   - Settings keeps "From wallpaper" and "Custom colour" as its two other choices, with blue first.
-   - Every screen, the editor included, follows the app's theme: light in light mode, dark in dark mode.
-3. **An icon for every feature**: Edit, Remove background, Enhance, Retouch, Artistic, Camera, Settings,
-   Save, Share, Back. Use Material Symbols (Rounded), imported as vector drawables rather than through
-   a large icon library.
-4. **One editor screen for the five editing tools** (Edit, Remove background, Enhance, Retouch,
-   Artistic: every `Tool` except Camera; decided by me, 2026-10-09):
-   - the photo fills the space above the controls;
-   - a Material 3 Expressive bottom toolbar holds the five tools as icons, so a person can switch tools
-     without going back to Home. The selected tool is shown the Expressive way (a selected,
-     shape-changed toggle);
-   - a top bar with Back and Save;
-   - each tool's panel stays a short "coming in a later run" message until its run builds it, with room
-     above the toolbar for the controls those runs add.
-5. **Home:**
-   - one large, clear "Open a photo" action and a camera shortcut (Camera stays a Home action, not an
-     editor tool);
-   - the five editing tools as cards with an icon and a label, grouped "AI tools" and "Edit". Each card opens the
-     gallery and then the editor with that tool selected.
-6. **Gallery:**
-   - rounded thumbnails and album chips;
-   - a `LoadingIndicator` while photos load.
-7. **Saved:**
-   - a short shape-morph success mark;
-   - Share, Edit another and Home as a `ButtonGroup`.
-8. **Camera:**
-   - icon controls in Material 3 Expressive form;
-   - a shutter that responds to the press.
-9. **Settings:** grouped rows with icons, and colour swatches for the three theme choices.
-10. **Motion with meaning** (`CLAUDE.md`: the Compose animation APIs first):
-    - screen transitions through Navigation 3's `NavDisplay`, with predictive back;
-    - press feedback and shape changes from the expressive motion scheme;
-    - the selected tool's change animating in the editor's toolbar.
+1. **Edit**: crop (free and the common ratios) and rotate; adjust brightness, contrast, saturation
+   and warmth; apply filters. The person sees each change on the photo as they make it.
+2. **Remove background**: cut the main subject out of the photo, show it over a checkerboard, and
+   save it with a transparent background (PNG).
+3. **Enhance**: a one-tap improvement of sharpness and detail (upscaling, where the engine offers it)
+   and lighting, with a before/after comparison.
+4. **Retouch**: face and skin retouching on a photo with a face — at least smoothing skin — with a
+   strength control; a photo with no face says so instead of failing silently.
+5. **Artistic**: turn the photo into a painterly style, from a choice of styles, with a strength
+   control.
+6. **Every tool**: the "coming in a later run" message is gone from the five tools; edits can be
+   undone back to the original before saving; a long operation shows progress and never freezes the
+   screen; a failure (out of memory, no subject found, a model that will not load) says what happened
+   and leaves the original untouched; **Save writes the edited result**, never the unedited original;
+   the original file is never changed.
 
-## Constraints
+## How to build it
 
-- `CLAUDE.md` applies in full: a light and a dark preview for every composable, one class per file, one
-  UiState per screen, KDoc in plain English.
-- Accessible:
-  - readable text and icons in both themes;
-  - touch targets of at least 48 dp;
-  - a content description on every icon that acts;
-  - motion that respects the system's "remove animations" setting.
-- **Every screen's look changes, so every Roborazzi baseline is re-recorded.** Ask me to approve that in
-  the DoD, and keep old and new side by side in the run's evidence.
-- Material3 1.5.0-beta01 is already in the app since Run 5, with `ExpressiveApiTest` showing the
-  Expressive components work behind `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`. Use that
-  version; a newer pre-release only if the DoD names it for my approval. The engine modules in `core/*`
-  keep their own Material3.
-- No new dependency beyond Material Symbols drawables, unless the DoD names it for my approval.
+- **Use the engine already in the repository.** `reference/retica-app/` shows how the original app
+  called these libraries: read it to learn the calls, never build, edit or import it (CLAUDE.md).
+  Where a prebuilt AAR has no source, learn its API from the classes it exposes and from how Retica
+  called it.
+- **Offline only.** No network permission, no model download: use the models bundled in
+  `libs/localml.aar`. If a tool cannot be done with what is bundled, say so in the DoD rather than
+  adding a download.
+- **The owner's phone is a Galaxy A13 on 32-bit Android (`armeabi-v7a`).** Every tool must work
+  there; a model too heavy for it must work on a smaller copy of the photo rather than crash.
+- The device checks may use the Galaxy A13 or the emulator, whichever is free (decided by me,
+  2026-10-14). Before driving either one, check nobody else's run or person is using it.
+- Keep the Run 7 layout (InFlux arrangement, Kanso's colours, the floating bar). Tool controls fit
+  that layout: the photo in its rounded card, the controls in the panel under it, one full-width Save.
+- Every existing standing rule in `CLAUDE.md` holds — previews, one class per file, a ViewModel and
+  UiState per screen, the code teaches.
 
-## Out of scope
+## README.md is part of the work (decided by me, 2026-10-14)
 
-The editing and AI tools themselves, a before/after comparison (there is nothing to compare until a tool
-edits), the speed problems on the Galaxy A13, and the human checks waiting in `.harness/ISSUES.md`.
+Every behaviour or business-logic change updates `README.md` in the same commit (`CLAUDE.md`, "README.md
+follows the code"). I pay the closest attention to the editing features: when this run ends, the
+README's "Editing features" table and "How each editing feature works" must describe, for each of the
+five tools, exactly what the code does — every processing step in order, which engine module,
+library or model does it, threading, input and output size and format, and failure handling — with
+file paths. A README claim the code does not back fails the run.
+
+## Pictures and tests
+
+- Roborazzi pictures of the five tool screens will change. Ask me, in the DoD, which pictures may be
+  re-recorded, the same way Run 7 did.
+- Each tool's processing gets tests that prove the output pixels changed the way the tool promises
+  (not only that a screen appears).

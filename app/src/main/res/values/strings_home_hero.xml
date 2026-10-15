@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home: the line under the title "Kanso". The exact words are fixed by the PRD. -->
+    <string name="home_hero_greeting">What will you edit today?</string>
+
+    <!-- Home's carousel: one short line under each AI tool's name on its banner. Kept short:
+         the banner shows it on one line beside the tool's large icon, even on a 360 dp phone. -->
+    <string name="home_hero_description_remove_background">Cut out the subject</string>
+    <string name="home_hero_description_enhance">Sharper, brighter photos</string>
+    <string name="home_hero_description_retouch">Smooth, natural skin</string>
+    <string name="home_hero_description_artistic">Paint it in a new style</string>
+
+    <!-- Home's carousel: the small button on every banner. The exact words are fixed by the PRD. -->
+    <string name="home_hero_try_now">Try now</string>
+
+    <!-- What a screen reader says for a banner's "Try now" button, so the four buttons do not all
+         sound the same. %1$s is the tool's name, such as "Retouch". -->
+    <string name="home_hero_try_now_description">Try %1$s now</string>
+
+    <!-- What a screen reader says for one page dot under the carousel. %1$d is the banner's
+         place, %2$d the number of banners, such as "Banner 2 of 4". -->
+    <string name="home_hero_dot_description">Banner %1$d of %2$d</string>
+    <string name="home_hero_dot_current">Current banner</string>
+</resources>

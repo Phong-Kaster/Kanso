@@ -38,6 +38,20 @@ The owner is learning Navigation 3 and full-Compose apps from this code. Every c
 composable has a KDoc comment in plain English saying what it does and why; a concept is explained
 where it is first used; a non-obvious line gets a short comment.
 
+## README.md follows the code, in the same change
+
+`README.md` describes Kanso as the code is, not as it is planned (decided by the owner, 2026-10-14).
+Every change to what the app does — a feature added, removed or changed, business logic, a pipeline
+step, a default, a limit, a file format, a permission — updates `README.md` in the same commit. A
+behaviour change without its README update is unfinished.
+
+The **photo-editing features get the owner's closest attention**. For each one, the README's
+"Editing features" table states its real state (works, partial, UI only, not wired), and "How each
+editing feature works" traces its pipeline end to end: the screen and ViewModel, every processing
+step in order, the engine module, library or model that does it (bundled or downloaded), the
+threading, the input and output (size, format, quality, where it is saved), and what happens on
+failure, with file paths. A claim the code does not back is a defect.
+
 ## Fixed constraints
 
 - No ads, no analytics, no accounts, no network permission.

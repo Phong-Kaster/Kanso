@@ -7,10 +7,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.phongkaster.kanso.data.settings.SettingsRepository
+import com.phongkaster.kanso.launcher.LauncherIconSwitcher
 import com.phongkaster.kanso.navigation.KansoNavHost
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 
@@ -24,6 +27,9 @@ class MainActivity : ComponentActivity() {
 
     /** The saved settings, handed out by Koin the first time they are used. */
     private val settings: SettingsRepository by inject()
+
+    /** Keeps the launcher icon's background in the theme colour, handed out by Koin. */
+    private val launcherIcons: LauncherIconSwitcher by inject()
 
     /**
      * Sets up the window when Android creates the activity: system splash first, then the
@@ -52,6 +58,12 @@ class MainActivity : ComponentActivity() {
             KansoTheme(themeMode, themeColour) {
                 KansoNavHost()
             }
+        }
+        // Each time the theme colour changes (and once at start, which also catches a wallpaper
+        // that changed while Kanso was closed), show the launcher icon in the closest colour.
+        // lifecycleScope stops collecting when the activity is destroyed.
+        lifecycleScope.launch {
+            settings.themeColour.collect { colour -> launcherIcons.show(launcherIcons.iconFor(colour)) }
         }
     }
 }

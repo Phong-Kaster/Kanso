@@ -1,5 +1,7 @@
 # Kanso is a Material 3 Expressive app, blue by default, with one editor for the five editing tools
 
+> **Superseded in part by [ADR-002](ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md) (2026-10-12):** the owner reversed this record's one-editor decision; each tool now has its own screen. Everything else here stands.
+
 While approving Run 3 (2026-10-07), the owner found Kanso's interface "too minimal": plain text rows, no icons
 and almost no motion. They asked for some colour, an icon for each feature, transitions, a loading
 animation and press effects, all built on the Jetpack Compose animation APIs. On 2026-10-09 they

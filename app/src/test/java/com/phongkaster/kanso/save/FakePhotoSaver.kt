@@ -1,5 +1,6 @@
 package com.phongkaster.kanso.save
 
+import android.graphics.Bitmap
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.photo.SaveResult
 import java.util.concurrent.CopyOnWriteArrayList
@@ -16,8 +17,11 @@ class FakePhotoSaver(
     val gate: CompletableDeferred<Unit>? = null,
 ) : PhotoSaver {
 
-    /** The source Uri of every save asked for, oldest first. */
+    /** The source Uri of every save of an unedited photo asked for, oldest first. */
     val calls = CopyOnWriteArrayList<String>()
+
+    /** The bitmap of every save of an edited picture asked for, oldest first. */
+    val bitmapCalls = CopyOnWriteArrayList<Bitmap>()
 
     /** Answers [needsPermission]. */
     override fun needsWritePermission(): Boolean = needsPermission
@@ -25,6 +29,13 @@ class FakePhotoSaver(
     /** Records the call, waits for [gate] if any, and answers [result]. */
     override suspend fun save(sourceUri: String): SaveResult {
         calls += sourceUri
+        gate?.await()
+        return result
+    }
+
+    /** Records the edited bitmap, waits for [gate] if any, and answers [result]. */
+    override suspend fun save(bitmap: Bitmap): SaveResult {
+        bitmapCalls += bitmap
         gate?.await()
         return result
     }

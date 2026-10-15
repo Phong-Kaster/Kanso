@@ -60,6 +60,30 @@ object ToolFixtures {
         return bitmap
     }
 
+    /** The width, in pixels, of each stripe of [narrowStripes]. */
+    const val STRIPE_PX = 8
+
+    /**
+     * Draws the narrow striped photo of the backdrop's checks (DoD 27): 300 x 800 pixels, its
+     * upper half vertical red-and-white stripes [STRIPE_PX] pixels wide, its lower half
+     * blue-and-white stripes. Red stripes start at x = 0, so they cover x = 0..7, 16..23 and so on.
+     */
+    fun narrowStripes(): Bitmap {
+        val width = 300
+        val height = 800
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        canvas.drawColor(Color.WHITE)
+        val paint = Paint()
+        for (left in 0 until width step 2 * STRIPE_PX) {
+            paint.color = Color.RED
+            canvas.drawRect(left.toFloat(), 0f, (left + STRIPE_PX).toFloat(), height / 2f, paint)
+            paint.color = Color.BLUE
+            canvas.drawRect(left.toFloat(), height / 2f, (left + STRIPE_PX).toFloat(), height.toFloat(), paint)
+        }
+        return bitmap
+    }
+
     /**
      * Writes [bitmap] as a JPEG into [file] and, if [orientation] is given, stores that EXIF
      * orientation tag (1 to 8) in it, as a camera would.

@@ -2,47 +2,41 @@ package com.phongkaster.kanso.ui.saved
 
 import android.content.ActivityNotFoundException
 import android.graphics.Bitmap
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ButtonGroupMenuState
-import androidx.compose.material3.ButtonGroupScope
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -73,67 +69,78 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.common.BlurredBackdrop
+import com.phongkaster.kanso.ui.common.RoundIconButton
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.launch
 
-/** The test tag on the root of the Saved screen. */
+/** The test tag on the root of the Saved screen (and of the photo viewer, which is the same screen). */
 const val SAVED_SCREEN_TAG = "saved-screen"
 
 /** The test tag on the saved photo. */
 const val SAVED_PHOTO_TAG = "saved-photo"
 
 /**
- * The test tag on the success mark, the small badge above the photo that grows and changes shape
- * once when the screen appears (see [SavedMark]). The same node carries the mark's content
- * description, so a screen reader can say that the photo was saved.
+ * The test tag on the blurred copy of the photo that fills the whole window behind it (see
+ * [BlurredBackdrop]).
+ */
+const val SAVED_BACKDROP_TAG = "saved-backdrop"
+
+/** The test tag on the soft shade at the top of the screen, behind the close button and the title. */
+const val SAVED_SCRIM_TAG = "saved-scrim"
+
+/** The test tag on the round close button at the top left, which goes back to Home. */
+const val SAVED_CLOSE_TAG = "saved-close"
+
+/** The test tag on the title beside the close button: "Saved", or "My edits" for the viewer. */
+const val SAVED_TITLE_TAG = "saved-title"
+
+/**
+ * The test tag on the success mark, the small badge over the top of the photo that grows and
+ * changes shape once when the screen appears after a save (see [SavedMark]). The same node carries
+ * the mark's content description, so a screen reader can say that the photo was saved. The photo
+ * viewer never shows it.
  */
 const val SAVED_MARK_TAG = "saved-mark"
 
+/** The test tag on the line saying where the photo was saved, shown only right after a save. */
+const val SAVED_MESSAGE_TAG = "saved-message"
+
 /**
- * The test tag on the loading indicator shown in the middle of the photo area while the saved
- * photo is being decoded. It is gone as soon as the photo is shown, or as soon as the photo turns
- * out to be unreadable.
+ * The test tag on the loading indicator shown in the middle of the screen while the photo is being
+ * decoded. It is gone as soon as the photo is shown, or as soon as the photo turns out to be
+ * unreadable.
  */
 const val SAVED_LOADING_TAG = "saved-loading"
 
-/**
- * The test tag on the button group that holds the three actions. The Share, Edit another and Home
- * buttons are its descendants in the semantics tree (the tree tests and screen readers read).
- */
-const val SAVED_ACTIONS_TAG = "saved-actions"
-
-/** The test tag on the Share button. */
+/** The test tag on the round Share button at the bottom left. */
 const val SAVED_SHARE_TAG = "saved-share"
 
-/** The test tag on the Edit another button. */
+/**
+ * The test tag on the wide button beside Share: "Edit another" after a save, "Edit" in the photo
+ * viewer.
+ */
 const val SAVED_EDIT_ANOTHER_TAG = "saved-edit-another"
 
-/** The test tag on the Home button. */
-const val SAVED_HOME_TAG = "saved-home"
-
 /**
- * The test tag on the icon inside the Share button. The icon has no content description (the
- * label beside it names the action), so without a tag of its own a test could not find it; the
- * tag is read in the unmerged semantics tree, because a button merges what is inside it into one
- * node (see [ActionLabel]).
+ * The test tag on the icon inside the wide button. The icon has no content description (the label
+ * beside it names the action), and a button merges what is inside it into one node of the
+ * semantics tree (the tree tests and screen readers read), so a test finds the icon by this tag in
+ * the unmerged tree. A test tag is never read aloud.
  */
-const val SAVED_SHARE_ICON_TAG = "saved-share-icon"
-
-/** The test tag on the icon inside the Edit another button (see [SAVED_SHARE_ICON_TAG]). */
 const val SAVED_EDIT_ANOTHER_ICON_TAG = "saved-edit-another-icon"
-
-/** The test tag on the icon inside the Home button (see [SAVED_SHARE_ICON_TAG]). */
-const val SAVED_HOME_ICON_TAG = "saved-home-icon"
 
 /**
  * A semantics property carrying the Uri (as text) of the photo the Saved screen shows, so a test
@@ -143,32 +150,37 @@ const val SAVED_HOME_ICON_TAG = "saved-home-icon"
 val SAVED_PHOTO_URI_KEY = SemanticsPropertyKey<String>("SavedPhotoUriKey")
 
 /**
- * The smallest height of an action button: Material 3's medium button height, 56 dp, which clears
- * Android's smallest touch target (48 dp). It is also exactly what a label of two lines needs
- * (2 x 20 dp of text plus 2 x 8 dp of padding, see [ACTION_PADDING]), so a button whose label
- * wraps is no taller than its neighbours at the normal font size.
+ * How tall the shade at the top is, below the status bar: enough to sit behind the close button,
+ * the title and a little more, so the shade ends softly rather than at the button's edge.
  */
-private val ACTION_MIN_HEIGHT = ButtonDefaults.MediumContainerHeight
+private val SCRIM_HEIGHT = 120.dp
 
 /**
- * The space inside an action button, around its icon and label: 12 dp on each side and 8 dp above
- * and below. The Material default is wider (16 dp on each side) and taller (10 dp); three buttons
- * share one row of a phone, so every dp given to the padding is taken from the label.
+ * How far below the status bar the shade keeps its full strength before it starts to fade: the whole
+ * top row (8 dp, the 48 dp close button, 8 dp), so the title is drawn over an evenly shaded
+ * background from its first pixel row to its last, and does not sit in the fade where a white photo
+ * would lower its contrast.
  */
-private val ACTION_PADDING = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+private val SCRIM_HOLD = 64.dp
 
 /**
- * How far a pressed action button may squeeze its neighbours, and so how far it grows. Unless told
- * otherwise the group allows as much as a Material button's end padding, 24 dp, which would squeeze
- * a neighbour's label onto an extra line while a finger is down; a few dp still shows the press
- * without moving any text.
+ * The strength of the shade at its top: 85 % of the surface colour over the photo, enough for the
+ * title and the status bar to read on any photo, while a hint of the photo still shows through.
  */
-private val PRESS_COMPRESSION = 4.dp
+private const val SCRIM_TOP_ALPHA = 0.85f
+
+/** The space around the top row (close button and title) and the bottom row (Share and the wide button). */
+private val EDGE_MARGIN = 16.dp
+
+/** The space above and below the top row's 48 dp close button. */
+private val TOP_ROW_VERTICAL_PADDING = 8.dp
+
+/** The height of the round close button, and so of the top row without its padding. */
+private val TOP_ROW_BUTTON_SIZE = 48.dp
 
 /**
- * The width and height of the success mark: large enough to read at a glance, small enough to
- * leave nearly all of the space between the top bar and the actions to the photo, even on a small
- * phone.
+ * The width and height of the success mark: large enough to read at a glance, small enough not to
+ * hide much of the photo it sits on.
  */
 private val MARK_SIZE = 64.dp
 
@@ -178,40 +190,54 @@ private val MARK_SIZE = 64.dp
  */
 private val MARK_CHECK_SIZE = 32.dp
 
+/** How far below the photo's top edge the success mark sits, when the photo starts high enough. */
+private val MARK_PHOTO_INSET = 16.dp
+
 /**
- * The screen shown after a photo is saved: a top bar titled "Saved", a small success mark that
- * grows and changes shape once to say the save worked (see [SavedMark]), the saved photo upright,
- * the message that it is in Pictures/Kanso, and three actions at the bottom: Share, Edit another
- * and Home.
+ * The lowest the success mark's centre may be, as a share of the window's height: 0.2 keeps it in
+ * the top quarter of the window, over the top of the photo, whatever the photo's shape.
+ */
+private const val MARK_MAX_CENTRE_FRACTION = 0.2f
+
+/**
+ * The Saved screen, in its two uses: right after a photo is saved, and as the photo viewer, a
+ * photo opened from the My edits tab. Either way it shows one finished photo, whole and as large
+ * as fits, over a soft blurred copy of itself that fills the window; a shade at the top behind a
+ * round close button and the title; and at the bottom a round Share button beside one wide
+ * button. After a save the title is "Saved", a success mark plays once over the top of the photo,
+ * a line says the photo is in Pictures/Kanso, and the wide button is "Edit another". In the viewer
+ * the title is "My edits", there is no mark and no line, and the wide button is "Edit".
  *
- * [viewModel] holds what the screen shows: the saved photo's Uri (the text of the Uri the save
- * returned) and that photo, decoded as the tool screen decodes one, in the background, upright,
- * and no larger than twice the screen's longest edge. This function works out that size and asks
- * the ViewModel for the photo. The navigation entry builds the ViewModel from the screen's key;
- * tests build it with a loader that hands back a fixed picture.
+ * [viewModel] holds what the screen shows: the photo's Uri (the text of the Uri the save returned,
+ * or of the tile tapped in My edits), whether this is the viewer, and that photo decoded as the
+ * tool screen decodes one, in the background, upright, and no larger than twice the screen's
+ * longest edge. This function works out that size and asks the ViewModel for the photo. The
+ * navigation entry builds the ViewModel from the screen's key; tests build it with a loader that
+ * hands back a fixed picture.
  *
  * Like Home, this screen is split in two (state hoisting; see `HomeScreen`). This function is the
  * stateful part: it reads the ViewModel's state, asks for the photo, runs the share logic and
  * hands the results to the stateless [SavedContent], which does the drawing and is what the
- * preview shows.
+ * previews show.
  *
  * Share opens Android's share sheet for the photo (see [shareChooserIntent]) and then calls
  * [onShare]. On Android 8.1 and 9 the save gives a `file://` Uri, which must never leave the
  * app, so the photo's `content://` Uri is looked up first (see [shareableUri]); that lookup runs
- * in the background, and Share cannot be tapped again while it runs. If no content Uri can be
- * found, the share sheet does not open and [onShare] is not called. The share stays here rather
+ * in the background, and a second tap on Share while it runs does nothing. If no content Uri can
+ * be found, the share sheet does not open and [onShare] is not called. The share stays here rather
  * than in the ViewModel because opening the share sheet needs the Activity's context.
  *
- * [onEditAnother] goes back to the gallery of the tool the photo was saved from (the navigation
- * entry reads that tool from the screen's key); [onHome] goes back to Home. There is no back
- * arrow: system Back already goes Home.
+ * [onEditAnother] is the wide button: after a save the navigation entry opens the gallery of the
+ * tool the photo was saved from; in the viewer it opens this photo in the Edit tool. [onClose] is
+ * the round close button at the top left: the navigation entry goes back to Home. System Back is
+ * left to the navigation: it goes Home after a save, and back to the grid from the viewer.
  */
 @Composable
 fun SavedScreen(
     viewModel: SavedViewModel,
-    onShare: () -> Unit,
-    onEditAnother: () -> Unit,
-    onHome: () -> Unit,
+    onShare: () -> Unit = {},
+    onEditAnother: () -> Unit = {},
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -251,7 +277,7 @@ fun SavedScreen(
                     val uri = shareableUri(context, photoUri)
                     if (uri != null) {
                         val opened = try {
-                            context.startActivity(shareChooserIntent(uri, chooserTitle))
+                            context.startActivity(shareChooserIntent(uri, chooserTitle, shareMimeType(context, uri)))
                             true
                         } catch (_: ActivityNotFoundException) {
                             // Every phone has the share sheet; this only guards against a broken one.
@@ -271,97 +297,314 @@ fun SavedScreen(
         sharing = sharing,
         onShare = share,
         onEditAnother = onEditAnother,
-        onHome = onHome,
+        onClose = onClose,
         modifier = modifier,
     )
 }
 
 /**
- * The stateless part of the Saved screen (see [SavedScreen] for why there are two): draws the top
- * bar, the success mark, the photo area and the bottom actions from [state], and reports every
- * tap through a callback.
+ * The stateless part of the Saved screen (see [SavedScreen] for why there are two): draws [state]
+ * in layers, back to front, and reports every tap through a callback.
  *
- * Between the top bar and the actions the screen is one column: the success mark ([SavedMark])
- * at the top, centred, and under it the photo area, which takes all the height the mark leaves.
- * The photo area shows the loading indicator ([SavedLoadingIndicator]) while the photo is being
- * decoded, then the photo as large as fits; a photo that cannot be read leaves it empty (the
- * photo is saved all the same, and the message at the bottom says so).
+ * 1. The window's background colour, which shows only while the photo is still being decoded (with
+ *    the loading indicator, [SavedLoadingIndicator], in the middle) or if it cannot be read.
+ * 2. Once decoded: a [BlurredBackdrop] of the photo filling the whole window, and on it the photo
+ *    itself ([PhotoView]), whole, centred and as large as fits, so it touches two opposite edges of
+ *    the window and the soft copy fills the space left at the other two.
+ * 3. The shade at the top ([TopShade]) and, over it, the round close button and the title
+ *    ([TopRow]).
+ * 4. After a save only: the success mark ([SavedMark]) over the top of the photo.
+ * 5. The bottom row ([BottomActions]): the "saved" line after a save, then Share and the wide
+ *    button, lifted clear of the phone's gesture zone.
  *
- * [state] holds the photo, shown once it is decoded, and its Uri, which is only carried onto the
- * photo's semantics so tests can tell which photo is shown. [sharing] is true while a share is
- * being prepared, which turns the Share button off. Nothing here loads a picture or opens the
- * share sheet, so a preview can draw it from sample data.
+ * `BoxWithConstraints` is a Box that also tells its content how much room it has (`maxWidth`,
+ * `maxHeight`); the mark uses it to work out where the top of the photo is (see [markCentreY]).
+ *
+ * [state] holds the photo, its Uri (only carried onto the photo's semantics so tests can tell which
+ * photo is shown) and whether this is the viewer. [sharing] is true while a share is being
+ * prepared; Share then ignores taps. [onShare], [onEditAnother] and [onClose] are the three
+ * buttons. Nothing here loads a picture or opens the share sheet, so a preview can draw it from
+ * sample data.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SavedContent(
     state: SavedUiState,
     sharing: Boolean,
     onShare: () -> Unit,
     onEditAnother: () -> Unit,
-    onHome: () -> Unit,
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(
-        modifier = modifier.testTag(SAVED_SCREEN_TAG),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.saved_title),
-                        // headlineSmallEmphasized is one of the "Emphasized" text styles that Material 3
-                        // Expressive adds: the same size family as headlineSmall, but bolder, so the
-                        // title stands out from the body text.
-                        style = MaterialTheme.typography.headlineSmallEmphasized,
-                    )
-                },
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    BoxWithConstraints(
+        modifier = modifier
+            .testTag(SAVED_SCREEN_TAG)
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center,
+    ) {
+        val photo = state.photo
+        when (photo) {
+            // Decoding takes a moment; meanwhile an indicator moves in the middle of the window.
+            SavedPhoto.Loading -> SavedLoadingIndicator()
+            // A photo that cannot be read leaves the window plain: it is saved all the same.
+            SavedPhoto.Unreadable -> Unit
+            is SavedPhoto.Ready -> {
+                // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and remember
+                // keeps the wrapper between redraws, so the backdrop's tiny copy is made once.
+                val image = remember(photo.bitmap) { photo.bitmap.asImageBitmap() }
+                BlurredBackdrop(photo = image, modifier = Modifier.testTag(SAVED_BACKDROP_TAG))
+                PhotoView(image = image, photoUri = state.photoUri)
+            }
+        }
+
+        TopShade(
+            statusBarTop = statusBarTop,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
+        TopRow(
+            viewer = state.viewer,
+            onClose = onClose,
+            modifier = Modifier.align(Alignment.TopStart),
+        )
+
+        // The viewer shows a photo saved some time ago: there is nothing to celebrate.
+        if (!state.viewer) {
+            val centreY = markCentreY(
+                photo = photo,
+                boxWidth = maxWidth,
+                boxHeight = maxHeight,
+                statusBarTop = statusBarTop,
             )
-        },
-        bottomBar = {
-            SavedActions(
-                shareEnabled = !sharing,
-                onShare = onShare,
-                onEditAnother = onEditAnother,
-                onHome = onHome,
-            )
-        },
-    ) { innerPadding ->
-        // innerPadding is the space the top bar and the actions take; the mark and the photo
-        // stay between.
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            SavedMark()
-            Box(
+            SavedMark(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    // weight(1f) gives the photo area all the height the mark leaves, so the photo
-                    // stays as large as fits.
-                    .weight(1f),
-                contentAlignment = Alignment.Center,
+                    .align(Alignment.TopCenter)
+                    // offset moves the mark down from the top edge; its node moves with it.
+                    .offset(y = centreY - MARK_SIZE / 2),
+            )
+        }
+
+        BottomActions(
+            viewer = state.viewer,
+            sharing = sharing,
+            onShare = onShare,
+            onEditAnother = onEditAnother,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+/**
+ * Returns how far from the window's top the success mark's centre goes, in a window [boxWidth] by
+ * [boxHeight] with a status bar [statusBarTop] tall, for [photo].
+ *
+ * The mark sits over the top of the photo: [MARK_PHOTO_INSET] below the photo's top edge. A photo
+ * shown whole is centred, so a wide one starts low; the mark then stays at most
+ * [MARK_MAX_CENTRE_FRACTION] of the window down, in the top quarter, where the eye looks first.
+ * And it never rises into the top row: its top stays 8 dp below the close button. While the photo
+ * is not decoded its top is unknown, so only the two limits apply.
+ */
+private fun markCentreY(photo: SavedPhoto, boxWidth: Dp, boxHeight: Dp, statusBarTop: Dp): Dp {
+    val lowest = boxHeight * MARK_MAX_CENTRE_FRACTION
+    val highest = statusBarTop + TOP_ROW_VERTICAL_PADDING * 2 + TOP_ROW_BUTTON_SIZE + 8.dp + MARK_SIZE / 2
+    val overPhoto = if (photo is SavedPhoto.Ready && boxWidth > 0.dp && boxHeight > 0.dp) {
+        val photoRatio = photo.bitmap.width.toFloat() / photo.bitmap.height.toFloat()
+        val boxRatio = boxWidth / boxHeight
+        // A photo wider (in shape) than the window fills its width; a taller one fills its height.
+        val photoHeight = if (photoRatio >= boxRatio) boxWidth / photoRatio else boxHeight
+        val photoTop = (boxHeight - photoHeight) / 2
+        photoTop + MARK_PHOTO_INSET + MARK_SIZE / 2
+    } else {
+        lowest
+    }
+    return minOf(overPhoto, lowest).coerceAtLeast(highest)
+}
+
+/**
+ * The soft shade across the top of the screen, behind the close button and the title, so they and
+ * the status bar read on any photo, light or dark. It is [SCRIM_HEIGHT] tall plus the status bar
+ * ([statusBarTop]), full width; [modifier] places it.
+ *
+ * What a `Brush` is: whatever Compose paints an area with. The simplest brush is one plain colour;
+ * a gradient brush paints a colour that changes smoothly across the area. A "gradient" is that
+ * smooth change: here `Brush.verticalGradient` goes from top to bottom through a few "colour
+ * stops", each a position (0 is the top edge, 1 the bottom) paired with a colour, and blends
+ * between neighbouring stops.
+ *
+ * The colour is the theme's `surface` role at every stop, only its alpha (its opacity) changes:
+ * [SCRIM_TOP_ALPHA] at the top, held over the status bar and [SCRIM_HOLD] below it, then fading
+ * to 0 at the bottom. Fading the same colour, rather than fading to `Color.Transparent`, matters:
+ * transparent is "black with alpha 0", so a fade towards it would pass through greyish tones
+ * halfway. With one role the shade is light in light mode and dark in dark mode, and the title in
+ * `onSurface`, the colour made to read on `surface`, always stands out on it.
+ */
+@Composable
+private fun TopShade(statusBarTop: Dp, modifier: Modifier = Modifier) {
+    val surface = MaterialTheme.colorScheme.surface
+    val height = statusBarTop + SCRIM_HEIGHT
+    // Where, from 0 to 1, the shade stops holding its full strength and starts fading.
+    val holdEnd = (statusBarTop + SCRIM_HOLD) / height
+    val brush = Brush.verticalGradient(
+        0f to surface.copy(alpha = SCRIM_TOP_ALPHA),
+        holdEnd to surface.copy(alpha = SCRIM_TOP_ALPHA),
+        1f to surface.copy(alpha = 0f),
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .testTag(SAVED_SCRIM_TAG)
+            .background(brush),
+    )
+}
+
+/**
+ * The top row, over the shade and below the status bar: the round close button at the left (calls
+ * [onClose]; the navigation goes Home) and the title beside it, "Saved", or "My edits" when
+ * [viewer]. The title is marked as a heading, so a screen reader can jump to it. [modifier] places
+ * the row.
+ */
+@Composable
+private fun TopRow(viewer: Boolean, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    val title = stringResource(if (viewer) R.string.saved_layout_viewer_title else R.string.saved_title)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            // Below the status bar, whose height the system reports as a window inset.
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(horizontal = EDGE_MARGIN, vertical = TOP_ROW_VERTICAL_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RoundIconButton(
+            onClick = onClose,
+            iconRes = R.drawable.ic_close,
+            contentDescription = stringResource(R.string.saved_layout_close),
+            modifier = Modifier.testTag(SAVED_CLOSE_TAG),
+        )
+        Text(
+            text = title,
+            // titleLargeEmphasized is one of the "Emphasized" text styles Material 3 Expressive
+            // adds: the size of titleLarge, but bolder, so the title stands out over the photo.
+            style = MaterialTheme.typography.titleLargeEmphasized,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .testTag(SAVED_TITLE_TAG)
+                .semantics { heading() },
+        )
+    }
+}
+
+/**
+ * The bottom of the screen: after a save (when not [viewer]) the line saying the photo is in
+ * Pictures/Kanso, then one row with the round Share button at the left (calls [onShare], ignored
+ * while [sharing]) and the wide button filling the rest (calls [onEditAnother]): "Edit another"
+ * after a save, "Edit" in the viewer.
+ *
+ * The row spans the window's width less [EDGE_MARGIN] at each side, so the wide button is always
+ * many times wider than Share. Both are centred on the same line: Share is a 48 dp circle, the
+ * wide button Material 3 Expressive's 56 dp medium button.
+ *
+ * Window insets are the strips along the screen's edges that the system draws on or listens on.
+ * The one that matters here is at the bottom: the gesture zone, where a swipe up means "go home".
+ * It is not always the navigation bar's height (with swipe gestures on and the hint hidden, the
+ * navigation bar is 0 dp tall while the gesture zone is still there), so the row pads itself by
+ * whichever of the two is taller (`union`), then keeps a small margin above that, as the tool
+ * screen's Save button does. [modifier] places the whole block.
+ */
+@Composable
+private fun BottomActions(
+    viewer: Boolean,
+    sharing: Boolean,
+    onShare: () -> Unit,
+    onEditAnother: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val height = ButtonDefaults.MediumContainerHeight
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+            )
+            .padding(horizontal = EDGE_MARGIN, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (!viewer) SavedMessage()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            RoundIconButton(
+                // The stateful screen already ignores a second tap while a share is prepared; the
+                // check here keeps the stateless part honest on its own.
+                onClick = { if (!sharing) onShare() },
+                iconRes = R.drawable.ic_share,
+                contentDescription = stringResource(R.string.saved_share),
+                modifier = Modifier.testTag(SAVED_SHARE_TAG),
+            )
+            Button(
+                onClick = onEditAnother,
+                // A set of shapes rather than one: the button squares its corners a little while
+                // pressed, animated with the theme's motion scheme.
+                shapes = ButtonDefaults.shapesFor(height),
+                contentPadding = ButtonDefaults.contentPaddingFor(height, hasStartIcon = true),
+                modifier = Modifier
+                    // weight(1f) gives the button all the width Share leaves.
+                    .weight(1f)
+                    .heightIn(min = height)
+                    .testTag(SAVED_EDIT_ANOTHER_TAG),
             ) {
-                when (val current = state.photo) {
-                    // Decoding takes a moment; meanwhile an indicator moves in the middle of the area.
-                    SavedPhoto.Loading -> SavedLoadingIndicator()
-                    // A photo that cannot be read leaves the area empty: it is saved all the same,
-                    // and the message below says so.
-                    SavedPhoto.Unreadable -> Unit
-                    is SavedPhoto.Ready -> PhotoView(bitmap = current.bitmap, photoUri = state.photoUri)
-                }
+                // No description of its own: the label next to it already says it.
+                Icon(
+                    painter = painterResource(R.drawable.ic_edit),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(ButtonDefaults.iconSizeFor(height))
+                        .testTag(SAVED_EDIT_ANOTHER_ICON_TAG),
+                )
+                Spacer(Modifier.size(ButtonDefaults.iconSpacingFor(height)))
+                Text(
+                    text = stringResource(if (viewer) R.string.saved_layout_viewer_edit else R.string.saved_edit_another),
+                    style = ButtonDefaults.textStyleFor(height),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
 }
 
 /**
- * The success mark above the photo, with its animation: it plays once when the screen appears and
- * then rests. The drawing itself is [SavedMarkBadge]; this function only moves the two numbers
- * that the drawing reads.
+ * The line "Your photo is saved in Pictures/Kanso." above the bottom row, shown only right after a
+ * save. It sits on a small rounded card in the theme's `surfaceContainerHigh` colour, with text in
+ * `onSurface`, so it reads over any photo in light and in dark.
+ */
+@Composable
+private fun SavedMessage() {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.testTag(SAVED_MESSAGE_TAG),
+    ) {
+        Text(
+            text = stringResource(R.string.saved_message),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
+
+/**
+ * The success mark over the top of the photo, with its animation: it plays once when the screen
+ * appears and then rests. The drawing itself is [SavedMarkBadge]; this function only moves the two
+ * numbers that the drawing reads.
  *
  * The mark is told in two steps, one after the other:
  *
@@ -444,8 +687,6 @@ private fun SavedMark(modifier: Modifier = Modifier) {
  * The progress handed to the morph is kept between 0 and 1 (`coerceIn`): a spring overshoots its
  * target, and a morph pushed past its last shape would bend the cookie beyond its design. The size
  * is allowed to overshoot, because a mark that grows a little too far and springs back reads well.
- * (Material's own loading indicator does the same: it keeps its morph progress in range and lets
- * the size carry the bounce.)
  *
  * The shape is painted in `drawBehind`, which draws under the node's content (the check) in the
  * node's own space. The node itself keeps its full size and place whatever the growth, so a test
@@ -508,16 +749,16 @@ private fun SavedMarkBadge(growth: Float, morphProgress: Float, modifier: Modifi
 }
 
 /**
- * The loading indicator in the middle of the photo area while the saved photo is being decoded,
- * so the person sees that the photo is on its way instead of an empty space.
+ * The loading indicator in the middle of the window while the photo is being decoded, so the
+ * person sees that the photo is on its way instead of an empty screen.
  *
  * `LoadingIndicator` is Material 3 Expressive's way of saying "please wait": a small rounded shape
- * that keeps morphing into the next one while it slowly turns (the editor's photo area shows the
- * same one, see `ToolScreen`). Called without a progress value, it does not know how long the wait
- * will last, so it animates for as long as it is shown; it goes away by itself as soon as the photo
- * is ready or turns out to be unreadable, because the photo area then draws that instead. It is
- * still marked experimental in Material3 1.5.0-beta01, hence the opt-in. It keeps its standard
- * 48 dp box and its default colour, the theme's primary.
+ * that keeps morphing into the next one while it slowly turns (the tool screen's photo card shows
+ * the same one). Called without a progress value, it does not know how long the wait will last,
+ * so it animates for as long as it is shown; it goes away by itself as soon as the photo is ready
+ * or turns out to be unreadable, because the screen then draws that instead. It is still marked
+ * experimental in Material3 1.5.0-beta01, hence the opt-in. It keeps its standard 48 dp box and
+ * its default colour, the theme's primary.
  *
  * It shows no text; its content description, set on its own modifier, is what a screen reader
  * says. Because it never stops by itself, no preview shows it, and a test that shows it pauses the
@@ -536,316 +777,29 @@ private fun SavedLoadingIndicator() {
 }
 
 /**
- * Draws [bitmap] as large as fits, keeping its shape, and marks the image node with [photoUri]
- * so tests can tell which photo is shown.
+ * Draws [image] whole, as large as fits in the window, keeping its shape, and marks the image node
+ * with [photoUri] so tests can tell which photo is shown.
  */
 @Composable
-private fun PhotoView(bitmap: Bitmap, photoUri: String) {
-    val image = remember(bitmap) { bitmap.asImageBitmap() }
+private fun PhotoView(image: ImageBitmap, photoUri: String) {
     Image(
         bitmap = image,
         contentDescription = stringResource(R.string.saved_photo_description),
         // Fit: never cropped, never stretched.
         contentScale = ContentScale.Fit,
+        // aspectRatio sizes the image node itself to the photo's shape, the largest that fits the
+        // window, so the node's bounds are exactly where the photo is drawn: it touches the window
+        // in one direction, and the blurred backdrop shows in the space left in the other.
         modifier = Modifier
-            .aspectRatio(bitmap.width.toFloat() / bitmap.height.toFloat())
+            .aspectRatio(image.width.toFloat() / image.height.toFloat())
             .testTag(SAVED_PHOTO_TAG)
             .semantics { this[SAVED_PHOTO_URI_KEY] = photoUri },
     )
 }
 
 /**
- * The bottom of the screen: the "saved" message, and under it the three actions, Share, Edit
- * another and Home, side by side in one row.
- *
- * The row is a [ButtonGroup], a layout that Material 3 Expressive adds for a few related buttons.
- * Next to a plain Row it does two extra things: the button under a finger grows a little and
- * squeezes its neighbours (see [PRESS_COMPRESSION]), which makes a press feel physical; and
- * buttons that do not fit the row move into a menu behind a "more" button instead of being cut
- * off. Three details are worth knowing, because each one is a trap the first time:
- *
- * - The braces after `ButtonGroup(...)` are not composable code. They only list the items, and
- *   the group draws them later. So the three labels are read with `stringResource` here, above the
- *   group, where a composable call is allowed.
- * - Every item has a weight (see [ActionButton]). An item without one is as wide as its label,
- *   and when the labels together are wider than the row (a big font on a small phone) the last
- *   buttons slide into the overflow menu. With a weight on every item, the three buttons always
- *   split the whole row between them, so all three are always on screen, and a label that is too
- *   long wraps onto a second line instead of making a button disappear.
- * - `clickableItem`, the short way to add an item, builds its own button, so there is no place to
- *   attach a test tag. `customItem` takes the button as a composable, so each tag goes on a button
- *   built in this file, and the group carries its own tag, [SAVED_ACTIONS_TAG]. The buttons are
- *   then children of the group in the semantics tree (the tree of nodes that tests and screen
- *   readers read instead of looking at pixels).
- *
- * `verticalAlignment = Alignment.CenterVertically` keeps the buttons centred on one line even if
- * one label wraps and its button gets taller than the others. The bar sits on the theme's surface
- * colour with the theme's text and button colours, so it reads well in light and dark.
- *
- * The bar is at the very bottom of the screen, where the system keeps two strips for itself, and
- * the buttons are lifted clear of both (the comment on the Column below shows how):
- *
- * - the navigation bar, which holds the back, home and recents buttons or the thin gesture hint,
- *   and which the system draws on top of the app;
- * - the bottom gesture zone, where a swipe up means "go home". The system reads a touch there as
- *   the start of a gesture, so a button inside it can bring up the phone's own navigation instead
- *   of being tapped. It is not always as tall as the navigation bar: with the navigation bar
- *   hidden, or with swipe gestures on and the gesture hint turned off (as One UI allows on the
- *   owner's Galaxy A13), the navigation bar is 0 dp tall but the gesture zone is still there.
- *   Padding by the navigation bar alone would then leave the buttons inside the gesture zone.
- *
- * Every button is at least 56 dp tall. [shareEnabled] is false while a share is being prepared.
- */
-@Composable
-private fun SavedActions(
-    shareEnabled: Boolean,
-    onShare: () -> Unit,
-    onEditAnother: () -> Unit,
-    onHome: () -> Unit,
-) {
-    val shareLabel = stringResource(R.string.saved_share)
-    val editAnotherLabel = stringResource(R.string.saved_edit_another)
-    val homeLabel = stringResource(R.string.saved_home)
-
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier
-                // Window insets are the strips along the screen's edges that the system draws on
-                // (the navigation bar) or listens on (the gesture zones). `only(Bottom)` keeps just
-                // the bottom gesture zone: the left and right ones are where the back swipe
-                // starts, and padding them would only narrow the row. `union` then takes, on each
-                // side, the larger of the two insets, so the bottom padding is the navigation
-                // bar's height or the gesture zone's, whichever is taller, never the two added
-                // together. The padding sits inside the Surface, so the Surface's colour still
-                // runs down behind the navigation bar while the buttons stay above both strips.
-                .windowInsetsPadding(
-                    WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
-                )
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.saved_message),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            ButtonGroup(
-                // The "more" button the group shows if its items ever did not fit; it opens a menu
-                // with the items that did not. With the weights below nothing overflows, but an
-                // empty indicator would make an overflowing item impossible to reach.
-                overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(SAVED_ACTIONS_TAG),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Each customItem is one button in the row (buttonGroupContent) plus the line the
-                // same action would have in the overflow menu (menuContent). The relative widths
-                // are 1 : 1.3 : 1: "Edit another" is the longest label, so on a phone it gets a
-                // little more of the row and still fits on one line, while Share and Home keep
-                // theirs on one line too.
-                customItem(
-                    buttonGroupContent = {
-                        ActionButton(
-                            label = shareLabel,
-                            icon = R.drawable.ic_share,
-                            onClick = onShare,
-                            tag = SAVED_SHARE_TAG,
-                            iconTag = SAVED_SHARE_ICON_TAG,
-                            relativeWidth = 1f,
-                            primary = true,
-                            enabled = shareEnabled,
-                        )
-                    },
-                    menuContent = { menu ->
-                        ActionMenuItem(
-                            label = shareLabel,
-                            icon = R.drawable.ic_share,
-                            onClick = onShare,
-                            enabled = shareEnabled,
-                            menu = menu,
-                        )
-                    },
-                )
-                customItem(
-                    buttonGroupContent = {
-                        ActionButton(
-                            label = editAnotherLabel,
-                            icon = R.drawable.ic_edit,
-                            onClick = onEditAnother,
-                            tag = SAVED_EDIT_ANOTHER_TAG,
-                            iconTag = SAVED_EDIT_ANOTHER_ICON_TAG,
-                            relativeWidth = 1.3f,
-                        )
-                    },
-                    menuContent = { menu ->
-                        ActionMenuItem(
-                            label = editAnotherLabel,
-                            icon = R.drawable.ic_edit,
-                            onClick = onEditAnother,
-                            menu = menu,
-                        )
-                    },
-                )
-                customItem(
-                    buttonGroupContent = {
-                        ActionButton(
-                            label = homeLabel,
-                            icon = R.drawable.ic_home,
-                            onClick = onHome,
-                            tag = SAVED_HOME_TAG,
-                            iconTag = SAVED_HOME_ICON_TAG,
-                            relativeWidth = 1f,
-                        )
-                    },
-                    menuContent = { menu ->
-                        ActionMenuItem(
-                            label = homeLabel,
-                            icon = R.drawable.ic_home,
-                            onClick = onHome,
-                            menu = menu,
-                        )
-                    },
-                )
-            }
-        }
-    }
-}
-
-/**
- * One button of the action row: an icon and a label, in the group's filled style when [primary]
- * and in its softer tonal style otherwise (Share is the main action of this screen; Edit another
- * and Home are the ways out of it).
- *
- * This is an extension of [ButtonGroupScope], the receiver of the braces after `ButtonGroup(...)`,
- * and that is on purpose: the two modifiers below that only a group understands, `weight` and
- * `animateWidth`, are members of that scope, so they can only be called with it in hand.
- *
- * - `weight(relativeWidth)` gives the button a share of the row proportional to [relativeWidth],
- *   as `weight` does inside a Row, so the buttons always fill the row and none is pushed out.
- * - `animateWidth(interactionSource, ...)` lets the group watch this button's presses, and widen
- *   the pressed button while it narrows the others. The button must be given the same
- *   interaction source, which is what reports the presses.
- * - `heightIn(min = ACTION_MIN_HEIGHT)` and `testTag(tag)` are the usual size floor and test tag.
- *
- * `shapes = ButtonDefaults.shapes()` is what makes the button morph: it holds two shapes, a pill
- * at rest and a squarer one while pressed, and the button animates between them. [onClick] runs
- * when the button is tapped; [enabled] is false while a share is being prepared. The label may
- * take two lines, which is why [ActionLabel] allows them. [iconTag] is handed to [ActionLabel],
- * which puts it on the icon, so a test can check the icon is there.
- */
-@Composable
-private fun ButtonGroupScope.ActionButton(
-    label: String,
-    @DrawableRes icon: Int,
-    onClick: () -> Unit,
-    tag: String,
-    iconTag: String,
-    relativeWidth: Float,
-    primary: Boolean = false,
-    enabled: Boolean = true,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val modifier = Modifier
-        .weight(relativeWidth)
-        .animateWidth(interactionSource, PRESS_COMPRESSION)
-        .heightIn(min = ACTION_MIN_HEIGHT)
-        .testTag(tag)
-    val shapes = ButtonDefaults.shapes()
-
-    if (primary) {
-        Button(
-            onClick = onClick,
-            shapes = shapes,
-            modifier = modifier,
-            enabled = enabled,
-            contentPadding = ACTION_PADDING,
-            interactionSource = interactionSource,
-        ) {
-            ActionLabel(icon = icon, label = label, iconTag = iconTag)
-        }
-    } else {
-        FilledTonalButton(
-            onClick = onClick,
-            shapes = shapes,
-            modifier = modifier,
-            enabled = enabled,
-            contentPadding = ACTION_PADDING,
-            interactionSource = interactionSource,
-        ) {
-            ActionLabel(icon = icon, label = label, iconTag = iconTag)
-        }
-    }
-}
-
-/**
- * What goes inside an action button: the Material Symbols icon, a gap, and the label.
- *
- * The icon is drawn with `Icon(painterResource(...))`, which tints it with the button's content
- * colour (so it is readable on a filled button and on a tonal one, in light and in dark); it has
- * no content description because the label next to it already says what the button does. Its size
- * and the gap come from [ButtonDefaults] for the small button size, the size whose 14 sp label
- * text fits three to a row. The label may wrap to two lines, centred, and ends with an ellipsis if
- * a very large font needs more: a long label never hides the button.
- *
- * The icon carries the test tag [iconTag]. A button merges everything inside it into one node of
- * the semantics tree (the tree tests and screen readers read), and an icon with no description
- * adds nothing to that node, so the merged tree cannot tell a button with an icon from one
- * without. The unmerged tree keeps every tagged node inside the button as a node of its own, and
- * that is where a test looks for the icon by this tag. A test tag is never read aloud.
- */
-@Composable
-private fun ActionLabel(@DrawableRes icon: Int, label: String, iconTag: String) {
-    val sizeClass = ButtonDefaults.MinHeight
-    Icon(
-        painter = painterResource(icon),
-        contentDescription = null,
-        modifier = Modifier
-            .size(ButtonDefaults.iconSizeFor(sizeClass))
-            .testTag(iconTag),
-    )
-    Spacer(Modifier.size(ButtonDefaults.iconSpacingFor(sizeClass)))
-    Text(
-        text = label,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        textAlign = TextAlign.Center,
-    )
-}
-
-/**
- * The line an action has in the group's overflow menu: the icon and the same label, and the same
- * action as the button. It only ever shows if the group runs out of room. [menu] is the menu's
- * state, used to close the menu once an action is chosen.
- */
-@Composable
-private fun ActionMenuItem(
-    label: String,
-    @DrawableRes icon: Int,
-    onClick: () -> Unit,
-    menu: ButtonGroupMenuState,
-    enabled: Boolean = true,
-) {
-    DropdownMenuItem(
-        text = { Text(label) },
-        onClick = {
-            onClick()
-            menu.dismiss()
-        },
-        leadingIcon = { Icon(painter = painterResource(icon), contentDescription = null) },
-        enabled = enabled,
-    )
-}
-
-/**
- * A made-up photo for the preview: a warm sky-to-sand gradient with a sun, 600 by 800 pixels
- * (portrait), drawn with Android's Canvas so no file, camera or MediaStore is needed.
+ * A made-up photo for the previews: a warm sky-to-sand gradient with a sun, 600 by 800 pixels
+ * (portrait), drawn with Android's Canvas so no file or camera is needed.
  */
 private fun sampleBitmap(): Bitmap {
     val bitmap = Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888)
@@ -863,20 +817,38 @@ private fun sampleBitmap(): Bitmap {
     return bitmap
 }
 
-/** The sample photo the preview shows, wrapped the way a decoded photo is in the screen's state. */
+/**
+ * A second made-up photo for the viewer's preview: a 4:3 landscape picture, a warm
+ * orange-to-violet sunset gradient with a pale moon, so the blurred backdrop shows above and below it.
+ */
+private fun sampleWideBitmap(): Bitmap {
+    val bitmap = Bitmap.createBitmap(800, 600, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    paint.shader = android.graphics.LinearGradient(
+        0f, 0f, 800f, 600f,
+        0xFFFB8C00.toInt(), 0xFF5E35B1.toInt(),
+        android.graphics.Shader.TileMode.CLAMP,
+    )
+    canvas.drawRect(0f, 0f, 800f, 600f, paint)
+    paint.shader = null
+    paint.color = 0xFFFFF8E1.toInt()
+    canvas.drawCircle(560f, 200f, 70f, paint)
+    return bitmap
+}
+
+/** The sample photo the Saved preview shows, wrapped the way a decoded photo is in the screen's state. */
 private fun samplePhoto(): SavedPhoto = SavedPhoto.Ready(sampleBitmap())
 
 /**
- * The Saved screen with a photo on show and every button ready, drawn once in light and once in
- * dark, from a [SavedUiState] built out of sample data. [SavedContent] draws the success mark
- * ([SavedMark], at rest in the preview pane, see there), the photo ([PhotoView]) and the bottom
- * row of three buttons in their button group ([SavedActions], whose parts are [ActionButton] and
- * [ActionLabel]), so this one picture covers them all. The overflow menu's lines,
- * [ActionMenuItem], never show here (the row always fits), so they have a preview of their own,
- * [ActionMenuItemPreview]. No preview shows the photo area while the photo is still being
- * decoded: its indicator never stops moving, so a still picture of it would mean nothing.
- * `ThemeMode.System` makes KansoTheme follow the preview's own light or dark picture; the taps do
- * nothing.
+ * The Saved screen right after a save, with the photo shown and every button ready, drawn once in
+ * light and once in dark, from a [SavedUiState] built out of sample data. [SavedContent] draws the
+ * backdrop and the photo ([PhotoView]), the shade ([TopShade]) and the top row ([TopRow]), the
+ * success mark ([SavedMark], at rest in the preview pane, see there), and the bottom
+ * ([BottomActions] with [SavedMessage]), so this one picture covers them all. No preview shows the
+ * screen while the photo is still being decoded: its indicator never stops moving, so a still
+ * picture of it would mean nothing. `ThemeMode.System` makes KansoTheme follow the preview's own
+ * light or dark picture; the taps do nothing.
  */
 @PreviewLightDark
 @Composable
@@ -890,7 +862,30 @@ private fun SavedPreview() {
             sharing = false,
             onShare = {},
             onEditAnother = {},
-            onHome = {},
+            onClose = {},
+        )
+    }
+}
+
+/**
+ * The photo viewer, a photo opened from My edits, drawn once in light and once in dark: a wide
+ * sample photo over its blurred copy, the title "My edits", no success mark and no "saved" line,
+ * and the wide button reading "Edit". The taps do nothing.
+ */
+@PreviewLightDark
+@Composable
+private fun PhotoViewerPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SavedContent(
+            state = SavedUiState(
+                photoUri = "content://media/external/images/media/43",
+                photo = SavedPhoto.Ready(sampleWideBitmap()),
+                viewer = true,
+            ),
+            sharing = false,
+            onShare = {},
+            onEditAnother = {},
+            onClose = {},
         )
     }
 }
@@ -911,47 +906,6 @@ private fun SavedMarkPreview() {
                 morphProgress = 1f,
                 modifier = Modifier.padding(16.dp),
             )
-        }
-    }
-}
-
-/**
- * The lines of the button group's overflow menu, drawn once in light and once in dark.
- * [SavedPreview] never shows them: every button in the row has a weight, so the row always fits,
- * the "more" menu stays closed and its [ActionMenuItem]s are never drawn. This preview draws the
- * three lines the menu would hold (Share, Edit another and Home, each with its label and its icon
- * from the app's drawables) one under the other, on the colour a Material drop-down menu sits on.
- * The menu state is a fresh, closed one made here, and the taps do nothing.
- */
-@PreviewLightDark
-@Composable
-private fun ActionMenuItemPreview() {
-    // ActionMenuItem only needs a menu state to close the menu after a tap; a closed one will do.
-    val menu = remember { ButtonGroupMenuState() }
-    KansoTheme(themeMode = ThemeMode.System) {
-        // MenuDefaults.containerColor is the background of a real drop-down menu, so the lines are
-        // seen on the colour they would have on a phone.
-        Surface(color = MenuDefaults.containerColor) {
-            Column {
-                ActionMenuItem(
-                    label = stringResource(R.string.saved_share),
-                    icon = R.drawable.ic_share,
-                    onClick = {},
-                    menu = menu,
-                )
-                ActionMenuItem(
-                    label = stringResource(R.string.saved_edit_another),
-                    icon = R.drawable.ic_edit,
-                    onClick = {},
-                    menu = menu,
-                )
-                ActionMenuItem(
-                    label = stringResource(R.string.saved_home),
-                    icon = R.drawable.ic_home,
-                    onClick = {},
-                    menu = menu,
-                )
-            }
         }
     }
 }

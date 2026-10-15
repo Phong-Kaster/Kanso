@@ -39,7 +39,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
@@ -83,6 +82,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.common.RoundBackButton
 import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
 import com.phongkaster.kanso.ui.permission.PermissionGate
 import com.phongkaster.kanso.ui.permission.openAppDetailsSettings
@@ -151,8 +151,8 @@ private val SHUTTER_RING_SIZE = 56.dp
  */
 private const val SHUTTER_PRESSED_RING_SCALE = 0.8f
 
-/** Android's smallest touch target, the size of the back button. */
-private val MIN_TOUCH = 48.dp
+/** The test tag on the top bar's round Back button. */
+const val CAMERA_BACK_TAG = "camera-back"
 
 /**
  * The height of the Keep and Retake buttons: Material's medium button height (56 dp), above the
@@ -217,14 +217,9 @@ fun CameraScreen(
  * (with a sample picture, or the refused panel) and the screenshot test all use it; it is
  * `internal` rather than private for that last one.
  *
- * The back arrow is a Material 3 Expressive icon button. Given `shapes` (a pair of shapes: one at
- * rest, one while pressed) instead of a single shape, the button changes its shape while a finger
- * is on it: the round button squares its corners a little, and Material animates between the two
- * with the theme's motion scheme, so a press feels physical. `IconButtonDefaults.shapes()` is the
- * standard pair. The arrow is a Material Symbols drawable; the file paints white, and `Icon`
- * tints it with the top bar's content colour, so it shows in light and in dark. It has no visible
- * text: its content description, "Back", is its spoken name. The button is given 48 dp, the
- * smallest touch target Android recommends, for its drawn shape as well as its touch area.
+ * The back arrow is the app's shared `RoundBackButton`: a 48 dp round Material 3 Expressive icon
+ * button that squares its corners a little while pressed, as on every other screen. Its content
+ * description, "Back", is its spoken name, and it carries the tag [CAMERA_BACK_TAG].
  *
  * The title uses `titleLargeEmphasized`, one of the "Emphasized" text styles Material 3
  * Expressive adds: the size of `titleLarge`, but bolder.
@@ -255,16 +250,14 @@ internal fun CameraFrame(
                     )
                 },
                 navigationIcon = {
-                    IconButton(
+                    // The shared round Back button (see ui/common), 48 dp, with a little room
+                    // from the screen's edge.
+                    RoundBackButton(
                         onClick = onBack,
-                        shapes = IconButtonDefaults.shapes(),
-                        modifier = Modifier.size(MIN_TOUCH),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .testTag(CAMERA_BACK_TAG),
+                    )
                 },
             )
         },

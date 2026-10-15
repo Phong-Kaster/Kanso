@@ -12,8 +12,8 @@ import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import java.util.Locale
 
 /**
- * The one accessibility check every screen state is put through (DoD 18): a control that does
- * something must have a spoken name and be at least [MIN_SIZE] wide and tall.
+ * The one accessibility check every screen state is put through (DoD 25, DoD 18 before it): a
+ * control that does something must have a spoken name and be at least [MIN_SIZE] wide and tall.
  *
  * What counts as a control. The check reads semantics nodes, the description of the screen that
  * screen readers such as TalkBack and Compose tests read instead of pixels. A node is a control
@@ -25,17 +25,18 @@ import java.util.Locale
  * The spoken name is the node's text or its content description, whichever is not blank. The
  * size is the largest of three measures, in each direction:
  * - `size`, the node's own laid-out size, never cut by the screen's edge, so a row scrolled half
- *   out of view still counts at its real size;
+ *   out of view (or a card of a sideways strip cut by the strip's edge, or a carousel banner
+ *   peeking in at the screen's edge) still counts at its real size;
  * - `boundsInRoot`, where the node sits on screen, cut to what is visible;
  * - `touchBoundsInRoot`, the area a finger can hit. Compose widens the touch area of a small
  *   tappable node to the phone's minimum touch target (48 dp) by itself, and reports the widened
  *   area here, so a Material icon button drawn at 40 dp still offers a 48 dp target. This is what
- *   DoD 18 means by "max(boundsInRoot, touchBoundsInRoot)".
+ *   DoD 25 means by "max(boundsInRoot, touchBoundsInRoot)".
  *
  * Two kinds of node are left out, each for a stated reason:
  * - nodes inside the node tagged [CUSTOM_COLOUR_PICKER_TAG]: the engine's colour picker
  *   (`core/colorpicker`, whose source Kanso may not edit) sets no semantics of its own and draws
- *   controls under 48 dp, the one named exception of DoD 18;
+ *   controls under 48 dp, the one named exception of DoD 25 (and DoD 18 before it);
  * - nodes that are not placed on the screen at all (a layout measured them but never put them
  *   anywhere, such as a button group's "more" button while every button fits). Nobody can see
  *   or reach such a node, and TalkBack skips it too.
@@ -69,10 +70,34 @@ object TouchTargetCheck {
 
     /**
      * Returns the nodes of [nodes] the check applies to: the controls that are placed on the
-     * screen and are not inside the engine's colour picker (see the KDoc of this object).
+     * screen and are not inside the engine's colour picker (see the KDoc of this object). A
+     * control mostly cut off sideways by a scrolling container (the "Try now" of a banner that
+     * only peeks in beside the carousel's front one) is not on the screen as a whole control, so
+     * it is skipped: its visible sliver is not what a finger aims at.
      */
     fun controlsToCheck(nodes: List<SemanticsNode>): List<SemanticsNode> =
-        nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) }
+        nodes.filter { isControl(it) && isPlaced(it) && !isInsideColourPicker(it) && !isCutOffSideways(it) }
+
+    /**
+     * Tells whether less than [MIN_VISIBLE_FRACTION] of [node]'s laid-out width is visible on
+     * screen: a control that only peeks in from the side of a strip or a carousel.
+     *
+     * Why a fraction and not "any cut at all". The carousel draws each banner through a mask
+     * whose edges are worked out in fractions of a pixel, so even the banner in front, and the
+     * "Try now" inside it, can come out a pixel or two narrower on screen than laid out. Skipping
+     * every control cut by any amount would then skip the very banner the walk is about;
+     * `AccessibilityWalkTest` checks the front banner and its "Try now" are among the controls
+     * checked.
+     */
+    private fun isCutOffSideways(node: SemanticsNode): Boolean =
+        node.boundsInRoot.width < node.size.width * MIN_VISIBLE_FRACTION
+
+    /**
+     * The least part of a control's laid-out width that must be visible for it to be checked: a
+     * half. The front banner shows whole; a banner beside it that shows more than half is checked
+     * too, and is measured at its laid-out size like any control.
+     */
+    private const val MIN_VISIBLE_FRACTION = 0.5f
 
     /**
      * Checks every control of [nodes] (see [controlsToCheck]) and returns one line per control

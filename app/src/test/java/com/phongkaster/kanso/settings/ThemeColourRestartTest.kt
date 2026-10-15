@@ -8,18 +8,18 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
-import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.di.appModule
+import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openTab
+import com.phongkaster.kanso.navigation.tapAboveBar
+import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -61,6 +61,8 @@ import org.robolectric.annotation.Config
  * test fails.
  *
  * It launches activities itself (ActivityScenario) because it needs two of them in one test.
+ * Settings is opened with the floating tab bar's Settings tab (`TabTaps.openTab`), and the
+ * wallpaper row is tapped with `TabTaps.tapAboveBar`, so a row resting under the bar is reached.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35], qualifiers = "notnight")
@@ -137,7 +139,7 @@ class ThemeColourRestartTest {
             waitForHome()
             openSettings()
             // Tapped like a person would; the row calls SettingsViewModel.onWallpaperChosen.
-            compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).performScrollTo().performClick()
+            compose.onNodeWithTag(THEME_COLOUR_WALLPAPER_TAG).tapAboveBar()
             // The theme only changes once the DataStore has written the file and re-read it, so
             // when the app's scheme turns to the wallpaper's (and so away from Kanso blue,
             // checked above) the choice is on disk.
@@ -185,20 +187,18 @@ class ThemeColourRestartTest {
     private fun appliedScheme(): ColorScheme =
         compose.onNodeWithTag(KANSO_THEME_TAG).fetchSemanticsNode().config[KansoColorSchemeKey]
 
-    /** Taps the Settings row on Home and waits until the Settings screen is shown. */
+    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
     private fun openSettings() {
-        compose.onNodeWithText(context.getString(R.string.settings))
-            .performScrollTo()
-            .performClick()
+        openTab(compose, KansoTab.SETTINGS)
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
-    /** Waits until Home's title is on screen. */
+    /** Waits until Home is on screen, found by its own tag. */
     private fun waitForHome() {
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Kanso").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithTag(HOME_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

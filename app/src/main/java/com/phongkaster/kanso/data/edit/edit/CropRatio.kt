@@ -1,0 +1,34 @@
+package com.phongkaster.kanso.data.edit.edit
+
+/**
+ * The shapes the Edit tool can crop a photo to.
+ *
+ * Each fixed shape is a width-to-height ratio ([widthPart] : [heightPart]), so 16:9 is a wide
+ * picture and 9:16 a tall one. A fixed ratio always cuts the largest centred rectangle of that
+ * shape out of the photo: the person only picks the shape, never a position. [FREE] has no ratio
+ * of its own: the person sets the rectangle themselves (see [EditSettings.CropRect]).
+ *
+ * The enum holds only numbers, never words: what each shape is called on screen lives in the
+ * panel (`ui/tool/EditPanel.kt`), so this file stays free of Android resources and can be used
+ * by the processor and its tests alone.
+ */
+enum class CropRatio(val widthPart: Int, val heightPart: Int) {
+
+    /** Any rectangle the person sets; the parts are 0 because there is no fixed ratio. */
+    FREE(0, 0),
+
+    /** A square. */
+    SQUARE(1, 1),
+
+    /** Landscape 4:3, the shape most phone cameras shoot. */
+    FOUR_THREE(4, 3),
+
+    /** Portrait 3:4, the 4:3 shape turned upright. */
+    THREE_FOUR(3, 4),
+
+    /** Wide 16:9, the shape of a television or a phone held sideways. */
+    SIXTEEN_NINE(16, 9),
+
+    /** Tall 9:16, the shape of a phone screen held upright (stories, wallpapers). */
+    NINE_SIXTEEN(9, 16),
+}

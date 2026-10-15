@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The labels of the three tabs on the floating tab bar (KansoTab). The round Camera button
+         beside the bar reuses tool_camera as its spoken name. -->
+    <string name="tab_home">Home</string>
+    <string name="tab_my_edits">My edits</string>
+    <string name="tab_settings">Settings</string>
+</resources>

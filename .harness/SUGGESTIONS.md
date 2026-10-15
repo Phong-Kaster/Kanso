@@ -171,3 +171,51 @@ The wrapper checks for a debug APK the repository built before it runs any opera
 Before touching the phone, the engine asks "is someone using it?". The helper refused to answer until the app had been built, even though answering does not touch the app. Letting that one question through, while every other operation still needs a built app, would let the check happen alongside the build instead of after it.
 
 ---
+
+---
+
+## S-011 - Make the S-005 / S-007 check a script the bootstrap runs on its own draft, not advice the critique role has to remember
+
+- **Destination:** loop (`.harness/loop/ENGINE.md` section 5, step 3, and `POLICIES.md`)
+- **Earned by:** Kanso Run 7, bootstrap (Iteration 1, 2026-10-12). S-005 and S-007 (both still open) say that a DoD proof naming a test class needs a task that writes it. The first draft of Run 7's DoD and plan broke that rule in eight places (a `NavTransitionTest` tab case, `KansoBlueContrastTest` pairs, `GalleryTopBarTest`, the `NavigationTest` permission clauses, the viewer clause of criterion 1, the last bullet of the edits-source proof, the preview names of criterion 36, the KDoc clauses of criterion 37). The independent critique role found all of them, after about 19 minutes and 310 thousand tokens, and the conflict analysis found the same class again on its own.
+- **Status:** open
+
+### What happened
+
+The check is mechanical: take every backticked name ending in `Test`, `Tag` or `Preview` and every file path in the DoD's Proofs, and look for it in the task files' Declared File Scopes and descriptions. The bootstrap authors the DoD and the tasks in the same invocation, so a one-line script (`grep -o` over `DoD.md`, then `grep -c` over `TASKS/`) can print every name no task mentions before the critique role is dispatched. Left to the critique role, the same gaps cost a full analysis round and then a rewrite of the plan.
+
+### In plain words
+
+The plan is a list of jobs and the definition of done is a list of exams. Every exam that names a test has to have a job that writes that test, and a computer can check that in a second. Doing the check before asking a reviewer saves the reviewer's time for the problems only a person can see.
+
+---
+
+## S-012 - When a PRD's goal sentence and one of its details disagree, bootstrap takes the goal, and a gate answer that edits a criterion needs a mechanical sweep before the checkpoint
+
+- **Destination:** loop
+- **Earned by:** Kanso Run 7, Iterations 1 and 2 (2026-10-12): the PRD's goal sentence said every tool, the recent edits and the Camera are one tap from Home; item 2 put two pill buttons and a carousel there. The bootstrap read item 2 as the limit (three tools behind 1 to 3 carousel swipes, assumption A-001) and flagged it for the owner's eye; the owner reversed it at the gate (D-001). Re-cutting meant a new Home row, a changed height budget and edits to the DoD, the plan, two tasks and three knowledge files, and a fresh-context review of the re-cut still found nine leftovers (a stale 192 dp carousel, a proof that named the old Edit button, a test that still tapped the old control, a clipped-bounds proof).
+- **Status:** open
+
+### What happened
+
+Two things. First, the bootstrap's rule for an ambiguous PRD is to take the reading it would recommend and record it; here the ambiguity was a goal sentence (stated first, in bold, with a date) against a detail further down, and the engine let the detail narrow the goal. A goal sentence the owner dated and bolded is the stronger evidence of intent; the detail was the thing to ask about. The cheap rule: when a goal and a detail conflict, build to the goal, state the detail as the assumption to confirm, and put it first in the approval question. Second, ENGINE.md section 6.2 says to apply a human's answer and log it, and section 6.3 says the Orient step reads the DoD only as Verifier, so nothing tells the Iteration to sweep the whole run directory for the old wording. The sweep that worked: grep the old terms (`home-pill`, `pill`, `swipe`, `192`, the old assumption id) across the DoD, the plan, every task file and the knowledge files, then have a read-only Capable reviewer look for contradictions and unowned proofs, then re-grep.
+
+### In plain words
+
+The owner's one-line goal said "every tool in one tap" and a detail lower down could be read as "two tools in one tap, the rest after a swipe". The engine chose the detail and asked the owner about it; the owner said the goal was what they meant. When the stated goal and a detail disagree, the safer default is to follow the goal and ask about the detail. And when the owner's answer changes a requirement, the engine should check every place that still repeats the old requirement, not only the ones it remembers.
+
+---
+
+## S-013 - ENGINE.md section 10 asks to archive into `.harness/archive/`, but the permission rules deny the engine every write there
+
+- **Destination:** loop (`.harness/loop/ENGINE.md` section 10, ADR-040, and the compiled permission settings)
+- **Earned by:** Kanso Run 7, Iteration 15 (2026-10-13). `.harness/ISSUES.md` is 52 KB, 43 KB of it about Runs 1 to 6. Section 10 says to move each settled earlier-run section to a new `.harness/archive/ISSUES-run-<n>.md` "written once with Write". The Iteration carried all 39 open items into one "Awaiting a person" section (checked with a `diff` of the `- [ ]` lines), then the Write of the archive file was refused: "File is in a directory that is denied by your permission settings". Read is denied there too. Iteration 12 had hit the same wall from the other side (a shell redirect created the file, then nothing could edit or delete it). `ISSUES.md` was put back as it was, so nothing was lost and nothing moved.
+- **Status:** open
+
+### What happened
+
+The specification and the permission rules disagree. The rules deny Read, Edit and Write on `.harness/archive/` (sensibly: so the engine cannot edit history), but the specification's only way to create an archive file is a Write. A rule that allows Write of a file that does not exist yet, and denies everything else, would match the intent ("written once, never edited").
+
+### In plain words
+
+The instructions tell the engine to move old notes into an archive folder, and the safety rules forbid it from writing into that folder at all. Until one of the two changes, the old notes stay in the main issues file, and every Iteration keeps paying to read them.

@@ -21,6 +21,10 @@ import kotlinx.coroutines.launch
  * [probe] is told when this ViewModel is cleared, so tests can check that leaving the screen frees
  * it, as they do for the other screens.
  *
+ * [viewer] is true when the screen is the photo viewer, a photo opened from the My edits tab (key
+ * `EditedPhoto`), rather than the screen shown right after a save (key `Saved`). It never changes,
+ * so it is simply copied into the state, where the screen function reads it.
+ *
  * The decoded photo lives here rather than in the screen function because this ViewModel belongs
  * to the screen's navigation entry: it outlives a rotation, which draws the screen again from
  * scratch, so the photo is not decoded twice, and it is freed as soon as the screen leaves the
@@ -30,10 +34,11 @@ class SavedViewModel(
     private val photoUri: String,
     private val loader: PhotoLoader,
     private val probe: ViewModelClearedProbe,
+    viewer: Boolean = false,
 ) : ViewModel() {
 
     /** The current state behind [state]; only this ViewModel changes it. */
-    private val mutableState = MutableStateFlow(SavedUiState(photoUri = photoUri))
+    private val mutableState = MutableStateFlow(SavedUiState(photoUri = photoUri, viewer = viewer))
 
     /**
      * What the Saved screen shows, as one snapshot the screen can read at any moment. It starts
