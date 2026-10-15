@@ -1,5 +1,9 @@
 # ISSUES
 
+## Run 9 (the Edit screen becomes a real editor)
+
+- Queued: D-001, approval of the Definition of Done (`.harness/run/ESCALATION.md`). Nothing else yet. Assumptions A-001 to A-008 are in `.harness/run/ASSUMPTIONS.md`.
+
 ## Run 8 (the five editing tools edit the photo)
 
 - **Iteration 10 (2026-10-14): DoD 27 now holds.** The 17 `ToolScreenshotTest` pictures were recorded in `6956f78` (via the record wrapper) and re-verified: `testDebugUnitTest` + `verifyRoborazziDebug` exit 0 (`.harness/run/evidence/v10-full.log`). The two unticked picture items below (Phase 4, Phase 2) are therefore only awaiting a person to look at the pictures; the engine looked at all 17 in `6956f78`. Device items 7, 9, 11, 13 remain not driven. Run stays `DONE_PARTIAL`.

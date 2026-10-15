@@ -66,6 +66,8 @@
 - **Never** use ML Kit *subject* segmentation (a Play-services model that downloads at first use) or any other model that fetches at runtime: the PRD is offline-only; the selfie-segmentation model is bundled - evidence: `core/localml/build.gradle.kts:64`, Run 8 DoD Q2.
 - **Never** hand an unscaled photo to Enhance: Real-ESRGAN upscales 4x, so a 4000x3000 input asks for about 768 MB - evidence: Run 8 bootstrap, Retica `EnhanceViewModel`.
 
+- **Never** use `ModalBottomSheet` for the Edit tool sheets (Run 9): it blocks touches outside it, so the floating Undo/Compare pill on the photo would be unreachable, and it dims the photo; and **never** pass `aspectLock` alone to `CropState` to apply a ratio - it keeps the current shape, so also set `region` to the ratio fitted inside the image - evidence: Run 9 bootstrap survey, `reference/run9-facts.md`.
+
 ## Repository class
 
 Product (real users rely on it; one initial skeleton long gone; Runs 1-7 shipped features, tests and a README).
@@ -93,3 +95,4 @@ One line per topic under `.harness/knowledge/reference/`; open a topic only when
 - `reference/engine-artistic.md` — Artistic: style models, style images, cache, mix — read when touching: Artistic.
 - `reference/engine-phase3-facts.md` — javap facts for face and style engine classes — read when touching: Retouch, Artistic.
 - `reference/engine-enhance.md` — Enhance: EnhanceImageUC flow, progress, initModel — read when touching: Enhance.
+- `reference/run9-facts.md` — Run 9 facts: how Edit, Save and Saved work before the run, core/imagecrop API, tests and guards that break, docs to rewrite — read when touching: Edit screen, ToolViewModel, Save/Saved/Result, core/imagecrop.
