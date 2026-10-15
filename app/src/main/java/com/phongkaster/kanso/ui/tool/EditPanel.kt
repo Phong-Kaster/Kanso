@@ -1,7 +1,6 @@
 package com.phongkaster.kanso.ui.tool
 
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,12 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,15 +70,6 @@ const val EDIT_FLIP_HORIZONTAL_TAG = "edit-flip-horizontal"
 /** Test tag of the Edit panel's button that mirrors the photo top to bottom. */
 const val EDIT_FLIP_VERTICAL_TAG = "edit-flip-vertical"
 
-/** Test tag of the free crop's width range (its left and right edges). */
-const val EDIT_FREE_WIDTH_TAG = "edit-free-width"
-
-/** Test tag of the free crop's height range (its top and bottom edges). */
-const val EDIT_FREE_HEIGHT_TAG = "edit-free-height"
-
-/** Test tag of the free crop's "Crop" button, which records the rectangle as it stands. */
-const val EDIT_FREE_APPLY_TAG = "edit-free-apply"
-
 /**
  * The ending of the test tag of the number shown beside a slider's name: the brightness slider's
  * number is tagged `edit-brightness-value` (see [editSliderValueTag]).
@@ -94,9 +81,6 @@ private val LABEL_WIDTH = 96.dp
 
 /** The width of the number beside a slider's name, room for "-100". */
 private val VALUE_WIDTH = 44.dp
-
-/** The narrowest a free crop may get, as a fraction of the photo's width or height. */
-private const val MIN_FREE_SPAN = 0.05f
 
 /** A slider value of 1 is shown as this number: the -1..1 settings are shown as -100..100. */
 private const val SHOWN_SCALE = 100f
@@ -185,8 +169,9 @@ fun EditPanel(
  *
  * It draws only the group of [openTool]:
  *
- * - Crop: one chip per crop shape, the chosen one ([EditSettings.cropRatio]) marked; a fixed shape
- *   locks the crop to it, Free unlocks it and shows two range sliders that move the crop's edges;
+ * - Crop: one chip per crop shape, the chosen one ([EditSettings.cropRatio]) marked, and a line
+ *   saying how to crop; a fixed shape locks the crop to it, Free unlocks it. The rectangle itself
+ *   is dragged on the photo, where the screen shows the cropper ([EditCropper]) instead;
  * - Rotate: turn left, turn right, flip across and flip upside down, each one action;
  * - Adjust: brightness, contrast, saturation and warmth, each from -100 through 0 (no change, the
  *   centre) to +100, with its number beside its name;
@@ -219,18 +204,14 @@ fun EditPanelContent(
     ) {
         when (openTool) {
             EditTool.CROP -> {
-                val freeOpen = settings.cropRatio == CropRatio.FREE
                 CropChips(chosen = settings.cropRatio, enabled = enabled, onRatio = onRatio)
-                // AnimatedVisibility grows the free crop controls in and shrinks them out
-                // (Compose's own animation API), instead of making the panel jump.
-                AnimatedVisibility(visible = freeOpen) {
-                    FreeCropControls(
-                        rect = settings.crop,
-                        enabled = enabled,
-                        onChange = { rect -> onPreview(settings.copy(crop = rect)) },
-                        onFinished = onCommit,
-                    )
-                }
+                // The rectangle itself is moved on the photo (the cropper); this line says how.
+                Text(
+                    text = stringResource(R.string.edit_crop_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
             EditTool.ROTATE -> TurnButtons(
                 enabled = enabled,
@@ -315,8 +296,8 @@ private fun withFilter(settings: EditSettings, preset: FilterPreset): EditSettin
 /**
  * One row of crop chips, scrolling sideways if the screen is narrow. Each is a filter chip marked
  * selected while it is the [chosen] shape: a fixed shape crops at once to the largest centred
- * rectangle of that shape and locks the crop to it; Free unlocks the crop and opens its rectangle
- * controls. A tap calls [onRatio] with the chip's shape; while [enabled] is false every chip is
+ * rectangle of that shape and locks the cropper's rectangle to it; Free unlocks it, so its edges
+ * move freely. A tap calls [onRatio] with the chip's shape; while [enabled] is false every chip is
  * disabled.
  */
 @Composable
@@ -336,65 +317,6 @@ private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio)
                 enabled = enabled,
                 modifier = Modifier.testTag(editRatioTag(ratio)),
             )
-        }
-    }
-}
-
-/**
- * The free crop's controls: a range slider for the left and right edges, one for the top and
- * bottom edges, each as a fraction of the photo. A range slider has two thumbs, one per edge. A
- * move that would make the rectangle narrower than [MIN_FREE_SPAN] is ignored; any other calls
- * [onChange] with the new [rect], and letting go calls [onFinished]. The "Crop" button calls
- * [onFinished] too, recording the rectangle as it stands. While [enabled] is false the sliders and
- * the button are disabled.
- *
- * The range slider is still marked experimental in some Material 3 versions, hence the opt-in.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FreeCropControls(
-    rect: EditSettings.CropRect,
-    enabled: Boolean,
-    onChange: (EditSettings.CropRect) -> Unit,
-    onFinished: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        LabelledRow(label = R.string.edit_tool_free_width) {
-            RangeSlider(
-                value = rect.left..rect.right,
-                onValueChange = { range ->
-                    if (range.endInclusive - range.start >= MIN_FREE_SPAN) {
-                        onChange(rect.copy(left = range.start, right = range.endInclusive))
-                    }
-                },
-                onValueChangeFinished = onFinished,
-                valueRange = 0f..1f,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth().testTag(EDIT_FREE_WIDTH_TAG),
-            )
-        }
-        LabelledRow(label = R.string.edit_tool_free_height) {
-            RangeSlider(
-                value = rect.top..rect.bottom,
-                onValueChange = { range ->
-                    if (range.endInclusive - range.start >= MIN_FREE_SPAN) {
-                        onChange(rect.copy(top = range.start, bottom = range.endInclusive))
-                    }
-                },
-                onValueChangeFinished = onFinished,
-                valueRange = 0f..1f,
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth().testTag(EDIT_FREE_HEIGHT_TAG),
-            )
-        }
-        FilledTonalButton(
-            onClick = onFinished,
-            enabled = enabled,
-            modifier = Modifier
-                .align(Alignment.End)
-                .testTag(EDIT_FREE_APPLY_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_free_apply))
         }
     }
 }
@@ -614,8 +536,8 @@ private fun EditPanelPreview() {
 }
 
 /**
- * The Crop sheet with Free chosen, in light and in dark: the two range sliders show a sample
- * rectangle that keeps the middle of the photo, with the "Crop" button under them.
+ * The Crop sheet with Free chosen, in light and in dark: the shape chips with Free marked, and the
+ * line saying how to move the rectangle on the photo.
  */
 @PreviewLightDark
 @Composable

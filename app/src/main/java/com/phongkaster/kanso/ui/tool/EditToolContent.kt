@@ -76,6 +76,10 @@ private const val PHOTO_SHARE = 0.6f
  * preview can pass plain samples. [onOpenTool] is a tool entry tapped, [onUndo] the pill's Undo
  * and [onCompare] its Compare switch flipped, with the new value.
  *
+ * [cropper], when given, takes the photo's place while the Crop sheet is open (the screen passes
+ * [EditCropper]); while Compare is on, or with no cropper given, [photo] is drawn as usual. The
+ * Undo and Compare pill stays on top of either.
+ *
  * While Compare is on, the row of tools is disabled, and so is Undo; the screen also passes the
  * comparing flag to the sheet's controls, which disable themselves.
  */
@@ -88,6 +92,7 @@ fun EditToolContent(
     photo: @Composable () -> Unit,
     sheet: @Composable (EditTool) -> Unit,
     modifier: Modifier = Modifier,
+    cropper: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
         Box(
@@ -95,7 +100,13 @@ fun EditToolContent(
                 .weight(PHOTO_SHARE)
                 .fillMaxWidth(),
         ) {
-            photo()
+            // While Crop is open the photo card becomes the cropper (handles, drag, pinch); while
+            // comparing, the plain photo is shown instead, so the original can be seen.
+            if (state.openTool == EditTool.CROP && !state.comparing && cropper != null) {
+                cropper()
+            } else {
+                photo()
+            }
             // Undo is usable only with an edit to take back, nothing running, and Compare off.
             EditPill(
                 undoEnabled = state.canUndo &&
@@ -343,8 +354,8 @@ private fun LivePreviewImagePreview() {
 }
 
 /**
- * A sample Edit screen body for the previews: a plain coloured box stands in for the photo and a
- * line of text for the sheet, so nothing touches a ViewModel or decodes a photo.
+ * A sample Edit screen body for the previews: plain coloured boxes stand in for the photo and the
+ * cropper, and a line of text for the sheet, so nothing touches a ViewModel or decodes a photo.
  */
 @Composable
 private fun SampleEditToolContent(state: ToolUiState) {
@@ -363,6 +374,14 @@ private fun SampleEditToolContent(state: ToolUiState) {
                     )
                 },
                 sheet = { tool -> Text(text = tool.name) },
+                // A box of another colour stands in for the cropper, so Crop's swap is visible.
+                cropper = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                    )
+                },
             )
         }
     }
@@ -394,6 +413,22 @@ private fun EditToolContentPreview() {
 @Composable
 private fun EditToolContentClosedPreview() {
     SampleEditToolContent(ToolUiState(tool = Tool.EDIT, photoUri = "content://sample/photo/1"))
+}
+
+/**
+ * The Edit screen body with Crop's sheet open, in light and in dark: the cropper (here a plain
+ * stand-in box) takes the photo's place, with the pill still on top.
+ */
+@PreviewLightDark
+@Composable
+private fun EditToolContentCropPreview() {
+    SampleEditToolContent(
+        ToolUiState(
+            tool = Tool.EDIT,
+            photoUri = "content://sample/photo/1",
+            openTool = EditTool.CROP,
+        ),
+    )
 }
 
 /** The Edit screen body while Compare is on, in light and in dark: the row and Undo are faint. */

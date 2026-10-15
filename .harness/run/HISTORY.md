@@ -12,3 +12,6 @@ Phase 2 (T-002) done in 4 slices + Iteration wiring: one EditSession (undo stack
 
 ## Iteration 4 (2026-10-15)
 Phase 3 (T-003) done in 4 slices + wiring: sliders/crop/turns/flips drawn live by Compose from one EditColourMatrix, filter as a conflated 640px render, parity test vs Android ColorMatrixColorFilter passes; Save on Edit full-renders. Reviewer blocking finding (filter drag frames dropped) fixed; 7 approved baselines re-recorded.
+
+## Iteration - Phase 4 (T-004)
+Real cropper (core/imagecrop) replaces range sliders; two Workers (production, tests), review fixes applied; tests/lint/assemble green; free-crop baselines pending T-009.

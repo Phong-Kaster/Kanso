@@ -336,6 +336,22 @@ class ToolViewModel(
     }
 
     /**
+     * The person finished one gesture on the cropper (a handle dragged, or the rectangle moved),
+     * leaving the crop rectangle [rect], given as fractions of the original photo. It becomes one
+     * undo entry, keeping every other setting (the chosen crop shape included). A rectangle equal
+     * to the current crop is not an action, so it is ignored: the cropper reports what it shows,
+     * and after an undo it shows exactly the crop the session already holds. Nothing happens while
+     * comparing, when the cropper is switched off.
+     */
+    fun commitCrop(rect: EditSettings.CropRect, processorFor: (EditSettings) -> ToolProcessor) {
+        val current = mutableState.value
+        if (current.comparing) return
+        if (current.settings.crop == rect) return
+        // Keep the recipe the Edit panel gave, so the filter cache stays the one panel and render share.
+        changeSettings(current.settings.copy(crop = rect), this.processorFor ?: processorFor)
+    }
+
+    /**
      * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it at
      * once (the screen applies a colour slider as it draws; a filter's intensity is computed on the
      * small preview copy), but no undo entry is made until [commitSettings]. Nothing happens while

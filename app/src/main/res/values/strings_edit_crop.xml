@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Edit screen's cropper: the line on the Crop sheet saying how to move the rectangle that
+     is drawn on the photo. -->
+<resources>
+    <string name="edit_crop_hint">Drag the handles, drag inside to move, pinch to zoom</string>
+</resources>

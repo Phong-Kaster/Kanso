@@ -54,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -79,7 +80,10 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
@@ -299,6 +303,27 @@ fun ToolScreen(
         // tool's sheet, and the pill's Compare switch shows the original photo while it is on.
         onOpenTool = viewModel::openTool,
         onCompare = viewModel::setComparing,
+        // The Edit screen only: while Crop is open (and the photo is decoded) the photo card is the
+        // real cropper on the original photo; a finished gesture is one crop action of the
+        // settings session (one Undo step). Until the photo is Ready there is no cropper, so the
+        // loading indicator or the unreadable message stays on screen.
+        editCropper = (state.photo as? ToolUiState.PhotoState.Ready)?.let { ready ->
+            {
+                val context = LocalContext.current
+                val processorFor: (EditSettings) -> ToolProcessor = remember(context) {
+                    val appContext = context.applicationContext
+                    val filters = FilterLut.fromAssets { path -> appContext.assets.open(path) }
+                    val build: (EditSettings) -> ToolProcessor = { wanted -> EditProcessor(wanted, filters) }
+                    build
+                }
+                EditCropper(
+                    bitmap = ready.bitmap,
+                    settings = state.settings,
+                    enabled = !state.comparing,
+                    onCropFinished = { rect -> viewModel.commitCrop(rect, processorFor) },
+                )
+            }
+        },
         // The Edit screen only: the open tool's controls, drawn in the sheet under the photo.
         // They are switched off only while Compare shows the original: a render in progress must
         // not disable a slider the finger is still on. Every change goes to the ViewModel's one
@@ -386,6 +411,7 @@ fun ToolContent(
     onOpenTool: (EditTool) -> Unit = {},
     onCompare: (Boolean) -> Unit = {},
     editSheet: @Composable (EditTool) -> Unit = {},
+    editCropper: (@Composable () -> Unit)? = null,
 ) {
     val isEdit = state.tool == Tool.EDIT
     Scaffold(
@@ -428,6 +454,7 @@ fun ToolContent(
                         modifier = Modifier.fillMaxSize(),
                     )
                 },
+                cropper = editCropper,
                 sheet = { tool ->
                     // The same options-strip tag as the other tools' panels carry, so the open
                     // tool's controls are found in the same place on every tool screen.

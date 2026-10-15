@@ -14,3 +14,8 @@ Baselines 51, 52 re-recorded (Undo now enabled after tapping Free; chip labels d
 - CompareTest (2 tests, makeEdit): checks the live matrix and pixels; compare shows no live-preview node.
 - ToolScreenTest: unchanged (fixed by production code: Edit photo node keeps TOOL_IMAGE_TAG, shape and description).
 - Baselines re-recorded (approved, D-001): 16, 17, 40, 41, 42, 51, 52 (photo now drawn by Canvas; sampling differs only); old copies in evidence/baseline-diffs/*_old.png.
+
+## Phase 4 (T-004, Run 9) - real cropper
+- New: EditCropTest (10 tests: cropper shown only with Crop open and Compare off, ratio chips set shape and rectangle, commitCrop is one undo action / equal rect adds none / ignored while comparing, cropper follows undo, a drag is one undo action, switched-off cropper reports nothing).
+- EditToolTest: unchanged (no test used the removed range sliders; its crop-ratio test still passes with no cropper slot).
+- Removed with the sliders: strings edit_tool_free_width/height/apply (no test referenced them). Baselines tool_edit_free_crop_light/dark fail until T-009 re-records them (approved).

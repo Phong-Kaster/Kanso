@@ -36,7 +36,7 @@ size, progress, Undo, failures and Save.
 
 | Feature | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Crop (free, 1:1, 4:3, 3:4, 16:9, 9:16), quarter turns, flips, brightness, contrast, saturation, warmth, and seven filters with an intensity, in plain Kotlin. | JPEG, at most 2000 px |
+| [Edit](docs/features/edit.md) | Crop with draggable handles, pinch zoom and 1:1, 4:3, 3:4, 16:9, 9:16 shapes, quarter turns, flips, brightness, contrast, saturation, warmth, and seven filters with an intensity, in plain Kotlin. | JPEG, at most 2000 px |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
 | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
@@ -147,7 +147,7 @@ only exercised on a device or emulator. Each feature page lists its own tests.
 | Path | What it is |
 |---|---|
 | `app/` | The Kanso app, written by Foreman. |
-| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor`. `core/imagecrop` and `core/overlaybrush` are built in but not called. |
+| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor`. The Edit screen's Crop uses `core/imagecrop`'s cropper (handles, drag, pinch; `ui/tool/EditCropper.kt`); `core/overlaybrush` is built in but not called. |
 | `libs/` | Those prebuilt libraries (AARs), plus two TensorFlow Lite AARs. `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. No build file references `tensorflow-lite.aar`. |
 | `opencv/` | The OpenCV Android SDK module the engine depends on. |
 | `reference/retica-app/` | Retica's original app code, **read-only**: how the engine's use cases are called. It is not built, and nothing in Kanso imports it. |
