@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -45,6 +46,8 @@ import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_SATURATION_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_WARMTH_TAG
+import com.phongkaster.kanso.ui.tool.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.LivePreviewMatrix
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
@@ -60,7 +63,7 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -69,12 +72,13 @@ import org.koin.core.context.stopKoin
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 /**
  * Checks on Android 15 the Edit screen's Compare switch and the pill that holds it (DoD 8, 21):
  *
  * - with an edit made, switching Compare on shows the untouched original photo, and switching it
- *   off shows the same edit again (the very same bitmap, never redone);
+ *   off shows the same edit again (the same settings, drawn live again, never re-rendered);
  * - while Compare is on every editing control is disabled at once: the four tool entries, Undo,
  *   and the controls of each sheet (the four colour sliders, the crop shapes, the turn buttons,
  *   the filters and their intensity), while Compare itself stays usable; the ViewModel also
@@ -85,8 +89,9 @@ import org.robolectric.annotation.GraphicsMode
  * The test draws the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] on a
  * fake 120 x 80 photo, with the Edit sheet slot filled as `ToolScreen` fills it (`ToolPanel`,
  * disabled while Compare is on). The edit is real: the brightness slider pushed to its maximum and
- * let go hands the real Edit processor to the ViewModel's `apply`. What the photo shows is read
- * from pixels, drawing the activity's content view into a bitmap.
+ * let go changes the ViewModel's settings session, and the photo card draws it live
+ * (`LivePreviewImage`, Run 9). What the photo shows is read from the live preview's semantics (its
+ * colour matrix) and from pixels, drawing the activity's content view into a bitmap.
  *
  * The photo is decoded before the screen is drawn, so the loading indicator (which animates
  * forever) is never on screen.
@@ -114,14 +119,26 @@ class CompareTest {
     }
 
     /**
-     * With a brightening edit made, Compare on draws exactly the pixels the photo had before the
-     * edit, and Compare off draws exactly the edited pixels again, from the same edited bitmap.
-     * The middle of the image node is compared, clear of the pill at the card's bottom right.
+     * With a brightening edit made, Compare on draws the photo as it was before the edit, and
+     * Compare off draws exactly the edited pixels again, from the same settings. The middle of
+     * the image node is compared, clear of the pill at the card's bottom right.
+     *
+     * Run 9 (T-003): the edit is no longer a rendered `edited` bitmap (that stays null until Done);
+     * the screen draws it live (`LivePreviewImage`, a colour matrix on the original). So the test
+     * checks what is really drawn: before the edit the live preview's matrix is the identity, after
+     * it the matrix is the settings' one and the pixels are brighter; while comparing there is no
+     * live preview at all (the plain original is drawn) and the pixels match the unedited ones;
+     * off again, the live preview returns with the same matrix and the same pixels. The unedited
+     * pixels and the compared ones come from two drawing paths (the live preview with no colour
+     * filter, then the plain image), so they are compared by their colours on average and at the
+     * centre of each half of the photo, not bit for bit, which a half-pixel shift of the scaled
+     * edge between grey and orange would break.
      */
     @Test
     fun compare_shows_the_original_and_switching_it_off_shows_the_edit_again() {
         val viewModel = showEdit(EditTool.ADJUST)
         val image = middleOf(bounds(TOOL_IMAGE_TAG))
+        assertEquals("nothing edited yet, yet colours are changed", IDENTITY_MATRIX, liveMatrix())
         val originalPixels = pixelsIn(image)
 
         val edited = makeEdit(viewModel)
@@ -132,14 +149,17 @@ class CompareTest {
         compose.waitForIdle()
         assertTrue(viewModel.state.value.comparing)
         compose.onNodeWithTag(EDIT_COMPARE_TAG).assertIsOn()
-        assertArrayEquals("Compare on must show the original", originalPixels, pixelsIn(image))
-        assertSame("comparing must keep the edit", edited, viewModel.state.value.edited)
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).assertDoesNotExist()
+        assertLooksLike("Compare on must show the original", originalPixels, pixelsIn(image), image)
+        assertEquals("comparing must keep the edit", edited, viewModel.state.value.settings)
+        assertNull("comparing must not render the edit", viewModel.state.value.edited)
 
         compose.onNodeWithTag(EDIT_COMPARE_TAG).performClick()
         compose.waitForIdle()
         assertFalse(viewModel.state.value.comparing)
         compose.onNodeWithTag(EDIT_COMPARE_TAG).assertIsOff()
-        assertSame("Compare off must bring back the same edit", edited, viewModel.state.value.edited)
+        assertEquals("Compare off must bring back the same edit", edited, viewModel.state.value.settings)
+        assertEquals("Compare off must draw the edit live again", EditColourMatrix.of(edited).toList(), liveMatrix())
         assertArrayEquals("Compare off must show the edit again", editedPixels, pixelsIn(image))
     }
 
@@ -149,6 +169,11 @@ class CompareTest {
      * controls of the other three sheets too (each opened through the ViewModel, since the row is
      * disabled). The ViewModel refuses an edit and an undo meanwhile. Switching Compare off
      * enables the sliders, the entries and Undo again.
+     *
+     * Run 9 (T-003): the edit is the session's settings drawn live, not a rendered `edited`
+     * bitmap (null until Done), so "the edit is kept" is checked on the settings, and the photo
+     * through the live preview: absent while comparing (the plain original is drawn), back with
+     * the edit's colour matrix once Compare is off.
      */
     @Test
     fun compare_disables_every_editing_control_and_switching_it_off_enables_them() {
@@ -161,6 +186,7 @@ class CompareTest {
         assertTrue(viewModel.state.value.comparing)
         assertEditingEnabled(false)
         compose.onNodeWithTag(EDIT_COMPARE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).assertDoesNotExist()
 
         // A tap on a disabled entry changes nothing.
         compose.onNodeWithTag(editToolTag(EditTool.CROP)).performClick()
@@ -188,15 +214,18 @@ class CompareTest {
         shadowOf(Looper.getMainLooper()).idle()
         compose.waitForIdle()
         val during = viewModel.state.value
-        assertSame("an edit or an undo went through while comparing", edited, during.edited)
+        assertEquals("an edit or an undo went through while comparing", edited, during.settings)
+        assertNull("comparing rendered the photo", during.edited)
         assertTrue(during.canUndo)
         assertTrue(during.processing is ToolUiState.Processing.Idle)
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).assertDoesNotExist()
 
         compose.onNodeWithTag(EDIT_COMPARE_TAG).performClick()
         compose.waitForIdle()
         assertFalse(viewModel.state.value.comparing)
         assertEditingEnabled(true)
-        assertSame(edited, viewModel.state.value.edited)
+        assertEquals(edited, viewModel.state.value.settings)
+        assertEquals("the live preview did not come back", EditColourMatrix.of(edited).toList(), liveMatrix())
     }
 
     /**
@@ -287,27 +316,66 @@ class CompareTest {
     }
 
     /**
-     * Makes one real edit through the Adjust sheet (brightness pushed to its maximum and let go),
-     * waits (at most 5 s of real time) until it has landed and none is running, and returns the
-     * edited bitmap.
+     * Makes one real edit through the Adjust sheet (brightness pushed to its maximum and let go)
+     * and returns the settings it left.
+     *
+     * Run 9 (T-003): it used to wait for a rendered `edited` bitmap, which the Edit screen no
+     * longer makes before Done. A colour slider is drawn live, at once, so this checks instead
+     * that the settings hold the edit as one Undo step, that nothing was rendered, and that the
+     * live preview draws the settings' colour matrix.
      */
-    private fun makeEdit(viewModel: ToolViewModel): Bitmap {
+    private fun makeEdit(viewModel: ToolViewModel): EditSettings {
         compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(EditSettings.MAX) }
         // Run 9: the semantics action only moves the slider (a preview); letting go is the commit
         // that makes it one Undo step.
         viewModel.commitSettings()
-        compose.waitUntil(timeoutMillis = 5_000) {
-            // The processor works on a real background thread; its result comes back through the
-            // main looper, which a Robolectric test must let run itself.
-            shadowOf(Looper.getMainLooper()).idle()
-            val state = viewModel.state.value
-            state.edited != null && state.processing is ToolUiState.Processing.Idle
-        }
+        shadowOf(Looper.getMainLooper()).idle()
         compose.waitForIdle()
-        assertTrue(viewModel.state.value.canUndo)
-        return checkNotNull(viewModel.state.value.edited)
+        val state = viewModel.state.value
+        assertEquals(EditSettings.MAX, state.settings.brightness, 0.0001f)
+        assertTrue(state.canUndo)
+        assertNull("a colour slider rendered the photo", state.edited)
+        assertTrue(state.processing is ToolUiState.Processing.Idle)
+        assertEquals(EditColourMatrix.of(state.settings).toList(), liveMatrix())
+        return state.settings
     }
+
+    /** The colour matrix the live preview now draws with ([LivePreviewMatrix]), as 20 numbers. */
+    private fun liveMatrix(): List<Float> =
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).fetchSemanticsNode().config[LivePreviewMatrix]
+
+    /**
+     * Fails with [message] unless [actual] looks like [expected], both the pixels of [area] row
+     * after row: their mean red, green and blue each within [MEAN_TOLERANCE], and the pixels at
+     * the centre of the area's left and right quarters (well inside the grey and the orange half)
+     * each channel within [POINT_TOLERANCE].
+     */
+    private fun assertLooksLike(message: String, expected: IntArray, actual: IntArray, area: Rect) {
+        assertEquals(message, expected.size, actual.size)
+        val expectedMeans = channelMeans(expected)
+        val actualMeans = channelMeans(actual)
+        (0..2).forEach { channel ->
+            assertEquals("$message (mean of channel $channel)", expectedMeans[channel], actualMeans[channel], MEAN_TOLERANCE)
+        }
+        val width = (area.right.toInt() - area.left.toInt()).coerceAtLeast(1)
+        val row = actual.size / width / 2
+        listOf(width / 4, width * 3 / 4).forEach { column ->
+            val index = row * width + column
+            listOf(16, 8, 0).forEach { shift ->
+                val want = (expected[index] shr shift) and 0xFF
+                val got = (actual[index] shr shift) and 0xFF
+                assertTrue("$message (pixel $column,$row: $want vs $got)", abs(want - got) <= POINT_TOLERANCE)
+            }
+        }
+    }
+
+    /** The mean red, green and blue of [pixels], in that order. */
+    private fun channelMeans(pixels: IntArray): DoubleArray = doubleArrayOf(
+        pixels.map { (it shr 16) and 0xFF }.average(),
+        pixels.map { (it shr 8) and 0xFF }.average(),
+        pixels.map { it and 0xFF }.average(),
+    )
 
     /**
      * Fails unless the Adjust sheet's four sliders, the four tool entries and Undo are all
@@ -387,9 +455,21 @@ class CompareTest {
     /** An opaque ARGB colour from its three channels. */
     private fun rgb(r: Int, g: Int, b: Int): Int = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
 
-    /** The made-up Uri of the fake photo. */
+    /** The made-up Uri of the fake photo, and the numbers the pixel and matrix checks use. */
     private companion object {
         /** A content Uri no real photo has; the fake loader ignores it. */
         const val PHOTO_URI = "content://media/external/images/media/42"
+
+        /**
+         * The identity colour matrix's 20 numbers (ones at 0, 6, 12 and 18): what the live
+         * preview reports while no colour slider has moved.
+         */
+        val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f }
+
+        /** How far apart two means of a channel (0 to 255) may be and still look alike. */
+        const val MEAN_TOLERANCE = 1.5
+
+        /** How far apart one channel (0 to 255) of two sampled pixels may be and still look alike. */
+        const val POINT_TOLERANCE = 3
     }
 }

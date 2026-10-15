@@ -689,7 +689,35 @@ private fun PhotoCard(
                     } else {
                         BlurredBackdrop(photo = image)
                     }
-                    PhotoView(image = image, photoUri = state.photoUri)
+                    if (state.tool == Tool.EDIT && !state.comparing) {
+                        // The Edit screen draws the photo live: the settings' crop, turns, flips and
+                        // colour sliders are applied by Compose as it draws, and only a filter is
+                        // a re-rendered bitmap (state.filterPreview). Nothing is rendered in full
+                        // until Done.
+                        // The node is sized to the shape of what is drawn (the cropped, turned
+                        // photo), so its bounds are exactly where the photo is.
+                        val crop = state.settings.crop
+                        val cropWidth = (crop.right - crop.left).coerceAtLeast(0.01f) * current.bitmap.width
+                        val cropHeight = (crop.bottom - crop.top).coerceAtLeast(0.01f) * current.bitmap.height
+                        val turned = state.settings.quarterTurns % 2 != 0
+                        val photoDescription = stringResource(R.string.tool_photo_description)
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(if (turned) cropHeight / cropWidth else cropWidth / cropHeight)
+                                .testTag(TOOL_IMAGE_TAG)
+                                .semantics {
+                                    this[TOOL_PHOTO_URI_KEY] = state.photoUri
+                                    contentDescription = photoDescription
+                                },
+                        ) {
+                            LivePreviewImage(
+                                bitmap = state.filterPreview ?: current.bitmap,
+                                settings = state.settings,
+                            )
+                        }
+                    } else {
+                        PhotoView(image = image, photoUri = state.photoUri)
+                    }
                 }
                 ToolUiState.PhotoState.Unreadable -> Text(
                     text = stringResource(R.string.tool_photo_unreadable),

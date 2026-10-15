@@ -12,6 +12,8 @@ import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.data.photo.SaveResult
@@ -52,9 +54,12 @@ import kotlinx.coroutines.withContext
  * - **The Edit screen** keeps one [EditSettings] object for the whole visit, inside an
  *   [EditSession] (the settings plus the earlier settings Undo can go back to). Every change goes
  *   through [changeSettings] (one action: a chip, a turn, a crop), [previewSettings] (a slider
- *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]. After each one
- *   the WHOLE settings are rendered again from the ORIGINAL photo, so nothing is ever stacked on
- *   an earlier result; [undo] just goes back to earlier settings and renders those.
+ *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]; [undo] just
+ *   goes back to earlier settings. None of them renders the full photo: the screen draws the
+ *   crop, turns, flips and colour sliders live on top of the original as it draws, and only a
+ *   filter is computed here, on a small copy of the original ([ToolUiState.filterPreview]). The
+ *   full render from the ORIGINAL photo, with the WHOLE current settings, runs once, when the
+ *   edit is finished ([save], [renderFinal]), so nothing is ever stacked on an earlier result.
  * - **The other tools** (Remove background, Enhance, Retouch, Artistic) use [apply]: it runs one
  *   edit (a [ToolProcessor]) on the photo as it is now shown, the result becomes the new shown
  *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
@@ -123,9 +128,9 @@ class ToolViewModel(
             // update { } changes only the photo part of the snapshot as it is right now, so a
             // decode that finishes while a save runs leaves the save part alone.
             mutableState.update { it.copy(photo = shown) }
-            // Settings chosen before the photo arrived (or kept from a smaller decode) are drawn
-            // on the newly decoded original now.
-            if (tool == Tool.EDIT && photo != null) renderSettings()
+            // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
+            // to the newly decoded original now; everything else the screen draws by itself.
+            if (tool == Tool.EDIT && photo != null && session.settings.hasFilter) requestPreview()
         }
     }
 
@@ -263,9 +268,9 @@ class ToolViewModel(
      * or when there is nothing to take back.
      *
      * On the Edit screen this goes back one action of the session (a slider release, a chip, a
-     * crop, a turn), whichever sheet it came from, and the photo is rendered again from the
-     * original with the earlier settings; it works even while a render runs, because the newest
-     * render always wins. On the other tools' screens the photo shown before the last edit is shown
+     * crop, a turn), whichever sheet it came from: the screen draws the earlier settings at once,
+     * and if they hold a filter its preview is computed again from the original (the newest
+     * request always wins). On the other tools' screens the photo shown before the last edit is shown
      * again (undoing every edit returns to the original), and nothing happens while an edit runs.
      */
     fun undo() {
@@ -274,7 +279,7 @@ class ToolViewModel(
             // A drag still under way counts as an action of its own, so it is settled first.
             if (!session.commit().canUndo) return
             publishSession(session.undo())
-            renderSettings()
+            requestPreview()
             return
         }
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
@@ -311,50 +316,42 @@ class ToolViewModel(
 
     /**
      * The last recipe the Edit panel gave for turning settings into a processor, kept so that
-     * [undo] (which the panel does not call) can render the earlier settings the same way.
+     * [undo] (which the panel does not call), the filter preview and the final render can draw
+     * settings the same way.
      */
     private var processorFor: ((EditSettings) -> ToolProcessor)? = null
 
-    /** The render of the Edit settings in progress, if any; a newer render cancels it. */
-    private var renderJob: Job? = null
-
-    /**
-     * Counts the Edit renders started. Each render remembers its own number, and only the render
-     * holding the newest number may change the state: an older one that is still finishing (a
-     * processor may not stop the moment it is cancelled) is simply dropped. It is read from the
-     * work thread too, so `@Volatile` makes every thread see the newest value.
-     */
-    @Volatile
-    private var renderGeneration = 0
-
     /**
      * One action on the Edit screen (a filter chip, a quarter turn, a flip, a finished crop) made
-     * the settings [new]: it becomes one undo entry and the photo is rendered again from the
-     * original. [processorFor] builds the processor that draws a set of settings. Nothing happens
-     * while comparing, when every control is disabled.
+     * the settings [new]: it becomes one undo entry. The screen draws the new settings at once;
+     * only a filter needs work here, so the filter preview is asked for (see [requestPreview]).
+     * [processorFor] builds the processor that draws a set of settings. Nothing happens while
+     * comparing, when every control is disabled.
      */
     fun changeSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
         if (mutableState.value.comparing) return
         this.processorFor = processorFor
         publishSession(session.change(new))
-        renderSettings()
+        requestPreview()
     }
 
     /**
-     * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it, but
-     * no undo entry is made until [commitSettings]. Nothing happens while comparing.
+     * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it at
+     * once (the screen applies a colour slider as it draws; a filter's intensity is computed on the
+     * small preview copy), but no undo entry is made until [commitSettings]. Nothing happens while
+     * comparing.
      */
     fun previewSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
         if (mutableState.value.comparing) return
         this.processorFor = processorFor
         publishSession(session.preview(new))
-        renderSettings()
+        requestPreview()
     }
 
     /**
      * The finger let go of a slider: the whole drag becomes one undo entry. The settings do not
-     * change, so nothing is rendered again; the render the last drag step started goes on and,
-     * being the newest, is the one shown. This works even while comparing, so a drag is never left
+     * change, so nothing new is asked for; the preview request the last drag step sent is still
+     * the newest, so it is the one shown. This works even while comparing, so a drag is never left
      * half recorded.
      */
     fun commitSettings() {
@@ -374,7 +371,7 @@ class ToolViewModel(
         val photoAspect = original.width.toFloat() / original.height
         this.processorFor = processorFor
         publishSession(session.cropRatioChosen(ratio, photoAspect))
-        renderSettings()
+        requestPreview()
     }
 
     /**
@@ -414,63 +411,175 @@ class ToolViewModel(
         mutableState.update { it.copy(settings = new.settings, canUndo = new.canUndo) }
     }
 
+    // --- The Edit screen's live filter preview -----------------------------------------------------
+
     /**
-     * Renders the session's current settings from the ORIGINAL photo, in the background.
+     * The filter settings waiting to be drawn on the small preview copy.
      *
-     * The latest settings always win: a new render cancels the one before it, and the generation
-     * number stops a render that finishes late from changing the state, so a slider released while
-     * another change is still being drawn is never lost. Neutral settings need no render at all:
-     * the edited photo becomes null, so the screen shows the original and Save copies its file.
-     * A failure keeps the photo shown as it was and says why.
+     * A Channel is a queue between coroutines (see [savedChannel]). This one is CONFLATED: it
+     * holds at most one item, and sending a new one replaces an item nobody has taken yet. So
+     * while one preview render runs, every intensity step a finger sends overwrites the one
+     * before it, and when the render ends the collector takes only the LATEST settings: the
+     * steps overtaken in between are dropped instead of being rendered one by one behind the
+     * finger. And because a send is never refused, the last setting (a slider let go mid-render)
+     * is never lost: it waits in the channel until the running render is done.
      */
-    private fun renderSettings() {
+    private val previewRequests = Channel<EditSettings>(Channel.CONFLATED)
+
+    /**
+     * The coroutine that takes requests out of [previewRequests] one at a time and renders them;
+     * started on the first request and stopped with the ViewModel ([viewModelScope]).
+     */
+    private var previewCollector: Job? = null
+
+    /** The original photo [previewSource] was made from, to know when it must be made again. */
+    private var previewSourceOf: Bitmap? = null
+
+    /**
+     * The original photo shrunk to [FilterPreviewRenderer.PREVIEW_EDGE] pixels, made once per
+     * decoded original, so a filter preview never works on the full-size photo.
+     */
+    private var previewSource: Bitmap? = null
+
+    /** The filter and intensity last asked for, so an unchanged filter is not rendered again. */
+    private var lastPreviewKey: Pair<FilterPreset, Float>? = null
+
+    /** The renderer in use, built on [previewSource] with the processor recipe it was given. */
+    private var previewRenderer: FilterPreviewRenderer? = null
+
+    /** The processor recipe [previewRenderer] was built with, to know when to build a new one. */
+    private var previewRendererRecipe: ((EditSettings) -> ToolProcessor)? = null
+
+    /**
+     * Asks for the session's current filter to be drawn on the small preview copy.
+     *
+     * Without a filter there is nothing to compute: [ToolUiState.filterPreview] becomes null at
+     * once and the screen draws the original. With one, the settings go into [previewRequests],
+     * where a newer request replaces an older one still waiting. Nothing here marks the screen as
+     * busy (no `Processing.Running`): the preview is quick, and the controls must not flicker or
+     * lock while a finger drags a slider.
+     */
+    private fun requestPreview() {
         val settings = session.settings
-        val generation = ++renderGeneration
-        renderJob?.cancel()
-        renderJob = null
-        if (settings.isNeutral) {
-            mutableState.update {
-                it.copy(edited = null, failure = null, processing = ToolUiState.Processing.Idle)
-            }
+        if (!settings.hasFilter) {
+            lastPreviewKey = null
+            mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        val build = processorFor ?: return
-        mutableState.update {
-            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
-        }
-        renderJob = viewModelScope.launch {
-            val result = try {
-                withContext(workDispatcher) {
-                    // Always the original, shrunk once to the working size: never an earlier result.
-                    val input = fittedOriginal(original)
-                    build(settings).process(input) { progress ->
-                        if (generation == renderGeneration) reportProgress(progress)
-                    }
-                }
-            } catch (cancelled: CancellationException) {
-                // A newer render cancelled this one, or the screen was left. Only the newest
-                // render may say the work is over: an older one leaves the state to the newer.
-                if (generation == renderGeneration) {
-                    mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
-                }
-                throw cancelled
-            } catch (outOfMemory: OutOfMemoryError) {
-                EditResult.Failed(EditFailure.OutOfMemory)
-            } catch (other: Throwable) {
-                EditResult.Failed(EditFailure.Other)
-            }
-            // A newer render has started since: this result is out of date.
-            if (generation != renderGeneration) return@launch
-            when (result) {
-                is EditResult.Edited -> mutableState.update {
-                    it.copy(edited = result.bitmap, failure = null, processing = ToolUiState.Processing.Idle)
-                }
-                is EditResult.Failed -> mutableState.update {
-                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
-                }
+        // A slider, turn or crop leaves the filter as it was: its preview is still right, so no
+        // render is repeated (it would only cost memory and a redraw during a drag).
+        val key = settings.filter to settings.filterIntensity
+        if (key == lastPreviewKey) return
+        lastPreviewKey = key
+        if (previewCollector == null) {
+            previewCollector = viewModelScope.launch {
+                // The loop waits for each request in turn and ends only when the scope is
+                // cancelled (this ViewModel cleared).
+                for (requested in previewRequests) renderPreview(requested)
             }
         }
+        // A conflated channel always accepts, so trySend never fails here.
+        previewRequests.trySend(settings)
+    }
+
+    /**
+     * Renders the filter of [requested] on the small preview copy of the original, in the
+     * background, and publishes it unless a newer filter choice has replaced it meanwhile (the
+     * newer one is then already waiting in [previewRequests]), or the filter was removed (the
+     * preview then stays null). A preview that fails shows the plain photo: the full render at
+     * the end reports a real failure.
+     */
+    private suspend fun renderPreview(requested: EditSettings) {
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap
+        val build = processorFor
+        if (original == null || build == null) {
+            // Nothing to render yet: forget the request so a later one is not skipped as a repeat.
+            lastPreviewKey = null
+            return
+        }
+        val rendered = try {
+            val renderer = previewRendererFor(original, build)
+            // Off the main thread, like every edit here.
+            withContext(workDispatcher) { renderer.render(requested) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failed: Throwable) {
+            // Out of memory while shrinking, or anything else: no preview for this filter.
+            null
+        }
+        val now = session.settings
+        // Same filter still chosen: show this frame even when the intensity has moved on since,
+        // so a drag keeps changing the photo; the newer request is already queued and replaces it.
+        // A failed render shows the plain photo rather than the previous filter's look.
+        if (now.hasFilter && now.filter == requested.filter) {
+            mutableState.update { it.copy(filterPreview = rendered) }
+            if (rendered == null) lastPreviewKey = null
+        }
+    }
+
+    /**
+     * The renderer for [original] and the recipe [build]: the one already made when both are the
+     * same objects as last time, otherwise a new one. Shrinking the original is real work, so it
+     * runs on [workDispatcher] and happens once per decoded original.
+     */
+    private suspend fun previewRendererFor(
+        original: Bitmap,
+        build: (EditSettings) -> ToolProcessor,
+    ): FilterPreviewRenderer {
+        val current = previewRenderer
+        if (current != null && previewSourceOf === original && previewRendererRecipe === build) {
+            return current
+        }
+        val source = previewSource.takeIf { previewSourceOf === original }
+            ?: withContext(workDispatcher) { WorkingSize.fit(original, FilterPreviewRenderer.PREVIEW_EDGE) }
+        previewSourceOf = original
+        previewSource = source
+        previewRendererRecipe = build
+        return FilterPreviewRenderer(source, build).also { previewRenderer = it }
+    }
+
+    // --- The Edit screen's full render -------------------------------------------------------------
+
+    /**
+     * Renders the Edit session's CURRENT settings at full working size from the original photo and
+     * returns the result, or null when there is nothing to render yet (no decoded photo, or no
+     * processor recipe because nothing was changed). It changes no state: the caller (the Done
+     * button) decides what to show while it runs and what to do with the picture.
+     *
+     * This is the only full-size render on the Edit screen, run once when the edit is finished:
+     * while the person edits, the screen draws the settings live instead.
+     */
+    suspend fun renderFinal(): EditResult? {
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return null
+        val build = processorFor ?: return null
+        return renderFull(original, build, session.settings)
+    }
+
+    /**
+     * Runs the processor [build] makes for [settings] on [original], shrunk once to this tool's
+     * working size ([WorkingSize.maxEdgeFor]), on [workDispatcher], and returns the result; it
+     * never writes the state. Always the original, never an earlier result, so nothing is stacked.
+     * [onProgress] hears how far along it is, from 0 to 1.
+     *
+     * A failure comes back as [EditResult.Failed] (out of memory, or anything else). A
+     * cancellation (the screen was left) is passed on up, as coroutines expect, not reported as a
+     * failure.
+     */
+    private suspend fun renderFull(
+        original: Bitmap,
+        build: (EditSettings) -> ToolProcessor,
+        settings: EditSettings,
+        onProgress: (Float) -> Unit = {},
+    ): EditResult = try {
+        withContext(workDispatcher) {
+            build(settings).process(fittedOriginal(original), onProgress)
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (outOfMemory: OutOfMemoryError) {
+        EditResult.Failed(EditFailure.OutOfMemory)
+    } catch (other: Throwable) {
+        EditResult.Failed(EditFailure.Other)
     }
 
     /**
@@ -513,26 +622,79 @@ class ToolViewModel(
      * When the person has edited the photo, the edited photo shown on screen is saved, exactly
      * at the size they saw it, as a new file; otherwise the original photo is copied as it is.
      * Either way the original photo's file is never changed.
+     *
+     * The Edit screen has no rendered photo while the person edits (the screen draws the settings
+     * live), so with changes made Save first renders the CURRENT settings in full from the
+     * original, showing the work as running (taps are ignored meanwhile), then saves that picture;
+     * with no changes it copies the original file. This keeps Save working until the Done button
+     * takes over the final render.
      */
     fun save() {
         val current = mutableState.value
         if (current.save == ToolUiState.SaveState.Saving) return
         if (current.processing is ToolUiState.Processing.Running) return
+        if (tool == Tool.EDIT && !session.settings.isNeutral) {
+            saveRenderedSettings()
+            return
+        }
         // Read once, now, so an edit that lands while the save runs cannot change what is saved.
         val edited = current.edited
         mutableState.update { it.copy(save = ToolUiState.SaveState.Saving) }
+        viewModelScope.launch { writeAndAnnounce(edited) }
+    }
+
+    /**
+     * The Edit screen's Save with changes made: renders the session's current settings in full
+     * from the original ([renderFull]), then writes the result. While the render runs the state
+     * says so ([ToolUiState.Processing.Running]), which also makes [save] ignore further taps. A
+     * failed render says why and saves nothing. Nothing happens before the photo is decoded.
+     */
+    private fun saveRenderedSettings() {
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val build = processorFor ?: return
+        // Read once, now: the picture saved is the settings as they were when Save was tapped.
+        val settings = session.settings
+        mutableState.update {
+            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
+        }
         viewModelScope.launch {
-            val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
+            val result = try {
+                renderFull(original, build, settings) { progress -> reportProgress(progress) }
+            } catch (cancelled: CancellationException) {
+                // The screen was left: the run is over, so the screen must not stay locked.
+                mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
+                throw cancelled
+            }
             when (result) {
-                is SaveResult.Saved -> {
+                is EditResult.Edited -> {
                     mutableState.update {
-                        it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
+                        it.copy(processing = ToolUiState.Processing.Idle, save = ToolUiState.SaveState.Saving)
                     }
-                    savedChannel.send(result.uri)
+                    writeAndAnnounce(result.bitmap)
                 }
-                SaveResult.Failed -> mutableState.update {
-                    it.copy(save = ToolUiState.SaveState.Failed)
+                is EditResult.Failed -> mutableState.update {
+                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
                 }
+            }
+        }
+    }
+
+    /**
+     * Writes [edited] into `Pictures/Kanso` as a new file, or copies the original photo's file
+     * when it is null, then records the outcome and, on success, sends the new photo's Uri to
+     * the screen through [savedEvents]. The caller has already set the state to Saving.
+     */
+    private suspend fun writeAndAnnounce(edited: Bitmap?) {
+        val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
+        when (result) {
+            is SaveResult.Saved -> {
+                mutableState.update {
+                    it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
+                }
+                savedChannel.send(result.uri)
+            }
+            SaveResult.Failed -> mutableState.update {
+                it.copy(save = ToolUiState.SaveState.Failed)
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.phongkaster.kanso.data.edit.edit
 
 import android.graphics.Bitmap
-import android.graphics.ColorMatrix
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ToolProcessor
@@ -108,8 +107,9 @@ class EditProcessor(
         onProgress(PROGRESS_FILTERED)
 
         // 5. The colour sliders, only when one is away from its middle, so all four at the middle
-        // leave every pixel exactly as it was.
-        if (settings.hasColourChange) applyMatrix(image.data, colourMatrix(settings))
+        // leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
+        // builder the live preview hands to Compose, so the preview and Done agree.
+        if (settings.hasColourChange) applyMatrix(image.data, EditColourMatrix.of(settings))
 
         // An edited photo is opaque: every pixel's alpha is set to 255 and the bitmap says so.
         val data = image.data
@@ -198,27 +198,15 @@ class EditProcessor(
     }
 
     /**
-     * Sends every pixel of [data] through [lut] and mixes the result with the pixel's own colour:
-     * [intensity] 1 gives the filtered colour, 0 the colour as it was, 0.5 halfway between.
+     * Sends every pixel of [data] through [lut] at [intensity], one pixel at a time through
+     * [filterPixel] (the same function the live preview's [FilterPreviewRenderer] relies on).
      */
     private fun applyFilter(data: IntArray, lut: FilterLut, intensity: Float) {
         for (i in data.indices) {
             if (i and CHECK_MASK == 0) checkActive()
-            val color = data[i]
-            val filtered = lut.map(color)
-            data[i] = if (intensity >= 1f) {
-                filtered
-            } else {
-                OPAQUE or
-                    (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
-                    (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
-                    mix(color and 0xFF, filtered and 0xFF, intensity)
-            }
+            data[i] = filterPixel(data[i], lut, intensity)
         }
     }
-
-    /** The value [amount] of the way from [from] to [to], rounded. */
-    private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
 
     /** Rounds [value] to a channel value, clamped to 0..255. */
     private fun channel(value: Float): Int = when {
@@ -233,11 +221,17 @@ class EditProcessor(
         /** The alpha bits of a fully opaque ARGB colour. */
         private const val OPAQUE = -0x1000000
 
-        /** How far brightness at its maximum lifts every channel, in 0..255 units. */
-        const val BRIGHTNESS_SHIFT = 80f
+        /**
+         * How far brightness at its maximum lifts every channel, in 0..255 units. The number lives
+         * in [EditColourMatrix]; this name is kept so existing code and tests still read it here.
+         */
+        const val BRIGHTNESS_SHIFT = EditColourMatrix.BRIGHTNESS_SHIFT
 
-        /** How far warmth at its maximum lifts red and lowers blue, in 0..255 units. */
-        const val WARMTH_SHIFT = 40f
+        /**
+         * How far warmth at its maximum lifts red and lowers blue, in 0..255 units (kept here for
+         * the same reason as [BRIGHTNESS_SHIFT]).
+         */
+        const val WARMTH_SHIFT = EditColourMatrix.WARMTH_SHIFT
 
         /** A cancelled render is noticed every 65,536 pixels in the colour and filter loops. */
         private const val CHECK_MASK = 0xFFFF
@@ -266,57 +260,32 @@ class EditProcessor(
         }
 
         /**
-         * Builds the one colour matrix the four sliders of [settings] make together, applied in
-         * this order: contrast, saturation, warmth, brightness. It is `internal` (visible to the
-         * app module and its tests, nowhere else) so a test can check the numbers directly.
-         *
-         * A colour matrix (Android's `ColorMatrix`) is a 4 x 5 grid of numbers: each output channel
-         * is a weighted sum of the input red, green, blue and alpha plus an offset. Chaining two
-         * matrices (`postConcat`) gives one matrix that does both, so the pixels are visited once.
-         *
-         * - Contrast scales each channel away from (or towards) mid-grey 128: by up to 2 at the
-         *   maximum, down to 0.2 at the minimum.
-         * - Saturation uses `setSaturation`: 0 at the minimum (every channel becomes the pixel's
-         *   luminance, so black and white), 1 in the middle, 2 at the maximum.
-         * - Warmth adds up to [WARMTH_SHIFT] to red and takes it from blue (the reverse when cooler).
-         * - Brightness adds up to [BRIGHTNESS_SHIFT] to every channel (or takes it away).
+         * The one colour matrix the four sliders of [settings] make together. The formula lives
+         * in [EditColourMatrix.of], shared with the live preview; this delegate stays so existing
+         * code and tests can keep asking the processor. It is `internal` (visible to the app
+         * module and its tests, nowhere else).
          */
-        internal fun colourMatrix(settings: EditSettings): FloatArray {
-            val matrix = ColorMatrix()
-            val contrast = settings.contrast.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (contrast != EditSettings.MIDDLE) {
-                val scale = if (contrast > 0f) 1f + contrast else 1f + contrast * 0.8f
-                val offset = 128f * (1f - scale)
-                matrix.postConcat(ColorMatrix(scaleAndShift(scale, offset, offset, offset)))
-            }
-            val saturation = settings.saturation.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (saturation != EditSettings.MIDDLE) {
-                val saturate = ColorMatrix()
-                saturate.setSaturation(1f + saturation)
-                matrix.postConcat(saturate)
-            }
-            val warmth = settings.warmth.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (warmth != EditSettings.MIDDLE) {
-                val shift = warmth * WARMTH_SHIFT
-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, 0f, -shift)))
-            }
-            val brightness = settings.brightness.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (brightness != EditSettings.MIDDLE) {
-                val shift = brightness * BRIGHTNESS_SHIFT
-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, shift, shift)))
-            }
-            return matrix.array
-        }
+        internal fun colourMatrix(settings: EditSettings): FloatArray = EditColourMatrix.of(settings)
 
         /**
-         * A colour matrix's 20 numbers that multiply red, green and blue by [scale] and then add
-         * [red], [green] and [blue] to them, leaving alpha alone.
+         * Sends one ARGB pixel [color] through the filter look-up [lut] and mixes the result with
+         * the pixel's own colour: [intensity] 1 (or more) gives the filtered colour, 0 the colour
+         * as it was, 0.5 halfway between, each channel rounded.
+         *
+         * It is a pure function (same input, same output, nothing else touched) and `internal`, so
+         * Done ([EditProcessor]) and the live preview ([FilterPreviewRenderer], which runs this
+         * processor with only the filter set) mix a filter in exactly the same way.
          */
-        private fun scaleAndShift(scale: Float, red: Float, green: Float, blue: Float): FloatArray = floatArrayOf(
-            scale, 0f, 0f, 0f, red,
-            0f, scale, 0f, 0f, green,
-            0f, 0f, scale, 0f, blue,
-            0f, 0f, 0f, 1f, 0f,
-        )
+        internal fun filterPixel(color: Int, lut: FilterLut, intensity: Float): Int {
+            val filtered = lut.map(color)
+            if (intensity >= 1f) return filtered
+            return OPAQUE or
+                (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
+                (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
+                mix(color and 0xFF, filtered and 0xFF, intensity)
+        }
+
+        /** The value [amount] of the way from [from] to [to], rounded. */
+        private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
     }
 }

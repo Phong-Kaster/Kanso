@@ -1,0 +1,873 @@
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt
+index fb65108..d287106 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt
+@@ -1,7 +1,6 @@
+ package com.phongkaster.kanso.data.edit.edit
+ 
+ import android.graphics.Bitmap
+-import android.graphics.ColorMatrix
+ import com.phongkaster.kanso.data.edit.EditFailure
+ import com.phongkaster.kanso.data.edit.EditResult
+ import com.phongkaster.kanso.data.edit.ToolProcessor
+@@ -108,8 +107,9 @@ class EditProcessor(
+         onProgress(PROGRESS_FILTERED)
+ 
+         // 5. The colour sliders, only when one is away from its middle, so all four at the middle
+-        // leave every pixel exactly as it was.
+-        if (settings.hasColourChange) applyMatrix(image.data, colourMatrix(settings))
++        // leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
++        // builder the live preview hands to Compose, so the preview and Done agree.
++        if (settings.hasColourChange) applyMatrix(image.data, EditColourMatrix.of(settings))
+ 
+         // An edited photo is opaque: every pixel's alpha is set to 255 and the bitmap says so.
+         val data = image.data
+@@ -198,28 +198,16 @@ class EditProcessor(
+     }
+ 
+     /**
+-     * Sends every pixel of [data] through [lut] and mixes the result with the pixel's own colour:
+-     * [intensity] 1 gives the filtered colour, 0 the colour as it was, 0.5 halfway between.
++     * Sends every pixel of [data] through [lut] at [intensity], one pixel at a time through
++     * [filterPixel] (the same function the live preview's [FilterPreviewRenderer] relies on).
+      */
+     private fun applyFilter(data: IntArray, lut: FilterLut, intensity: Float) {
+         for (i in data.indices) {
+             if (i and CHECK_MASK == 0) checkActive()
+-            val color = data[i]
+-            val filtered = lut.map(color)
+-            data[i] = if (intensity >= 1f) {
+-                filtered
+-            } else {
+-                OPAQUE or
+-                    (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
+-                    (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
+-                    mix(color and 0xFF, filtered and 0xFF, intensity)
+-            }
++            data[i] = filterPixel(data[i], lut, intensity)
+         }
+     }
+ 
+-    /** The value [amount] of the way from [from] to [to], rounded. */
+-    private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
+-
+     /** Rounds [value] to a channel value, clamped to 0..255. */
+     private fun channel(value: Float): Int = when {
+         value <= 0f -> 0
+@@ -233,11 +221,17 @@ class EditProcessor(
+         /** The alpha bits of a fully opaque ARGB colour. */
+         private const val OPAQUE = -0x1000000
+ 
+-        /** How far brightness at its maximum lifts every channel, in 0..255 units. */
+-        const val BRIGHTNESS_SHIFT = 80f
++        /**
++         * How far brightness at its maximum lifts every channel, in 0..255 units. The number lives
++         * in [EditColourMatrix]; this name is kept so existing code and tests still read it here.
++         */
++        const val BRIGHTNESS_SHIFT = EditColourMatrix.BRIGHTNESS_SHIFT
+ 
+-        /** How far warmth at its maximum lifts red and lowers blue, in 0..255 units. */
+-        const val WARMTH_SHIFT = 40f
++        /**
++         * How far warmth at its maximum lifts red and lowers blue, in 0..255 units (kept here for
++         * the same reason as [BRIGHTNESS_SHIFT]).
++         */
++        const val WARMTH_SHIFT = EditColourMatrix.WARMTH_SHIFT
+ 
+         /** A cancelled render is noticed every 65,536 pixels in the colour and filter loops. */
+         private const val CHECK_MASK = 0xFFFF
+@@ -266,57 +260,32 @@ class EditProcessor(
+         }
+ 
+         /**
+-         * Builds the one colour matrix the four sliders of [settings] make together, applied in
+-         * this order: contrast, saturation, warmth, brightness. It is `internal` (visible to the
+-         * app module and its tests, nowhere else) so a test can check the numbers directly.
+-         *
+-         * A colour matrix (Android's `ColorMatrix`) is a 4 x 5 grid of numbers: each output channel
+-         * is a weighted sum of the input red, green, blue and alpha plus an offset. Chaining two
+-         * matrices (`postConcat`) gives one matrix that does both, so the pixels are visited once.
+-         *
+-         * - Contrast scales each channel away from (or towards) mid-grey 128: by up to 2 at the
+-         *   maximum, down to 0.2 at the minimum.
+-         * - Saturation uses `setSaturation`: 0 at the minimum (every channel becomes the pixel's
+-         *   luminance, so black and white), 1 in the middle, 2 at the maximum.
+-         * - Warmth adds up to [WARMTH_SHIFT] to red and takes it from blue (the reverse when cooler).
+-         * - Brightness adds up to [BRIGHTNESS_SHIFT] to every channel (or takes it away).
++         * The one colour matrix the four sliders of [settings] make together. The formula lives
++         * in [EditColourMatrix.of], shared with the live preview; this delegate stays so existing
++         * code and tests can keep asking the processor. It is `internal` (visible to the app
++         * module and its tests, nowhere else).
+          */
+-        internal fun colourMatrix(settings: EditSettings): FloatArray {
+-            val matrix = ColorMatrix()
+-            val contrast = settings.contrast.coerceIn(EditSettings.MIN, EditSettings.MAX)
+-            if (contrast != EditSettings.MIDDLE) {
+-                val scale = if (contrast > 0f) 1f + contrast else 1f + contrast * 0.8f
+-                val offset = 128f * (1f - scale)
+-                matrix.postConcat(ColorMatrix(scaleAndShift(scale, offset, offset, offset)))
+-            }
+-            val saturation = settings.saturation.coerceIn(EditSettings.MIN, EditSettings.MAX)
+-            if (saturation != EditSettings.MIDDLE) {
+-                val saturate = ColorMatrix()
+-                saturate.setSaturation(1f + saturation)
+-                matrix.postConcat(saturate)
+-            }
+-            val warmth = settings.warmth.coerceIn(EditSettings.MIN, EditSettings.MAX)
+-            if (warmth != EditSettings.MIDDLE) {
+-                val shift = warmth * WARMTH_SHIFT
+-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, 0f, -shift)))
+-            }
+-            val brightness = settings.brightness.coerceIn(EditSettings.MIN, EditSettings.MAX)
+-            if (brightness != EditSettings.MIDDLE) {
+-                val shift = brightness * BRIGHTNESS_SHIFT
+-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, shift, shift)))
+-            }
+-            return matrix.array
+-        }
++        internal fun colourMatrix(settings: EditSettings): FloatArray = EditColourMatrix.of(settings)
+ 
+         /**
+-         * A colour matrix's 20 numbers that multiply red, green and blue by [scale] and then add
+-         * [red], [green] and [blue] to them, leaving alpha alone.
++         * Sends one ARGB pixel [color] through the filter look-up [lut] and mixes the result with
++         * the pixel's own colour: [intensity] 1 (or more) gives the filtered colour, 0 the colour
++         * as it was, 0.5 halfway between, each channel rounded.
++         *
++         * It is a pure function (same input, same output, nothing else touched) and `internal`, so
++         * Done ([EditProcessor]) and the live preview ([FilterPreviewRenderer], which runs this
++         * processor with only the filter set) mix a filter in exactly the same way.
+          */
+-        private fun scaleAndShift(scale: Float, red: Float, green: Float, blue: Float): FloatArray = floatArrayOf(
+-            scale, 0f, 0f, 0f, red,
+-            0f, scale, 0f, 0f, green,
+-            0f, 0f, scale, 0f, blue,
+-            0f, 0f, 0f, 1f, 0f,
+-        )
++        internal fun filterPixel(color: Int, lut: FilterLut, intensity: Float): Int {
++            val filtered = lut.map(color)
++            if (intensity >= 1f) return filtered
++            return OPAQUE or
++                (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
++                (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
++                mix(color and 0xFF, filtered and 0xFF, intensity)
++        }
++
++        /** The value [amount] of the way from [from] to [to], rounded. */
++        private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
+     }
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt
+index cb93ae0..c3d6617 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt
+@@ -1,6 +1,25 @@
+ package com.phongkaster.kanso.ui.tool
+ 
++import android.graphics.Bitmap
++import android.graphics.LinearGradient
++import android.graphics.Paint
++import android.graphics.Shader
+ import androidx.compose.animation.AnimatedContent
++import androidx.compose.foundation.Canvas
++import androidx.compose.runtime.remember
++import androidx.compose.ui.geometry.Offset
++import androidx.compose.ui.graphics.ColorFilter
++import androidx.compose.ui.graphics.ColorMatrix
++import androidx.compose.ui.graphics.asImageBitmap
++import androidx.compose.ui.graphics.drawscope.withTransform
++import androidx.compose.ui.semantics.SemanticsPropertyKey
++import androidx.compose.ui.semantics.SemanticsPropertyReceiver
++import androidx.compose.ui.unit.IntOffset
++import androidx.compose.ui.unit.IntRect
++import androidx.compose.ui.unit.IntSize
++import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
++import kotlin.math.min
++import kotlin.math.roundToInt
+ import androidx.compose.animation.fadeIn
+ import androidx.compose.animation.fadeOut
+ import androidx.compose.animation.slideInVertically
+@@ -160,6 +179,169 @@ private fun EditSheetArea(
+     }
+ }
+ 
++/** Test tag of the Edit screen's live preview of the photo ([LivePreviewImage]). */
++const val LIVE_PREVIEW_TAG = "live-preview"
++
++/**
++ * The colour matrix [LivePreviewImage] applies, as its 20 numbers (4 rows of 5, row after row):
++ * exactly the identity matrix when no colour slider has moved. It lives in the node's semantics
++ * (the description of the screen that tests and screen readers read), so a test can check which
++ * colours are drawn without reading pixels.
++ */
++val LivePreviewMatrix = SemanticsPropertyKey<List<Float>>("LivePreviewMatrix")
++
++/** Writes [LivePreviewMatrix] in a `semantics { }` block; reading it back is for tests only. */
++var SemanticsPropertyReceiver.livePreviewMatrix by LivePreviewMatrix
++
++/**
++ * The geometry [LivePreviewImage] applies, as stable text such as
++ * `turns=1;flipH=true;flipV=false;crop=0.0,0.0,1.0,1.0` (the quarter turns 0 to 3, the two flips,
++ * then the crop's left, top, right and bottom as fractions of the photo), for tests to read.
++ */
++val LivePreviewGeometry = SemanticsPropertyKey<String>("LivePreviewGeometry")
++
++/** Writes [LivePreviewGeometry] in a `semantics { }` block; reading it back is for tests only. */
++var SemanticsPropertyReceiver.livePreviewGeometry by LivePreviewGeometry
++
++/** The identity colour matrix's 20 numbers: ones on the diagonal (places 0, 6, 12, 18). */
++private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f }
++
++/**
++ * Draws [bitmap] with the Edit [settings] applied live, every frame, by Compose itself, filling
++ * the space [modifier] gives it (it fills its parent by default).
++ *
++ * [bitmap] is the original photo, or its small copy with the filter already applied (the
++ * ViewModel's `filterPreview`): the filter is the one part Compose cannot draw. Everything else
++ * is applied here while drawing, so the photo follows a slider while the finger is still on it
++ * and no full-size picture is ever rendered before the edit is finished:
++ *
++ * 1. **Crop.** Only the rectangle `settings.crop` (fractions of the photo, turned into pixels the
++ *    same way the final render does) is taken from [bitmap].
++ * 2. **Quarter turns, then flips.** The cropped part is turned clockwise, then mirrored along
++ *    the screen's axes, the same order as the final render (crop, turn, flip). It is scaled to
++ *    fit inside the box whole, keeping its shape, and centred.
++ * 3. **Colour sliders.** Brightness, contrast, saturation and warmth become one colour matrix
++ *    ([EditColourMatrix.of], the very numbers the final render uses), handed to the GPU as a
++ *    `ColorFilter.colorMatrix`; with every slider in the middle no filter is set at all.
++ *
++ * The node carries [LIVE_PREVIEW_TAG], and [LivePreviewMatrix] and [LivePreviewGeometry] say
++ * what is applied, for tests.
++ */
++@Composable
++fun LivePreviewImage(bitmap: Bitmap, settings: EditSettings, modifier: Modifier = Modifier) {
++    // asImageBitmap wraps the Android bitmap for Compose without copying its pixels; remember
++    // keeps the wrapper until another bitmap arrives.
++    val image = remember(bitmap) { bitmap.asImageBitmap() }
++    val matrix = remember(settings) { EditColourMatrix.of(settings) }
++    val identity = remember(matrix) { EditColourMatrix.isIdentity(matrix) }
++    val colourFilter = remember(matrix, identity) {
++        if (identity) null else ColorFilter.colorMatrix(ColorMatrix(matrix))
++    }
++    val matrixNumbers = if (identity) IDENTITY_MATRIX else matrix.toList()
++    val turns = ((settings.quarterTurns % 4) + 4) % 4
++    val crop = cropPixels(bitmap.width, bitmap.height, settings.crop)
++    val geometry = "turns=$turns;flipH=${settings.flipHorizontal};flipV=${settings.flipVertical};" +
++        "crop=${settings.crop.left},${settings.crop.top},${settings.crop.right},${settings.crop.bottom}"
++    Canvas(
++        modifier = modifier
++            .fillMaxSize()
++            .testTag(LIVE_PREVIEW_TAG)
++            .semantics {
++                livePreviewMatrix = matrixNumbers
++                livePreviewGeometry = geometry
++            },
++    ) {
++        // A quarter or three-quarter turn swaps the picture's width and height on screen.
++        val sideways = turns % 2 == 1
++        val shownWidth = if (sideways) crop.height else crop.width
++        val shownHeight = if (sideways) crop.width else crop.height
++        // "Contain": the largest scale at which the whole turned picture fits in the box.
++        val fit = min(size.width / shownWidth, size.height / shownHeight)
++        val drawWidth = (crop.width * fit).roundToInt()
++        val drawHeight = (crop.height * fit).roundToInt()
++        val centre = center
++        // withTransform applies its steps to the drawing in reverse order of the calls: the
++        // picture, drawn centred on (0, 0), is first turned, then mirrored in the screen's axes,
++        // then moved to the middle of the box. Both pivots are (0, 0), the picture's centre.
++        withTransform({
++            translate(centre.x, centre.y)
++            scale(
++                scaleX = if (settings.flipHorizontal) -1f else 1f,
++                scaleY = if (settings.flipVertical) -1f else 1f,
++                pivot = Offset.Zero,
++            )
++            rotate(degrees = 90f * turns, pivot = Offset.Zero)
++        }) {
++            drawImage(
++                image = image,
++                srcOffset = IntOffset(crop.left, crop.top),
++                srcSize = IntSize(crop.width, crop.height),
++                dstOffset = IntOffset(-drawWidth / 2, -drawHeight / 2),
++                dstSize = IntSize(drawWidth, drawHeight),
++                colorFilter = colourFilter,
++            )
++        }
++    }
++}
++
++/**
++ * The crop [rect] (fractions of the photo) as pixels of a [width] x [height] picture, rounded the
++ * same way the final render rounds it: edges put in order, kept inside the picture, at least
++ * 1 x 1. So the preview takes exactly the rectangle Done will keep.
++ */
++private fun cropPixels(width: Int, height: Int, rect: EditSettings.CropRect): IntRect {
++    val left = (min(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(0, width - 1)
++    val top = (min(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(0, height - 1)
++    val right = (maxOf(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(left + 1, width)
++    val bottom = (maxOf(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(top + 1, height)
++    return IntRect(left, top, right, bottom)
++}
++
++/**
++ * A made-up 320 x 240 photo for the previews: a diagonal blend from blue to orange, so the crop,
++ * the turn and the colour change are all visible. Nothing is decoded from a file.
++ */
++private fun sampleGradientBitmap(): Bitmap {
++    val bitmap = Bitmap.createBitmap(320, 240, Bitmap.Config.ARGB_8888)
++    val paint = Paint().apply {
++        shader = LinearGradient(
++            0f, 0f, 320f, 240f,
++            0xFF1A73E8.toInt(), 0xFFF29900.toInt(),
++            Shader.TileMode.CLAMP,
++        )
++    }
++    android.graphics.Canvas(bitmap).drawRect(0f, 0f, 320f, 240f, paint)
++    return bitmap
++}
++
++/**
++ * The live preview of a photo cropped to its left two thirds, turned a quarter, mirrored and
++ * made warmer and brighter, in light and in dark.
++ */
++@PreviewLightDark
++@Composable
++private fun LivePreviewImagePreview() {
++    val bitmap = remember { sampleGradientBitmap() }
++    KansoTheme(themeMode = ThemeMode.System) {
++        Box(
++            modifier = Modifier
++                .fillMaxSize()
++                .background(MaterialTheme.colorScheme.surface),
++        ) {
++            LivePreviewImage(
++                bitmap = bitmap,
++                settings = EditSettings(
++                    crop = EditSettings.CropRect(0f, 0f, 0.66f, 1f),
++                    quarterTurns = 1,
++                    flipHorizontal = true,
++                    brightness = 0.2f,
++                    warmth = 0.5f,
++                ),
++            )
++        }
++    }
++}
++
+ /**
+  * A sample Edit screen body for the previews: a plain coloured box stands in for the photo and a
+  * line of text for the sheet, so nothing touches a ViewModel or decodes a photo.
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+index 3d1eb7f..b8c7c85 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+@@ -689,7 +689,35 @@ private fun PhotoCard(
+                     } else {
+                         BlurredBackdrop(photo = image)
+                     }
+-                    PhotoView(image = image, photoUri = state.photoUri)
++                    if (state.tool == Tool.EDIT && !state.comparing) {
++                        // The Edit screen draws the photo live: the settings' crop, turns, flips and
++                        // colour sliders are applied by Compose as it draws, and only a filter is
++                        // a re-rendered bitmap (state.filterPreview). Nothing is rendered in full
++                        // until Done.
++                        // The node is sized to the shape of what is drawn (the cropped, turned
++                        // photo), so its bounds are exactly where the photo is.
++                        val crop = state.settings.crop
++                        val cropWidth = (crop.right - crop.left).coerceAtLeast(0.01f) * current.bitmap.width
++                        val cropHeight = (crop.bottom - crop.top).coerceAtLeast(0.01f) * current.bitmap.height
++                        val turned = state.settings.quarterTurns % 2 != 0
++                        val photoDescription = stringResource(R.string.tool_photo_description)
++                        Box(
++                            modifier = Modifier
++                                .aspectRatio(if (turned) cropHeight / cropWidth else cropWidth / cropHeight)
++                                .testTag(TOOL_IMAGE_TAG)
++                                .semantics {
++                                    this[TOOL_PHOTO_URI_KEY] = state.photoUri
++                                    contentDescription = photoDescription
++                                },
++                        ) {
++                            LivePreviewImage(
++                                bitmap = state.filterPreview ?: current.bitmap,
++                                settings = state.settings,
++                            )
++                        }
++                    } else {
++                        PhotoView(image = image, photoUri = state.photoUri)
++                    }
+                 }
+                 ToolUiState.PhotoState.Unreadable -> Text(
+                     text = stringResource(R.string.tool_photo_unreadable),
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+index 801af85..644dbb4 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+@@ -17,6 +17,13 @@ import com.phongkaster.kanso.navigation.Tool
+  * The Edit screen also keeps here which of its tool sheets is open ([openTool]) and whether the
+  * person is comparing with the original ([comparing]), its current settings ([settings]) and
+  * whether it is asking to discard them ([discardPrompt]), so the whole screen reads one snapshot.
++ *
++ * **How the Edit screen's photo is drawn.** No full-size render happens while the person edits:
++ * the screen draws the original photo ([photo]), or its small filtered copy ([filterPreview]) once
++ * a filter is chosen, and applies the crop, turns, flips and colour sliders of [settings] itself
++ * as it draws. So [edited] stays null on the Edit screen; the full render from the original runs
++ * only when the edit is finished (Save, and later Done).
++ *
+  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
+  * this screen: each tool has a screen of its own.
+  *
+@@ -40,10 +47,19 @@ data class ToolUiState(
+      * The photo as the person has edited it so far, or null while nothing has been edited (or
+      * every edit has been undone). When it is set, the screen shows it instead of the photo in
+      * [photo], and Save writes it; [photo] itself always keeps the unedited original, so undoing
+-     * every edit returns to it. On the Edit screen it is always [settings] rendered from the
+-     * original, and null whenever those settings are neutral.
++     * every edit returns to it. On the Edit screen it stays null: that screen draws [settings]
++     * live on top of [photo] (or [filterPreview]) and renders the full photo only when it is
++     * saved, so no full-size picture is made while the person is still editing.
+      */
+     val edited: Bitmap? = null,
++    /**
++     * The Edit screen's filter preview: the original photo shrunk to the preview size (at most
++     * 640 pixels on its longest edge) with the current filter applied at its intensity, and
++     * nothing else (the crop, turns, flips and sliders are drawn on top of it by the screen).
++     * It is null while no filter is chosen, and before the first filter render has finished; the
++     * screen then draws the original photo instead.
++     */
++    val filterPreview: Bitmap? = null,
+     /** True when there is an edit to take back, so the screen's Undo control can be used. */
+     val canUndo: Boolean = false,
+     /** Whether an edit is running right now, and how far along it is. */
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+index 35634d5..4fc7e21 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+@@ -12,6 +12,7 @@ import com.phongkaster.kanso.data.edit.edit.CropRatio
+ import com.phongkaster.kanso.data.edit.edit.EditSession
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
++import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
+ import com.phongkaster.kanso.data.photo.PhotoLoader
+ import com.phongkaster.kanso.data.photo.PhotoSaver
+ import com.phongkaster.kanso.data.photo.SaveResult
+@@ -52,9 +53,12 @@ import kotlinx.coroutines.withContext
+  * - **The Edit screen** keeps one [EditSettings] object for the whole visit, inside an
+  *   [EditSession] (the settings plus the earlier settings Undo can go back to). Every change goes
+  *   through [changeSettings] (one action: a chip, a turn, a crop), [previewSettings] (a slider
+- *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]. After each one
+- *   the WHOLE settings are rendered again from the ORIGINAL photo, so nothing is ever stacked on
+- *   an earlier result; [undo] just goes back to earlier settings and renders those.
++ *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]; [undo] just
++ *   goes back to earlier settings. None of them renders the full photo: the screen draws the
++ *   crop, turns, flips and colour sliders live on top of the original as it draws, and only a
++ *   filter is computed here, on a small copy of the original ([ToolUiState.filterPreview]). The
++ *   full render from the ORIGINAL photo, with the WHOLE current settings, runs once, when the
++ *   edit is finished ([save], [renderFinal]), so nothing is ever stacked on an earlier result.
+  * - **The other tools** (Remove background, Enhance, Retouch, Artistic) use [apply]: it runs one
+  *   edit (a [ToolProcessor]) on the photo as it is now shown, the result becomes the new shown
+  *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
+@@ -123,9 +127,9 @@ class ToolViewModel(
+             // update { } changes only the photo part of the snapshot as it is right now, so a
+             // decode that finishes while a save runs leaves the save part alone.
+             mutableState.update { it.copy(photo = shown) }
+-            // Settings chosen before the photo arrived (or kept from a smaller decode) are drawn
+-            // on the newly decoded original now.
+-            if (tool == Tool.EDIT && photo != null) renderSettings()
++            // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
++            // to the newly decoded original now; everything else the screen draws by itself.
++            if (tool == Tool.EDIT && photo != null && session.settings.hasFilter) requestPreview()
+         }
+     }
+ 
+@@ -263,9 +267,9 @@ class ToolViewModel(
+      * or when there is nothing to take back.
+      *
+      * On the Edit screen this goes back one action of the session (a slider release, a chip, a
+-     * crop, a turn), whichever sheet it came from, and the photo is rendered again from the
+-     * original with the earlier settings; it works even while a render runs, because the newest
+-     * render always wins. On the other tools' screens the photo shown before the last edit is shown
++     * crop, a turn), whichever sheet it came from: the screen draws the earlier settings at once,
++     * and if they hold a filter its preview is computed again from the original (the newest
++     * request always wins). On the other tools' screens the photo shown before the last edit is shown
+      * again (undoing every edit returns to the original), and nothing happens while an edit runs.
+      */
+     fun undo() {
+@@ -274,7 +278,7 @@ class ToolViewModel(
+             // A drag still under way counts as an action of its own, so it is settled first.
+             if (!session.commit().canUndo) return
+             publishSession(session.undo())
+-            renderSettings()
++            requestPreview()
+             return
+         }
+         if (mutableState.value.processing is ToolUiState.Processing.Running) return
+@@ -311,50 +315,42 @@ class ToolViewModel(
+ 
+     /**
+      * The last recipe the Edit panel gave for turning settings into a processor, kept so that
+-     * [undo] (which the panel does not call) can render the earlier settings the same way.
++     * [undo] (which the panel does not call), the filter preview and the final render can draw
++     * settings the same way.
+      */
+     private var processorFor: ((EditSettings) -> ToolProcessor)? = null
+ 
+-    /** The render of the Edit settings in progress, if any; a newer render cancels it. */
+-    private var renderJob: Job? = null
+-
+-    /**
+-     * Counts the Edit renders started. Each render remembers its own number, and only the render
+-     * holding the newest number may change the state: an older one that is still finishing (a
+-     * processor may not stop the moment it is cancelled) is simply dropped. It is read from the
+-     * work thread too, so `@Volatile` makes every thread see the newest value.
+-     */
+-    @Volatile
+-    private var renderGeneration = 0
+-
+     /**
+      * One action on the Edit screen (a filter chip, a quarter turn, a flip, a finished crop) made
+-     * the settings [new]: it becomes one undo entry and the photo is rendered again from the
+-     * original. [processorFor] builds the processor that draws a set of settings. Nothing happens
+-     * while comparing, when every control is disabled.
++     * the settings [new]: it becomes one undo entry. The screen draws the new settings at once;
++     * only a filter needs work here, so the filter preview is asked for (see [requestPreview]).
++     * [processorFor] builds the processor that draws a set of settings. Nothing happens while
++     * comparing, when every control is disabled.
+      */
+     fun changeSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
+         if (mutableState.value.comparing) return
+         this.processorFor = processorFor
+         publishSession(session.change(new))
+-        renderSettings()
++        requestPreview()
+     }
+ 
+     /**
+-     * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it, but
+-     * no undo entry is made until [commitSettings]. Nothing happens while comparing.
++     * A slider on the Edit screen is being dragged and stands at [new]: the photo follows it at
++     * once (the screen applies a colour slider as it draws; a filter's intensity is computed on the
++     * small preview copy), but no undo entry is made until [commitSettings]. Nothing happens while
++     * comparing.
+      */
+     fun previewSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
+         if (mutableState.value.comparing) return
+         this.processorFor = processorFor
+         publishSession(session.preview(new))
+-        renderSettings()
++        requestPreview()
+     }
+ 
+     /**
+      * The finger let go of a slider: the whole drag becomes one undo entry. The settings do not
+-     * change, so nothing is rendered again; the render the last drag step started goes on and,
+-     * being the newest, is the one shown. This works even while comparing, so a drag is never left
++     * change, so nothing new is asked for; the preview request the last drag step sent is still
++     * the newest, so it is the one shown. This works even while comparing, so a drag is never left
+      * half recorded.
+      */
+     fun commitSettings() {
+@@ -374,7 +370,7 @@ class ToolViewModel(
+         val photoAspect = original.width.toFloat() / original.height
+         this.processorFor = processorFor
+         publishSession(session.cropRatioChosen(ratio, photoAspect))
+-        renderSettings()
++        requestPreview()
+     }
+ 
+     /**
+@@ -414,63 +410,158 @@ class ToolViewModel(
+         mutableState.update { it.copy(settings = new.settings, canUndo = new.canUndo) }
+     }
+ 
++    // --- The Edit screen's live filter preview -----------------------------------------------------
++
+     /**
+-     * Renders the session's current settings from the ORIGINAL photo, in the background.
++     * The filter settings waiting to be drawn on the small preview copy.
+      *
+-     * The latest settings always win: a new render cancels the one before it, and the generation
+-     * number stops a render that finishes late from changing the state, so a slider released while
+-     * another change is still being drawn is never lost. Neutral settings need no render at all:
+-     * the edited photo becomes null, so the screen shows the original and Save copies its file.
+-     * A failure keeps the photo shown as it was and says why.
++     * A Channel is a queue between coroutines (see [savedChannel]). This one is CONFLATED: it
++     * holds at most one item, and sending a new one replaces an item nobody has taken yet. So
++     * while one preview render runs, every intensity step a finger sends overwrites the one
++     * before it, and when the render ends the collector takes only the LATEST settings: the
++     * steps overtaken in between are dropped instead of being rendered one by one behind the
++     * finger. And because a send is never refused, the last setting (a slider let go mid-render)
++     * is never lost: it waits in the channel until the running render is done.
+      */
+-    private fun renderSettings() {
++    private val previewRequests = Channel<EditSettings>(Channel.CONFLATED)
++
++    /**
++     * The coroutine that takes requests out of [previewRequests] one at a time and renders them;
++     * started on the first request and stopped with the ViewModel ([viewModelScope]).
++     */
++    private var previewCollector: Job? = null
++
++    /** The original photo [previewSource] was made from, to know when it must be made again. */
++    private var previewSourceOf: Bitmap? = null
++
++    /**
++     * The original photo shrunk to [FilterPreviewRenderer.PREVIEW_EDGE] pixels, made once per
++     * decoded original, so a filter preview never works on the full-size photo.
++     */
++    private var previewSource: Bitmap? = null
++
++    /** The renderer in use, built on [previewSource] with the processor recipe it was given. */
++    private var previewRenderer: FilterPreviewRenderer? = null
++
++    /** The processor recipe [previewRenderer] was built with, to know when to build a new one. */
++    private var previewRendererRecipe: ((EditSettings) -> ToolProcessor)? = null
++
++    /**
++     * Asks for the session's current filter to be drawn on the small preview copy.
++     *
++     * Without a filter there is nothing to compute: [ToolUiState.filterPreview] becomes null at
++     * once and the screen draws the original. With one, the settings go into [previewRequests],
++     * where a newer request replaces an older one still waiting. Nothing here marks the screen as
++     * busy (no `Processing.Running`): the preview is quick, and the controls must not flicker or
++     * lock while a finger drags a slider.
++     */
++    private fun requestPreview() {
+         val settings = session.settings
+-        val generation = ++renderGeneration
+-        renderJob?.cancel()
+-        renderJob = null
+-        if (settings.isNeutral) {
+-            mutableState.update {
+-                it.copy(edited = null, failure = null, processing = ToolUiState.Processing.Idle)
+-            }
++        if (!settings.hasFilter) {
++            mutableState.update { it.copy(filterPreview = null) }
+             return
+         }
++        if (previewCollector == null) {
++            previewCollector = viewModelScope.launch {
++                // The loop waits for each request in turn and ends only when the scope is
++                // cancelled (this ViewModel cleared).
++                for (requested in previewRequests) renderPreview(requested)
++            }
++        }
++        // A conflated channel always accepts, so trySend never fails here.
++        previewRequests.trySend(settings)
++    }
++
++    /**
++     * Renders the filter of [requested] on the small preview copy of the original, in the
++     * background, and publishes it unless a newer filter choice has replaced it meanwhile (the
++     * newer one is then already waiting in [previewRequests]), or the filter was removed (the
++     * preview then stays null). A preview that fails leaves the previous one shown and changes
++     * nothing else: the full render at the end reports a real failure.
++     */
++    private suspend fun renderPreview(requested: EditSettings) {
+         val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+         val build = processorFor ?: return
+-        mutableState.update {
+-            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
++        val rendered = try {
++            val renderer = previewRendererFor(original, build)
++            // Off the main thread, like every edit here.
++            withContext(workDispatcher) { renderer.render(requested) }
++        } catch (cancelled: CancellationException) {
++            throw cancelled
++        } catch (failed: Throwable) {
++            // Out of memory while shrinking, or anything else: keep what is shown.
++            null
++        } ?: return
++        val now = session.settings
++        val stillWanted = now.hasFilter &&
++            now.filter == requested.filter &&
++            now.filterIntensity == requested.filterIntensity
++        if (stillWanted) mutableState.update { it.copy(filterPreview = rendered) }
++    }
++
++    /**
++     * The renderer for [original] and the recipe [build]: the one already made when both are the
++     * same objects as last time, otherwise a new one. Shrinking the original is real work, so it
++     * runs on [workDispatcher] and happens once per decoded original.
++     */
++    private suspend fun previewRendererFor(
++        original: Bitmap,
++        build: (EditSettings) -> ToolProcessor,
++    ): FilterPreviewRenderer {
++        val current = previewRenderer
++        if (current != null && previewSourceOf === original && previewRendererRecipe === build) {
++            return current
+         }
+-        renderJob = viewModelScope.launch {
+-            val result = try {
+-                withContext(workDispatcher) {
+-                    // Always the original, shrunk once to the working size: never an earlier result.
+-                    val input = fittedOriginal(original)
+-                    build(settings).process(input) { progress ->
+-                        if (generation == renderGeneration) reportProgress(progress)
+-                    }
+-                }
+-            } catch (cancelled: CancellationException) {
+-                // A newer render cancelled this one, or the screen was left. Only the newest
+-                // render may say the work is over: an older one leaves the state to the newer.
+-                if (generation == renderGeneration) {
+-                    mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
+-                }
+-                throw cancelled
+-            } catch (outOfMemory: OutOfMemoryError) {
+-                EditResult.Failed(EditFailure.OutOfMemory)
+-            } catch (other: Throwable) {
+-                EditResult.Failed(EditFailure.Other)
+-            }
+-            // A newer render has started since: this result is out of date.
+-            if (generation != renderGeneration) return@launch
+-            when (result) {
+-                is EditResult.Edited -> mutableState.update {
+-                    it.copy(edited = result.bitmap, failure = null, processing = ToolUiState.Processing.Idle)
+-                }
+-                is EditResult.Failed -> mutableState.update {
+-                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
+-                }
+-            }
++        val source = previewSource.takeIf { previewSourceOf === original }
++            ?: withContext(workDispatcher) { WorkingSize.fit(original, FilterPreviewRenderer.PREVIEW_EDGE) }
++        previewSourceOf = original
++        previewSource = source
++        previewRendererRecipe = build
++        return FilterPreviewRenderer(source, build).also { previewRenderer = it }
++    }
++
++    // --- The Edit screen's full render -------------------------------------------------------------
++
++    /**
++     * Renders the Edit session's CURRENT settings at full working size from the original photo and
++     * returns the result, or null when there is nothing to render yet (no decoded photo, or no
++     * processor recipe because nothing was changed). It changes no state: the caller (the Done
++     * button) decides what to show while it runs and what to do with the picture.
++     *
++     * This is the only full-size render on the Edit screen, run once when the edit is finished:
++     * while the person edits, the screen draws the settings live instead.
++     */
++    suspend fun renderFinal(): EditResult? {
++        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return null
++        val build = processorFor ?: return null
++        return renderFull(original, build, session.settings)
++    }
++
++    /**
++     * Runs the processor [build] makes for [settings] on [original], shrunk once to this tool's
++     * working size ([WorkingSize.maxEdgeFor]), on [workDispatcher], and returns the result; it
++     * never writes the state. Always the original, never an earlier result, so nothing is stacked.
++     * [onProgress] hears how far along it is, from 0 to 1.
++     *
++     * A failure comes back as [EditResult.Failed] (out of memory, or anything else). A
++     * cancellation (the screen was left) is passed on up, as coroutines expect, not reported as a
++     * failure.
++     */
++    private suspend fun renderFull(
++        original: Bitmap,
++        build: (EditSettings) -> ToolProcessor,
++        settings: EditSettings,
++        onProgress: (Float) -> Unit = {},
++    ): EditResult = try {
++        withContext(workDispatcher) {
++            build(settings).process(fittedOriginal(original), onProgress)
+         }
++    } catch (cancelled: CancellationException) {
++        throw cancelled
++    } catch (outOfMemory: OutOfMemoryError) {
++        EditResult.Failed(EditFailure.OutOfMemory)
++    } catch (other: Throwable) {
++        EditResult.Failed(EditFailure.Other)
+     }
+ 
+     /**
+@@ -513,30 +604,83 @@ class ToolViewModel(
+      * When the person has edited the photo, the edited photo shown on screen is saved, exactly
+      * at the size they saw it, as a new file; otherwise the original photo is copied as it is.
+      * Either way the original photo's file is never changed.
++     *
++     * The Edit screen has no rendered photo while the person edits (the screen draws the settings
++     * live), so with changes made Save first renders the CURRENT settings in full from the
++     * original, showing the work as running (taps are ignored meanwhile), then saves that picture;
++     * with no changes it copies the original file. This keeps Save working until the Done button
++     * takes over the final render.
+      */
+     fun save() {
+         val current = mutableState.value
+         if (current.save == ToolUiState.SaveState.Saving) return
+         if (current.processing is ToolUiState.Processing.Running) return
++        if (tool == Tool.EDIT && !session.settings.isNeutral) {
++            saveRenderedSettings()
++            return
++        }
+         // Read once, now, so an edit that lands while the save runs cannot change what is saved.
+         val edited = current.edited
+         mutableState.update { it.copy(save = ToolUiState.SaveState.Saving) }
++        viewModelScope.launch { writeAndAnnounce(edited) }
++    }
++
++    /**
++     * The Edit screen's Save with changes made: renders the session's current settings in full
++     * from the original ([renderFull]), then writes the result. While the render runs the state
++     * says so ([ToolUiState.Processing.Running]), which also makes [save] ignore further taps. A
++     * failed render says why and saves nothing. Nothing happens before the photo is decoded.
++     */
++    private fun saveRenderedSettings() {
++        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
++        val build = processorFor ?: return
++        // Read once, now: the picture saved is the settings as they were when Save was tapped.
++        val settings = session.settings
++        mutableState.update {
++            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
++        }
+         viewModelScope.launch {
+-            val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
++            val result = try {
++                renderFull(original, build, settings) { progress -> reportProgress(progress) }
++            } catch (cancelled: CancellationException) {
++                // The screen was left: the run is over, so the screen must not stay locked.
++                mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
++                throw cancelled
++            }
+             when (result) {
+-                is SaveResult.Saved -> {
++                is EditResult.Edited -> {
+                     mutableState.update {
+-                        it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
++                        it.copy(processing = ToolUiState.Processing.Idle, save = ToolUiState.SaveState.Saving)
+                     }
+-                    savedChannel.send(result.uri)
++                    writeAndAnnounce(result.bitmap)
+                 }
+-                SaveResult.Failed -> mutableState.update {
+-                    it.copy(save = ToolUiState.SaveState.Failed)
++                is EditResult.Failed -> mutableState.update {
++                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
+                 }
+             }
+         }
+     }
+ 
++    /**
++     * Writes [edited] into `Pictures/Kanso` as a new file, or copies the original photo's file
++     * when it is null, then records the outcome and, on success, sends the new photo's Uri to
++     * the screen through [savedEvents]. The caller has already set the state to Saving.
++     */
++    private suspend fun writeAndAnnounce(edited: Bitmap?) {
++        val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
++        when (result) {
++            is SaveResult.Saved -> {
++                mutableState.update {
++                    it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
++                }
++                savedChannel.send(result.uri)
++            }
++            SaveResult.Failed -> mutableState.update {
++                it.copy(save = ToolUiState.SaveState.Failed)
++            }
++        }
++    }
++
+     /** Records that the person refused the storage-write permission, so the screen says why. */
+     fun onWritePermissionDenied() {
+         mutableState.update { it.copy(save = ToolUiState.SaveState.PermissionDenied) }

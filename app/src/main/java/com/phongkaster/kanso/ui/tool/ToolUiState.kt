@@ -17,6 +17,13 @@ import com.phongkaster.kanso.navigation.Tool
  * The Edit screen also keeps here which of its tool sheets is open ([openTool]) and whether the
  * person is comparing with the original ([comparing]), its current settings ([settings]) and
  * whether it is asking to discard them ([discardPrompt]), so the whole screen reads one snapshot.
+ *
+ * **How the Edit screen's photo is drawn.** No full-size render happens while the person edits:
+ * the screen draws the original photo ([photo]), or its small filtered copy ([filterPreview]) once
+ * a filter is chosen, and applies the crop, turns, flips and colour sliders of [settings] itself
+ * as it draws. So [edited] stays null on the Edit screen; the full render from the original runs
+ * only when the edit is finished (Save, and later Done).
+ *
  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
  * this screen: each tool has a screen of its own.
  *
@@ -40,10 +47,19 @@ data class ToolUiState(
      * The photo as the person has edited it so far, or null while nothing has been edited (or
      * every edit has been undone). When it is set, the screen shows it instead of the photo in
      * [photo], and Save writes it; [photo] itself always keeps the unedited original, so undoing
-     * every edit returns to it. On the Edit screen it is always [settings] rendered from the
-     * original, and null whenever those settings are neutral.
+     * every edit returns to it. On the Edit screen it stays null: that screen draws [settings]
+     * live on top of [photo] (or [filterPreview]) and renders the full photo only when it is
+     * saved, so no full-size picture is made while the person is still editing.
      */
     val edited: Bitmap? = null,
+    /**
+     * The Edit screen's filter preview: the original photo shrunk to the preview size (at most
+     * 640 pixels on its longest edge) with the current filter applied at its intensity, and
+     * nothing else (the crop, turns, flips and sliders are drawn on top of it by the screen).
+     * It is null while no filter is chosen, and before the first filter render has finished; the
+     * screen then draws the original photo instead.
+     */
+    val filterPreview: Bitmap? = null,
     /** True when there is an edit to take back, so the screen's Undo control can be used. */
     val canUndo: Boolean = false,
     /** Whether an edit is running right now, and how far along it is. */

@@ -2,7 +2,9 @@ package com.phongkaster.kanso.tool.edit
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Looper
+import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.collectAsState
@@ -11,6 +13,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assert
@@ -19,11 +22,13 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
@@ -41,6 +46,11 @@ import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_RIGHT_TAG
 import com.phongkaster.kanso.ui.tool.EditPanel
 import com.phongkaster.kanso.ui.tool.EditPanelContent
 import com.phongkaster.kanso.ui.tool.EditToolRow
+import com.phongkaster.kanso.ui.tool.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.LivePreviewGeometry
+import com.phongkaster.kanso.ui.tool.LivePreviewMatrix
+import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
+import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.editFilterTag
@@ -51,7 +61,7 @@ import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -65,14 +75,22 @@ import kotlin.math.abs
 /**
  * Checks on Android 15 the Edit tool's controls and what they do to the photo (DoD 2, 5, 14, 16).
  *
- * Most tests draw the real Edit panel (`EditPanel`) for a real [ToolViewModel] on a fake 120 x 80
- * photo: the panel shows the sheet of the tool opened with the ViewModel's `openTool`, draws the
- * session's settings from the ViewModel's state, and hands each change with the real Edit
- * processor to the ViewModel (`changeSettings`, `previewSettings`, `commitSettings`,
- * `chooseCropRatio`), as the screen does. The photo the screen shows is the state's `edited`
- * bitmap once an edit is made, so that is the bitmap read here. Within 5 s of real time:
+ * Most tests draw the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] on a
+ * fake 120 x 80 photo, with the Edit sheet slot holding the real Edit panel (`EditPanel`): the
+ * panel shows the sheet of the tool opened with the ViewModel's `openTool`, draws the session's
+ * settings from the ViewModel's state, and hands each change with the real Edit processor to the
+ * ViewModel (`changeSettings`, `previewSettings`, `commitSettings`, `chooseCropRatio`), as the
+ * screen does.
  *
- * - brightness pushed to its maximum and let go makes the shown photo brighter on average;
+ * Run 9 (T-003): the photo the Edit screen shows is no longer a rendered `edited` bitmap (that
+ * stays null until Done) but the live preview drawn by the photo card (`LivePreviewImage`): the
+ * colour sliders, crop, turns and flips are applied by Compose as it draws, on the original or on
+ * `filterPreview`, the small copy with only the filter applied. So the tests read what is really
+ * on screen: the live preview's semantics (its colour matrix and geometry), the image node's
+ * bounds, and its pixels, drawn from the activity's content view into a bitmap. Within 5 s of
+ * real time:
+ *
+ * - brightness pushed to its maximum makes the shown photo brighter on average;
  * - the 1:1 chip makes the shown photo square;
  * - a filter chip changes the shown photo's colours, and dragging its intensity changes them
  *   again while the finger is still down. The filter's look-up comes from a generated inverting
@@ -112,20 +130,34 @@ class EditToolTest {
     }
 
     /**
-     * Brightness at its maximum, let go, makes the shown photo brighter on average.
+     * Brightness at its maximum makes the shown photo brighter on average.
      *
      * Run 9: brightness lives in the Adjust sheet now, so the test opens Adjust first; the slider
      * now hands whole settings to the ViewModel's `previewSettings`/`commitSettings` instead of a
      * one-off change to the removed `apply`, and the photo is rendered from the original.
+     *
+     * Run 9 (T-003): no render is waited for any more (a colour slider renders nothing; it used to
+     * time out waiting for `edited`). The live preview must draw the settings' colour matrix, whose
+     * offsets lift red, green and blue, and the pixels drawn in the photo must be brighter.
      */
     @Test
     fun brightness_brightens_the_shown_photo() {
         val viewModel = show(EditTool.ADJUST)
-        val before = meanLuminance(shown(viewModel))
+        val image = middleOf(bounds(TOOL_IMAGE_TAG))
+        val before = meanLuminance(pixelsIn(image))
         compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(EditSettings.MAX) }
-        val after = waitForEdit(viewModel, previous = null)
-        assertTrue("brightness: $before -> ${meanLuminance(after)}", meanLuminance(after) > before)
+        compose.waitForIdle()
+
+        val state = viewModel.state.value
+        assertEquals(EditSettings.MAX, state.settings.brightness, 0.0001f)
+        val matrix = liveMatrix()
+        assertEquals("the live preview does not draw the settings", EditColourMatrix.of(state.settings).toList(), matrix)
+        // The offsets of the red, green and blue rows sit at places 4, 9 and 14.
+        assertTrue("brightness does not lift every channel: $matrix", matrix[4] > 0f && matrix[9] > 0f && matrix[14] > 0f)
+        val after = meanLuminance(pixelsIn(image))
+        assertTrue("brightness: $before -> $after", after > before)
+        assertNull("a colour slider rendered the photo", state.edited)
     }
 
     /**
@@ -133,16 +165,32 @@ class EditToolTest {
      *
      * Run 9: the crop chips live in the Crop sheet now, so the test opens Crop first; a chip now
      * goes to the ViewModel's `chooseCropRatio`, which sets the centred square crop rectangle.
+     *
+     * Run 9 (T-003): no render is waited for any more (it timed out waiting for `edited`). The
+     * shown photo is the image node, sized to the cropped shape: it goes from 3:2 to square. The
+     * crop keeps the photo's full height (as the rendered photo kept its 80 px), and the live
+     * preview's geometry draws exactly the settings' crop.
      */
     @Test
     fun a_crop_ratio_changes_the_shape_of_the_shown_photo() {
         val viewModel = show(EditTool.CROP)
-        val before = shown(viewModel)
-        assertNotEquals(before.width, before.height)
+        val before = bounds(TOOL_IMAGE_TAG)
+        assertEquals(PHOTO_WIDTH.toFloat() / PHOTO_HEIGHT, before.width / before.height, ASPECT_TOLERANCE)
         compose.onNodeWithTag(editRatioTag(CropRatio.SQUARE)).performSemanticsAction(SemanticsActions.OnClick)
-        val after = waitForEdit(viewModel, previous = null)
-        assertEquals(after.height, after.width)
-        assertEquals(before.height, after.height)
+        compose.waitForIdle()
+
+        val after = bounds(TOOL_IMAGE_TAG)
+        assertEquals("the shown photo is not square: $after", 1f, after.width / after.height, ASPECT_TOLERANCE)
+        val state = viewModel.state.value
+        val crop = state.settings.crop
+        assertEquals(0f, crop.top, 0.0001f)
+        assertEquals(1f, crop.bottom, 0.0001f)
+        assertEquals(
+            "the live preview does not draw the settings' crop",
+            "turns=0;flipH=false;flipV=false;crop=${crop.left},${crop.top},${crop.right},${crop.bottom}",
+            liveGeometry(),
+        )
+        assertNull("a crop rendered the photo", state.edited)
     }
 
     /**
@@ -150,41 +198,55 @@ class EditToolTest {
      *
      * Run 9: the filter chips live in the Filters sheet now, so the test opens Filters first; a
      * chip is now one action through the ViewModel's `changeSettings`.
+     *
+     * Run 9 (T-003): a filter is the one part still computed, on the small preview copy
+     * (`filterPreview`), not as a full `edited` render (it timed out waiting for one). The test
+     * waits for that preview and reads the pixels drawn in the photo.
      */
     @Test
     fun a_filter_changes_the_colours_of_the_shown_photo() {
         val viewModel = show(EditTool.FILTERS)
-        val before = channelMeans(shown(viewModel))
+        val image = middleOf(bounds(TOOL_IMAGE_TAG))
+        val before = channelMeans(pixelsIn(image))
         compose.onNodeWithTag(editFilterTag(FilterPreset.KELVIN)).performSemanticsAction(SemanticsActions.OnClick)
-        val after = channelMeans(waitForEdit(viewModel, previous = null))
+        waitForFilterPreview(viewModel, previous = null)
+        val after = channelMeans(pixelsIn(image))
         val change = (0..2).maxOf { abs(after[it] - before[it]) }
         assertTrue("the filter barely changed the colours ($change)", change > 3.0)
+        assertNull("a filter rendered the full photo", viewModel.state.value.edited)
     }
 
     /**
      * DoD 16: dragging the filter's intensity changes the shown photo while the finger is still
      * down; lifting it keeps the result and leaves an Undo step.
+     *
+     * Run 9 (T-003): each intensity step now asks for a new filter preview (`filterPreview`), not
+     * a full `edited` render (the test timed out waiting for one); the test waits for a new
+     * preview while the finger is still down and reads the pixels drawn in the photo. The slider
+     * is scrolled into view first, since the sheet under the photo scrolls.
      */
     @Test
     fun the_filter_intensity_changes_the_photo_while_dragged() {
         val viewModel = show(EditTool.FILTERS)
+        val image = middleOf(bounds(TOOL_IMAGE_TAG))
         compose.onNodeWithTag(editFilterTag(FilterPreset.KELVIN)).performSemanticsAction(SemanticsActions.OnClick)
-        val full = waitForEdit(viewModel, previous = null)
-        val fullMeans = channelMeans(full)
+        val full = waitForFilterPreview(viewModel, previous = null)
+        val fullMeans = channelMeans(pixelsIn(image))
 
         val slider = compose.onNodeWithTag(EDIT_INTENSITY_TAG)
+        slider.performScrollTo()
         slider.performTouchInput {
             // Intensity 100 has the thumb at the right end; starting in the middle and moving
             // left lowers it well below 100.
             down(center)
             repeat(DRAG_STEPS) { moveBy(Offset(-width * DRAG_STEP_FRACTION, 0f)) }
         }
-        val dragged = waitForEdit(viewModel, previous = full)
+        waitForFilterPreview(viewModel, previous = full)
         assertTrue(
             "the intensity did not fall while dragged",
             viewModel.state.value.settings.filterIntensity < 0.9f,
         )
-        val draggedMeans = channelMeans(dragged)
+        val draggedMeans = channelMeans(pixelsIn(image))
         val change = (0..2).maxOf { abs(draggedMeans[it] - fullMeans[it]) }
         assertTrue("the drag barely changed the photo ($change)", change > 3.0)
 
@@ -302,14 +364,17 @@ class EditToolTest {
 
     /**
      * Builds the Edit screen's ViewModel on the fake photo, decodes the photo, opens [open]'s
-     * sheet, and draws the Edit panel for whichever tool the ViewModel has open. Returns the
-     * ViewModel.
+     * sheet, and draws the screen's stateless part with the Edit panel in its sheet slot. Returns
+     * the ViewModel.
      *
-     * Run 9: the host no longer draws `ToolContent` with `EditPanel(onApply = viewModel::apply)`:
-     * that API is gone (the panel now hands whole settings to the session calls), and the tool
-     * screen's sheet slot is being rewired outside this test. The test draws the panel itself, as
-     * the screen's sheet area does: from the ViewModel's settings, drawn afresh (`key`) for each
-     * tool opened. The slider, chip, processor, ViewModel and shown photo are still all real.
+     * Run 9: the panel hands whole settings to the session calls, drawn from the ViewModel's
+     * settings, afresh (`key`) for each tool opened. The slider, chip, processor and ViewModel
+     * are all real.
+     *
+     * Run 9 (T-003): the host now draws `ToolContent` (the photo card with its live preview, the
+     * row of tools and the sheet), not the panel alone, so the tests can read the photo as shown;
+     * the panel in the sheet slot is wired as `ToolScreen` wires it, except for the generated
+     * filter source.
      */
     private fun show(open: EditTool): ToolViewModel {
         val viewModel = ToolViewModel(
@@ -329,23 +394,30 @@ class EditToolTest {
         val filters = invertingSource()
         compose.setContent {
             MaterialTheme {
-                // collectAsState redraws the panel whenever the ViewModel's state changes.
+                // collectAsState redraws the screen whenever the ViewModel's state changes.
                 val state by viewModel.state.collectAsState()
-                val tool = state.openTool
-                if (tool != null) {
-                    key(tool) {
-                        EditPanel(
-                            openTool = tool,
-                            settings = state.settings,
-                            onChange = viewModel::changeSettings,
-                            onPreview = viewModel::previewSettings,
-                            onCommit = viewModel::commitSettings,
-                            onRatio = viewModel::chooseCropRatio,
-                            enabled = !state.comparing,
-                            filterSource = filters,
-                        )
-                    }
-                }
+                ToolContent(
+                    state = state,
+                    onBack = {},
+                    onSave = {},
+                    onUndo = viewModel::undo,
+                    onOpenTool = viewModel::openTool,
+                    onCompare = viewModel::setComparing,
+                    editSheet = { tool ->
+                        key(tool) {
+                            EditPanel(
+                                openTool = tool,
+                                settings = state.settings,
+                                onChange = viewModel::changeSettings,
+                                onPreview = viewModel::previewSettings,
+                                onCommit = viewModel::commitSettings,
+                                onRatio = viewModel::chooseCropRatio,
+                                enabled = !state.comparing,
+                                filterSource = filters,
+                            )
+                        }
+                    },
+                )
             }
         }
         compose.waitForIdle()
@@ -367,26 +439,76 @@ class EditToolTest {
     }
 
     /**
-     * Waits (at most 5 s of real time) until an edit has landed and none is running, and returns
-     * the photo now shown. [previous] is the `edited` bitmap before the action (null for none).
+     * Waits (at most 5 s of real time) until a filter preview other than [previous] (null for
+     * none) is in the state, lets the screen draw it, and returns it.
+     *
+     * Run 9 (T-003): replaces the wait for a full `edited` render. The preview renderer works on
+     * `Dispatchers.Default` whatever dispatcher the ViewModel is given, and its result comes back
+     * through the main looper, which a Robolectric test must let run itself.
      */
-    private fun waitForEdit(viewModel: ToolViewModel, previous: Bitmap?): Bitmap {
+    private fun waitForFilterPreview(viewModel: ToolViewModel, previous: Bitmap?): Bitmap {
         compose.waitUntil(timeoutMillis = 5_000) {
-            // The processor works on a real background thread; its result comes back through the
-            // main looper, which a Robolectric test must let run itself.
             shadowOf(Looper.getMainLooper()).idle()
-            val state = viewModel.state.value
-            state.edited != null && state.edited !== previous &&
-                state.processing is ToolUiState.Processing.Idle
+            val preview = viewModel.state.value.filterPreview
+            preview != null && preview !== previous
         }
         compose.waitForIdle()
-        return checkNotNull(viewModel.state.value.edited)
+        return checkNotNull(viewModel.state.value.filterPreview)
     }
 
-    /** The photo the screen shows now: the edited one, or the original before any edit. */
-    private fun shown(viewModel: ToolViewModel): Bitmap {
-        val state = viewModel.state.value
-        return state.edited ?: (state.photo as ToolUiState.PhotoState.Ready).bitmap
+    /** The colour matrix the live preview now draws with ([LivePreviewMatrix]), as 20 numbers. */
+    private fun liveMatrix(): List<Float> =
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).fetchSemanticsNode().config[LivePreviewMatrix]
+
+    /** The geometry the live preview now draws with ([LivePreviewGeometry]), as its text. */
+    private fun liveGeometry(): String =
+        compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).fetchSemanticsNode().config[LivePreviewGeometry]
+
+    /**
+     * The bounds of the node tagged [tag] in the root's pixels, from its `positionInRoot` and its
+     * size (never clipped to what is visible).
+     */
+    private fun bounds(tag: String): Rect {
+        val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
+        val position = node.positionInRoot
+        return Rect(position.x, position.y, position.x + node.size.width, position.y + node.size.height)
+    }
+
+    /** The middle half of [area] each way: a quarter of its width and height in from each side. */
+    private fun middleOf(area: Rect): Rect = Rect(
+        area.left + area.width / 4,
+        area.top + area.height / 4,
+        area.right - area.width / 4,
+        area.bottom - area.height / 4,
+    )
+
+    /**
+     * Draws the activity's content view into a fresh bitmap and returns the pixels inside [area]
+     * (in the root's pixels), row after row.
+     *
+     * It draws the content view itself instead of using Compose's captureToImage, whose wait for
+     * the window to redraw times out under Robolectric here (see `settings/ScreenPixels.kt`). The
+     * Compose root fills the content view from its top-left corner, so the two share coordinates.
+     */
+    private fun pixelsIn(area: Rect): IntArray {
+        compose.waitForIdle()
+        val content = compose.activity.findViewById<ViewGroup>(android.R.id.content)
+        val view = checkNotNull(content.getChildAt(0)) { "The activity has no content view yet" }
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(bitmap))
+        return try {
+            val left = area.left.toInt().coerceIn(0, bitmap.width - 1)
+            val top = area.top.toInt().coerceIn(0, bitmap.height - 1)
+            val right = area.right.toInt().coerceIn(left + 1, bitmap.width)
+            val bottom = area.bottom.toInt().coerceIn(top + 1, bitmap.height)
+            val width = right - left
+            val height = bottom - top
+            val data = IntArray(width * height)
+            bitmap.getPixels(data, 0, width, left, top, width, height)
+            data
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     /** A filter source whose every filter inverts the colours, from a generated 256 x 3 strip. */
@@ -413,29 +535,19 @@ class EditToolTest {
     /** An opaque ARGB colour from its three channels. */
     private fun rgb(r: Int, g: Int, b: Int): Int = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
 
-    /** Every pixel of [bitmap], row after row. */
-    private fun pixels(bitmap: Bitmap): IntArray {
-        val data = IntArray(bitmap.width * bitmap.height)
-        bitmap.getPixels(data, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        return data
-    }
-
-    /** The mean luminance of [bitmap] (Rec. 601 weights), 0 to 255. */
-    private fun meanLuminance(bitmap: Bitmap): Double = pixels(bitmap).map { color ->
+    /** The mean luminance of [pixels] (Rec. 601 weights), 0 to 255. */
+    private fun meanLuminance(pixels: IntArray): Double = pixels.map { color ->
         0.299 * ((color shr 16) and 0xFF) + 0.587 * ((color shr 8) and 0xFF) + 0.114 * (color and 0xFF)
     }.average()
 
-    /** The mean red, green and blue of [bitmap], in that order. */
-    private fun channelMeans(bitmap: Bitmap): DoubleArray {
-        val data = pixels(bitmap)
-        return doubleArrayOf(
-            data.map { (it shr 16) and 0xFF }.average(),
-            data.map { (it shr 8) and 0xFF }.average(),
-            data.map { it and 0xFF }.average(),
-        )
-    }
+    /** The mean red, green and blue of [pixels], in that order. */
+    private fun channelMeans(pixels: IntArray): DoubleArray = doubleArrayOf(
+        pixels.map { (it shr 16) and 0xFF }.average(),
+        pixels.map { (it shr 8) and 0xFF }.average(),
+        pixels.map { it and 0xFF }.average(),
+    )
 
-    /** The made-up photo and how the finger moves in the drag test. */
+    /** The made-up photo, how the finger moves in the drag test, and the shape tolerance. */
     private companion object {
         /** A content Uri no real photo has; the fake loader ignores it. */
         const val PHOTO_URI = "content://media/external/images/media/42"
@@ -451,5 +563,8 @@ class EditToolTest {
 
         /** Each move's length as a fraction of the slider's width. */
         const val DRAG_STEP_FRACTION = 0.07f
+
+        /** How far the image node's width-to-height ratio may be from the expected one (pixel rounding). */
+        const val ASPECT_TOLERANCE = 0.02f
     }
 }

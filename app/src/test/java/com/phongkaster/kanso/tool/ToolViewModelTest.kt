@@ -27,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -35,6 +36,7 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.koin.core.context.stopKoin
@@ -63,6 +65,11 @@ import org.robolectric.annotation.Config
  * newest settings win over a render still running, Back closes a sheet or asks to discard, and
  * Save writes the rendered settings or, with none, the original. Undo across the Edit sheets is
  * in `edit/EditUndoTest`.
+ *
+ * Run 9 (T-003) draws the Edit settings live on the screen: nothing full-size is rendered while
+ * editing (`edited` stays null), only a filter is rendered, on a small copy of the original, into
+ * `filterPreview` on a background thread, and Save renders the current settings in full first.
+ * The Edit tests wait for that background work in real time.
  *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
@@ -485,10 +492,20 @@ class ToolViewModelTest {
 
     /**
      * Run 9, DoD 18 and 6: a slider released while an earlier change is still being rendered is
-     * not lost. A filter chip starts a render that hangs; the person drags a slider and lets go
-     * meanwhile. The newest settings are rendered and shown, the hung render finishing late
-     * changes nothing, every render starts from the original photo, and the chip and the drag are
-     * one undo entry each.
+     * not lost. A filter chip starts a filter preview render that hangs; the person drags the
+     * filter's intensity and lets go meanwhile. The released intensity ends in the session, is
+     * the one rendered and shown once the hung render ends (the step dragged past in between is
+     * never rendered), the hung render finishing late shows nothing, every render starts from the
+     * original photo, Done's final render uses the released settings, and the chip and the drag
+     * are one undo entry each.
+     *
+     * Run 9 (T-003): the Edit screen no longer renders the full photo while editing (the screen
+     * draws crop, turns, flips and colour sliders live); only a filter is rendered, on a small copy
+     * of the original, into `filterPreview`, and the full render waits for Done (`renderFinal`).
+     * So this test now hangs the filter preview instead of a full render, reads `filterPreview`
+     * instead of `edited` (which stays null), no longer expects `Processing.Running` (the preview
+     * never locks the controls), and waits in real time because the renderer works on its own
+     * background thread. The property it protects is the same: a release during work is not lost.
      */
     @Test
     fun a_slider_released_while_a_render_runs_is_not_lost() {
@@ -499,36 +516,50 @@ class ToolViewModelTest {
         val renderer = SettingsRenderer(gates = mapOf(chip to hung))
 
         viewModel.changeSettings(chip, renderer.processorFor)
-        runMainThread()
-        assertTrue(viewModel.state.value.processing is ToolUiState.Processing.Running)
+        waitUntil("the chip's render to start") { renderer.inputs.size == 1 }
+        assertEquals(ToolUiState.Processing.Idle, viewModel.state.value.processing)
+        assertNull(viewModel.state.value.filterPreview)
         assertNull(viewModel.state.value.edited)
 
-        val released = chip.copy(brightness = 0.4f)
-        viewModel.previewSettings(chip.copy(brightness = 0.2f), renderer.processorFor)
+        val dragged = chip.copy(filterIntensity = 0.6f)
+        val released = chip.copy(filterIntensity = 0.3f)
+        viewModel.previewSettings(dragged, renderer.processorFor)
         viewModel.previewSettings(released, renderer.processorFor)
         viewModel.commitSettings()
         runMainThread()
-        var state = viewModel.state.value
-        assertEquals(released, state.settings)
-        assertEquals("The released slider was not rendered", released, renderer.settingsOf(state.edited))
-        assertEquals(ToolUiState.Processing.Idle, state.processing)
+        assertEquals(released, viewModel.state.value.settings)
+        assertTrue(viewModel.state.value.canUndo)
 
-        // The first render finishes late: it is out of date, so it must change nothing.
+        // The first render finishes late: it is out of date, so it must not be shown; the released
+        // intensity, waiting meanwhile, is rendered next and shown.
         hung.complete(Unit)
+        waitUntil("the released intensity's preview") {
+            renderer.settingsOf(viewModel.state.value.filterPreview) == released
+        }
         runMainThread()
-        state = viewModel.state.value
-        assertEquals("A late render overwrote the newest one", released, renderer.settingsOf(state.edited))
+        val state = viewModel.state.value
+        assertEquals("A late render overwrote the newest one", released, renderer.settingsOf(state.filterPreview))
+        assertEquals(listOf(chip, released), renderer.rendered)
         assertEquals(ToolUiState.Processing.Idle, state.processing)
         assertNull(state.failure)
+        assertNull("A full-size picture was rendered while editing", state.edited)
+        assertTrue("A render did not start from the original", renderer.inputs.all { it === original })
+
+        // Done renders the released settings, from the original too.
+        val done = runBlocking { viewModel.renderFinal() }
+        assertTrue("The final render failed: $done", done is EditResult.Edited)
+        assertEquals(released, renderer.settingsOf((done as EditResult.Edited).bitmap))
         assertTrue("A render did not start from the original", renderer.inputs.all { it === original })
 
         viewModel.undo()
-        runMainThread()
+        waitUntil("the chip's preview after Undo") {
+            renderer.settingsOf(viewModel.state.value.filterPreview) == chip
+        }
         assertEquals(chip, viewModel.state.value.settings)
-        assertEquals(chip, renderer.settingsOf(viewModel.state.value.edited))
         viewModel.undo()
         runMainThread()
         assertEquals(EditSettings(), viewModel.state.value.settings)
+        assertNull(viewModel.state.value.filterPreview)
         assertNull(viewModel.state.value.edited)
         assertFalse(viewModel.state.value.canUndo)
     }
@@ -564,7 +595,9 @@ class ToolViewModelTest {
         viewModel.dismissDiscardPrompt()
         assertFalse(viewModel.state.value.discardPrompt)
         assertEquals("Keep editing lost the changes", turned, viewModel.state.value.settings)
-        assertEquals(turned, renderer.settingsOf(viewModel.state.value.edited))
+        // Run 9 (T-003): a turn is drawn live by the screen, so nothing is rendered while editing
+        // and `edited` stays null; the kept changes are read from the settings above.
+        assertNull(viewModel.state.value.edited)
 
         assertTrue(viewModel.onBackPressed())
         assertTrue(viewModel.state.value.discardPrompt)
@@ -581,6 +614,13 @@ class ToolViewModelTest {
      * Run 9: on the Edit screen Save writes the rendered settings (the edited bitmap itself, never
      * the original's Uri); with the settings back at neutral (every change undone) there is no
      * edited photo, so Save copies the original from its Uri.
+     *
+     * Run 9 (T-003): nothing is rendered while editing any more (`edited` stays null; the screen
+     * draws the settings live), so Save itself renders the current settings in full from the
+     * original, with the recipe the panel gave, and saves that picture. The test now reads the
+     * picture the fake saver received and checks which settings it was rendered from and that
+     * the render started from the original, instead of comparing it with an `edited` rendered
+     * beforehand.
      */
     @Test
     fun edit_save_writes_the_rendered_settings_and_neutral_settings_save_the_original() {
@@ -592,11 +632,13 @@ class ToolViewModelTest {
         val flipped = EditSettings(flipHorizontal = true, contrast = 0.3f)
         viewModel.changeSettings(flipped, renderer.processorFor)
         runMainThread()
-        val edited = viewModel.state.value.edited
-        assertEquals(flipped, renderer.settingsOf(edited))
+        assertNull("A full-size picture was rendered while editing", viewModel.state.value.edited)
+        assertTrue("A render ran before Save", renderer.inputs.isEmpty())
         viewModel.save()
-        runMainThread()
-        assertSame(edited, saver.bitmapCalls.single())
+        waitUntil("the rendered settings to be saved") { saver.bitmapCalls.isNotEmpty() }
+        val saved = saver.bitmapCalls.single()
+        assertEquals("Save did not render the current settings", flipped, renderer.settingsOf(saved))
+        assertSame("Save's render did not start from the original", original, renderer.inputs.single())
         assertTrue("The original's Uri was saved after an edit", saver.calls.isEmpty())
 
         val neutralSaver = FakePhotoSaver()
@@ -632,10 +674,14 @@ class ToolViewModelTest {
     /**
      * Stands in for the Edit panel's recipe `{ settings -> EditProcessor(settings, filters) }`,
      * with no engine: each processor it builds records the settings and the input it was given
-     * and answers with a new small bitmap, remembered with its settings so a test can ask which
-     * settings the shown picture was rendered from. A render whose settings are in [gates] waits
-     * for its gate first, and ignores being cancelled while it waits, as a real processor that
-     * does not check for cancellation would.
+     * and answers with a new bitmap of the input's size, remembered with its settings so a test
+     * can ask which settings the shown picture was rendered from. A render whose settings are in
+     * [gates] waits for its gate first, and ignores being cancelled while it waits, as a real
+     * processor that does not check for cancellation would.
+     *
+     * Run 9 (T-003): the picture is the input's size (it was 4 x 4) because the filter preview
+     * renderer scales a picture of another size back to its source's size, which would make a new
+     * bitmap this renderer could no longer recognise.
      */
     private class SettingsRenderer(private val gates: Map<EditSettings, CompletableDeferred<Unit>> = emptyMap()) {
 
@@ -645,12 +691,16 @@ class ToolViewModelTest {
         /** Each picture rendered, with the settings it was rendered from. */
         private val results = CopyOnWriteArrayList<Pair<Bitmap, EditSettings>>()
 
+        /** The settings of every finished render, oldest first. */
+        val rendered: List<EditSettings>
+            get() = results.map { it.second }
+
         /** Builds the processor for one set of settings, as the ViewModel asks for each render. */
         val processorFor: (EditSettings) -> ToolProcessor = { settings ->
             FakeProcessor { input, _ ->
                 inputs += input
                 gates[settings]?.let { gate -> withContext(NonCancellable) { gate.await() } }
-                val picture = Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888)
+                val picture = Bitmap.createBitmap(input.width, input.height, Bitmap.Config.ARGB_8888)
                 results += picture to settings
                 EditResult.Edited(picture)
             }
@@ -740,6 +790,22 @@ class ToolViewModelTest {
     /** Runs everything waiting in the main thread's queue, where the ViewModel's jobs end. */
     private fun runMainThread() {
         shadowOf(Looper.getMainLooper()).idle()
+    }
+
+    /**
+     * Waits, in real time and at most 5 seconds, until [condition] holds, running the main
+     * thread's queue between checks; fails naming [what]. Run 9 (T-003): the Edit screen's filter
+     * preview renders on its own background thread (`Dispatchers.Default` inside the renderer),
+     * so its result reaches the main thread only after real time has passed.
+     */
+    private fun waitUntil(what: String, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000L
+        while (true) {
+            runMainThread()
+            if (condition()) return
+            if (System.currentTimeMillis() > deadline) fail("Timed out waiting for $what")
+            Thread.sleep(5L)
+        }
     }
 
     /** Values shared by the tests. */
