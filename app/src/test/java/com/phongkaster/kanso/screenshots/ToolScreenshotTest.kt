@@ -21,7 +21,6 @@ import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.BrightenedProcessor
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.ENHANCE_COMPARE_TAG
@@ -30,7 +29,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.editRatioTag
 import com.phongkaster.kanso.ui.tool.editToolTag
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import org.junit.After
@@ -238,19 +237,18 @@ class ToolScreenshotTest {
             photoUri = "content://media/external/images/media/42",
             loader = loader,
             probe = ViewModelClearedProbe(),
-            saver = NoSavePhotoSaver(),
             registry = registry,
         )
         compose.setContent {
             KansoTheme(themeMode = mode) {
-                ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+                ToolScreen(viewModel = viewModel, onBack = {}, onDone = {})
             }
         }
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(hasTestTag(TOOL_IMAGE_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsEnabled()
     }
 
     /** Saves a picture of the whole window as `src/test/screenshots/[name]`. */

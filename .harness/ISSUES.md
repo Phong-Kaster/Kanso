@@ -334,3 +334,7 @@ No issues yet. Bootstrap only; D-001 (the DoD approval) is pending.
 
 - Carried (T-004): choosing a fixed crop ratio and then turning the photo does not re-fit the rectangle, so the chip stays marked while the shape is rotated (`EditSession.cropRatioChosen`, `EditPanel` onTurn).
 - README and `docs/features/edit.md` still describe the old Edit tool (T-007 rewrites them; CLAUDE.md asks for the same change, deferred by plan).
+- Carried (Phase 5): `53_tool_enhance_done_light/dark.png` were re-recorded under criterion 22's prose approval but are not in DECISIONS.md `## Baselines`; add them there if the owner wants the record to be explicit.
+- Carried (Phase 5): `docs/features/saving-and-share.md`, `tool-screen.md`, `my-edits.md`, `remove-background.md` still describe the Saved screen and the Save bar (T-007/T-008).
+- Carried (Phase 5): with Undo and Done on the right, a long tool name (Remove background) on a 360 dp phone may ellipsize; only checked at test widths. FileProvider cannot be called on the Windows desktop JVM, so the provider is verified by manifest lookup only; Share through a real provider is unverified until the device run.
+- Carried (Phase 5): a second Share deletes the first cached copy (reviewer minor 9); Share's JPEG quality 95 repeats the saver's constant (minor 8).

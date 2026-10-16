@@ -92,9 +92,9 @@ fun kansoPushTransition(
  * Push or pop: NavDisplay chooses between this spec and [kansoPushTransition] by comparing the
  * back stack before and after the change. It is a pop only when the bottom key is the same, the
  * new back stack is shorter, and it is exactly the start of the old one: `[Home, Settings]`
- * becoming `[Home]`, or Saved's Home button turning `[Home, Saved]` into `[Home]`. Every other
- * change is a push, including a change that removes keys and adds others: saving a photo turns
- * `[Home, Gallery, ToolPhoto]` into `[Home, Saved]`, so the Saved screen slides in like a new
+ * becoming `[Home]`, or Result's Go home button turning `[Home, ToolPhoto, Result]` into `[Home]`. Every other
+ * change is a push, including a change that removes keys and adds others: Done adds
+ * Result above `[Home, Gallery, ToolPhoto]`, so the Result screen slides in like a new
  * screen, which is what a person expects of a step forward.
  *
  * Like [kansoPushTransition], it takes the motion scheme as a parameter and reads its two springs

@@ -11,15 +11,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
-import com.phongkaster.kanso.data.photo.PhotoSaver
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.save.FakePhotoSaver
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import java.util.concurrent.CopyOnWriteArrayList
@@ -29,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,6 +71,13 @@ import org.robolectric.annotation.Config
  * `filterPreview` on a background thread, and Save renders the current settings in full first.
  * The Edit tests wait for that background work in real time.
  *
+ * Run 9 (T-006): Save became Done on all five tools. The ViewModel has no saver any more: Done
+ * puts the finished picture into the hand-off store (`RenderedPhotoStore`) and sends one done
+ * event, and the Result screen saves. Every test that called `save()` now calls `done()` and reads
+ * the store and the events instead of a fake saver's calls; `SaveState` is gone, and the one
+ * failure Done can have (Edit's final render failing) replaces the failed-save test. The deeper
+ * Done checks (size, nothing written, double tap, the session left intact) are in `DoneResultTest`.
+ *
  * It runs under Robolectric because the [FakePhotoLoader] it is given needs an Android Context and
  * a Bitmap. Robolectric runs the test on Android's main thread, the thread the ViewModel's
  * coroutines run on, so a load or a save whose fake answers at once has finished when the call
@@ -95,16 +102,18 @@ class ToolViewModelTest {
 
     /**
      * DoD 10: for each of the five tools, a ViewModel built for that tool starts with it and the
-     * key's photo, nothing decoded and nothing saved, and keeps that tool in every snapshot it
-     * hands out: before the decode, after it, while a save runs and after the save is done.
+     * key's photo, nothing decoded and nothing handed over, and keeps that tool in every snapshot
+     * it hands out: before the decode, after it and after Done.
+     *
+     * Run 9 (T-006): Save became Done, which hands the picture over at once (the photo here is
+     * unedited) instead of passing through a saving state, so the gate on the saver is gone.
      */
     @Test
     fun the_state_keeps_the_key_s_tool_for_the_view_model_s_whole_life() {
         Tool.entries.forEach { tool ->
-            // The gate holds the save open until the test completes it.
-            val gate = CompletableDeferred<Unit>()
-            val saver = FakePhotoSaver(gate = gate)
-            val viewModel = toolViewModel(FakePhotoLoader(app, ToolFixtures.gradient(600, 400)), saver, tool)
+            val store = RenderedPhotoStore()
+            val photo = ToolFixtures.gradient(600, 400)
+            val viewModel = toolViewModel(FakePhotoLoader(app, photo), store, tool)
             assertEquals(ToolUiState(tool = tool, photoUri = PHOTO_URI), viewModel.state.value)
 
             viewModel.load(MAX_EDGE_PX)
@@ -112,57 +121,66 @@ class ToolViewModelTest {
             assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
             assertEquals(tool, viewModel.state.value.tool)
 
-            viewModel.save()
+            viewModel.done()
             runMainThread()
-            assertEquals(ToolUiState.SaveState.Saving, viewModel.state.value.save)
-            assertEquals(tool, viewModel.state.value.tool)
-
-            gate.complete(Unit)
-            runMainThread()
-            assertEquals(ToolUiState.SaveState.Saved(keptOriginalOrientation = false), viewModel.state.value.save)
+            assertEquals("$tool: Done did not send one event", 1, doneEventCount(viewModel))
             assertEquals(tool, viewModel.state.value.tool)
             assertEquals(PHOTO_URI, viewModel.state.value.photoUri)
-            assertEquals(listOf(PHOTO_URI), saver.calls.toList())
+            assertFalse(viewModel.state.value.finishing)
+            assertSame("$tool: Done did not hand over the unedited photo", photo, store.peek())
         }
     }
 
     /**
-     * A save, from start to end, leaves the decoded photo as the very same picture, and the
-     * loader is asked for it only once.
+     * Done leaves the decoded photo as the very same picture, and the loader is asked for it only
+     * once. Run 9 (T-006): this was the same check for Save, which Done replaced.
      */
     @Test
-    fun a_save_keeps_the_decoded_photo_and_does_not_load_again() {
+    fun done_keeps_the_decoded_photo_and_does_not_load_again() {
         val bitmap = ToolFixtures.gradient(600, 400)
         val loader = FakePhotoLoader(app, bitmap)
-        val viewModel = toolViewModel(loader, FakePhotoSaver())
+        val viewModel = toolViewModel(loader, RenderedPhotoStore())
         viewModel.load(MAX_EDGE_PX)
         runMainThread()
         val loaded = viewModel.state.value.photo
         assertTrue("The photo is not ready: $loaded", loaded is ToolUiState.PhotoState.Ready)
 
-        viewModel.save()
+        viewModel.done()
         runMainThread()
 
         val state = viewModel.state.value
-        assertEquals(ToolUiState.SaveState.Saved(keptOriginalOrientation = false), state.save)
+        assertEquals(1, doneEventCount(viewModel))
         assertSame(loaded, state.photo)
         assertSame(bitmap, (state.photo as ToolUiState.PhotoState.Ready).bitmap)
         assertEquals(listOf(MAX_EDGE_PX), loader.requestedEdges.toList())
     }
 
-    /** A failed save keeps the decoded photo and the tool, so the failure is shown over the photo. */
+    /**
+     * A Done whose final Edit render fails keeps the person on the screen: the failure is set,
+     * the photo, the tool and the settings stay, Done is usable again (not finishing), nothing is
+     * handed over and no done event is sent. Run 9 (T-006): this replaced the failed-save test,
+     * since Done writes nothing and its only failure is the render.
+     */
     @Test
-    fun a_failed_save_keeps_the_photo_and_the_tool() {
-        val viewModel = toolViewModel(FakePhotoLoader(app, ToolFixtures.gradient(600, 400)), tool = Tool.ENHANCE)
-        viewModel.load(MAX_EDGE_PX)
-        runMainThread()
-        // NoSavePhotoSaver fails every save.
-        viewModel.save()
+    fun a_failed_done_render_keeps_the_photo_and_the_tool_and_hands_nothing_over() {
+        val store = RenderedPhotoStore()
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), store, tool = Tool.EDIT)
+        val turned = EditSettings(quarterTurns = 1)
+        // A turn needs no filter preview, so the recipe is only ever used by Done's render.
+        val failing: (EditSettings) -> ToolProcessor = { FakeProcessor { _, _ -> throw IllegalStateException("test") } }
+        viewModel.changeSettings(turned, failing)
         runMainThread()
 
-        assertEquals(ToolUiState.SaveState.Failed, viewModel.state.value.save)
-        assertEquals(Tool.ENHANCE, viewModel.state.value.tool)
-        assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
+        viewModel.done()
+        waitUntil("the failed render to end") { !viewModel.state.value.finishing }
+
+        val state = viewModel.state.value
+        assertEquals(EditFailure.Other, state.failure)
+        assertEquals(Tool.EDIT, state.tool)
+        assertTrue(state.photo is ToolUiState.PhotoState.Ready)
+        assertEquals(turned, state.settings)
+        assertNull("A failed render was handed over", store.peek())
+        assertEquals("A failed render opened Result", 0, doneEventCount(viewModel))
     }
 
     /**
@@ -228,13 +246,14 @@ class ToolViewModelTest {
 
     /**
      * Run 8: the progress a running edit reports shows in the state as `Running(progress)`;
-     * meanwhile Save, Undo and a second edit are all ignored (the saver is never called), and when
-     * the edit ends the state is idle again with the result shown.
+     * meanwhile Done, Undo and a second edit are all ignored (nothing is handed over and no done
+     * event is sent), and when the edit ends the state is idle again with the result shown.
+     * Run 9 (T-006): Save became Done, so the test taps Done and reads the hand-off store.
      */
     @Test
-    fun a_running_edit_reports_its_progress_and_blocks_save() {
-        val saver = FakePhotoSaver()
-        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), saver)
+    fun a_running_edit_reports_its_progress_and_blocks_done() {
+        val store = RenderedPhotoStore()
+        val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), store)
         val halfway = CompletableDeferred<Unit>()
         val finish = CompletableDeferred<Unit>()
         val result = ToolFixtures.gradient(300, 200)
@@ -251,12 +270,13 @@ class ToolViewModelTest {
         runMainThread()
         assertEquals(ToolUiState.Processing.Running(0.25f), viewModel.state.value.processing)
 
-        viewModel.save()
+        viewModel.done()
         viewModel.undo()
         viewModel.apply(other)
         runMainThread()
-        assertEquals(ToolUiState.SaveState.Idle, viewModel.state.value.save)
-        assertTrue("Save ran during an edit", saver.calls.isEmpty() && saver.bitmapCalls.isEmpty())
+        assertFalse(viewModel.state.value.finishing)
+        assertNull("Done handed a picture over during an edit", store.peek())
+        assertEquals("Done opened Result during an edit", 0, doneEventCount(viewModel))
         assertTrue("A second edit ran during the first", other.inputs.isEmpty())
 
         halfway.complete(Unit)
@@ -358,36 +378,35 @@ class ToolViewModelTest {
     }
 
     /**
-     * Run 8: after an edit, Save hands the saver the edited bitmap itself, at its own size, and
-     * never the photo's Uri, so the original file is never written; an unedited photo is still
-     * saved from its Uri.
+     * Run 8: after an edit, Done hands over the edited bitmap itself, at its own size, never the
+     * original; an unedited photo hands over the decoded original.
+     * Run 9 (T-006): this was the same check for Save; Done hands over to the store instead.
      */
     @Test
-    fun save_after_an_edit_saves_the_edited_bitmap_and_not_the_original() {
+    fun done_after_an_edit_hands_over_the_edited_bitmap_and_not_the_original() {
         val original = ToolFixtures.gradient(600, 400)
         val edited = ToolFixtures.gradient(640, 480)
 
-        val uneditedSaver = FakePhotoSaver()
-        val unedited = loadedViewModel(original, uneditedSaver)
-        unedited.save()
+        val uneditedStore = RenderedPhotoStore()
+        val unedited = loadedViewModel(original, uneditedStore)
+        unedited.done()
         runMainThread()
-        assertEquals(listOf(PHOTO_URI), uneditedSaver.calls.toList())
-        assertTrue(uneditedSaver.bitmapCalls.isEmpty())
+        assertSame(original, uneditedStore.peek())
+        assertEquals(1, doneEventCount(unedited))
 
-        val saver = FakePhotoSaver()
-        val viewModel = loadedViewModel(original, saver)
+        val store = RenderedPhotoStore()
+        val viewModel = loadedViewModel(original, store)
         viewModel.apply(FakeProcessor { _, _ -> EditResult.Edited(edited) })
         runMainThread()
-        viewModel.save()
+        viewModel.done()
         runMainThread()
 
-        val saved = saver.bitmapCalls.single()
-        assertSame(edited, saved)
-        assertEquals(640, saved.width)
-        assertEquals(480, saved.height)
-        assertNotSame(original, saved)
-        assertTrue("The original's Uri was saved after an edit", saver.calls.isEmpty())
-        assertEquals(ToolUiState.SaveState.Saved(keptOriginalOrientation = false), viewModel.state.value.save)
+        val handed = checkNotNull(store.peek())
+        assertSame(edited, handed)
+        assertEquals(640, handed.width)
+        assertEquals(480, handed.height)
+        assertNotSame(original, handed)
+        assertEquals(1, doneEventCount(viewModel))
     }
 
     /**
@@ -611,47 +630,53 @@ class ToolViewModelTest {
     }
 
     /**
-     * Run 9: on the Edit screen Save writes the rendered settings (the edited bitmap itself, never
-     * the original's Uri); with the settings back at neutral (every change undone) there is no
-     * edited photo, so Save copies the original from its Uri.
+     * Run 9: on the Edit screen Done hands over the rendered settings, rendered in full from the
+     * original with the recipe the panel gave; with the settings back at neutral (every change
+     * undone) Done hands over the decoded original itself.
      *
-     * Run 9 (T-003): nothing is rendered while editing any more (`edited` stays null; the screen
-     * draws the settings live), so Save itself renders the current settings in full from the
-     * original, with the recipe the panel gave, and saves that picture. The test now reads the
-     * picture the fake saver received and checks which settings it was rendered from and that
-     * the render started from the original, instead of comparing it with an `edited` rendered
-     * beforehand.
+     * Run 9 (T-006): this was the same check for Save, which wrote the render or copied the
+     * original's file; Done writes nothing and puts the picture into the hand-off store, so the
+     * test reads the store instead of the fake saver. With nothing ever changed there is no recipe
+     * and the original itself is handed over; after a change and its undo the recipe is known, so
+     * Done renders the neutral settings from the original, and the test checks they are neutral.
      */
     @Test
-    fun edit_save_writes_the_rendered_settings_and_neutral_settings_save_the_original() {
+    fun edit_done_hands_over_the_rendered_settings_and_neutral_settings_hand_over_the_original() {
         val original = ToolFixtures.gradient(600, 400)
         val renderer = SettingsRenderer()
 
-        val saver = FakePhotoSaver()
-        val viewModel = loadedViewModel(original, saver, tool = Tool.EDIT)
+        val store = RenderedPhotoStore()
+        val viewModel = loadedViewModel(original, store, tool = Tool.EDIT)
         val flipped = EditSettings(flipHorizontal = true, contrast = 0.3f)
         viewModel.changeSettings(flipped, renderer.processorFor)
         runMainThread()
         assertNull("A full-size picture was rendered while editing", viewModel.state.value.edited)
-        assertTrue("A render ran before Save", renderer.inputs.isEmpty())
-        viewModel.save()
-        waitUntil("the rendered settings to be saved") { saver.bitmapCalls.isNotEmpty() }
-        val saved = saver.bitmapCalls.single()
-        assertEquals("Save did not render the current settings", flipped, renderer.settingsOf(saved))
-        assertSame("Save's render did not start from the original", original, renderer.inputs.single())
-        assertTrue("The original's Uri was saved after an edit", saver.calls.isEmpty())
+        assertTrue("A render ran before Done", renderer.inputs.isEmpty())
+        viewModel.done()
+        waitUntil("the rendered settings to be handed over") { store.peek() != null }
+        val handed = store.peek()
+        assertEquals("Done did not render the current settings", flipped, renderer.settingsOf(handed))
+        assertSame("Done's render did not start from the original", original, renderer.inputs.single())
+        assertEquals(1, doneEventCount(viewModel))
 
-        val neutralSaver = FakePhotoSaver()
-        val neutral = loadedViewModel(original, neutralSaver, tool = Tool.EDIT)
+        val untouchedStore = RenderedPhotoStore()
+        val untouched = loadedViewModel(original, untouchedStore, tool = Tool.EDIT)
+        untouched.done()
+        runMainThread()
+        assertSame("Done with nothing changed did not hand over the original", original, untouchedStore.peek())
+        assertEquals(1, doneEventCount(untouched))
+
+        val neutralStore = RenderedPhotoStore()
+        val neutral = loadedViewModel(original, neutralStore, tool = Tool.EDIT)
         neutral.changeSettings(flipped, renderer.processorFor)
         runMainThread()
         neutral.undo()
         runMainThread()
         assertNull(neutral.state.value.edited)
-        neutral.save()
-        runMainThread()
-        assertEquals(listOf(PHOTO_URI), neutralSaver.calls.toList())
-        assertTrue(neutralSaver.bitmapCalls.isEmpty())
+        neutral.done()
+        waitUntil("the neutral settings to be handed over") { neutralStore.peek() != null }
+        assertEquals(EditSettings(), renderer.settingsOf(neutralStore.peek()))
+        assertEquals(1, doneEventCount(neutral))
     }
 
     /**
@@ -738,11 +763,11 @@ class ToolViewModelTest {
      */
     private fun loadedViewModel(
         photo: Bitmap,
-        saver: PhotoSaver = NoSavePhotoSaver(),
+        store: RenderedPhotoStore = RenderedPhotoStore(),
         tool: Tool = Tool.RETOUCH,
         registry: ProcessorRegistry = ProcessorRegistry(),
     ): ToolViewModel {
-        val viewModel = toolViewModel(FakePhotoLoader(app, photo), saver, tool, registry)
+        val viewModel = toolViewModel(FakePhotoLoader(app, photo), store, tool, registry)
         viewModel.load(MAX_EDGE_PX)
         runMainThread()
         assertTrue(viewModel.state.value.photo is ToolUiState.PhotoState.Ready)
@@ -767,13 +792,14 @@ class ToolViewModelTest {
 
     /**
      * Builds the ViewModel on [tool] (Edit by default) for [PHOTO_URI] with [loader], the way the
-     * app's Koin recipe does but by hand, with a probe nobody reads, [saver] (by default one
-     * that writes nothing and fails every save) and [registry]. Shrinking before an edit runs on
-     * `Dispatchers.Unconfined`, in place on the test's thread, so the test needs no other thread.
+     * app's Koin recipe does but by hand, with a probe nobody reads, [store] (the hand-off Done
+     * puts the finished picture into; Run 9, T-006: it replaced the saver) and [registry].
+     * Shrinking before an edit runs on `Dispatchers.Unconfined`, in place on the test's thread,
+     * so the test needs no other thread.
      */
     private fun toolViewModel(
         loader: FakePhotoLoader,
-        saver: PhotoSaver = NoSavePhotoSaver(),
+        store: RenderedPhotoStore = RenderedPhotoStore(),
         tool: Tool = Tool.EDIT,
         registry: ProcessorRegistry = ProcessorRegistry(),
     ): ToolViewModel =
@@ -782,10 +808,21 @@ class ToolViewModelTest {
             photoUri = PHOTO_URI,
             loader = loader,
             probe = ViewModelClearedProbe(),
-            saver = saver,
             registry = registry,
+            store = store,
             workDispatcher = Dispatchers.Unconfined,
         )
+
+    /**
+     * Counts the done events [viewModel] has sent and nobody has read yet, reading them all. The
+     * events wait in a queue (a Channel), so the ones already sent arrive at once; the short
+     * timeout only ends the count once the queue is empty.
+     */
+    private fun doneEventCount(viewModel: ToolViewModel): Int = runBlocking {
+        var count = 0
+        withTimeoutOrNull(EVENT_WAIT_MS) { viewModel.doneEvents.collect { count++ } }
+        count
+    }
 
     /** Runs everything waiting in the main thread's queue, where the ViewModel's jobs end. */
     private fun runMainThread() {
@@ -815,5 +852,8 @@ class ToolViewModelTest {
 
         /** The size the screen asks for on the test phone: twice 891 dp at 3 pixels per dp. */
         const val MAX_EDGE_PX = 2 * 891 * 3
+
+        /** How long [doneEventCount] waits for one more event before it stops counting. */
+        const val EVENT_WAIT_MS = 100L
     }
 }

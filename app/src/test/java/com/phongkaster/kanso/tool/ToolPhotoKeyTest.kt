@@ -113,7 +113,7 @@ class ToolPhotoKeyTest {
                                 val viewModel = koinViewModel<ToolViewModel>(
                                     parameters = { parametersOf(key.tool, key.photoUri) },
                                 )
-                                ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+                                ToolScreen(viewModel = viewModel, onBack = {}, onDone = {})
                             }
                         },
                     )

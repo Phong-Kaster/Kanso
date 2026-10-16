@@ -128,7 +128,7 @@ fun EditToolContent(
             // The session's settings tell the row which tools hold a change (their dot).
             EditToolRow(
                 openTool = state.openTool,
-                enabled = !state.comparing,
+                enabled = !state.comparing && !state.finishing,
                 onOpen = onOpenTool,
                 settings = state.settings,
             )

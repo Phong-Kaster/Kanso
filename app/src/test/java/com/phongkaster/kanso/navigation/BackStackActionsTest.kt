@@ -23,7 +23,7 @@ class BackStackActionsTest {
         assertFalse(isTabKey(Gallery(Tool.EDIT)))
         assertFalse(isTabKey(ToolPhoto(Tool.RETOUCH, PHOTO)))
         assertFalse(isTabKey(Camera(Tool.EDIT)))
-        assertFalse(isTabKey(Saved(Tool.EDIT, PHOTO)))
+        assertFalse(isTabKey(Result))
     }
 
     /** Each tab names its own key, in the bar's order Home, My edits, Settings. */
@@ -120,7 +120,7 @@ class BackStackActionsTest {
     /** Close goes Home from any depth and leaves Home alone on the stack. */
     @Test
     fun close_to_home_leaves_only_home() {
-        val stack = mutableListOf<NavKey>(Home, MyEdits, ToolPhoto(Tool.EDIT, PHOTO), Saved(Tool.EDIT, PHOTO))
+        val stack = mutableListOf<NavKey>(Home, MyEdits, ToolPhoto(Tool.EDIT, PHOTO), Result)
         stack.closeToHome()
         assertEquals(listOf<NavKey>(Home), stack)
 

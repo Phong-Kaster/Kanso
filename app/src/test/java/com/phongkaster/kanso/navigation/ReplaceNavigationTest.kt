@@ -47,10 +47,10 @@ import com.phongkaster.kanso.ui.home.homeTryTag
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
-import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
+import com.phongkaster.kanso.ui.result.RESULT_EDIT_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
+import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
@@ -214,17 +214,17 @@ class ReplaceNavigationTest {
             openTab(compose, KansoTab.MY_EDITS)
             waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(myEditsTileTag(0)) > 0 }
             compose.onNodeWithTag(myEditsTileTag(0)).tapAboveBar()
-            waitFor { count(SAVED_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
-            waitFor { count(SAVED_EDIT_ANOTHER_TAG) > 0 }
-            compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).performClick()
+            waitFor { count(RESULT_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
+            waitFor { count(RESULT_EDIT_TAG) > 0 }
+            compose.onNodeWithTag(RESULT_EDIT_TAG).performClick()
             waitForToolScreenOn(Tool.EDIT, photo.uri)
             assertEquals("The Edit screen must have no Replace", 0, count(TOOL_REPLACE_TAG))
 
             // Back: the photo screen the Edit screen was opened from, on the same photo.
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            val viewerPhoto = hasTestTag(SAVED_PHOTO_TAG) and SemanticsMatcher.expectValue(SAVED_PHOTO_URI_KEY, photo.uri)
+            val viewerPhoto = hasTestTag(RESULT_PHOTO_TAG) and SemanticsMatcher.expectValue(RESULT_PHOTO_URI_KEY, photo.uri)
             waitFor {
-                count(TOOL_SCREEN_TAG) == 0 && count(GALLERY_SCREEN_TAG) == 0 && count(SAVED_SCREEN_TAG) > 0 &&
+                count(TOOL_SCREEN_TAG) == 0 && count(GALLERY_SCREEN_TAG) == 0 && count(RESULT_SCREEN_TAG) > 0 &&
                     compose.onAllNodes(viewerPhoto).fetchSemanticsNodes().isNotEmpty()
             }
             assertEquals(0, count(TOOL_SCREEN_TAG))
@@ -232,7 +232,7 @@ class ReplaceNavigationTest {
 
             // Another Back: My edits, with its tab selected.
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
+            waitFor { count(RESULT_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
             waitFor { count(kansoTabTag(KansoTab.MY_EDITS)) > 0 }
             compose.onNodeWithTag(kansoTabTag(KansoTab.MY_EDITS)).assertIsSelected()
             assertEquals(0, count(HOME_SCREEN_TAG))

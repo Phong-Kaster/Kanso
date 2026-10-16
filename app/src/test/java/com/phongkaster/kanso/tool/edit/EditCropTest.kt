@@ -29,7 +29,6 @@ import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.ui.tool.EDIT_CROPPER_TAG
 import com.phongkaster.kanso.ui.tool.EditCropper
 import com.phongkaster.kanso.ui.tool.EditPanel
@@ -306,7 +305,6 @@ class EditCropTest {
             PHOTO_URI,
             FakePhotoLoader(context, photo()),
             ViewModelClearedProbe(),
-            NoSavePhotoSaver(),
             workDispatcher = Dispatchers.Unconfined,
         )
         // The fake loader answers at once; idling the main thread lets the result land.
@@ -321,7 +319,7 @@ class EditCropTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     onUndo = viewModel::undo,
                     onOpenTool = viewModel::openTool,
                     onCompare = viewModel::setComparing,

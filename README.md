@@ -14,8 +14,8 @@ not a roadmap. It is the index: each feature below links to its own page in
 step by step with file paths, which tests cover it, and what is still open.
 
 > **Current state.** The app works from start to end: Home, a photo gallery for each tool, the
-> camera, a screen for each of the five editing tools, saving into `Pictures/Kanso`, a Saved screen
-> with Share, the My edits tab and Settings. All five tools edit the photo. Edit runs in plain
+> camera, a screen for each of the five editing tools, a Done button that opens a Result screen
+> with Share, Save (into `Pictures/Kanso`) and Go home, the My edits tab and Settings. All five tools edit the photo. Edit runs in plain
 > Kotlin; Remove background, Enhance, Retouch and Artistic call the image engine's bundled on-device
 > models (`libs/localml.aar`, through `core/localml`) and OpenCV. On the Android emulator (API 34,
 > x86_64), on 2026-10-14, all five ran with no crash and each saved its result into
@@ -29,10 +29,10 @@ step by step with file paths, which tests cover it, and what is still open.
 
 ### Editing tools
 
-Every tool opens on its own screen with the same frame: Back, the tool's name, Undo, the photo in
-a card with a Replace chip, the tool's controls, and Save.
+Every tool opens on its own screen with the same frame: Back, the tool's name, Undo (Edit keeps it in a pill on the photo), Done at the top right, the photo in
+a card with a Replace chip (not on Edit), and the tool's controls. There is no Save bar: Done renders and opens Result.
 [The tool screen](docs/features/tool-screen.md) explains that shared part: decoding, the working
-size, progress, Undo, failures and Save.
+size, progress, Undo, failures and Done.
 
 | Feature | What it does | Saved as |
 |---|---|---|
@@ -53,7 +53,7 @@ size, progress, Undo, failures and Save.
 
 | Feature | What it does |
 |---|---|
-| [Saving, the Saved screen and Share](docs/features/saving-and-share.md) | Save writes a new file into `Pictures/Kanso` (the original is never changed); the Saved screen shows it; Share sends it through Android's share sheet with a one-off read grant. |
+| [Saving, the Result screen and Share](docs/features/saving-and-share.md) | Done hands the rendered picture to the Result screen through `RenderedPhotoStore` (nothing is written); Result's Save is the only gallery write, a new file in `Pictures/Kanso` (the original is never changed); Share writes a copy under the cache's `shared/` folder (PNG if it has see-through pixels, else JPEG quality 95) and sends it through FileProvider and Android's share sheet with a one-off read grant. After a process kill Result shows "Nothing to show". |
 | [My edits and the photo viewer](docs/features/my-edits.md) | A tab listing everything Kanso saved, newest first; a tapped photo opens in a viewer with Share and Edit. |
 
 ### Around the app
@@ -76,7 +76,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
   `KansoApplication` starts Koin with `di/AppModule.kt`.
 - **Navigation 3** (`navigation/KansoNavHost.kt`): one saved back stack of `@Serializable` keys:
   `Home`, `MyEdits`, `Settings` (the tabs), `Gallery(tool)`, `Camera(tool)`, `ToolPhoto(tool, uri)`,
-  `Saved(tool, uri)`, `EditedPhoto(uri)`. Each entry gets its own `ViewModelStore`, so a ViewModel
+  `Result`, `EditedPhoto(uri)`. Each entry gets its own `ViewModelStore`, so a ViewModel
   survives rotation and is cleared when its screen is popped. The tabs live in `KansoTabShell`,
   under a floating tab bar.
 - **State:** every screen has one ViewModel exposing one immutable `UiState` as a `StateFlow` (the

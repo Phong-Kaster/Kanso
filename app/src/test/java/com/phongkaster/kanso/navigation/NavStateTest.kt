@@ -30,8 +30,8 @@ import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_SYSTEM_TAG
 import kotlinx.coroutines.CoroutineScope
@@ -206,7 +206,7 @@ class NavStateTest {
     private fun assertFirstTileOpensNewestPhoto() {
         waitFor { count(myEditsTileTag(0)) > 0 }
         compose.onNodeWithTag(myEditsTileTag(0)).tapAboveBar()
-        val newest = hasTestTag(SAVED_PHOTO_TAG) and SemanticsMatcher.expectValue(SAVED_PHOTO_URI_KEY, editedPhotos.first().uri)
+        val newest = hasTestTag(RESULT_PHOTO_TAG) and SemanticsMatcher.expectValue(RESULT_PHOTO_URI_KEY, editedPhotos.first().uri)
         waitFor { compose.onAllNodes(newest).fetchSemanticsNodes().isNotEmpty() }
     }
 

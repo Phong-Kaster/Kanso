@@ -35,7 +35,6 @@ import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
@@ -215,7 +214,6 @@ class EditToolRowTest {
             PHOTO_URI,
             FakePhotoLoader(context, photo()),
             ViewModelClearedProbe(),
-            NoSavePhotoSaver(),
             workDispatcher = Dispatchers.Unconfined,
         )
         // The fake loader answers at once; idling the main thread lets the result land.
@@ -229,7 +227,7 @@ class EditToolRowTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     onUndo = viewModel::undo,
                     onOpenTool = viewModel::openTool,
                     onCompare = viewModel::setComparing,

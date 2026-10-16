@@ -1,13 +1,16 @@
-package com.phongkaster.kanso.ui.saved
+package com.phongkaster.kanso.ui.result
 
 import android.content.ClipData
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -26,6 +29,22 @@ const val SHARE_PNG_MIME_TYPE = "image/png"
 
 /** How long [shareableUri] waits for the media scanner before giving up, in milliseconds. */
 const val DEFAULT_SCAN_TIMEOUT_MILLIS = 5_000L
+
+/**
+ * The folder inside the app's cache where Share writes the rendered picture it hands to another
+ * app. It must match the `cache-path` in `res/xml/file_paths.xml`, the only place FileProvider may
+ * hand files out from.
+ */
+const val SHARE_CACHE_FOLDER = "shared"
+
+/** The JPEG quality of a shared picture, the same as a saved one. */
+const val SHARE_JPEG_QUALITY = 95
+
+/**
+ * The end of the FileProvider's authority, the name other apps use to reach it; the full authority
+ * is the app's package name followed by this (see the `provider` in the manifest).
+ */
+const val SHARE_AUTHORITY_SUFFIX = ".fileprovider"
 
 /**
  * Returns a Uri for the saved photo [photoUri] that another app may be given, or null when there
@@ -175,6 +194,71 @@ private fun displayName(resolver: ContentResolver, uri: Uri): String? = try {
 } catch (_: Exception) {
     null
 }
+
+/**
+ * Returns the MIME type a rendered [bitmap] is shared under: `image/png` when it has an alpha
+ * channel (see-through pixels, as a cut-out has), else `image/jpeg`. The file [shareableBitmapUri]
+ * writes uses the same choice, as `PhotoSaver` does for a save.
+ */
+fun bitmapShareMimeType(bitmap: Bitmap): String =
+    if (bitmap.hasAlpha()) SHARE_PNG_MIME_TYPE else SHARE_MIME_TYPE
+
+/**
+ * Writes [bitmap], the picture Done rendered, to a file under the cache's [SHARE_CACHE_FOLDER] and
+ * returns a `content://` Uri for it that another app may be given, or null when the file could not
+ * be written. Nothing is written to the gallery: sharing an unsaved edit leaves no trace there.
+ *
+ * The file is a PNG when the bitmap has see-through pixels, else a JPEG at [SHARE_JPEG_QUALITY],
+ * at the bitmap's own size. Copies left by earlier shares are deleted first, so the folder holds
+ * only the latest picture and the cache does not grow with every share.
+ *
+ * Why FileProvider: a file in the app's cache is private, and handing its `file://` path to
+ * another app is refused (see [shareableUri]). FileProvider, a content provider from AndroidX
+ * declared in the manifest, gives the file a `content://` Uri instead and opens it for whichever
+ * app is granted read access through the share intent (see [shareChooserIntent]).
+ *
+ * The work runs on Dispatchers.IO, so compressing a large picture never stops the screen drawing.
+ */
+suspend fun shareableBitmapUri(
+    context: Context,
+    bitmap: Bitmap,
+    uriFor: (Context, File) -> Uri = ::fileProviderUri,
+): Uri? = withContext(Dispatchers.IO) {
+    try {
+        val folder = File(context.cacheDir, SHARE_CACHE_FOLDER)
+        folder.listFiles()?.forEach { it.delete() }
+        if (!folder.isDirectory && !folder.mkdirs()) return@withContext null
+        val png = bitmap.hasAlpha()
+        val file = File(folder, "Kanso_${System.currentTimeMillis()}.${if (png) "png" else "jpg"}")
+        val written = file.outputStream().use { stream ->
+            if (png) {
+                // PNG is lossless: the quality number is ignored.
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            } else {
+                bitmap.compress(Bitmap.CompressFormat.JPEG, SHARE_JPEG_QUALITY, stream)
+            }
+        }
+        if (!written) {
+            file.delete()
+            return@withContext null
+        }
+        uriFor(context, file)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        // A full disk or a provider that does not know the folder: there is nothing to share.
+        null
+    }
+}
+
+/**
+ * Returns the FileProvider Uri of [file], a copy in the cache's `shared/` folder: the authority is
+ * the app's package name plus [SHARE_AUTHORITY_SUFFIX], the one the manifest declares. It is a
+ * separate function so a test running on a desktop JVM, where FileProvider cannot match Windows
+ * paths, can hand [shareableBitmapUri] another way of naming the file.
+ */
+fun fileProviderUri(context: Context, file: File): Uri =
+    FileProvider.getUriForFile(context, context.packageName + SHARE_AUTHORITY_SUFFIX, file)
 
 /**
  * Builds the intent that opens Android's share sheet for the photo at [contentUri], with the

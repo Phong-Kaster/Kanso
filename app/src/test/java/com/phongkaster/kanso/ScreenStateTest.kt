@@ -762,7 +762,7 @@ class ScreenStateTest {
             "gallery/GalleryViewModel",
             "camera/CameraViewModel",
             "tool/ToolViewModel",
-            "saved/SavedViewModel",
+            "result/ResultViewModel",
             "myedits/MyEditsViewModel",
             "settings/SettingsViewModel",
         )

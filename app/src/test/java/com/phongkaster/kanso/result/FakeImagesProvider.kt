@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.saved
+package com.phongkaster.kanso.result
 
 import android.content.ContentProvider
 import android.content.ContentValues
@@ -14,6 +14,9 @@ import org.robolectric.shadows.ShadowContentResolver
  * file's path in the DATA column. Robolectric has no MediaStore, so this one knows only the
  * [files] a test gives it (path to row id) and answers the one question the share code asks:
  * "which row has DATA = this path?".
+ *
+ * Run 9: moved from the `saved` test package to `result`, because the Result screen replaced the
+ * Saved screen; the viewer still shares a saved photo through it.
  */
 class FakeImagesProvider : ContentProvider() {
 

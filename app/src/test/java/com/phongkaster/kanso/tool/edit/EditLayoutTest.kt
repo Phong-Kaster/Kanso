@@ -27,14 +27,12 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_SHEET_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolUiState
@@ -110,13 +108,12 @@ class EditLayoutTest {
             val row = bounds(EDIT_TOOL_ROW_TAG)
             val sheet = bounds(EDIT_SHEET_TAG)
             val back = bounds(TOOL_BACK_TAG)
-            val save = bounds(TOOL_SAVE_TAG)
 
             // The body starts under the top bar: below the Back button, within the bar's margin.
             assertTrue("card top ${card.top} above the Back button ${back.bottom}", card.top >= back.bottom - 0.5f)
             assertTrue("card top ${card.top} far below the top bar ${back.bottom}", card.top - back.bottom <= dp(20f))
-            // The body ends at the Save bar's top, 12 dp above the Save button.
-            assertEquals("body bottom with $open open", save.top - dp(12f), sheet.bottom, onePx)
+            // Run 9: the bottom Save bar is gone (Done is at the top right), so the body now simply
+            // ends at the sheet area's bottom and nothing below it is measured.
 
             val body = sheet.bottom - card.top
             assertEquals("photo share of the body with $open open", 0.6f * body, card.height, onePx)
@@ -145,11 +142,9 @@ class EditLayoutTest {
             val card = bounds(TOOL_CARD_TAG)
             val row = bounds(EDIT_TOOL_ROW_TAG)
             val sheet = bounds(EDIT_SHEET_TAG)
-            val save = bounds(TOOL_SAVE_TAG)
 
             assertEquals("row under the photo, $tool", card.bottom, row.top, onePx)
             assertEquals("sheet under the row, $tool", row.bottom, sheet.top, onePx)
-            assertEquals("sheet down to the Save bar, $tool", save.top - dp(12f), sheet.bottom, onePx)
             assertEquals("sheet left edge, $tool", card.left, sheet.left, onePx)
             assertEquals("sheet right edge, $tool", card.right, sheet.right, onePx)
             assertTrue("sheet of $tool only ${sheet.height} px tall", sheet.height >= dp(100f))
@@ -191,7 +186,7 @@ class EditLayoutTest {
         var shown by mutableStateOf(readyState(Tool.EDIT, photo))
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = shown, onBack = {}, onSave = {})
+                ToolContent(state = shown, onBack = {}, onDone = {})
             }
         }
         Tool.entries.forEach { tool ->
@@ -215,7 +210,6 @@ class EditLayoutTest {
             PHOTO_URI,
             FakePhotoLoader(context, photo()),
             ViewModelClearedProbe(),
-            NoSavePhotoSaver(),
             workDispatcher = Dispatchers.Unconfined,
         )
         // The fake loader answers at once; idling the main thread lets the result land.
@@ -229,7 +223,7 @@ class EditLayoutTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     onUndo = viewModel::undo,
                     onOpenTool = viewModel::openTool,
                     onCompare = viewModel::setComparing,

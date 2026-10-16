@@ -15,3 +15,6 @@ Phase 3 (T-003) done in 4 slices + wiring: sliders/crop/turns/flips drawn live b
 
 ## Iteration - Phase 4 (T-004)
 Real cropper (core/imagecrop) replaces range sliders; two Workers (production, tests), review fixes applied; tests/lint/assemble green; free-crop baselines pending T-009.
+
+## Iteration - Phase 5 (T-005, T-006)
+Iteration pre-wired Result key, RenderedPhotoStore, FileProvider, DI, nav; two Workers each wrote production then tests. Review fixes: untouched photo saved from its own file, controls locked while Done renders, store cleared when Result is left, Saved tag names renamed to Result. 19 baselines re-recorded (approved). verifyRoborazziDebug, lint, assemble green.

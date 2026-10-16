@@ -23,7 +23,6 @@ import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.RETOUCH_RUN_TAG
@@ -161,7 +160,6 @@ class RetouchToolTest {
             PHOTO_URI,
             FakePhotoLoader(context, photo),
             ViewModelClearedProbe(),
-            NoSavePhotoSaver(),
             registry = ProcessorRegistry(mapOf(Tool.RETOUCH to processor)),
             workDispatcher = Dispatchers.Unconfined,
         )
@@ -176,7 +174,7 @@ class RetouchToolTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     panel = {
                         RetouchPanel(
                             onApply = { strength ->

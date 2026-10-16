@@ -122,7 +122,6 @@ class ToolBackdropTest {
             photoUri = PHOTO_URI,
             loader = FakePhotoLoader(context, stripes),
             probe = ViewModelClearedProbe(),
-            saver = NoSavePhotoSaver(),
         )
         var showControl by mutableStateOf(runControl)
         var mode by mutableStateOf(ThemeMode.Light)
@@ -135,7 +134,7 @@ class ToolBackdropTest {
                     // The colour of the card itself, as the theme gives it to a card.
                     val colour = CardDefaults.cardColors().containerColor.toArgb()
                     SideEffect { cardColour = colour }
-                    ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+                    ToolScreen(viewModel = viewModel, onBack = {}, onDone = {})
                 }
             }
         }

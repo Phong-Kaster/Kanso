@@ -13,7 +13,6 @@ import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.tool.NoSavePhotoSaver
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -294,7 +293,6 @@ class EditUndoTest {
             photoUri = PHOTO_URI,
             loader = FakePhotoLoader(app, photo),
             probe = ViewModelClearedProbe(),
-            saver = NoSavePhotoSaver(),
             workDispatcher = Dispatchers.Unconfined,
         )
         viewModel.load(MAX_EDGE_PX)

@@ -68,6 +68,8 @@
 
 - **Never** use `ModalBottomSheet` for the Edit tool sheets (Run 9): it blocks touches outside it, so the floating Undo/Compare pill on the photo would be unreachable, and it dims the photo; and **never** pass `aspectLock` alone to `CropState` to apply a ratio - it keeps the current shape, so also set `region` to the ratio fitted inside the image - evidence: Run 9 bootstrap survey, `reference/run9-facts.md`.
 
+- **Never** call `FileProvider.getUriForFile` in a JVM test on Windows (it compares paths with `/` and throws `Failed to find configured root`); pass `HOST_URI` (`app/src/test/.../result/HostFileUri.kt`) to `shareableBitmapUri` / `ResultScreen(shareFileUri = ...)`. Also: a new `Bitmap.createBitmap(ARGB_8888)` reports `hasAlpha() == true`, so Save/Share write a PNG unless the test calls `setHasAlpha(false)`. The Saved screen is `Result` since Run 9 (preview names `ResultPreview`, `ResultMarkPreview`; tags `RESULT_*`) - evidence: Run 9 Phase 5.
+
 ## Repository class
 
 Product (real users rely on it; one initial skeleton long gone; Runs 1-7 shipped features, tests and a README).

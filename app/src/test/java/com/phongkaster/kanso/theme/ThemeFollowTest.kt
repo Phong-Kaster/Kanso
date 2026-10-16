@@ -69,12 +69,12 @@ import com.phongkaster.kanso.ui.myedits.MyEditsContent
 import com.phongkaster.kanso.ui.myedits.MyEditsUiState
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.PermissionAccess
-import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SCRIM_TAG
-import com.phongkaster.kanso.ui.saved.SavedContent
-import com.phongkaster.kanso.ui.saved.SavedPhoto
-import com.phongkaster.kanso.ui.saved.SavedUiState
+import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SCRIM_TAG
+import com.phongkaster.kanso.ui.result.ResultContent
+import com.phongkaster.kanso.ui.result.ResultPhoto
+import com.phongkaster.kanso.ui.result.ResultUiState
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SettingsContent
 import com.phongkaster.kanso.ui.settings.SettingsUiState
@@ -477,10 +477,9 @@ class ThemeFollowTest {
             tool = tool,
             photoUri = PHOTO_URI,
             photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
-            save = ToolUiState.SaveState.Idle,
         )
         show(mode) {
-            ToolContent(state = state, onBack = {}, onSave = {})
+            ToolContent(state = state, onBack = {}, onDone = {})
         }
         val card = nodeRect(TOOL_CARD_TAG)
         assertTrue(
@@ -514,11 +513,11 @@ class ThemeFollowTest {
         // shade (the theme's surface over it), read as the theme's colours: what this test follows.
         val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
         themed.eraseColor(scheme(mode).background.toArgb())
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed))
+        val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(themed), save = ResultUiState.SaveState.Saved())
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
-        val mark = nodeRect(SAVED_MARK_TAG)
+        val mark = nodeRect(RESULT_MARK_TAG)
         assertFollows(
             screen = "Saved",
             mode = mode,
@@ -750,12 +749,12 @@ class ThemeFollowTest {
     private fun checkViewer(mode: ThemeMode) {
         val red = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
         red.eraseColor(VIEWER_PHOTO_ARGB)
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(red), viewer = true)
+        val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(red), viewer = true)
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
-        val shade = nodeRect(SAVED_SCRIM_TAG)
-        val photo = nodeRect(SAVED_PHOTO_TAG)
+        val shade = nodeRect(RESULT_SCRIM_TAG)
+        val photo = nodeRect(RESULT_PHOTO_TAG)
         val surface = scheme(mode).surface
         val expected = blendOver(surface, VIEWER_SHADE_ALPHA, Color(VIEWER_PHOTO_ARGB))
         // The shade holds its full strength over the status bar and 64 dp below it (SCRIM_HOLD), so its top

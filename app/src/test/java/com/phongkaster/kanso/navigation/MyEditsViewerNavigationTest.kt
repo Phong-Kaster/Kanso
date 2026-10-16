@@ -38,15 +38,15 @@ import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_CLOSE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_MESSAGE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
-import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_TITLE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_CLOSE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_EDIT_TAG
+import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
+import com.phongkaster.kanso.ui.result.RESULT_MESSAGE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
+import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SHARE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_TITLE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
@@ -106,11 +106,11 @@ class MyEditsViewerNavigationTest {
     fun a_tile_opens_the_viewer_on_its_photo_with_share_edit_close_and_no_bar() {
         launchToViewer {
             compose.onNode(
-                hasTestTag(SAVED_PHOTO_TAG) and SemanticsMatcher.expectValue(SAVED_PHOTO_URI_KEY, photo3.uri),
+                hasTestTag(RESULT_PHOTO_TAG) and SemanticsMatcher.expectValue(RESULT_PHOTO_URI_KEY, photo3.uri),
             ).assertIsDisplayed()
 
             // Share: round, named "Share", no visible text.
-            val share = compose.onNodeWithTag(SAVED_SHARE_TAG)
+            val share = compose.onNodeWithTag(RESULT_SHARE_TAG)
                 .assertIsDisplayed()
                 .assert(hasContentDescription(app.getString(R.string.saved_share)))
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
@@ -118,7 +118,7 @@ class MyEditsViewerNavigationTest {
             assertRound("Share", share.size.width, share.size.height)
 
             // The wide button reads exactly "Edit".
-            val edit = compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).assertIsDisplayed().fetchSemanticsNode()
+            val edit = compose.onNodeWithTag(RESULT_EDIT_TAG).assertIsDisplayed().fetchSemanticsNode()
             val editTexts = edit.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
             assertEquals(listOf(app.getString(R.string.saved_layout_viewer_edit)), editTexts)
             assertEquals("Edit", app.getString(R.string.saved_layout_viewer_edit))
@@ -128,18 +128,18 @@ class MyEditsViewerNavigationTest {
             )
 
             // Close: round, named.
-            val close = compose.onNodeWithTag(SAVED_CLOSE_TAG)
+            val close = compose.onNodeWithTag(RESULT_CLOSE_TAG)
                 .assertIsDisplayed()
                 .assert(hasContentDescription(app.getString(R.string.saved_layout_close)))
                 .fetchSemanticsNode()
             assertRound("Close", close.size.width, close.size.height)
 
             // The title.
-            compose.onNode(hasTestTag(SAVED_TITLE_TAG) and hasText("My edits")).assertIsDisplayed()
+            compose.onNode(hasTestTag(RESULT_TITLE_TAG) and hasText("My edits")).assertIsDisplayed()
 
             // No mark, no "saved" line, no tab bar or Camera button beside it.
-            assertEquals(0, count(SAVED_MARK_TAG))
-            assertEquals(0, count(SAVED_MESSAGE_TAG))
+            assertEquals(0, count(RESULT_MARK_TAG))
+            assertEquals(0, count(RESULT_MESSAGE_TAG))
             assertEquals(0, count(KANSO_TAB_BAR_TAG))
             assertEquals(0, count(KANSO_CAMERA_BUTTON_TAG))
         }
@@ -151,7 +151,7 @@ class MyEditsViewerNavigationTest {
         launchToViewer {
             // Activity starts recorded so far (the app's own launch) are not the share.
             startedIntents()
-            compose.onNodeWithTag(SAVED_SHARE_TAG).performClick()
+            compose.onNodeWithTag(RESULT_SHARE_TAG).performClick()
 
             var chooser: Intent? = null
             waitFor {
@@ -172,8 +172,8 @@ class MyEditsViewerNavigationTest {
     @Test
     fun edit_in_the_viewer_opens_the_edit_tool_on_the_photo() {
         launchToViewer {
-            compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).performClick()
-            waitFor { count(TOOL_SCREEN_TAG) > 0 && count(SAVED_SCREEN_TAG) == 0 }
+            compose.onNodeWithTag(RESULT_EDIT_TAG).performClick()
+            waitFor { count(TOOL_SCREEN_TAG) > 0 && count(RESULT_SCREEN_TAG) == 0 }
 
             compose.onNode(
                 hasText(app.getString(R.string.tool_edit)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
@@ -190,8 +190,8 @@ class MyEditsViewerNavigationTest {
     @Test
     fun close_in_the_viewer_shows_home() {
         launchToViewer {
-            compose.onNodeWithTag(SAVED_CLOSE_TAG).performClick()
-            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
+            compose.onNodeWithTag(RESULT_CLOSE_TAG).performClick()
+            waitFor { count(RESULT_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
             assertEquals(0, count(MY_EDITS_SCREEN_TAG))
             compose.onNodeWithTag(HOME_SCREEN_TAG).assertIsDisplayed()
         }
@@ -202,7 +202,7 @@ class MyEditsViewerNavigationTest {
     fun back_from_the_viewer_shows_my_edits_with_the_tile_on_screen() {
         launchToViewer { scenario ->
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
+            waitFor { count(RESULT_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
             waitFor { count(myEditsTileTag(3)) > 0 }
             compose.onNodeWithTag(MY_EDITS_SCREEN_TAG).assertIsDisplayed()
             compose.onNodeWithTag(myEditsTileTag(3)).assertIsDisplayed()
@@ -233,8 +233,8 @@ class MyEditsViewerNavigationTest {
             waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(myEditsTileTag(3)) > 0 }
             compose.onNodeWithTag(myEditsTileTag(3)).tapAboveBar()
 
-            waitFor { count(SAVED_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
-            waitFor { count(KANSO_TAB_BAR_TAG) == 0 && count(SAVED_PHOTO_TAG) > 0 }
+            waitFor { count(RESULT_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
+            waitFor { count(KANSO_TAB_BAR_TAG) == 0 && count(RESULT_PHOTO_TAG) > 0 }
             body(scenario)
         }
     }

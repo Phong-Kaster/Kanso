@@ -80,9 +80,9 @@ import com.phongkaster.kanso.ui.home.homeTryTag
 import com.phongkaster.kanso.ui.myedits.MyEditsContent
 import com.phongkaster.kanso.ui.myedits.MyEditsUiState
 import com.phongkaster.kanso.ui.permission.PermissionAccess
-import com.phongkaster.kanso.ui.saved.SavedContent
-import com.phongkaster.kanso.ui.saved.SavedPhoto
-import com.phongkaster.kanso.ui.saved.SavedUiState
+import com.phongkaster.kanso.ui.result.ResultContent
+import com.phongkaster.kanso.ui.result.ResultPhoto
+import com.phongkaster.kanso.ui.result.ResultUiState
 import com.phongkaster.kanso.ui.settings.SettingsContent
 import com.phongkaster.kanso.ui.settings.SettingsUiState
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -347,61 +347,61 @@ class AccessibilityWalkTest {
     /** The Edit screen with a ready photo: Back, "Replace" and Save. */
     @Test
     fun tool_screen_edit_ready() {
-        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Remove background screen with a ready photo. */
     @Test
     fun tool_screen_remove_background_ready() {
-        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Enhance screen with a ready photo. */
     @Test
     fun tool_screen_enhance_ready() {
-        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Retouch screen with a ready photo. */
     @Test
     fun tool_screen_retouch_ready() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Artistic screen with a ready photo. */
     @Test
     fun tool_screen_artistic_ready() {
-        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Edit screen when the photo cannot be opened: Save is switched off but still named. */
     @Test
     fun tool_screen_edit_unreadable() {
-        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Unreadable)
     }
 
     /** The Remove background screen when the photo cannot be opened. */
     @Test
     fun tool_screen_remove_background_unreadable() {
-        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Unreadable)
     }
 
     /** The Enhance screen when the photo cannot be opened. */
     @Test
     fun tool_screen_enhance_unreadable() {
-        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Unreadable)
     }
 
     /** The Retouch screen when the photo cannot be opened. */
     @Test
     fun tool_screen_retouch_unreadable() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Unreadable)
     }
 
     /** The Artistic screen when the photo cannot be opened. */
     @Test
     fun tool_screen_artistic_unreadable() {
-        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Unreadable, ToolUiState.SaveState.Idle)
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Unreadable)
     }
 
     /**
@@ -410,31 +410,31 @@ class AccessibilityWalkTest {
      */
     @Test
     fun tool_screen_edit_saving() {
-        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+        walkToolScreen(Tool.EDIT, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     /** The Remove background screen while a save runs. */
     @Test
     fun tool_screen_remove_background_saving() {
-        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+        walkToolScreen(Tool.REMOVE_BACKGROUND, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     /** The Enhance screen while a save runs. */
     @Test
     fun tool_screen_enhance_saving() {
-        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+        walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     /** The Retouch screen while a save runs. */
     @Test
     fun tool_screen_retouch_saving() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     /** The Artistic screen while a save runs. */
     @Test
     fun tool_screen_artistic_saving() {
-        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), ToolUiState.SaveState.Saving)
+        walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     // --- Saved -----------------------------------------------------------------------------
@@ -442,22 +442,22 @@ class AccessibilityWalkTest {
     /** Saved right after a save, with its photo: the round close button, Share and "Edit another". */
     @Test
     fun saved() {
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)))
+        val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(ToolFixtures.gradient(600, 400)))
         walk("saved") {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
     }
 
     /** The photo opened from My edits (Saved's viewer form): the round close button, Share and "Edit". */
     @Test
     fun photo_opened_from_my_edits() {
-        val state = SavedUiState(
+        val state = ResultUiState(
             photoUri = PHOTO_URI,
-            photo = SavedPhoto.Ready(ToolFixtures.gradient(600, 400)),
+            photo = ResultPhoto.Ready(ToolFixtures.gradient(600, 400)),
             viewer = true,
         )
         walk("photo opened from my edits") {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
     }
 
@@ -737,16 +737,16 @@ class AccessibilityWalkTest {
         )
     }
 
-    /** Checks the screen of [tool] with its photo at [photo] and its save at [save]. */
-    private fun walkToolScreen(tool: Tool, photo: ToolUiState.PhotoState, save: ToolUiState.SaveState) {
+    /** Run 9: Save became Done; [finishing] is Edit's Done render running (it was the Saving state). */
+    private fun walkToolScreen(tool: Tool, photo: ToolUiState.PhotoState, finishing: Boolean = false) {
         val face = when {
-            save == ToolUiState.SaveState.Saving -> "saving"
+            finishing -> "finishing"
             photo == ToolUiState.PhotoState.Unreadable -> "photo unreadable"
             else -> "ready"
         }
-        val state = ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = photo, save = save)
+        val state = ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = photo, finishing = finishing)
         walk("tool screen ${tool.name} $face") {
-            ToolContent(state = state, onBack = {}, onSave = {}, onReplace = {})
+            ToolContent(state = state, onBack = {}, onDone = {}, onReplace = {})
         }
     }
 

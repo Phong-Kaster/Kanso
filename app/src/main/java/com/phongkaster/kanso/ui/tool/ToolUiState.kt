@@ -11,9 +11,11 @@ import com.phongkaster.kanso.navigation.Tool
  * every screen has exactly one, is explained on `HomeUiState`; see there.
  *
  * The tool screen's snapshot holds the screen's tool ([tool]), the photo being worked on
- * ([photoUri]), what is shown in place of the photo ([photo]), where saving stands ([save]) and
- * the editing part: the edited photo ([edited]), whether an edit can be taken back ([canUndo]),
- * whether an edit is running ([processing]) and why the last one failed ([failure]).
+ * ([photoUri]), what is shown in place of the photo ([photo]), whether Done is preparing the
+ * finished picture ([finishing]) and the editing part: the edited photo ([edited]), whether an
+ * edit can be taken back ([canUndo]), whether an edit is running ([processing]) and why the last
+ * one failed ([failure]). Saving is not done here any more: Done hands the finished picture to
+ * the Result screen, which saves and shares it.
  * The Edit screen also keeps here which of its tool sheets is open ([openTool]) and whether the
  * person is comparing with the original ([comparing]), its current settings ([settings]) and
  * whether it is asking to discard them ([discardPrompt]), so the whole screen reads one snapshot.
@@ -22,14 +24,13 @@ import com.phongkaster.kanso.navigation.Tool
  * the screen draws the original photo ([photo]), or its small filtered copy ([filterPreview]) once
  * a filter is chosen, and applies the crop, turns, flips and colour sliders of [settings] itself
  * as it draws. So [edited] stays null on the Edit screen; the full render from the original runs
- * only when the edit is finished (Save, and later Done).
+ * only when the edit is finished, when the person taps Done.
  *
  * [tool] and [photoUri] are the two facts that came in the navigation key, and neither changes on
  * this screen: each tool has a screen of its own.
  *
- * Loading the photo and saving it are separate jobs that can happen in any order, so each one
- * changes only its own field of the snapshot and leaves the others as they are: a photo decoded
- * while a save runs never forgets the save.
+ * Loading the photo and the work behind Done are separate jobs that can happen in any order, so
+ * each one changes only its own field of the snapshot and leaves the others as they are.
  */
 data class ToolUiState(
     /**
@@ -41,15 +42,20 @@ data class ToolUiState(
     val photoUri: String,
     /** What is shown in place of the photo: nothing yet, the photo itself, or a message. */
     val photo: PhotoState = PhotoState.Loading,
-    /** Where saving the photo stands: nothing yet, running, done, failed or refused. */
-    val save: SaveState = SaveState.Idle,
+    /**
+     * True while Done is rendering the Edit screen's settings at full size from the original
+     * photo. The Done button then shows a small spinner and ignores taps; when the render ends,
+     * well or badly, it goes false again. The other four tools hand their picture over at once,
+     * so for them it never becomes true.
+     */
+    val finishing: Boolean = false,
     /**
      * The photo as the person has edited it so far, or null while nothing has been edited (or
      * every edit has been undone). When it is set, the screen shows it instead of the photo in
-     * [photo], and Save writes it; [photo] itself always keeps the unedited original, so undoing
-     * every edit returns to it. On the Edit screen it stays null: that screen draws [settings]
-     * live on top of [photo] (or [filterPreview]) and renders the full photo only when it is
-     * saved, so no full-size picture is made while the person is still editing.
+     * [photo], and Done hands it to the Result screen; [photo] itself always keeps the unedited
+     * original, so undoing every edit returns to it. On the Edit screen it stays null: that screen
+     * draws [settings] live on top of [photo] (or [filterPreview]) and renders the full photo only
+     * when Done is tapped, so no full-size picture is made while the person is still editing.
      */
     val edited: Bitmap? = null,
     /**
@@ -95,7 +101,7 @@ data class ToolUiState(
 
     /**
      * Whether an edit is running. While one runs, the screen shows its progress and does not let
-     * the person save or undo, so a half-made edit can never be saved by mistake.
+     * the person tap Done or Undo, so a half-made edit is never handed over by mistake.
      */
     sealed interface Processing {
 
@@ -121,29 +127,5 @@ data class ToolUiState(
 
         /** The photo is missing, not readable by Kanso, or not an image. */
         data object Unreadable : PhotoState
-    }
-
-    /**
-     * Where saving the photo stands, for the Save action and the message under the photo.
-     */
-    sealed interface SaveState {
-
-        /** Nothing saved yet on this visit, or the last message has been replaced. */
-        data object Idle : SaveState
-
-        /** A save is running; Save cannot be tapped again until it ends. */
-        data object Saving : SaveState
-
-        /**
-         * The photo was saved. [keptOriginalOrientation] is true when it was too large to turn
-         * upright and was copied as it is; the screen then says some apps may show it sideways.
-         */
-        data class Saved(val keptOriginalOrientation: Boolean) : SaveState
-
-        /** The photo could not be saved; nothing was written. */
-        data object Failed : SaveState
-
-        /** The person refused the storage-write permission (Android 8.1 and 9); nothing was written. */
-        data object PermissionDenied : SaveState
     }
 }

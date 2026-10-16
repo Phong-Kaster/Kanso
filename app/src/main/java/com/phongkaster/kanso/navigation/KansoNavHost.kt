@@ -26,8 +26,8 @@ import com.phongkaster.kanso.ui.home.HomeUiState
 import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.myedits.MyEditsScreen
 import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
-import com.phongkaster.kanso.ui.saved.SavedScreen
-import com.phongkaster.kanso.ui.saved.SavedViewModel
+import com.phongkaster.kanso.ui.result.ResultScreen
+import com.phongkaster.kanso.ui.result.ResultViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -191,53 +191,34 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                     // Replace: back to this tool's gallery to pick another photo, with Back
                     // from there still going where Back from this screen went.
                     onReplace = { if (backStack.last() == key) backStack.replaceWithGallery(key.tool) },
-                    // A saved photo replaces everything above Home with the Saved screen, so
-                    // Back from Saved goes to Home, not to the tool screen. Only act while the
-                    // tool screen is on top. The Saved key carries this screen's tool, so
-                    // "Edit another" opens that tool's gallery.
-                    onSaved = { photoUri ->
-                        if (backStack.last() == key) {
-                            while (backStack.size > 1) backStack.removeLastOrNull()
-                            backStack.add(Saved(key.tool, photoUri))
-                        }
-                    },
+                    // Done opens Result above the tool screen, so Back from Result returns to this
+                    // session intact. Only act while the tool screen is on top.
+                    onDone = { if (backStack.last() == key) backStack.add(Result) },
                 )
             }
-            entry<Saved> { key ->
-                // The saved photo's Uri travels inside the key and reaches the ViewModel as a Koin
-                // parameter, the same way the tool screen's ViewModel gets its photo.
-                val viewModel = koinViewModel<SavedViewModel>(
-                    parameters = { parametersOf(key.photoUri) },
-                )
-                SavedScreen(
+            entry<Result> { key ->
+                // After Done the rendered picture is in the hand-off store; no parameters needed.
+                val viewModel = koinViewModel<ResultViewModel>()
+                ResultScreen(
                     viewModel = viewModel,
-                    onShare = {},
-                    // Edit another: back to [Home, Gallery(tool)]. Home: back to [Home].
-                    onEditAnother = {
-                        if (backStack.last() == key) {
-                            backStack.removeLastOrNull()
-                            backStack.add(Gallery(key.tool))
-                        }
-                    },
+                    // Go home clears everything above Home (the session ends with it).
                     onClose = { if (backStack.last() == key) backStack.closeToHome() },
                 )
             }
             entry<EditedPhoto> { key ->
-                // The viewer is the Saved screen in its viewer form: the same layout, the title
-                // "My edits" and "Edit" instead of "Edit another". The `viewer` Koin parameter
-                // tells the ViewModel which form to show.
-                val viewModel = koinViewModel<SavedViewModel>(
+                // The viewer is the Result screen in its viewer form: the photo is read from the
+                // phone by Uri, and Save is not offered (the picture is already saved).
+                val viewModel = koinViewModel<ResultViewModel>(
                     parameters = { parametersOf(key.photoUri, true) },
                 )
-                SavedScreen(
+                ResultScreen(
                     viewModel = viewModel,
-                    onShare = {},
-                    // Edit opens this photo in the Edit tool, above the viewer.
-                    onEditAnother = {
-                        if (backStack.last() == key) backStack.add(ToolPhoto(Tool.EDIT, key.photoUri))
-                    },
                     // Close goes Home; system Back (goBack) pops to the My edits grid.
                     onClose = { if (backStack.last() == key) backStack.closeToHome() },
+                    // Edit opens this photo in the Edit tool, above the viewer.
+                    onEdit = {
+                        if (backStack.last() == key) backStack.add(ToolPhoto(Tool.EDIT, key.photoUri))
+                    },
                 )
             }
             // Settings is a tab: no Back arrow, the bar's Home tab (or system Back) leaves it.

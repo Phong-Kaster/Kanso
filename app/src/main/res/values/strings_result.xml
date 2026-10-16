@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Result screen, shown after Done on a tool screen. -->
+<resources>
+    <!-- The title over the rendered picture, before and after it is saved. -->
+    <string name="result_title">Your edit</string>
+    <!-- Shown in place of the picture when nothing was handed over (the app was restarted). -->
+    <string name="result_nothing">Nothing to show</string>
+    <!-- The round button that ends the session and goes back to Home; read by screen readers. -->
+    <string name="result_home">Go home</string>
+    <!-- What a screen reader says for the rendered picture, which is not saved yet. -->
+    <string name="result_photo_description">Your edited photo</string>
+</resources>

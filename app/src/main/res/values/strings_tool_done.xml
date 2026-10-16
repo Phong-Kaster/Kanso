@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tool screens: the Done button at the top right. It renders the edit and opens the Result
+         screen; it writes nothing to the phone. -->
+    <string name="tool_done">Done</string>
+</resources>

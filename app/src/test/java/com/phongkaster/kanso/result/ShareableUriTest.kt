@@ -1,11 +1,11 @@
-package com.phongkaster.kanso.saved
+package com.phongkaster.kanso.result
 
 import android.app.Application
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.phongkaster.kanso.ui.saved.shareableUri
+import com.phongkaster.kanso.ui.result.shareableUri
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,6 +19,9 @@ import org.robolectric.annotation.Config
  * Checks [shareableUri] on Android 9, where Save returns a `file://` Uri that must never be
  * handed to another app: a file MediaStore knows gives its row's `content://` Uri, a content Uri
  * is kept as it is, and anything that cannot be turned into a content Uri gives null.
+ *
+ * Run 9: moved from the `saved` test package to `result`, because the Result screen replaced the
+ * Saved screen; its photo viewer still shares a saved photo through [shareableUri].
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [28])

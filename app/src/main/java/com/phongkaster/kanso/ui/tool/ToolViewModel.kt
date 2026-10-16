@@ -14,9 +14,8 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.photo.PhotoLoader
-import com.phongkaster.kanso.data.photo.PhotoSaver
-import com.phongkaster.kanso.data.photo.SaveResult
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import kotlinx.coroutines.CancellationException
@@ -46,8 +45,9 @@ import kotlinx.coroutines.withContext
  * again.
  *
  * [loader] decodes the photo; [probe] is told when this ViewModel is cleared, so tests can check
- * that leaving the screen frees it; [saver] writes the photo into the phone's `Pictures/Kanso`
- * album when the person taps Save.
+ * that leaving the screen frees it; [store] is the hand-off to the Result screen: when the person
+ * taps Done ([done]) the finished picture is put there and the screen opens Result, which reads it
+ * back. This ViewModel never writes a file: saving and sharing belong to the Result screen.
  *
  * Editing works on a copy held in memory, never on the photo's file, in one of two ways.
  *
@@ -59,7 +59,7 @@ import kotlinx.coroutines.withContext
  *   crop, turns, flips and colour sliders live on top of the original as it draws, and only a
  *   filter is computed here, on a small copy of the original ([ToolUiState.filterPreview]). The
  *   full render from the ORIGINAL photo, with the WHOLE current settings, runs once, when the
- *   edit is finished ([save], [renderFinal]), so nothing is ever stacked on an earlier result.
+ *   edit is finished ([done], [renderFinal]), so nothing is ever stacked on an earlier result.
  * - **The other tools** (Remove background, Enhance, Retouch, Artistic) use [apply]: it runs one
  *   edit (a [ToolProcessor]) on the photo as it is now shown, the result becomes the new shown
  *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
@@ -73,20 +73,20 @@ class ToolViewModel(
     private val photoUri: String,
     private val loader: PhotoLoader,
     private val probe: ViewModelClearedProbe,
-    private val saver: PhotoSaver,
     private val registry: ProcessorRegistry = ProcessorRegistry(),
+    private val store: RenderedPhotoStore = RenderedPhotoStore(),
     private val workDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
     /**
      * The current state behind [state]; only this ViewModel changes it. It starts with the tool
-     * and the photo's Uri from the key, nothing decoded yet and nothing saved.
+     * and the photo's Uri from the key and nothing decoded yet.
      */
     private val mutableState = MutableStateFlow(ToolUiState(tool, photoUri))
 
     /**
-     * What the screen shows (its tool, the photo, and where saving stands), as one snapshot it
-     * can read at any moment.
+     * What the screen shows (its tool, the photo, the edit and whether Done is working), as one
+     * snapshot it can read at any moment.
      */
     val state: StateFlow<ToolUiState> = mutableState.asStateFlow()
 
@@ -125,8 +125,8 @@ class ToolViewModel(
             } else {
                 ToolUiState.PhotoState.Unreadable
             }
-            // update { } changes only the photo part of the snapshot as it is right now, so a
-            // decode that finishes while a save runs leaves the save part alone.
+            // update { } changes only the photo part of the snapshot as it is right now, so the
+            // rest of it (an edit, Done's state) is left alone.
             mutableState.update { it.copy(photo = shown) }
             // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
             // to the newly decoded original now; everything else the screen draws by itself.
@@ -152,7 +152,7 @@ class ToolViewModel(
     fun apply(processor: ToolProcessor, fromOriginal: Boolean = false) {
         if (tool == Tool.EDIT) return
         val current = mutableState.value
-        if (current.comparing) return
+        if (current.comparing || current.finishing) return
         if (current.processing is ToolUiState.Processing.Running) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         // What the person sees right now: the last edit, or the original if there is none.
@@ -241,7 +241,7 @@ class ToolViewModel(
         // A tap during a run, or while comparing, is ignored by apply, so its settings must not
         // reach the processor.
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
-        if (mutableState.value.comparing) return
+        if (mutableState.value.comparing || mutableState.value.finishing) return
         configure(processor)
         apply(processor, fromOriginal)
     }
@@ -274,7 +274,7 @@ class ToolViewModel(
      * again (undoing every edit returns to the original), and nothing happens while an edit runs.
      */
     fun undo() {
-        if (mutableState.value.comparing) return
+        if (mutableState.value.comparing || mutableState.value.finishing) return
         if (tool == Tool.EDIT) {
             // A drag still under way counts as an action of its own, so it is settled first.
             if (!session.commit().canUndo) return
@@ -329,7 +329,7 @@ class ToolViewModel(
      * comparing, when every control is disabled.
      */
     fun changeSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
-        if (mutableState.value.comparing) return
+        if (mutableState.value.comparing || mutableState.value.finishing) return
         this.processorFor = processorFor
         publishSession(session.change(new))
         requestPreview()
@@ -345,7 +345,7 @@ class ToolViewModel(
      */
     fun commitCrop(rect: EditSettings.CropRect, processorFor: (EditSettings) -> ToolProcessor) {
         val current = mutableState.value
-        if (current.comparing) return
+        if (current.comparing || current.finishing) return
         if (current.settings.crop == rect) return
         // Keep the recipe the Edit panel gave, so the filter cache stays the one panel and render share.
         changeSettings(current.settings.copy(crop = rect), this.processorFor ?: processorFor)
@@ -358,7 +358,7 @@ class ToolViewModel(
      * comparing.
      */
     fun previewSettings(new: EditSettings, processorFor: (EditSettings) -> ToolProcessor) {
-        if (mutableState.value.comparing) return
+        if (mutableState.value.comparing || mutableState.value.finishing) return
         this.processorFor = processorFor
         publishSession(session.preview(new))
         requestPreview()
@@ -382,7 +382,7 @@ class ToolViewModel(
      */
     fun chooseCropRatio(ratio: CropRatio?, processorFor: (EditSettings) -> ToolProcessor) {
         val current = mutableState.value
-        if (current.comparing) return
+        if (current.comparing || current.finishing) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         val photoAspect = original.width.toFloat() / original.height
         this.processorFor = processorFor
@@ -432,7 +432,7 @@ class ToolViewModel(
     /**
      * The filter settings waiting to be drawn on the small preview copy.
      *
-     * A Channel is a queue between coroutines (see [savedChannel]). This one is CONFLATED: it
+     * A Channel is a queue between coroutines (see [doneChannel]). This one is CONFLATED: it
      * holds at most one item, and sending a new one replaces an item nobody has taken yet. So
      * while one preview render runs, every intensity step a finger sends overwrites the one
      * before it, and when the render ends the collector takes only the LATEST settings: the
@@ -612,112 +612,86 @@ class ToolViewModel(
         mutableState.update { it.copy(failure = null) }
     }
 
+    // --- Done: hand the finished picture to the Result screen ----------------------------------
+
     /**
-     * Carries the Uri (as text) of each newly saved photo to the screen, once.
+     * Tells the screen, once per finished Done, that the picture is in the [store] and the Result
+     * screen can be opened.
      *
      * A Channel is a queue between coroutines: each item is received by exactly one reader, one
-     * time. That makes it right for "the photo was saved, move on" — unlike state, it is not
-     * delivered again when the screen is drawn again after a rotation.
+     * time. That makes it right for "the picture is ready, move on": unlike state, it is not
+     * delivered again when the screen is drawn again after a rotation, or when the person comes
+     * back from Result to this screen.
      */
-    private val savedChannel = Channel<String>(Channel.BUFFERED)
+    private val doneChannel = Channel<Unit>(Channel.BUFFERED)
 
-    /** The saved photos' Uris, each delivered once; the screen calls its `onSaved` with them. */
-    val savedEvents: Flow<String> = savedChannel.receiveAsFlow()
-
-    /**
-     * Tells whether Save must first ask for the storage-write permission (Android 8.1 and 9
-     * only, and only while it is not granted). The screen asks for it before calling [save].
-     */
-    fun needsWritePermission(): Boolean = saver.needsWritePermission()
+    /** One item per finished Done; the screen calls its `onDone` for each. */
+    val doneEvents: Flow<Unit> = doneChannel.receiveAsFlow()
 
     /**
-     * Saves the photo into `Pictures/Kanso`, in the background. A tap while a save is already
-     * running is ignored, so one tap never makes two files; so is a tap while an edit is running,
-     * so a half-made edit is never saved.
+     * The person tapped Done: the finished picture goes into the hand-off [store], then
+     * [doneEvents] tells the screen to open Result. Nothing is written to the phone's storage
+     * here; the Result screen saves or shares the picture if the person asks it to.
      *
-     * When the person has edited the photo, the edited photo shown on screen is saved, exactly
-     * at the size they saw it, as a new file; otherwise the original photo is copied as it is.
-     * Either way the original photo's file is never changed.
+     * Nothing happens before the photo is shown, while an edit runs (a half-made edit is never
+     * handed over) or while an earlier Done is still rendering, so a second tap is ignored.
      *
-     * The Edit screen has no rendered photo while the person edits (the screen draws the settings
-     * live), so with changes made Save first renders the CURRENT settings in full from the
-     * original, showing the work as running (taps are ignored meanwhile), then saves that picture;
-     * with no changes it copies the original file. This keeps Save working until the Done button
-     * takes over the final render.
+     * - **The other four tools** hand over the picture shown now: the last edit, or, with no edit
+     *   yet, the decoded original photo. That is instant, so it needs no waiting state.
+     * - **The Edit screen** has no full-size picture while the person edits (the screen draws the
+     *   settings live), so Done renders the CURRENT settings in full from the original photo
+     *   ([renderFinal]'s path), off the main thread. Meanwhile [ToolUiState.finishing] is true:
+     *   the Done button shows a small spinner and ignores taps. A failed render keeps the person
+     *   on this screen and says why ([ToolUiState.failure]); nothing is handed over. With no
+     *   change made yet there is nothing to render, so the decoded original is handed over.
+     *
+     * Done does not end the editing session: the settings, the undo steps and the edits stay here,
+     * so Back from Result returns to this screen exactly as it was left.
      */
-    fun save() {
+    fun done() {
         val current = mutableState.value
-        if (current.save == ToolUiState.SaveState.Saving) return
+        if (current.finishing) return
         if (current.processing is ToolUiState.Processing.Running) return
-        if (tool == Tool.EDIT && !session.settings.isNeutral) {
-            saveRenderedSettings()
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val build = processorFor
+        if (tool != Tool.EDIT || build == null) {
+            // Instant: the picture shown now (on Edit with nothing changed, the original).
+            val edited = if (tool == Tool.EDIT) null else current.edited
+            handOver(edited ?: original, originalUri = if (edited == null) photoUri else null)
             return
         }
-        // Read once, now, so an edit that lands while the save runs cannot change what is saved.
-        val edited = current.edited
-        mutableState.update { it.copy(save = ToolUiState.SaveState.Saving) }
-        viewModelScope.launch { writeAndAnnounce(edited) }
-    }
-
-    /**
-     * The Edit screen's Save with changes made: renders the session's current settings in full
-     * from the original ([renderFull]), then writes the result. While the render runs the state
-     * says so ([ToolUiState.Processing.Running]), which also makes [save] ignore further taps. A
-     * failed render says why and saves nothing. Nothing happens before the photo is decoded.
-     */
-    private fun saveRenderedSettings() {
-        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        val build = processorFor ?: return
-        // Read once, now: the picture saved is the settings as they were when Save was tapped.
+        // Read once, now: the picture handed over is the settings as they were when Done was tapped.
         val settings = session.settings
-        mutableState.update {
-            it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
-        }
+        mutableState.update { it.copy(finishing = true, failure = null) }
         viewModelScope.launch {
             val result = try {
-                renderFull(original, build, settings) { progress -> reportProgress(progress) }
+                renderFull(original, build, settings)
             } catch (cancelled: CancellationException) {
-                // The screen was left: the run is over, so the screen must not stay locked.
-                mutableState.update { it.copy(processing = ToolUiState.Processing.Idle) }
+                // The screen was left: the render is over, so Done must not stay locked.
+                mutableState.update { it.copy(finishing = false) }
                 throw cancelled
             }
             when (result) {
                 is EditResult.Edited -> {
-                    mutableState.update {
-                        it.copy(processing = ToolUiState.Processing.Idle, save = ToolUiState.SaveState.Saving)
-                    }
-                    writeAndAnnounce(result.bitmap)
+                    mutableState.update { it.copy(finishing = false) }
+                    handOver(result.bitmap)
                 }
+                // The same failure message an edit shows; the person stays here to try again.
                 is EditResult.Failed -> mutableState.update {
-                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
+                    it.copy(failure = result.failure, finishing = false)
                 }
             }
         }
     }
 
     /**
-     * Writes [edited] into `Pictures/Kanso` as a new file, or copies the original photo's file
-     * when it is null, then records the outcome and, on success, sends the new photo's Uri to
-     * the screen through [savedEvents]. The caller has already set the state to Saving.
+     * Puts [picture] into the hand-off [store] (replacing any earlier one; [originalUri] is the photo's own Uri when [picture] is that photo untouched) and tells the screen,
+     * through [doneEvents], to open Result. A buffered channel accepts at once, so trySend never
+     * fails here.
      */
-    private suspend fun writeAndAnnounce(edited: Bitmap?) {
-        val result = if (edited != null) saver.save(edited) else saver.save(photoUri)
-        when (result) {
-            is SaveResult.Saved -> {
-                mutableState.update {
-                    it.copy(save = ToolUiState.SaveState.Saved(result.keptOriginalOrientation))
-                }
-                savedChannel.send(result.uri)
-            }
-            SaveResult.Failed -> mutableState.update {
-                it.copy(save = ToolUiState.SaveState.Failed)
-            }
-        }
-    }
-
-    /** Records that the person refused the storage-write permission, so the screen says why. */
-    fun onWritePermissionDenied() {
-        mutableState.update { it.copy(save = ToolUiState.SaveState.PermissionDenied) }
+    private fun handOver(picture: Bitmap, originalUri: String? = null) {
+        store.put(picture, originalUri)
+        doneChannel.trySend(Unit)
     }
 
     /** Reports to the probe that this ViewModel has been cleared. */

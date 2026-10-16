@@ -1,7 +1,7 @@
 package com.phongkaster.kanso.save
 
-import android.Manifest
 import android.app.Application
+import android.graphics.Bitmap
 import android.os.Environment
 import android.os.Looper
 import androidx.activity.ComponentActivity
@@ -10,6 +10,7 @@ import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -19,32 +20,36 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.exifinterface.media.ExifInterface
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.edit.EditResult
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
+import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.photo.LoadedPhoto
-import com.phongkaster.kanso.data.photo.MediaStorePhotoSaver
 import com.phongkaster.kanso.data.photo.PhotoLoader
-import com.phongkaster.kanso.data.photo.PhotoSaver
-import com.phongkaster.kanso.data.photo.SaveResult
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
-import com.phongkaster.kanso.ui.tool.SAVE_MESSAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_PROGRESS_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_LOADING_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_PROGRESS_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -56,23 +61,29 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowEnvironment
-import org.robolectric.shadows.ShadowMediaScannerConnection
 
 /**
- * Checks the Save action on the tool screen (DoD 12 and 13): it calls the saver once the photo
- * is shown, hands the new picture to `onSaved` once, asks for the storage-write permission on
- * Android 8.1 and 9 only, and explains a refusal, a failure and a photo kept sideways.
+ * Formerly the Save button test; now the Done button test (Run 9, T-006). The file and the class
+ * keep their old name so the test history stays in one place.
  *
- * The permission dialog cannot be shown in a JVM test, so the screen gets a
- * [SinglePermissionRegistry] that records each request and lets the test answer it. The photo
- * on screen comes from a [FakePhotoLoader]; the saved bytes come from a real fixture file.
+ * Save was replaced by Done at the top right of every tool screen. Done never writes a file and
+ * never asks for a storage permission: it puts the finished picture into the hand-off store
+ * (`RenderedPhotoStore`) and calls `onDone`, once, and the caller opens the Result screen, which
+ * saves. This checks, on the real tool screen:
  *
- * The screen shows a loading indicator in the photo area until the photo is decoded, and another
- * in Save while a save runs. Both keep moving for as long as they are shown. A Compose test whose
- * clock runs on its own waits for a still screen before every check, so it must never check
- * while one of them is there: the screen is shown with the test's clock paused and the clock is
- * moved by hand until the photo has replaced the first indicator (see [host]); the tests that
- * look at the screen mid-load or mid-save keep the clock paused throughout.
+ * - DoD 9: a tap on Edit's Done renders the current settings, hands that picture over, calls
+ *   `onDone` once, and writes nothing to the gallery (a fake MediaStore stays empty) on every
+ *   Android version the app supports, with no permission asked (one test per version).
+ * - While Edit's Done renders, the button is off and shows a small spinner; a second tap is
+ *   ignored, so Result opens once.
+ * - Done is off until the photo is shown; meanwhile the photo area shows its loading indicator.
+ *
+ * The old tests of Save's saving state, its messages and the storage permission on Android 8.1
+ * and 9 are gone with Save: Run 9 (T-006) moved saving to the Result screen.
+ *
+ * The screen shows a loading indicator in the photo area until the photo is decoded, and a spinner
+ * in Done while Edit renders. Both keep moving for as long as they are shown, so the screen is
+ * shown with the test's clock paused, which is moved by hand (see [host]).
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -83,7 +94,7 @@ class SaveButtonTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
-    /** A fresh folder for the fixture photo and the fake MediaStore's files. */
+    /** A fresh folder for the fake MediaStore's files. */
     @get:Rule
     val temp = TemporaryFolder()
 
@@ -91,11 +102,11 @@ class SaveButtonTest {
     private val app: Application
         get() = ApplicationProvider.getApplicationContext()
 
-    /** Records permission requests instead of showing the system dialog. */
+    /** Records permission requests instead of showing the system dialog; Done must make none. */
     private val registry = SinglePermissionRegistry()
 
-    /** The Uri of every picture handed to onSaved, oldest first. */
-    private val saved = CopyOnWriteArrayList<String>()
+    /** How many times the screen called onDone. */
+    private val doneCalls = AtomicInteger(0)
 
     /** Mounts shared storage and empties the Kanso album used on Android 8.1 and 9. */
     @Before
@@ -110,56 +121,69 @@ class SaveButtonTest {
         stopKoin()
     }
 
-    // --- With a fake saver -------------------------------------------------------------------
-
-    /** Tapping Save calls the saver with the photo, asks for nothing, and calls onSaved once. */
+    /**
+     * A tap on Done on a tool other than Edit hands over the photo shown (here the unedited one)
+     * at once and calls onDone once; Done is usable again afterwards.
+     */
     @Test
-    fun save_calls_the_saver_and_hands_the_picture_on_once() {
-        val saver = FakePhotoSaver(result = SaveResult.Saved("content://media/external_primary/images/media/9"))
-        show(saver, PHOTO_URI)
+    fun done_hands_the_photo_over_and_calls_on_done_once() {
+        val photo = ToolFixtures.gradient(600, 400)
+        val store = RenderedPhotoStore()
+        host(ToolViewModel(Tool.RETOUCH, PHOTO_URI, FakePhotoLoader(app, photo), ViewModelClearedProbe(), store = store))
 
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled().performClick()
-        waitUntil { saved.isNotEmpty() }
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsEnabled()
+            .assert(hasText(app.getString(R.string.tool_done)))
+            .performClick()
+        waitUntil { doneCalls.get() > 0 }
 
-        assertEquals(listOf(PHOTO_URI), saver.calls.toList())
-        assertEquals(listOf("content://media/external_primary/images/media/9"), saved.toList())
+        assertEquals(1, doneCalls.get())
+        assertSame(photo, store.peek())
         assertTrue("A permission was requested: ${registry.requests}", registry.requests.isEmpty())
-        assertTrue(compose.onAllNodes(hasTestTag(SAVE_MESSAGE_TAG)).fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsEnabled()
     }
 
     /**
-     * While a save runs, Save is disabled and shows a loading indicator and "Saving…"; then it is
-     * back.
+     * While Edit's Done renders the settings, Done is off and shows its spinner; a second tap does
+     * nothing. When the render ends the spinner goes, the render is in the store, and onDone has
+     * been called exactly once.
      *
-     * The indicator keeps moving while the save is held open, so the test's clock stays paused
-     * for the whole test and moves only by hand (see the class description).
+     * The spinner keeps moving while the render is held open, so the test's clock stays paused
+     * for the whole test and moves only by hand.
      */
     @Test
-    fun save_is_disabled_and_shows_progress_while_saving() {
+    fun done_is_disabled_and_shows_progress_while_edit_renders() {
         val gate = CompletableDeferred<Unit>()
-        val saver = FakePhotoSaver(gate = gate)
-        show(saver, PHOTO_URI, keepClockPaused = true)
+        val recipe = Recipe(gate)
+        val store = RenderedPhotoStore()
+        val viewModel = editViewModel(store)
+        host(viewModel, keepClockPaused = true)
+        compose.runOnUiThread { viewModel.changeSettings(EditSettings(quarterTurns = 1), recipe.processorFor) }
 
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        waitUntil { hasNode(TOOL_SAVE_PROGRESS_TAG) }
-        compose.onNodeWithTag(TOOL_SAVE_PROGRESS_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsNotEnabled()
-        compose.onNode(hasText(app.getString(R.string.tool_saving)), useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(TOOL_DONE_TAG).performClick()
+        waitUntil { hasNode(TOOL_DONE_PROGRESS_TAG) }
+        // Lets the spinner finish growing in, so it is fully on screen when checked.
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag(TOOL_DONE_PROGRESS_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsNotEnabled().performClick()
+        waitUntil { recipe.renders.get() == 1 }
+        assertNull("A picture was handed over before the render ended", store.peek())
+        assertEquals(0, doneCalls.get())
 
         gate.complete(Unit)
-        waitUntil { saved.isNotEmpty() }
-        // With the clock paused the screen catches up only as the clock moves: once the indicator
-        // has gone, Save has been drawn again for the finished save.
-        waitUntil { !hasNode(TOOL_SAVE_PROGRESS_TAG) }
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsEnabled()
-        assertEquals(1, saver.calls.size)
+        waitUntil { doneCalls.get() > 0 }
+        // With the clock paused the screen catches up only as the clock moves: once the spinner
+        // has gone, Done has been drawn again for the finished render.
+        waitUntil { !hasNode(TOOL_DONE_PROGRESS_TAG) }
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsEnabled()
+        assertEquals("Two taps opened Result twice", 1, doneCalls.get())
+        assertEquals("A second tap rendered again", 1, recipe.renders.get())
+        assertEquals(EditSettings(quarterTurns = 1), recipe.settingsOf(store.peek()))
     }
 
     /**
      * While the photo is still being decoded, the photo area shows a loading indicator in its
-     * middle, named for screen readers, and no photo; once the photo is ready the indicator has
-     * gone and the photo is shown in its place.
+     * middle, named for screen readers, and no photo, and Done is off; once the photo is ready the
+     * indicator has gone, the photo is shown in its place and Done is on.
      *
      * The loader holds the photo back until the test lets it go. The indicator keeps moving
      * meanwhile, so the clock is paused before the screen appears and moves only by hand.
@@ -178,7 +202,7 @@ class SaveButtonTest {
             }
         }
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
-        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, loader, ViewModelClearedProbe(), FakePhotoSaver())
+        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, loader, ViewModelClearedProbe())
         compose.mainClock.autoAdvance = false
         setScreen(viewModel)
 
@@ -192,168 +216,144 @@ class SaveButtonTest {
         assertEquals(body.center.x, indicator.center.x, 1f)
         assertEquals(body.center.y, indicator.center.y, 1f)
         assertFalse("The photo is shown before it was decoded", hasNode(TOOL_IMAGE_TAG))
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsNotEnabled()
 
         gate.complete(Unit)
         waitUntil { hasNode(TOOL_IMAGE_TAG) }
         assertFalse("The loading indicator stayed after the photo arrived", hasNode(TOOL_LOADING_TAG))
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsEnabled()
     }
 
-    /** A photo too large to turn is saved as it is, and the screen says so. */
+    /** Done cannot be tapped while the photo is not shown (here: it cannot be opened). */
     @Test
-    fun a_photo_kept_sideways_is_explained() {
-        val saver = FakePhotoSaver(result = SaveResult.Saved("content://media/x/1", keptOriginalOrientation = true))
-        show(saver, PHOTO_URI)
-
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        waitForMessage()
-
-        compose.onNodeWithTag(SAVE_MESSAGE_TAG).assertIsDisplayed()
-        compose.onNode(hasText(app.getString(R.string.save_kept_orientation))).assertIsDisplayed()
-        assertEquals(listOf("content://media/x/1"), saved.toList())
-    }
-
-    /** A failed save shows the failure message and hands nothing on. */
-    @Test
-    fun a_failed_save_is_explained() {
-        show(FakePhotoSaver(result = SaveResult.Failed), PHOTO_URI)
-
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        waitForMessage()
-
-        compose.onNode(hasText(app.getString(R.string.save_failed))).assertIsDisplayed()
-        assertTrue(saved.isEmpty())
-    }
-
-    /** Save cannot be tapped while the photo is not shown (here: it cannot be opened). */
-    @Test
-    fun save_is_disabled_without_a_photo() {
-        val saver = FakePhotoSaver()
-        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, FakePhotoLoader(app, null), ViewModelClearedProbe(), saver)
+    fun done_is_disabled_without_a_photo() {
+        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, FakePhotoLoader(app, null), ViewModelClearedProbe())
         host(viewModel)
 
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsNotEnabled()
     }
 
-    // --- With the real saver: which Android versions ask --------------------------------------
+    // --- Done writes nothing, on every Android version --------------------------------------------
 
-    /** Android 15: Save asks for nothing and writes a row into the (fake) MediaStore. */
+    /** Android 15: Edit's Done asks for nothing and writes no row into the (fake) MediaStore. */
     @Test
-    fun android_15_saves_without_asking() {
-        assertSavesWithoutAsking()
+    fun android_15_done_writes_nothing() {
+        assertDoneWritesNothingToMediaStore()
     }
 
-    /** Android 10: Save asks for nothing and writes a row into the (fake) MediaStore. */
+    /** Android 10: Edit's Done asks for nothing and writes no row into the (fake) MediaStore. */
     @Test
     @Config(sdk = [29])
-    fun android_10_saves_without_asking() {
-        assertSavesWithoutAsking()
+    fun android_10_done_writes_nothing() {
+        assertDoneWritesNothingToMediaStore()
     }
 
-    /** Android 9: Save asks for WRITE_EXTERNAL_STORAGE; granting it writes the file and scans it. */
+    /**
+     * Android 9: Edit's Done asks for no storage permission (Save asked for one here; Run 9,
+     * T-006 moved saving to Result) and writes no file into the Kanso album.
+     */
     @Test
     @Config(sdk = [28])
-    fun android_9_asks_and_saves_when_granted() {
-        assertAsksThenSavesWhenGranted()
+    fun android_9_done_asks_nothing_and_writes_nothing() {
+        assertDoneWritesNothingToTheAlbum()
     }
 
     /** Android 8.1: the same. */
     @Test
     @Config(sdk = [27])
-    fun android_8_1_asks_and_saves_when_granted() {
-        assertAsksThenSavesWhenGranted()
-    }
-
-    /** Android 9: refusing shows the message and writes nothing. */
-    @Test
-    @Config(sdk = [28])
-    fun android_9_refused_shows_a_message_and_writes_nothing() {
-        assertRefusalWritesNothing()
-    }
-
-    /** Android 8.1: refusing shows the message and writes nothing. */
-    @Test
-    @Config(sdk = [27])
-    fun android_8_1_refused_shows_a_message_and_writes_nothing() {
-        assertRefusalWritesNothing()
+    fun android_8_1_done_asks_nothing_and_writes_nothing() {
+        assertDoneWritesNothingToTheAlbum()
     }
 
     // --- Helpers -----------------------------------------------------------------------------
 
-    /** Saves through the real saver on Android 10+ and checks no permission was requested. */
-    private fun assertSavesWithoutAsking() {
-        val media = FakeMediaProvider.install(temp.newFolder("media"))
-        show(MediaStorePhotoSaver(app), servedPhoto())
+    /**
+     * Stands in for the Edit panel's recipe, with no engine: each processor it builds counts the
+     * render, waits for [gate] if there is one (ignoring cancellation, as a real processor might)
+     * and answers with a new picture of its input's size, remembered with its settings.
+     */
+    private class Recipe(private val gate: CompletableDeferred<Unit>? = null) {
 
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        waitUntil { saved.isNotEmpty() }
+        /** How many renders have started. */
+        val renders = AtomicInteger(0)
 
-        assertTrue("A permission was requested: ${registry.requests}", registry.requests.isEmpty())
-        val row = media.rows.values.single()
-        assertEquals(listOf(row.uri.toString()), saved.toList())
-        assertTrue(looksLikeJpeg(row.file.readBytes()))
-    }
+        /** Each picture rendered, with the settings it came from. */
+        private val results = CopyOnWriteArrayList<Pair<Bitmap, EditSettings>>()
 
-    /** Taps Save without the permission, checks the request, grants it and checks the file. */
-    private fun assertAsksThenSavesWhenGranted() {
-        show(MediaStorePhotoSaver(app), servedPhoto())
+        /** Builds the processor for one set of settings, as the ViewModel asks for each render. */
+        val processorFor: (EditSettings) -> ToolProcessor = { settings ->
+            object : ToolProcessor {
+                /** Counts the render, waits for the gate, and answers with a new picture. */
+                override suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult {
+                    renders.incrementAndGet()
+                    gate?.let { withContext(NonCancellable) { it.await() } }
+                    val picture = Bitmap.createBitmap(input.width, input.height, Bitmap.Config.ARGB_8888)
+                    results += picture to settings
+                    return EditResult.Edited(picture)
+                }
+            }
+        }
 
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        compose.waitForIdle()
-        assertEquals(listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), registry.requests.toList())
-        assertTrue("Wrote before the answer", legacyKansoFiles().isEmpty())
-
-        shadowOf(app).grantPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        compose.runOnUiThread { registry.answerLatest(true) }
-        waitUntil { saved.isNotEmpty() }
-
-        val file = legacyKansoFiles().single()
-        assertTrue("Bad name ${file.name}", SAVED_NAME.matches(file.name))
-        assertEquals(200 to 400, jpegSize(file))
-        assertTrue(file.absolutePath in ShadowMediaScannerConnection.getSavedPaths())
-        assertEquals(1, saved.size)
-        assertEquals(1, registry.requests.size)
-    }
-
-    /** Taps Save without the permission, refuses it, and checks the message and the empty album. */
-    private fun assertRefusalWritesNothing() {
-        show(MediaStorePhotoSaver(app), servedPhoto())
-
-        compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-        compose.waitForIdle()
-        assertEquals(listOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), registry.requests.toList())
-
-        compose.runOnUiThread { registry.answerLatest(false) }
-        waitForMessage()
-
-        compose.onNodeWithTag(SAVE_MESSAGE_TAG).assertIsDisplayed()
-        compose.onNode(hasText(app.getString(R.string.save_permission_denied))).assertIsDisplayed()
-        assertTrue("A file was written", legacyKansoFiles().isEmpty())
-        assertTrue(saved.isEmpty())
-        // The screen is still there and Save can be tried again.
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsEnabled()
-    }
-
-    /** Writes a 400 x 200 photo tagged "turn a quarter" and serves it; returns its Uri. */
-    private fun servedPhoto(): String {
-        val file = ToolFixtures.writeJpeg(
-            temp.newFile("photo.jpg"),
-            ToolFixtures.twoHalves(400, 200),
-            ExifInterface.ORIENTATION_ROTATE_90,
-        )
-        return ToolFixtures.serve(app, file, "photo.jpg")
+        /** The settings [bitmap] was rendered from, or null for a picture this did not render. */
+        fun settingsOf(bitmap: Bitmap?): EditSettings? = results.firstOrNull { it.first === bitmap }?.second
     }
 
     /**
-     * Shows the tool screen on [photoUri] with [saver], and waits until the photo is drawn. The
-     * test's clock is left paused when [keepClockPaused] is true (see [host]).
+     * Taps Edit's Done after a change, on Android 10 or later, with a fake MediaStore installed,
+     * and checks the render was handed over, onDone was called once, nothing was asked and no
+     * row was written.
      */
-    private fun show(saver: PhotoSaver, photoUri: String, keepClockPaused: Boolean = false) {
-        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
-        val loader = FakePhotoLoader(app, ToolFixtures.gradient(600, 400))
-        host(ToolViewModel(Tool.EDIT, photoUri, loader, ViewModelClearedProbe(), saver), keepClockPaused)
-        waitUntil { compose.onAllNodes(hasTestTag(TOOL_IMAGE_TAG)).fetchSemanticsNodes().isNotEmpty() }
+    private fun assertDoneWritesNothingToMediaStore() {
+        val media = FakeMediaProvider.install(temp.newFolder("media"))
+        val store = assertEditDoneHandsOver()
+        assertTrue("Done wrote into the MediaStore: ${media.rows.keys}", media.rows.isEmpty())
+        assertTrue(store.peek() != null)
     }
+
+    /**
+     * Taps Edit's Done after a change, on Android 8.1 or 9, and checks the render was handed
+     * over, onDone was called once, no permission was asked and no file was written to the album.
+     */
+    private fun assertDoneWritesNothingToTheAlbum() {
+        assertEditDoneHandsOver()
+        assertTrue("Done wrote a file: ${legacyKansoFiles()}", legacyKansoFiles().isEmpty())
+    }
+
+    /**
+     * Shows Edit on the gradient photo, makes one change (a quarter turn) with a [Recipe], taps
+     * Done and waits for onDone; checks the store holds that render, onDone ran once and no
+     * permission was requested. Returns the store.
+     */
+    private fun assertEditDoneHandsOver(): RenderedPhotoStore {
+        val recipe = Recipe()
+        val store = RenderedPhotoStore()
+        val viewModel = editViewModel(store)
+        // The clock stays paused: Done's spinner turns while the render runs.
+        host(viewModel, keepClockPaused = true)
+        compose.runOnUiThread { viewModel.changeSettings(EditSettings(quarterTurns = 1), recipe.processorFor) }
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(TOOL_DONE_TAG).performClick()
+        waitUntil { doneCalls.get() > 0 }
+        compose.waitForIdle()
+
+        assertEquals(1, doneCalls.get())
+        assertEquals(EditSettings(quarterTurns = 1), recipe.settingsOf(store.peek()))
+        assertTrue("A permission was requested: ${registry.requests}", registry.requests.isEmpty())
+        return store
+    }
+
+    /** Builds the Edit screen's ViewModel on the gradient photo, handing over into [store]. */
+    private fun editViewModel(store: RenderedPhotoStore): ToolViewModel =
+        // Built outside the composable: lint forbids constructing a ViewModel while drawing.
+        ToolViewModel(
+            Tool.EDIT,
+            PHOTO_URI,
+            FakePhotoLoader(app, ToolFixtures.gradient(600, 400)),
+            ViewModelClearedProbe(),
+            store = store,
+        )
 
     /**
      * Shows the tool screen for [viewModel] and waits until the photo area has finished loading
@@ -372,8 +372,9 @@ class SaveButtonTest {
     }
 
     /**
-     * Sets the tool screen for [viewModel] as the content, with the recording registry. The
-     * caller pauses the test's clock first, since the screen opens on a loading indicator.
+     * Sets the tool screen for [viewModel] as the content, with the recording registry, so a
+     * permission request would be seen. The caller pauses the test's clock first, since the
+     * screen opens on a loading indicator.
      */
     private fun setScreen(viewModel: ToolViewModel) {
         compose.setContent {
@@ -382,20 +383,15 @@ class SaveButtonTest {
             }
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides owner) {
                 MaterialTheme {
-                    ToolScreen(viewModel = viewModel, onBack = {}, onSaved = { saved += it })
+                    ToolScreen(viewModel = viewModel, onBack = {}, onDone = { doneCalls.incrementAndGet() })
                 }
             }
         }
         compose.waitForIdle()
     }
 
-    /** Waits until the save message is on screen. */
-    private fun waitForMessage() {
-        waitUntil { compose.onAllNodes(hasTestTag(SAVE_MESSAGE_TAG)).fetchSemanticsNodes().isNotEmpty() }
-    }
-
     /**
-     * Waits until [condition] holds. The save finishes on a background thread and comes back
+     * Waits until [condition] holds. Edit's render finishes on a background thread and comes back
      * to the main thread, so the main looper is run on each check. While the test's clock is
      * paused it is also moved on by one frame before each check: a paused clock never moves by
      * itself, and the screen only catches up with a change as the clock moves.
@@ -414,7 +410,7 @@ class SaveButtonTest {
 
     /** Values the tests share. */
     private companion object {
-        /** The photo the fake-saver tests show; nothing is read from it. */
+        /** The photo the tests show; the fake loader reads nothing from it. */
         const val PHOTO_URI = "content://media/external/images/media/7"
     }
 }
