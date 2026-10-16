@@ -4,7 +4,14 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.performSemanticsAction
+import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.editFilterTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -41,11 +48,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the reference pictures of a tool screen showing a photo, with its Save button visible, in
+ * Takes the reference pictures of a tool screen showing a photo, with its Done button visible, in
  * light and in dark: the Edit screen (pictures 16 and 17, DoD 25), the Enhance screen opened from
  * its own key (pictures 22 and 23), where the title and the options strip are Enhance's, and the
  * Edit screen with a tall, narrow photo whose blurred copy fills the card beside it (pictures 40
- * and 41 on Android 15, 42 on Android 11, DoD 27).
+ * and 41 on Android 15, 42 on Android 11, DoD 27). Run 9 adds pictures 55 to 68: Edit's row of
+ * tools, its Crop, Rotate, Adjust and Filters sheets, Compare, and the Undo and Compare pill.
  *
  * The photos are drawn in code and handed over by a [FakePhotoLoader], so the pictures never
  * depend on a file or on the decoder. The screen is hosted directly in KansoTheme with the mode
@@ -166,7 +174,7 @@ class ToolScreenshotTest {
         capture("50_tool_artistic_dark.png")
     }
 
-    /** Picture 51: Edit with the Free crop controls open, light. */
+    /** Picture 51: Edit with Free crop chosen, the cropper shown over the photo, light. */
     @Test
     fun tool_edit_free_crop_light() {
         showTool(Tool.EDIT, ThemeMode.Light)
@@ -174,7 +182,7 @@ class ToolScreenshotTest {
         capture("51_tool_edit_free_crop_light.png")
     }
 
-    /** Picture 52: Edit with the Free crop controls open, dark. */
+    /** Picture 52: Edit with Free crop chosen, the cropper shown over the photo, dark. */
     @Test
     fun tool_edit_free_crop_dark() {
         showTool(Tool.EDIT, ThemeMode.Dark)
@@ -198,9 +206,170 @@ class ToolScreenshotTest {
         capture("54_tool_enhance_done_dark.png")
     }
 
+    /** Picture 55: the Edit screen's row of tools with no sheet open, light. Run 9: DoD 22 (1). */
+    @Test
+    fun edit_tool_row_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        capture("55_edit_tool_row_light.png")
+    }
+
+    /** Picture 56: the row of tools with no sheet open, dark. Run 9: dark twin of picture 55. */
+    @Test
+    fun edit_tool_row_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        capture("56_edit_tool_row_dark.png")
+    }
+
+    /** Picture 57: the Crop sheet open, light. Run 9: DoD 22 (2). */
+    @Test
+    fun edit_crop_sheet_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.CROP)
+        capture("57_edit_crop_sheet_light.png")
+    }
+
+    /** Picture 58: the Crop sheet open, dark. Run 9: dark twin of picture 57. */
+    @Test
+    fun edit_crop_sheet_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.CROP)
+        capture("58_edit_crop_sheet_dark.png")
+    }
+
+    /** Picture 59: the Rotate sheet open, light. Run 9: DoD 22 (3). */
+    @Test
+    fun edit_rotate_sheet_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.ROTATE)
+        capture("59_edit_rotate_sheet_light.png")
+    }
+
+    /** Picture 60: the Rotate sheet open, dark. */
+    @Test
+    fun edit_rotate_sheet_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.ROTATE)
+        capture("60_edit_rotate_sheet_dark.png")
+    }
+
+    /** Picture 61: the Adjust sheet with brightness at 70, light. Run 9: DoD 22 (4). */
+    @Test
+    fun edit_adjust_brightness_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        capture("61_edit_adjust_brightness_light.png")
+    }
+
+    /** Picture 62: the Adjust sheet with brightness at 70, dark. */
+    @Test
+    fun edit_adjust_brightness_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        capture("62_edit_adjust_brightness_dark.png")
+    }
+
+    /** Picture 63: the Filters sheet with the 1977 filter chosen, light. Run 9: DoD 22 (5). */
+    @Test
+    fun edit_filters_1977_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        chooseFilter1977()
+        capture("63_edit_filters_1977_light.png")
+    }
+
+    /** Picture 64: the Filters sheet with the 1977 filter chosen, dark. */
+    @Test
+    fun edit_filters_1977_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        chooseFilter1977()
+        capture("64_edit_filters_1977_dark.png")
+    }
+
+    /** Picture 65: Compare switched on after an edit, light. Run 9: DoD 22 (6). */
+    @Test
+    fun edit_compare_on_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        compose.onNodeWithTag(EDIT_COMPARE_TAG).performClick()
+        compose.waitForIdle()
+        capture("65_edit_compare_on_light.png")
+    }
+
+    /** Picture 66: Compare switched on after an edit, dark. */
+    @Test
+    fun edit_compare_on_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        compose.onNodeWithTag(EDIT_COMPARE_TAG).performClick()
+        compose.waitForIdle()
+        capture("66_edit_compare_on_dark.png")
+    }
+
+    /** Picture 67: the Undo and Compare pill over the photo after an edit, light. Run 9: DoD 22 (8). */
+    @Test
+    fun edit_pill_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        compose.onNodeWithTag(EDIT_PILL_TAG).assertIsDisplayed()
+        capture("67_edit_pill_light.png")
+    }
+
+    /** Picture 68: the Undo and Compare pill over the photo after an edit, dark. */
+    @Test
+    fun edit_pill_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.ADJUST)
+        setBrightness70()
+        compose.onNodeWithTag(EDIT_PILL_TAG).assertIsDisplayed()
+        capture("68_edit_pill_dark.png")
+    }
+
+    /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
+    private fun openSheet(tool: EditTool) {
+        compose.onNodeWithTag(editToolTag(tool)).performClick()
+        compose.waitForIdle()
+    }
+
+    /** Sets the Brightness slider to 0.7 (shown as 70) through its semantics, as AdjustSheetTest does. */
+    private fun setBrightness70() {
+        compose.onNodeWithTag(EDIT_BRIGHTNESS_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.7f) }
+        compose.waitForIdle()
+    }
+
     /**
-     * Opens the Crop sheet from the row of tools, then taps the Free crop chip, which opens the
-     * rectangle sliders. Run 9: Edit's controls now live in sheets, so the sheet is opened first.
+     * Opens the Filters sheet and picks 1977. The filter preview renders on Dispatchers.Default, off
+     * the test clock, and nothing in the semantics says when its bitmap has landed. So this polls in
+     * real time (up to 10 s, checking every 50 ms) until the 1977 chip reports itself selected, then
+     * gives the background render a short settle time before the picture is taken.
+     */
+    private fun chooseFilter1977() {
+        openSheet(EditTool.FILTERS)
+        val chip = compose.onNodeWithTag(editFilterTag(FilterPreset.SEVENTY_SEVEN))
+        chip.performScrollTo().performClick()
+        compose.waitForIdle()
+        val deadline = System.currentTimeMillis() + FILTER_POLL_LIMIT_MILLIS
+        while (!isSelected(chip) && System.currentTimeMillis() < deadline) {
+            Thread.sleep(FILTER_POLL_STEP_MILLIS)
+            compose.waitForIdle()
+        }
+        Thread.sleep(FILTER_SETTLE_MILLIS)
+        compose.waitForIdle()
+    }
+
+    /** True when the chip's semantics say it is selected (a FilterChip writes this property). */
+    private fun isSelected(chip: androidx.compose.ui.test.SemanticsNodeInteraction): Boolean =
+        androidx.compose.ui.semantics.SemanticsProperties.Selected in chip.fetchSemanticsNode().config &&
+            chip.fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Selected]
+
+    /**
+     * Opens the Crop sheet from the row of tools, then taps the Free crop chip, which shows the
+     * cropper over the photo (Run 9: the real cropper replaced the rectangle sliders). Edit's
+     * controls live in sheets, so the sheet is opened first.
      */
     private fun openFreeCrop() {
         compose.onNodeWithTag(editToolTag(EditTool.CROP)).performClick()
@@ -221,7 +390,7 @@ class ToolScreenshotTest {
 
     /**
      * Shows [tool]'s screen on [photo] (by default the 600 x 400 gradient) in [mode], and waits
-     * until the photo is drawn and Save can be tapped.
+     * until the photo is drawn and Done can be tapped.
      */
     private fun showTool(
         tool: Tool,
@@ -263,3 +432,12 @@ class ToolScreenshotTest {
  * 891 dp tall, at xxhdpi, the size of a typical modern phone.
  */
 private const val TOOL_PHONE = "w411dp-h891dp-xxhdpi"
+
+/** The longest real time, in milliseconds, [ToolScreenshotTest] polls for the chosen filter chip to be selected. */
+private const val FILTER_POLL_LIMIT_MILLIS = 10_000L
+
+/** Real milliseconds between two polls of the filter chip. */
+private const val FILTER_POLL_STEP_MILLIS = 50L
+
+/** Real milliseconds given to the filter's background render once the chip is selected (it runs off the test clock). */
+private const val FILTER_SETTLE_MILLIS = 1_500L

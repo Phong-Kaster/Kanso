@@ -4,7 +4,8 @@
 
 Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
+shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
+Share and Save are on [the Result screen](saving-and-share.md).
 
 ---
 
@@ -12,7 +13,8 @@ shares (opening the photo, progress, Undo, Replace, Save) are on [The tool scree
 
 One button, **Cut out the subject**, finds the person in the photo and makes everything else fully
 transparent. The result is shown over a grey-and-white checkerboard, so you can see what is now
-see-through, and it is saved as a **PNG** that keeps the transparency.
+see-through. **Done** hands it to the Result screen, where Save writes it as a **PNG** that keeps
+the transparency and Share sends a PNG copy.
 
 Limits, from the code:
 
@@ -32,12 +34,15 @@ Limits, from the code:
   button), or from the **Remove background** shortcut. Pick a photo in the gallery, or tap the
   gallery's camera button and keep a shot.
 - Tap **Cut out the subject**. The progress ring fills while it works.
-- When it is done the person stands on a checkerboard. **Undo** brings the background back;
-  **Save** writes the PNG.
+- When it has finished the person stands on a checkerboard. **Undo** brings the background back.
+- Tap **Done** to open the Result screen: **Save** writes the PNG to `Pictures/Kanso`, **Share**
+  sends it, **Go home** ends the session, and Back returns here with the cut-out and Undo intact.
 
 **Seen on the Android emulator (API 34, x86_64), 2026-10-14**, with test photos of a face (1024 x
-1024) and a 4000 x 3000 scene: the cut-out took about 5 seconds, showed the person over the checkerboard, and saved as a PNG in
-`Pictures/Kanso`, with no crash.
+1024) and a 4000 x 3000 scene: the cut-out took about 5 seconds, showed the person over the
+checkerboard, and saved as a PNG in `Pictures/Kanso`, with no crash. That run used the Save of
+Run 8 (a bar on the tool screen), before Run 9 moved Save to the Result screen; no device run of
+the Done-to-Result path is recorded here.
 
 ## How it works
 
@@ -51,7 +56,9 @@ flowchart TD
     F -->|"no value >= 0.5"| N["NoSubject message"]
     F --> G["MaskCompositor: alpha from mask, colours kept"]
     G --> H["ARGB_8888 with alpha, shown over Checkerboard"]
-    H --> I["Save: PNG, image/png, Pictures/Kanso"]
+    H --> J["Done: RenderedPhotoStore, Result screen"]
+    J -->|Save| I["PNG, image/png, Pictures/Kanso"]
+    J -->|Share| K["PNG copy in cache shared/, FileProvider"]
 ```
 
 1. **The button.**
@@ -100,10 +107,14 @@ flowchart TD
    sees the tool is Remove background and the shown bitmap has alpha, and draws a
    [`Checkerboard`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/Checkerboard.kt) behind it
    (12 dp squares in two theme colours) instead of the blurred backdrop.
-8. **Save.** `MediaStorePhotoSaver.save(bitmap)` sees `hasAlpha()` and writes a lossless **PNG**,
-   named `Kanso_<yyyyMMdd_HHmmss>.png`, type `image/png`, at the size shown. Share then sends it as
-   `image/png` (see [Saving and Share](saving-and-share.md)). The Saved screen shows the cut-out
-   over a blurred copy of itself, not over a checkerboard.
+8. **Done, then Save or Share.** Done hands the cut-out (or, with no cut-out made or every one
+   undone, the original photo) to the Result screen through `RenderedPhotoStore`; it writes
+   nothing. Result shows the cut-out over a blurred copy of itself, not over a checkerboard. Its
+   **Save** calls `MediaStorePhotoSaver.save(bitmap)`, which sees `hasAlpha()` and writes a
+   lossless **PNG**, named `Kanso_<yyyyMMdd_HHmmss>.png`, type `image/png`, at the size shown.
+   **Share** writes a PNG copy into the cache's `shared/` folder and sends it as `image/png`
+   through FileProvider, without touching the gallery (see
+   [Done, the Result screen, Save and Share](saving-and-share.md)).
 
 **What happens on failure:**
 
@@ -126,8 +137,11 @@ The photo and Undo stay as they were. Leaving the screen cancels the run.
   the screen shows a two-tone checkerboard.
 - [`save/SaveEditedTest.kt`](../../app/src/test/java/com/phongkaster/kanso/save/SaveEditedTest.kt):
   a bitmap with alpha is saved as a PNG in `Pictures/Kanso`, with the right type and extension.
-- [`saved/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/SharePhotoTest.kt):
-  a PNG is shared as `image/png`.
+- [`result/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/SharePhotoTest.kt):
+  a PNG is shared as `image/png`, and a picture with alpha is written as a PNG in the `shared`
+  cache folder.
+- [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt):
+  Done on each tool other than Edit hands over its edited result.
 - [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
   `tool_cutout_light` and `_dark`.
 - `EngineSegmenter` itself is native code and is **not** run by any test on the computer; only the

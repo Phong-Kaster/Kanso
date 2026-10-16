@@ -4,7 +4,8 @@
 
 Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
+shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
+Share and Save are on [the Result screen](saving-and-share.md).
 
 ---
 
@@ -39,7 +40,8 @@ Limits, from the code:
 - Press and hold **Hold to see the original** under the small comparison picture to see the photo
   before; let go to see the result again. With a screen reader, a double tap switches between the
   two.
-- **Undo** takes the result back; **Save** writes it.
+- **Undo** takes the result back. **Done** opens the Result screen with it, where **Save** writes it
+  to `Pictures/Kanso` and **Share** sends it; Back from Result returns here unchanged.
 
 **Seen on the Android emulator (API 34, x86_64), 2026-10-14:** on a 4000 x 3000 photo the progress
 indicator showed, the result came after about 15 seconds, and there was no out-of-memory error or
@@ -56,7 +58,9 @@ flowchart TD
     E -->|"Processing(p) ... Success(bitmap)"| F["progress 0..0.9, result up to 2048 px"]
     F --> G["AutoLighting: gamma curve if mean < 110"]
     G --> H["setHasAlpha(false)"] --> I["shown; EnhanceCompare appears"]
-    I --> J["Save: JPEG q95, Pictures/Kanso"]
+    I --> K["Done: RenderedPhotoStore, Result screen"]
+    K -->|Save| J["JPEG q95, Pictures/Kanso"]
+    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
 ```
 
 1. **The button.**
@@ -79,7 +83,7 @@ flowchart TD
       forward, even if the engine's numbers jump back;
    3. reports 0.9, stops here if you left the screen, then runs `AutoLighting`;
    4. frees the upscaled copy if lighting made a new one, marks the result opaque
-      (`setHasAlpha(false)`, so Save writes a JPEG), reports 1.
+      (`setHasAlpha(false)`, so Save and Share on Result write a JPEG), reports 1.
 5. **The engine call.**
    [`data/edit/enhance/EngineUpscaler.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/enhance/EngineUpscaler.kt)
    is the only file of the app that names the Enhance engine's classes:
@@ -109,8 +113,11 @@ flowchart TD
    `onPress`, `tryAwaitRelease`) shows the original instead; `AnimatedContent` fades between the two
    in 150 ms. The "original" is the photo as it was opened on this screen, not the photo just
    before the last Enhance.
-8. **Save.** The result is opaque, so Save writes a **JPEG at quality 95**, at the size shown (up
-   to 2048 px), into `Pictures/Kanso`.
+8. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
+   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
+   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown (up
+   to 2048 px), into `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/`
+   folder (see [Done, the Result screen, Save and Share](saving-and-share.md)).
 
 **What happens on failure:**
 

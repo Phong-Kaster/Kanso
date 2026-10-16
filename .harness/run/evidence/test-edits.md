@@ -26,3 +26,6 @@ Baselines 51, 52 re-recorded (Undo now enabled after tapping Free; chip labels d
 - SavedNavigationTest -> ResultNavigationTest (Done opens Result; Back returns to the tool; Go home leaves only Home; Edit another dropped). HomeRecentTest: Done, then Save on Result, then Go home. MyEditsViewerNavigationTest, NavStateTest, ReplaceNavigationTest, ThemeFollowTest, AccessibilityWalkTest, BackStackActionsTest, PreviewsRenderTest (names ResultPreview, ResultMarkPreview, ResultSavedPreview, ResultNothingPreview), ScreenStateTest: renamed tags/types only.
 - EditLayoutTest: the two Save-bar-position assertions dropped (no bar). Tests with `saver =`/`onSave`/`onSaved` (tool/*, tool/edit/*, screenshots/ToolScreenshotTest): constructor and callback names only.
 - Baselines re-recorded (approved, D-001 criterion 22): 16,17,18,19,22,23,40,41,42,45-52 and 53,54 (tool_enhance_done; not in DECISIONS "## Baselines" list - covered by the criterion's prose, flagged in ISSUES). Old copies: evidence/baseline-diffs/p5_*_old.png.
+
+## Phase 6 (T-009, Run 9)
+- ToolScreenshotTest: 14 new captures (pictures 55-68: tool row, Crop, Rotate, Adjust 70, Filters 1977, compare on, pill; light and dark) plus helpers; stale KDocs about Save/sliders corrected. No test removed or weakened. Baselines 55-68 recorded new (evidence/p6-record.log).

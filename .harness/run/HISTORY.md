@@ -18,3 +18,6 @@ Real cropper (core/imagecrop) replaces range sliders; two Workers (production, t
 
 ## Iteration - Phase 5 (T-005, T-006)
 Iteration pre-wired Result key, RenderedPhotoStore, FileProvider, DI, nav; two Workers each wrote production then tests. Review fixes: untouched photo saved from its own file, controls locked while Done renders, store cleared when Result is left, Saved tag names renamed to Result. 19 baselines re-recorded (approved). verifyRoborazziDebug, lint, assemble green.
+
+## Iteration - Phase 6 (T-007, T-008, T-009)
+Recovered a crashed invocation's coherent debris (docs + 14 new picture tests), recorded baselines 55-68 (judged by opening 55, 57, 61, 63-65), three Workers wrote CONTEXT.md, ADR-003, retouch/artistic/my-edits/camera docs and verified README/edit.md against the code. Review: no blocking; fixed docs (failure message not drawn with Crop open), stale test KDocs, poll for filter chip. verifyRoborazziDebug, lint, assemble green. All tasks complete -> DONE-candidate.

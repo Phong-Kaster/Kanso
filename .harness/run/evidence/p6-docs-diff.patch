@@ -1,0 +1,1491 @@
+diff --git a/README.md b/README.md
+index 29683ca..0a7290a 100644
+--- a/README.md
++++ b/README.md
+@@ -8,20 +8,21 @@ libraries would otherwise merge in (`app/src/main/AndroidManifest.xml`). Every m
+ inside the app; nothing is downloaded. A photo only leaves the phone when you send it to another
+ app with Share.
+ 
+-This README describes **what the code on branch `loop/kanso-editing-tools` actually does**. It is
++This README describes **what the code on branch `loop/kanso-real-editor` actually does**. It is
+ not a roadmap. It is the index: each feature below links to its own page in
+ [`docs/features/`](docs/features/), which explains what the feature is, how to use it, how it works
+ step by step with file paths, which tests cover it, and what is still open.
+ 
+ > **Current state.** The app works from start to end: Home, a photo gallery for each tool, the
+ > camera, a screen for each of the five editing tools, a Done button that opens a Result screen
+-> with Share, Save (into `Pictures/Kanso`) and Go home, the My edits tab and Settings. All five tools edit the photo. Edit runs in plain
+-> Kotlin; Remove background, Enhance, Retouch and Artistic call the image engine's bundled on-device
++> with Share, Save (into `Pictures/Kanso`) and Go home, the My edits tab and Settings. All five tools edit the photo. Edit draws
++> its crop, turns, flips and sliders live as Compose draws (a filter on a 640 px copy) and renders in plain Kotlin at Done; Remove background, Enhance, Retouch and Artistic call the image engine's bundled on-device
+ > models (`libs/localml.aar`, through `core/localml`) and OpenCV. On the Android emulator (API 34,
+ > x86_64), on 2026-10-14, all five ran with no crash and each saved its result into
+ > `Pictures/Kanso` (Remove background as PNG, the others as JPEG); the camera, My edits, the photo
+-> viewer and Settings were also driven with no crash. Nothing has yet been checked on the owner's
+-> phone, a Galaxy A13.
++> viewer and Settings were also driven with no crash. That emulator run came before Run 9 rebuilt
++> the Edit screen (row of tools, live preview, cropper, Result screen). Nothing has yet been checked
++> on the owner's phone, a Galaxy A13.
+ 
+ ---
+ 
+@@ -36,7 +37,7 @@ size, progress, Undo, failures and Done.
+ 
+ | Feature | What it does | Saved as |
+ |---|---|---|
+-| [Edit](docs/features/edit.md) | Crop with draggable handles, pinch zoom and 1:1, 4:3, 3:4, 16:9, 9:16 shapes, quarter turns, flips, brightness, contrast, saturation, warmth, and seven filters with an intensity, in plain Kotlin. | JPEG, at most 2000 px |
++| [Edit](docs/features/edit.md) | A row of four tools (Crop, Rotate, Adjust, Filters), each opening a sheet under the photo: crop with draggable handles, pinch zoom and Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth; one of seven filters (choosing one replaces the other) with an intensity. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare sit in a pill on the photo. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
+ | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
+ | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
+ | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
+@@ -66,6 +67,121 @@ size, progress, Undo, failures and Done.
+ 
+ ---
+ 
++## Editing features
++
++The real state of each editing feature, as the code is. "Works" means the code path is complete
++from the control to the saved file; none of them has yet been checked on the owner's Galaxy A13.
++
++| Feature | State | Notes |
++|---|---|---|
++| Edit: Crop | Works | Cropper from `core/imagecrop` on the original photo: handles, drag, pinch; Free or a fixed shape (locked); one finished gesture is one Undo step. |
++| Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
++| Edit: Adjust | Works | Brightness, contrast, saturation, warmth; the photo follows the finger live, and a slider stays where it is let go. |
++| Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
++| Edit: Undo and Compare | Works | A pill on the photo; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
++| Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
++| Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
++| Retouch | Works | Face landmarks plus OpenCV bilateral smoothing, with a strength slider. |
++| Artistic | Works | Four styles from the Inception v3 style-transfer models, with a strength slider. |
++| Done and Result (Share, Save, Go home) | Works | Done hands the picture to Result; Save is the only gallery write. |
++
++The old Edit panel is gone since Run 9: sliders no longer return to the middle after each change,
++the free crop no longer uses two Width and Height sliders, and filters no longer stack.
++
++## How each editing feature works
++
++Paths are under `app/src/main/java/com/phongkaster/kanso/` unless they start with `core/` or
++`libs/`. Each feature page in [`docs/features/`](docs/features/) has the full detail; Edit is traced
++here end to end, with diagrams on [its page](docs/features/edit.md).
++
++### Edit
++
++1. **Screen and ViewModel.** `navigation/KansoNavHost.kt` shows the `ToolPhoto(tool, photoUri)` key
++   (`navigation/ToolPhoto.kt`) with `ui/tool/ToolScreen.kt` and a `ui/tool/ToolViewModel.kt`, which
++   exposes one
++   `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit body is
++   `ui/tool/EditToolContent.kt`: the photo takes 60% of the height, the row of tools
++   (`ui/tool/EditToolRow.kt`) and the open tool's sheet the rest. The sheet is a plain `Surface`
++   animated with `AnimatedContent`, not a `ModalBottomSheet`, so the Undo and Compare pill
++   (`ui/tool/EditPill.kt`) on the photo stays usable. The sheets' controls are
++   `ui/tool/EditPanel.kt`.
++2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
++   (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the
++   original for the whole visit; the photo's file is never changed.
++3. **The session.** All changes are one immutable `EditSettings`
++   (`data/edit/edit/EditSettings.kt`) inside an `EditSession` (`data/edit/edit/EditSession.kt`)
++   with its undo stack. A chip, turn or flip calls `changeSettings`, a crop shape
++   `chooseCropRatio`, a finished cropper gesture `commitCrop`, a slider `previewSettings` while it
++   moves and `commitSettings` when let go (the whole drag is one Undo step). The cropper,
++   `ui/tool/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview`
++   (`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`) and its `CropState`;
++   it always shows the plain decoded photo, un-turned and un-flipped, because the crop is kept as
++   fractions of the original and the render crops before it turns. When the last finger lifts, a
++   rectangle that moved by more than a tenth of a percent becomes one `commitCrop`. All of this,
++   and the row and the sheets, runs on the main thread as Compose draws; no pixel is computed.
++4. **Live preview.** `LivePreviewImage` (in `ui/tool/EditToolContent.kt`) draws the original on a
++   Compose `Canvas` every frame: crop, quarter turns, flips, and the four sliders as one
++   `ColorFilter.colorMatrix` from `data/edit/edit/EditColourMatrix.kt`. A filter is the one part
++   computed on the CPU: the ViewModel sends filter changes through a conflated `Channel`, and
++   `data/edit/edit/FilterPreviewRenderer.kt` renders only the filter on a copy of the original at
++   most 640 px, on `Dispatchers.Default`, which the canvas then draws in place of the original.
++5. **Done.** `ToolViewModel.done` shows a spinner in Done, disables the row, the sheet and the
++   cropper, and renders the whole current settings once from the decoded original (at most twice
++   the screen's longest edge), shrunk to at most 2000 px (`WorkingSize.EDIT` in
++   `data/edit/WorkingSize.kt`), with `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, on
++   the pixels as one `IntArray`: crop, quarter turns, flips, the filter (look-ups from
++   `data/edit/edit/FilterLut.kt` and `data/edit/edit/FilterPreset.kt`, images bundled in
++   `libs/imageprocessor.aar` and `libs/editimage.aar`, read from the app's assets with no
++   download), the colour matrix, then every pixel made opaque, giving a new `ARGB_8888` bitmap
++   with `setHasAlpha(false)`. If no Edit control was used yet, there is nothing to render and the
++   decoded original is handed over at once, with the photo's Uri. The picture goes into
++   `data/edit/RenderedPhotoStore.kt` (a Koin single holding one bitmap) and the `Result` key
++   (`navigation/Result.kt`) is pushed above Edit; Back from Result returns to the session intact.
++6. **Result.** `ui/result/ResultViewModel.kt` reads the store once; `ui/result/ResultScreen.kt`
++   offers Share, Save and Go home. **Save** is the only gallery write:
++   `data/photo/MediaStorePhotoSaver.kt`, on `Dispatchers.IO`, writes a new JPEG at quality 95, at
++   the rendered size, named `Kanso_<yyyyMMdd_HHmmss>.jpg`, into `Pictures/Kanso` (an untouched
++   photo is saved from its own file: its bytes, or re-encoded upright when it carries an EXIF
++   turn). A picture is saved once; the button then reads "Saved". On Android 8.1 and 9 the
++   storage-write permission is asked first. **Share** (`ui/result/SharePhoto.kt`) writes a copy of
++   the picture on screen under the cache's `shared/` folder (JPEG quality 95 for an opaque picture,
++   which every Edit render is), on `Dispatchers.IO`, and sends it through FileProvider with a
++   one-off read grant. **Go home** clears the back stack to Home and ends the session; leaving
++   Result clears the store.
++7. **On failure.** A Done render that runs out of memory ("This photo is too large to edit on this
++   phone...") or fails in any other way, such as a filter image that cannot be read ("Something
++   went wrong and the edit was not made..."), shows its message at the top of the photo card, hands
++   nothing over and keeps every setting and Undo step. A failed filter preview silently shows the
++   photo without the filter. A photo that cannot be decoded shows "This photo cannot be opened. Go
++   back and pick another one." A failed Save says "The photo could not be saved. Try again."; a
++   refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
++   to show" and Edit reopens on the photo with no changes (the session lived only in memory).
++
++### Remove background, Enhance, Retouch and Artistic
++
++These four share one path in `ui/tool/ToolViewModel.kt`: `apply` shrinks the photo to the tool's
++working size (`data/edit/WorkingSize.kt`: Remove background and Retouch 2000 px, Enhance 512 px,
++Artistic 1024 px) and runs its `ToolProcessor` on `Dispatchers.Default`; the result becomes the
++shown photo and the one before is kept for Undo. Each tool's processor is the one
++`di/AppModule.kt` puts in `data/edit/ProcessorRegistry.kt`. Remove background and Enhance run on
++the photo as shown; Retouch and Artistic always run from the original with the strength (and
++style) set, so their results do not stack. A failure shows a message on the
++photo card and leaves the photo as it was. Done hands the shown photo to Result at once.
++
++- **Remove background**: `data/edit/cutout/CutoutProcessor.kt`, calling
++  `data/edit/cutout/EngineSegmenter.kt`; saved as PNG with transparency.
++  [Details](docs/features/remove-background.md).
++- **Enhance**: `data/edit/enhance/EnhanceProcessor.kt`, calling
++  `data/edit/enhance/EngineUpscaler.kt` and `data/edit/enhance/AutoLighting.kt`; saved as JPEG.
++  [Details](docs/features/enhance.md).
++- **Retouch**: `data/edit/retouch/RetouchProcessor.kt`, calling
++  `data/edit/retouch/EngineFaceFinder.kt` and `data/edit/retouch/EngineSkinSmoother.kt`; saved as
++  JPEG. [Details](docs/features/retouch.md).
++- **Artistic**: `data/edit/artistic/ArtisticProcessor.kt`, calling
++  `data/edit/artistic/EngineStylizer.kt`; saved as JPEG. [Details](docs/features/artistic.md).
++
++---
++
+ ## Architecture
+ 
+ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
+@@ -87,7 +203,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
+   call sits in one wrapper file (`Engine*.kt`) behind a small interface, so everything else is
+   tested on the computer with fakes; the engine is native code and cannot load there.
+ - **Data:** `PhotoSource` and `SavedPhotoSource` (MediaStore reads), `PhotoLoader` (decode),
+-  `PhotoSaver` (write), `SettingsRepository` (Preferences DataStore at
++  `PhotoSaver` (write), `RenderedPhotoStore` (the hand-off from Done to Result), `SettingsRepository` (Preferences DataStore at
+   `files/datastore/settings.preferences_pb`).
+ - **UI:** Jetpack Compose with Material 3 1.5 (Expressive components and motion), Coil for
+   thumbnails, MaterialKolor for colour schemes built from a seed colour.
+@@ -102,6 +218,7 @@ native libraries and bundled assets, are packed into the APK. Only these files o
+ | Tool | Wrapper file in `app/` | Engine class | Model or library (all bundled) |
+ |---|---|---|---|
+ | Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), `filter_materials/map/*Map.png` (`libs/editimage.aar`) |
++| Edit (Crop) | `ui/tool/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`, package `com.mr0xf00.easycrop`) | none: Compose drawing and touch handling |
+ | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` (its library ships the model) |
+ | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |
+ | Retouch | `data/edit/retouch/EngineFaceFinder.kt` | `DetectFaceLandmarkUC` (with `UnifyPoint` from `core/common`) | `face_landmarker.task` |
+diff --git a/docs/features/artistic.md b/docs/features/artistic.md
+index 569e727..2189192 100644
+--- a/docs/features/artistic.md
++++ b/docs/features/artistic.md
+@@ -4,7 +4,8 @@
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
+-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
++shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
++Share and Save are on [the Result screen](saving-and-share.md).
+ 
+ ---
+ 
+@@ -21,8 +22,8 @@ then tap **Apply style**.
+ 
+ Limits, from the code:
+ 
+-- Works on at most **1024 px** on the longest edge, so the saved JPEG is at most 1024 px, even at
+-  strength 0.
++- Works on at most **1024 px** on the longest edge, so the JPEG that Save on Result writes after a
++  run is at most 1024 px, even at strength 0.
+ - Always starts again from the **original** photo: a new style or strength replaces the last
+   result instead of painting over it.
+ - The four style images are Kanso's own drawings, not paintings by anyone else: 256 x 256 WebP
+@@ -40,7 +41,9 @@ Limits, from the code:
+   works.
+ - To try another strength, move the slider and tap **Apply style** again: with the same style this
+   only re-mixes and does not run the model again. Another style runs the model again.
+-- **Undo** takes back the whole session of Artistic runs at once; **Save** writes the result.
++- **Undo** takes back the whole session of Artistic runs at once. **Done** opens the Result screen
++  with the result, where **Save** writes it to `Pictures/Kanso` and **Share** sends it; Back from
++  Result returns here unchanged.
+ 
+ **Seen on the Android emulator (API 34, x86_64), 2026-10-14:** each style took about 9 seconds,
+ with no crash. The same day, the emulator showed that with the earlier `FULL_STYLE_RATIO = 1f`,
+@@ -57,7 +60,10 @@ flowchart TD
+     D -->|"otherwise"| E["EngineStylizer: StylePredict + StyleTransfer Inception v3, ratio 0"]
+     E --> M
+     M --> F["Kotlin mix by strength, opaque"]
+-    F --> G["Save: JPEG q95, Pictures/Kanso"]
++    F --> I["shown on the card"]
++    I --> K["Done: RenderedPhotoStore, Result screen"]
++    K -->|Save| G["JPEG q95, Pictures/Kanso"]
++    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
+ ```
+ 
+ 1. **The panel.**
+@@ -114,8 +120,11 @@ flowchart TD
+    a short list of numbers) and `image_stylization_inceptionv3_dr_transfer.tflite` (repaints the
+    photo with it), both bundled in the assets of `libs/localml.aar`. Nothing is downloaded.
+ 7. **Undo.** An Artistic run straight after another one replaces it without a new Undo step.
+-8. **Save.** The result is opaque: a **JPEG at quality 95**, at the size shown (at most 1024 px),
+-   into `Pictures/Kanso`.
++8. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
++   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
++   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown (at
++   most 1024 px), into `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/`
++   folder (see [Done, the Result screen, Save and Share](saving-and-share.md)).
+ 
+ **What happens on failure:**
+ 
+diff --git a/docs/features/camera.md b/docs/features/camera.md
+index cb7aaa9..0d7fde2 100644
+--- a/docs/features/camera.md
++++ b/docs/features/camera.md
+@@ -16,7 +16,8 @@ a shot you choose **Keep** (it opens in the tool) or **Retake**.
+ Limits, from the code:
+ 
+ - The shot is **not** added to the phone's gallery. It lives in Kanso's private storage until you
+-  save the finished photo with Save in a tool.
++  tap Done in the tool and then Save on the Result screen (see
++  [Done, the Result screen, Save and Share](saving-and-share.md)).
+ - Shots older than a day are deleted the next time you take one; a shot you leave without keeping
+   is deleted at once.
+ - The lens switch only shows when the phone has both a back and a front camera; the flash button
+@@ -97,7 +98,7 @@ All with a fake `CameraController` that needs no hardware.
+ - [`camera/CameraPermissionTest.kt`](../../app/src/test/java/com/phongkaster/kanso/camera/CameraPermissionTest.kt):
+   launch asks for nothing; opening the camera asks once; a refusal explains, opens settings and
+   does not ask again.
+-- [`navigation/SavedNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/SavedNavigationTest.kt):
++- [`navigation/ResultNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/ResultNavigationTest.kt):
+   a gallery's camera, then Keep, opens that gallery's own tool.
+ - Screenshots: `CameraControlsScreenshotTest`, `CameraRefusedScreenshotTest`.
+ 
+diff --git a/docs/features/edit.md b/docs/features/edit.md
+index 977cb36..3bacc79 100644
+--- a/docs/features/edit.md
++++ b/docs/features/edit.md
+@@ -1,158 +1,301 @@
+-# Edit: crop, turn, flip, colour and filters
++# Edit: crop, rotate, adjust and filters
+ 
+ [Back to README](../../README.md)
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
+-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
++shares (opening the photo, the top bar, failures, Done) are on [The tool screen](tool-screen.md);
++what happens after Done is on [Saving, the Result screen and Share](saving-and-share.md).
+ 
+ ---
+ 
+ ## What it is
+ 
+-Edit is Kanso's general editor. Everything runs in plain Kotlin on the phone's processor: no
+-model, no engine code, no network. You can:
+-
+-- **Crop** to a fixed shape, 1:1, 4:3, 3:4, 16:9 or 9:16 (the largest centred rectangle of that
+-  shape), or **Free**, where two range sliders (Width and Height) set the rectangle to keep.
+-- **Turn left** or **Turn right** a quarter turn, **Flip across** (left to right) or **Flip upside
+-  down**.
+-- Move four colour sliders: **Brightness**, **Contrast**, **Saturation**, **Warmth**.
+-- Apply one of seven **filters**, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro, at the
+-  **Intensity** the slider under the chips shows.
+-
+-Limits, from the code:
+-
+-- Edit works on at most **2000 px** on the longest edge. The saved file is a **JPEG at quality 95**
+-  at the size shown, so a 4000 x 3000 photo saves as 2000 x 1500 once you edit it.
+-- Each change is applied on its own, as one step Undo can take back. There is **no live preview**
+-  while you drag a slider: the change is applied when you let go, then the slider springs back to
+-  the middle.
+-- Changes **add up**. Two filter taps apply the second filter on top of the first; two crops crop
+-  twice. There is no "None" filter chip: Undo removes a filter.
+-- The Intensity slider only sets the strength of the **next** filter tap. Moving it afterwards
+-  does not change a filter already applied.
+-- The free crop has no handles on the photo; the rectangle is set only with the two range
+-  sliders, and it can be no narrower than 5% of the photo on either side.
+-- Fixed shapes are always centred; you cannot move them.
++Edit is Kanso's general editor. Under the photo sits a row of four tools, **Crop**, **Rotate**,
++**Adjust** and **Filters**; tapping one opens its sheet under the row (tapping it again closes it).
++While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
++rendered once, in plain Kotlin on the phone's processor, when you tap **Done**. No model and no
++network are used. You can:
++
++- **Crop**: choose Free, 1:1, 4:3, 3:4, 16:9 or 9:16. While the Crop sheet is open the photo becomes
++  a cropper (from the `core/imagecrop` module): drag a handle to move an edge or a corner, drag inside
++  the rectangle to move it, pinch to zoom. The cropper shows the plain decoded photo, without the
++  turns, flips, filter or slider colours. A fixed shape sets the largest centred rectangle of that
++  shape and locks the handles to it; Free unlocks them and keeps the rectangle as it is.
++- **Rotate**: Turn left or Turn right a quarter turn, Flip across (left to right) or Flip upside
++  down (a second tap flips back).
++- **Adjust**: four sliders, **Brightness**, **Contrast**, **Saturation** and **Warmth**, each from
++  -100 through 0 (no change) to +100, with the number beside the name. The photo follows the finger
++  while it drags, and the slider stays where it is let go.
++- **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
++  with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
++  **replaces** the one before; filters never pile up.
++- **Undo** and **Compare**, in a small pill at the photo's bottom right that stays in reach whatever
++  sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
++  photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
++  Done stays usable while comparing and renders the edit, not the original.
++- **Done** at the top right renders the picture and opens the Result screen (Share, Save, Go home).
++  Nothing is written to the gallery until Save is tapped there.
++
++Each tool with a change carries a small dot on its entry in the row.
+ 
+ ## How to use it
+ 
+ - Reach it from the **Edit** shortcut on Home (then pick a photo in the gallery), by tapping a
+   **Recent edits** card on Home, from the round **Camera** button on the tab bar (a kept shot opens
+-  in Edit), or with **Edit** in the My edits photo viewer. Edit has no carousel banner.
+-- On the Edit screen the controls sit under the photo and scroll if they do not fit (the panel is
+-  at most 260 dp tall):
+-  1. tap a shape chip to crop at once, or tap **Free**, set Width and Height, and tap **Crop**;
+-  2. tap **Turn left**, **Turn right**, **Flip across** or **Flip upside down**;
+-  3. drag a colour slider and let go;
+-  4. set **Intensity**, then tap a filter chip.
+-- Tap **Save** when done.
+-
+-**Seen on the Android emulator (API 34, x86_64), 2026-10-14:** crop 16:9, a turn, a brightness
+-change and Save as a JPEG all worked, with no crash.
++  in Edit), or with **Edit** in the My edits photo viewer. Edit has no carousel banner and no
++  Replace chip.
++- Tap a tool in the row to open its sheet, change what you like, open another tool; the photo keeps
++  the same size because it always takes 60% of the height below the top bar and the controls the
++  other 40%.
++- Switch **Compare** on to see the original, and off again to go on editing.
++- Tap **Done**. While it renders, a small spinner shows in the Done button, which ignores taps, and
++  the row of tools, the sheet and the cropper are disabled (with no control used yet there is
++  nothing to render and Result opens at once). Then the Result screen opens; **Back** from Result returns to Edit with every setting and Undo step
++  as it was left.
++- **Back** on Edit first closes an open sheet. With changes made, it then asks "Discard your
++  changes?" with **Discard** and **Keep editing**; with no changes it leaves at once.
+ 
+ ## How it works
+ 
++### The session and the live preview
++
++```mermaid
++flowchart TD
++    A["A chip, turn, flip or finished crop gesture"] -->|changeSettings / chooseCropRatio / commitCrop| S["EditSession.change: new EditSettings, old one on the undo stack"]
++    B["A slider being dragged"] -->|previewSettings| P["EditSession.preview: settings follow the finger, no undo entry"]
++    B2["Slider let go"] -->|commitSettings| C["EditSession.commit: the whole drag is one undo entry"]
++    S --> U["ToolUiState.settings"]
++    P --> U
++    C --> U
++    U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders"]
++    U -->|filter or intensity changed| Q["conflated Channel of filter requests"]
++    Q --> R["FilterPreviewRenderer: 640 px copy of the original, filter only, Dispatchers.Default"]
++    R -->|ToolUiState.filterPreview| L
++```
++
++1. **The screen and its state.** The Edit screen is
++   [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
++   (`ToolScreen`, `ToolContent`) with
++   [`ui/tool/EditToolContent.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt)
++   for its body: the photo area, the
++   [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
++   the [`ui/tool/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolRow.kt)
++   and the sheet area. The sheet is an ordinary `Surface` animated in with `AnimatedContent`, not a
++   Material `ModalBottomSheet`, because a modal sheet dims the photo and swallows touches, and the
++   pill must stay usable. Its ViewModel is
++   [`ui/tool/ToolViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt),
++   which exposes one `StateFlow<ToolUiState>`
++   ([`ui/tool/ToolUiState.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt)).
++2. **The photo.** `ToolViewModel.load` decodes the photo with
++   [`data/photo/PhotoLoader.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/PhotoLoader.kt),
++   upright, on `Dispatchers.IO`, with its longest edge at most twice the screen's longest edge
++   (`displayMaxEdgePx`). This decoded bitmap is "the original" for the rest of the visit; the file
++   itself is never touched.
++3. **One settings value for the whole visit.** Everything the person has done is one immutable
++   [`data/edit/edit/EditSettings.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt):
++   the crop rectangle (fractions of the original), the locked crop shape, quarter turns, the two
++   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1). It is
++   held, with its undo stack, by
++   [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
++   Every control hands the ViewModel a complete new value, never a change on top of the last
++   result:
++   - [`ui/tool/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt)
++     draws the open sheet from the session's settings (it keeps no state of its own, so a slider
++     reopens where it was left). A turn, a flip or a filter chip calls `changeSettings`; a crop
++     shape calls `chooseCropRatio`; a slider calls `previewSettings` while it moves and
++     `commitSettings` when let go.
++   - [`ui/tool/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditCropper.kt)
++     wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
++     [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
++     It always shows the original photo un-turned and un-flipped, because the crop is stored as
++     fractions of the original and the render crops before it turns. When the last finger lifts,
++     the rectangle becomes fractions and, if it differs from the session's crop by more than a tenth
++     of a percent, goes to `commitCrop` once. A session crop or shape that changes (a chip, Undo)
++     moves the cropper's rectangle to match, and a fixed shape locks its aspect (`CropState.aspectLock`,
++     switched off while the rectangle is moved so the new shape is not bent back to the old one).
++     While Compare is on or Done is rendering, a layer on top takes every touch, so the cropper
++     ignores them. The cropper, the sheets and the row all run on the main thread, as Compose draws;
++     none of them touches pixels.
++   - `EditSession.change` pushes the old settings on the undo stack (an unchanged value adds
++     nothing); `preview` follows the finger without an entry and `commit` turns the whole drag into
++     one entry; `cropRatioChosen` sets the largest centred rectangle of the shape, fitted on its
++     side when the photo has an odd number of quarter turns, so the turned picture comes out in the
++     shape chosen; `undo` goes back to the last entry. There is no redo.
++4. **The live preview.** The photo card draws
++   `LivePreviewImage` (in `ui/tool/EditToolContent.kt`) whenever Compare is off and the Crop sheet
++   is closed. It is a Compose `Canvas` that, every frame, takes only the crop rectangle from the
++   bitmap (rounded exactly as the final render rounds it), turns it, mirrors it, fits it inside the
++   card, and draws it through `ColorFilter.colorMatrix` with the four sliders' matrix from
++   [`data/edit/edit/EditColourMatrix.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditColourMatrix.kt),
++   the same numbers Done uses. With every slider at 0 no colour filter is set. No pixel is
++   recomputed on the CPU for crop, turn, flip or the sliders.
++5. **The filter preview.** A filter is a look-up per pixel that Compose cannot draw, so the
++   ViewModel computes it. When the filter or its intensity changes (`requestPreview`), the settings
++   go into a `Channel(Channel.CONFLATED)`: one collector coroutine renders one request at a time,
++   and a newer request replaces one still waiting, so a fast intensity drag never queues up work.
++   [`data/edit/edit/FilterPreviewRenderer.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/FilterPreviewRenderer.kt)
++   runs the real `EditProcessor` with only the filter set, on `Dispatchers.Default`, on a copy of
++   the original shrunk once to at most 640 px (`PREVIEW_EDGE`). The result becomes
++   `ToolUiState.filterPreview`, and `LivePreviewImage` draws that bitmap instead of the original,
++   cropping, turning and colouring it as above. A crop, turn or slider change keeps the same filter
++   preview. A preview that fails shows the plain photo, with no message.
++
++### Done, the full render and the Result screen
++
+ ```mermaid
+-flowchart LR
+-    A["EditPanel: one change as EditSettings"] --> B["new EditProcessor(change, FilterLut source)"]
+-    B --> C["ToolViewModel.apply: shown photo, fit to 2000 px, Dispatchers.Default"]
+-    C --> D["crop"] --> E["turn"] --> F["flip"] --> G["colour matrix"] --> H["filter LUT + intensity"]
+-    H --> I["opaque ARGB_8888 bitmap"] --> J["shown, old one kept for Undo"]
+-    J --> K["Save: JPEG q95, Pictures/Kanso"]
++flowchart TD
++    D["Done tapped (ToolViewModel.done)"] --> N{"Any Edit control used yet?"}
++    N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
++    N -->|yes| F["finishing = true: spinner in Done"]
++    F --> W["WorkingSize.fit(original, 2000 px) on Dispatchers.Default"]
++    W --> E["EditProcessor: crop, turn, flip, filter, colour matrix, opaque"]
++    E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
++    E -->|Failed| X["failure message on the photo card; stay on Edit"]
++    H0 --> R["doneEvents: navigate to Result"]
++    H1 --> R
++    R --> V["ResultViewModel reads the store once"]
++    V --> SH["Share: copy in cache/shared/, FileProvider, share sheet"]
++    V --> SV["Save: PhotoSaver, new file in Pictures/Kanso"]
++    V --> GH["Go home: back stack cleared to Home"]
+ ```
+ 
+-1. **The panel builds one change.**
+-   [`ui/tool/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt)
+-   keeps what its controls show in an `EditSettings` (with `remember`). For each action it builds a
+-   fresh `EditSettings` holding **only that change** and wraps it in an `EditProcessor`, which it
+-   hands to `ToolViewModel.apply` (`ToolPanel` passes `viewModel::apply`):
+-   - a shape chip: `EditSettings(cropRatio = ratio)`; Free's **Crop**: the free rectangle, as
+-     fractions of the photo (skipped when it is still the whole photo);
+-   - a turn: `quarterTurns = -1` or `+1`; a flip: `flipHorizontal` or `flipVertical`;
+-   - letting go of a colour slider: the four slider values, only if one is away from the middle;
+-     then all four go back to the middle;
+-   - a filter chip: the filter and the Intensity value at that moment.
+-
+-   Why only the change: the ViewModel runs each processor on the photo as now shown, which already
+-   holds every earlier edit, so handing over the whole history would apply it twice.
+-2. **The ViewModel runs it.** `ToolViewModel.apply` (see [The tool screen](tool-screen.md#3-running-an-edit))
+-   takes the photo as shown (the last edit, or the original), shrinks it to 2000 px
+-   (`WorkingSize.EDIT`) on `Dispatchers.Default`, and calls the processor.
+-3. **The processor edits the pixels.**
+-   [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt)
+-   switches to `Dispatchers.Default`, shrinks to 2000 px again if needed (so it is safe whoever
+-   calls it), and works on the pixels as one `IntArray`, in this order:
+-   1. **Crop**: copies only the kept rectangle out of the bitmap. A fixed shape is the largest
+-      centred rectangle of that ratio
+-      ([`data/edit/edit/CropRatio.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/CropRatio.kt));
+-      Free turns the fractions into pixels, at least 1 x 1. Progress 0.25.
+-   2. **Turn** by moving every pixel (no blurring; four turns give back the same pixels), then the
++1. **Done.** `ToolViewModel.done` does nothing while a Done is already rendering, before the photo
++   is shown, or while an edit runs. If no Edit control has been used yet on this visit (the
++   ViewModel has no processor recipe yet), the decoded original goes to the hand-off store with the
++   photo's Uri, at once. Otherwise it reads the settings at the tap, sets `finishing` (the Done
++   button shows a small spinner and ignores taps; the row of tools, the sheet's controls and the
++   cropper are disabled) and renders. Changes that were all undone still count as used, so Done
++   then renders the neutral settings (a fresh picture of at most 2000 px, which Save writes as a
++   JPEG) rather than handing over the file. Compare does not stop Done: it renders the settings,
++   not the original.
++2. **The full render.** Its input is the decoded original ("The photo", in the section above: at
++   most twice the screen's longest edge, not the file at full size). `renderFull` shrinks it once
++   to at most 2000 px on its longest edge (`WorkingSize.EDIT` in
++   [`data/edit/WorkingSize.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt))
++   and runs
++   [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
++   all on `Dispatchers.Default`. The processor always works from the original with the whole
++   settings, so nothing is stacked. On the pixels as one `IntArray`, in this order:
++   1. **Crop**: copies only the kept rectangle (fractions turned into pixels, rounded, edges put in
++      order, at least 1 x 1). A fixed shape is no special case: choosing it already set the
++      rectangle. Progress 0.25.
++   2. **Turn** by moving every pixel (no blurring; four turns give the same pixels back), then the
+       **flips**. Progress 0.5.
+-   3. **Colour**: when any slider is off the middle, one Android `ColorMatrix` is built and every
+-      pixel goes through it once. In order: contrast scales each channel around mid-grey 128 (up to
+-      x2 at the top, down to x0.2 at the bottom); saturation uses `setSaturation(1 + s)` (0 is black
+-      and white, 2 is vivid); warmth adds up to 40 (of 255) to red and takes it from blue;
++   3. **Filter**, when one is chosen at an intensity above 0: each pixel goes through the filter's
++      look-up, then is mixed with its own colour by the intensity (`filterPixel`, shared with the
++      preview). Progress 0.75. The filter comes before the sliders so the sliders fine-tune the
++      filtered look.
++   4. **Colour**, when a slider is away from 0: one 4 x 5 matrix from `EditColourMatrix.of`, in this
++      order: contrast scales each channel around mid-grey 128 (up to x2, down to x0.2), saturation
++      uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to red and takes it from blue,
+       brightness adds up to 80 to every channel. Values are rounded and clamped to 0..255.
+-      Progress 0.75.
+-   4. **Filter**: each pixel goes through the filter's look-up, then is mixed with its unfiltered
+-      colour by the intensity (1 = fully filtered).
+-   5. Every pixel's alpha is set to 255, the result is a new `ARGB_8888` bitmap with
+-      `setHasAlpha(false)`, so Save writes a JPEG. Progress 1.
+-4. **Where the filters come from.**
++   5. Every pixel's alpha is set to 255 and the result is a new `ARGB_8888` bitmap with
++      `setHasAlpha(false)`. Progress 1. (Done shows no progress ring; only the spinner.)
++
++   The turn and flip loops check for cancellation on every row, and the filter and colour loops
++   every 65,536 pixels, so leaving Edit (which clears its ViewModel and cancels its coroutines)
++   stops a render early.
++3. **Where the filters come from.**
+    [`data/edit/edit/FilterPreset.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/FilterPreset.kt)
+    names seven images that ship inside the engine's prebuilt libraries and are merged into the
+-   app's assets at build time (no download):
+-   - **Light**: `lookup/lookup_light.png` from `libs/imageprocessor.aar`, a 512 x 512 colour cube
+-     (64 levels per channel in 8 x 8 tiles);
+-   - **1977, Kelvin, Nashville, Walden, Hudson, Amaro**: `filter_materials/map/<name>Map.png` from
+-     `libs/editimage.aar`, curve strips 256 pixels wide.
+-
++   app's assets at build time (no download): Light is lookup/lookup_light.png from
++   `libs/imageprocessor.aar`, a 512 x 512 colour cube; 1977, Kelvin, Nashville, Walden, Hudson and
++   Amaro are curve strips under filter_materials/map/ from `libs/editimage.aar`.
+    [`data/edit/edit/FilterLut.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/FilterLut.kt)
+-   tells the two kinds apart by shape. A cube is read as a 3D table (blue picks the tile, red and
+-   green the pixel inside it, each rounded to the nearest level). A strip is read as three tone
+-   curves, red from the row at 1/6 of its height, green at 1/2, blue at 5/6. `FilterLut.fromAssets`
+-   decodes each image the first time it is asked for (as `ARGB_8888`, unscaled) and keeps it for as
+-   long as the Edit panel is on screen. No engine code runs.
+-5. **Result and Undo.** The ViewModel shows the new bitmap and keeps the one before for Undo.
+-6. **Save.** `MediaStorePhotoSaver.save(bitmap)` writes the shown bitmap as a JPEG at quality 95,
+-   at its size, into `Pictures/Kanso` (see [Saving and Share](saving-and-share.md)).
++   tells the two kinds apart by shape (a cube is read as a 3D table, a strip as three tone curves).
++   `FilterLut.fromAssets` decodes each image the first time it is asked for and keeps it in that
++   source's cache. No engine code runs.
++4. **The hand-off.** The picture goes into
++   [`data/edit/RenderedPhotoStore.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/RenderedPhotoStore.kt),
++   a Koin single that holds one bitmap (a navigation key is saved as text and cannot carry one), and
++   `doneEvents` (a `Channel`, so it fires once) tells the screen to push
++   [`navigation/Result.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/Result.kt) on
++   the back stack above Edit
++   ([`navigation/KansoNavHost.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt)).
++   Done does not end the session.
++5. **Result.** [`ui/result/ResultViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultViewModel.kt)
++   reads the store once when it is built and
++   [`ui/result/ResultScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultScreen.kt)
++   shows it under the title "Your edit" with Share, Save and Go home:
++   - **Save** is the only gallery write. `ResultViewModel.save` calls
++     [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
++     on `Dispatchers.IO`: a rendered Edit picture is opaque, so it is written as a new JPEG at
++     quality 95, at its size, into `Pictures/Kanso`. An untouched photo (Done with no change) is
++     saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn). A
++     picture is saved at most once; the button then reads "Saved". On Android 8.1 and 9 the
++     storage-write permission is asked first.
++   - **Share** writes a copy of the picture on screen in the cache's `shared/` folder (JPEG
++     quality 95 for an opaque picture, PNG for one with an alpha channel; for an untouched photo
++     this is the decoded, screen-sized copy, not the file) on `Dispatchers.IO` and sends it through FileProvider and Android's share sheet with
++     a one-off read grant ([`ui/result/SharePhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/SharePhoto.kt)).
++   - **Go home** clears the back stack down to Home, which ends the session; leaving Result also
++     clears the store.
+ 
+ **What happens on failure:**
+ 
+-- Running out of memory gives the "too large to edit on this phone" message.
+-- A filter image that cannot be read gives `EditFailure.Other`: "Something went wrong and the edit
+-  was not made. Your photo is unchanged." Any other exception gives the same.
+-- In every case the photo and the Undo history stay as they were.
++- Done running out of memory shows "This photo is too large to edit on this phone. Try a smaller
++  one. Your photo is unchanged."; a filter image that cannot be read, or any other exception,
++  shows "Something went wrong and the edit was not made. Your photo is unchanged." The message sits
++  at the top of the photo card and a tap hides it. In both cases the person stays on Edit with
++  every setting and Undo step kept, and nothing is handed over.
++- A filter preview that fails shows the photo without the filter, silently; Done reports a real
++  failure.
++- A photo that cannot be decoded shows "This photo cannot be opened. Go back and pick another one."
++- A failed Save shows "The photo could not be saved. Try again."; a refused storage permission
++  shows that nothing was saved.
++- After the process is killed, Result's store is empty and it shows "Nothing to show"; the Edit
++  session lived only in the ViewModel's memory, so Edit reopens on the photo with no changes.
++
++## Limits, from the code
++
++- **Size.** The photo is decoded at most twice the screen's longest edge, and Done renders at most
++  **2000 px** on the longest edge, so a 4000 x 3000 photo comes out at most 2000 x 1500. The saved
++  file is a **JPEG at quality 95**. Done with no control used saves the original file instead (its
++  bytes, or re-encoded upright when it carries an EXIF turn); once a control was used, even if
++  every change was undone, Done renders a new JPEG of at most 2000 px.
++- **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
++  edge, so on screen a filtered photo holds less detail than the picture Done renders.
++- **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
++  another keeps the intensity; coming from None it starts at 100; None resets it.
++- **Crop.** The cropper always shows the photo un-turned and un-flipped. A turn after a crop turns
++  the cropped picture with it (a 16:9 crop turned once comes out 9:16).
++- **Undo** takes back one action at a time (a chip, a turn, a flip, a crop ratio, one finished crop
++  gesture, or one whole slider drag), whichever sheet it came from. There is no redo.
++- **Back with changes** asks before discarding; the check is on the current settings, so undoing
++  every change leaves without asking.
++- **No session across restarts.** Settings and Undo steps are not saved; they live as long as the
++  Edit screen's ViewModel.
++- **Removed in Run 9.** The old one-step-at-a-time Edit panel is gone: sliders no longer return to
++  the middle after each change, the free crop no longer uses two Width and Height sliders, and
++  filters no longer stack on top of each other.
+ 
+ ## Tests
+ 
+-- [`tool/edit/EditProcessorTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditProcessorTest.kt):
+-  no change gives the same pixels; each ratio crops to its shape around the middle; a free crop
+-  keeps its rectangle; turn right and left move the corners correctly; four turns give the photo
+-  back; both flips mirror; sliders in the middle change nothing; brightness, contrast, saturation
+-  and warmth each move the measure they should; a very large photo is worked on at 2000 px; the
+-  result is opaque; running out of memory is reported.
+-- [`tool/edit/EditFilterTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditFilterTest.kt):
+-  reads the **real** filter images from the app's merged assets and checks that each one changes
+-  the colours; None and intensity 0 give the photo back; half intensity lies between; an identity
+-  cube keeps colours and an inverting strip inverts them; a missing image fails plainly.
+-- [`tool/edit/EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt):
+-  through the real screen, brightness brightens the shown photo, a crop ratio changes its shape and
+-  a filter changes its colours.
+-- [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
+-  `tool_edit_free_crop_light` and `_dark` record the panel with Free open.
++The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
++[`EditProcessorTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditProcessorTest.kt),
++[`EditFilterTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditFilterTest.kt),
++[`EditSessionTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditSessionTest.kt),
++[`ColourMatrixParityTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/ColourMatrixParityTest.kt),
++[`FilterPreviewRendererTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FilterPreviewRendererTest.kt),
++[`LivePreviewTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/LivePreviewTest.kt),
++[`EditCropTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditCropTest.kt),
++[`EditUndoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditUndoTest.kt),
++[`CompareTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/CompareTest.kt),
++[`AdjustSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/AdjustSheetTest.kt),
++[`FiltersSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FiltersSheetTest.kt),
++[`EditToolRowTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolRowTest.kt),
++[`EditLayoutTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditLayoutTest.kt),
++[`DiscardDialogTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/DiscardDialogTest.kt)
++and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt).
++Done and the Result screen are covered by
++[`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt),
++[`result/ResultViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultViewModelTest.kt)
++and [`result/ResultScreenTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultScreenTest.kt).
+ 
+ ## Known limits and open items
+ 
+-- **The Edit panel stays enabled while an edit runs.** A quick second tap, or a slider let go
+-  during a run, is dropped by `ToolViewModel.apply`, and the slider still springs back to the
+-  middle, so the change is lost without a message (`.harness/ISSUES.md`, Run 8 Phase 2 review, not
+-  fixed).
+-- The limits under "What it is": no live preview, edits stack, Intensity applies only to the next
+-  filter tap, no on-photo crop handles.
+-- **Awaiting a person, Run 8:** item 24 (layout in light and dark), item 35 (Edit, Save and My
+-  edits on the Galaxy A13).
++- The limits above.
++- Not yet checked on the owner's phone, a Galaxy A13 (32-bit, `armeabi-v7a`).
+ 
+ [Back to README](../../README.md)
+diff --git a/docs/features/enhance.md b/docs/features/enhance.md
+index 587c13f..eb66f20 100644
+--- a/docs/features/enhance.md
++++ b/docs/features/enhance.md
+@@ -4,7 +4,8 @@
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
+-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
++shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
++Share and Save are on [the Result screen](saving-and-share.md).
+ 
+ ---
+ 
+@@ -39,7 +40,8 @@ Limits, from the code:
+ - Press and hold **Hold to see the original** under the small comparison picture to see the photo
+   before; let go to see the result again. With a screen reader, a double tap switches between the
+   two.
+-- **Undo** takes the result back; **Save** writes it.
++- **Undo** takes the result back. **Done** opens the Result screen with it, where **Save** writes it
++  to `Pictures/Kanso` and **Share** sends it; Back from Result returns here unchanged.
+ 
+ **Seen on the Android emulator (API 34, x86_64), 2026-10-14:** on a 4000 x 3000 photo the progress
+ indicator showed, the result came after about 15 seconds, and there was no out-of-memory error or
+@@ -56,7 +58,9 @@ flowchart TD
+     E -->|"Processing(p) ... Success(bitmap)"| F["progress 0..0.9, result up to 2048 px"]
+     F --> G["AutoLighting: gamma curve if mean < 110"]
+     G --> H["setHasAlpha(false)"] --> I["shown; EnhanceCompare appears"]
+-    I --> J["Save: JPEG q95, Pictures/Kanso"]
++    I --> K["Done: RenderedPhotoStore, Result screen"]
++    K -->|Save| J["JPEG q95, Pictures/Kanso"]
++    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
+ ```
+ 
+ 1. **The button.**
+@@ -79,7 +83,7 @@ flowchart TD
+       forward, even if the engine's numbers jump back;
+    3. reports 0.9, stops here if you left the screen, then runs `AutoLighting`;
+    4. frees the upscaled copy if lighting made a new one, marks the result opaque
+-      (`setHasAlpha(false)`, so Save writes a JPEG), reports 1.
++      (`setHasAlpha(false)`, so Save and Share on Result write a JPEG), reports 1.
+ 5. **The engine call.**
+    [`data/edit/enhance/EngineUpscaler.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/enhance/EngineUpscaler.kt)
+    is the only file of the app that names the Enhance engine's classes:
+@@ -109,8 +113,11 @@ flowchart TD
+    `onPress`, `tryAwaitRelease`) shows the original instead; `AnimatedContent` fades between the two
+    in 150 ms. The "original" is the photo as it was opened on this screen, not the photo just
+    before the last Enhance.
+-8. **Save.** The result is opaque, so Save writes a **JPEG at quality 95**, at the size shown (up
+-   to 2048 px), into `Pictures/Kanso`.
++8. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
++   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
++   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown (up
++   to 2048 px), into `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/`
++   folder (see [Done, the Result screen, Save and Share](saving-and-share.md)).
+ 
+ **What happens on failure:**
+ 
+diff --git a/docs/features/my-edits.md b/docs/features/my-edits.md
+index 3f38ccf..83f73da 100644
+--- a/docs/features/my-edits.md
++++ b/docs/features/my-edits.md
+@@ -40,7 +40,7 @@ flowchart TD
+     B --> C["MediaStoreSavedPhotoSource on Dispatchers.IO"]
+     C -->|"API 29+: RELATIVE_PATH = 'Pictures/Kanso/'; API 27-28: _data path match"| D["rows DATE_MODIFIED DESC"]
+     D --> E["grid of Coil thumbnails"]
+-    E -->|tap| F["EditedPhoto(uri): SavedScreen with viewer = true"]
++    E -->|tap| F["EditedPhoto(uri): ResultScreen with viewer = true"]
+     F -->|Edit| G["ToolPhoto(EDIT, uri)"]
+ ```
+ 
+@@ -68,12 +68,14 @@ flowchart TD
+    gallery's `PhotoThumbnail`, loaded by Coil and decoded at about 160 dp.
+ 5. **The viewer.** A tap pushes `EditedPhoto(uri)`
+    ([`navigation/EditedPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/EditedPhoto.kt)),
+-   only while My edits is on top. The navigation host draws it with the Saved screen and a
+-   `SavedViewModel` built with `viewer = true`: titled "My edits", no success mark, no saved line,
+-   and **Edit** instead of Edit another. Share works as on the Saved screen (see
+-   [Saving and Share](saving-and-share.md#share)).
+-6. **Edit.** Pushes `ToolPhoto(Tool.EDIT, uri)` above the viewer; Replace there goes to the Edit
+-   gallery and then back to the viewer.
++   only while My edits is on top. The navigation host draws it with the Result screen
++   ([`ui/result/ResultScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultScreen.kt))
++   and a `ResultViewModel` built with `viewer = true`: titled "My edits", with a round close button
++   that goes Home, no success mark, and **Share** and **Edit** instead of Share, Save and Go home
++   (the photo is already saved, so Save is not offered). Share sends the photo's own MediaStore
++   Uri (see [Share](saving-and-share.md#share)).
++6. **Edit.** Pushes `ToolPhoto(Tool.EDIT, uri)` above the viewer. The Edit screen has no Replace
++   chip; Back from it returns to the viewer.
+ 
+ ## Tests
+ 
+diff --git a/docs/features/remove-background.md b/docs/features/remove-background.md
+index 063e2c4..dfa6e80 100644
+--- a/docs/features/remove-background.md
++++ b/docs/features/remove-background.md
+@@ -4,7 +4,8 @@
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
+-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
++shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
++Share and Save are on [the Result screen](saving-and-share.md).
+ 
+ ---
+ 
+@@ -12,7 +13,8 @@ shares (opening the photo, progress, Undo, Replace, Save) are on [The tool scree
+ 
+ One button, **Cut out the subject**, finds the person in the photo and makes everything else fully
+ transparent. The result is shown over a grey-and-white checkerboard, so you can see what is now
+-see-through, and it is saved as a **PNG** that keeps the transparency.
++see-through. **Done** hands it to the Result screen, where Save writes it as a **PNG** that keeps
++the transparency and Share sends a PNG copy.
+ 
+ Limits, from the code:
+ 
+@@ -32,12 +34,15 @@ Limits, from the code:
+   button), or from the **Remove background** shortcut. Pick a photo in the gallery, or tap the
+   gallery's camera button and keep a shot.
+ - Tap **Cut out the subject**. The progress ring fills while it works.
+-- When it is done the person stands on a checkerboard. **Undo** brings the background back;
+-  **Save** writes the PNG.
++- When it has finished the person stands on a checkerboard. **Undo** brings the background back.
++- Tap **Done** to open the Result screen: **Save** writes the PNG to `Pictures/Kanso`, **Share**
++  sends it, **Go home** ends the session, and Back returns here with the cut-out and Undo intact.
+ 
+ **Seen on the Android emulator (API 34, x86_64), 2026-10-14**, with test photos of a face (1024 x
+-1024) and a 4000 x 3000 scene: the cut-out took about 5 seconds, showed the person over the checkerboard, and saved as a PNG in
+-`Pictures/Kanso`, with no crash.
++1024) and a 4000 x 3000 scene: the cut-out took about 5 seconds, showed the person over the
++checkerboard, and saved as a PNG in `Pictures/Kanso`, with no crash. That run used the Save of
++Run 8 (a bar on the tool screen), before Run 9 moved Save to the Result screen; no device run of
++the Done-to-Result path is recorded here.
+ 
+ ## How it works
+ 
+@@ -51,7 +56,9 @@ flowchart TD
+     F -->|"no value >= 0.5"| N["NoSubject message"]
+     F --> G["MaskCompositor: alpha from mask, colours kept"]
+     G --> H["ARGB_8888 with alpha, shown over Checkerboard"]
+-    H --> I["Save: PNG, image/png, Pictures/Kanso"]
++    H --> J["Done: RenderedPhotoStore, Result screen"]
++    J -->|Save| I["PNG, image/png, Pictures/Kanso"]
++    J -->|Share| K["PNG copy in cache shared/, FileProvider"]
+ ```
+ 
+ 1. **The button.**
+@@ -100,10 +107,14 @@ flowchart TD
+    sees the tool is Remove background and the shown bitmap has alpha, and draws a
+    [`Checkerboard`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/Checkerboard.kt) behind it
+    (12 dp squares in two theme colours) instead of the blurred backdrop.
+-8. **Save.** `MediaStorePhotoSaver.save(bitmap)` sees `hasAlpha()` and writes a lossless **PNG**,
+-   named `Kanso_<yyyyMMdd_HHmmss>.png`, type `image/png`, at the size shown. Share then sends it as
+-   `image/png` (see [Saving and Share](saving-and-share.md)). The Saved screen shows the cut-out
+-   over a blurred copy of itself, not over a checkerboard.
++8. **Done, then Save or Share.** Done hands the cut-out (or, with no cut-out made or every one
++   undone, the original photo) to the Result screen through `RenderedPhotoStore`; it writes
++   nothing. Result shows the cut-out over a blurred copy of itself, not over a checkerboard. Its
++   **Save** calls `MediaStorePhotoSaver.save(bitmap)`, which sees `hasAlpha()` and writes a
++   lossless **PNG**, named `Kanso_<yyyyMMdd_HHmmss>.png`, type `image/png`, at the size shown.
++   **Share** writes a PNG copy into the cache's `shared/` folder and sends it as `image/png`
++   through FileProvider, without touching the gallery (see
++   [Done, the Result screen, Save and Share](saving-and-share.md)).
+ 
+ **What happens on failure:**
+ 
+@@ -126,8 +137,11 @@ The photo and Undo stay as they were. Leaving the screen cancels the run.
+   the screen shows a two-tone checkerboard.
+ - [`save/SaveEditedTest.kt`](../../app/src/test/java/com/phongkaster/kanso/save/SaveEditedTest.kt):
+   a bitmap with alpha is saved as a PNG in `Pictures/Kanso`, with the right type and extension.
+-- [`saved/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/SharePhotoTest.kt):
+-  a PNG is shared as `image/png`.
++- [`result/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/SharePhotoTest.kt):
++  a PNG is shared as `image/png`, and a picture with alpha is written as a PNG in the `shared`
++  cache folder.
++- [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt):
++  Done on each tool other than Edit hands over its edited result.
+ - [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
+   `tool_cutout_light` and `_dark`.
+ - `EngineSegmenter` itself is native code and is **not** run by any test on the computer; only the
+diff --git a/docs/features/retouch.md b/docs/features/retouch.md
+index 0c062e6..93e4907 100644
+--- a/docs/features/retouch.md
++++ b/docs/features/retouch.md
+@@ -4,7 +4,8 @@
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
+-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
++shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
++Share and Save are on [the Result screen](saving-and-share.md).
+ 
+ ---
+ 
+@@ -23,7 +24,8 @@ Limits, from the code:
+ - It needs a face. With none, it says "No face found in this photo. Nothing was changed."
+ - It always starts again from the **original** photo, so applying again at another strength
+   **replaces** the last result instead of smoothing twice.
+-- Works on at most **2000 px** on the longest edge; the saved JPEG is at that size or smaller.
++- Works on at most **2000 px** on the longest edge; the JPEG that Save on Result writes is at that
++  size or smaller.
+ - Offline: the face model and OpenCV are inside the app.
+ - It only smooths skin. (The original Retica app's "Retouch" screen removed objects; Kanso's does
+   not.)
+@@ -34,7 +36,9 @@ Limits, from the code:
+   the **Retouch** shortcut, then pick a photo (or take one with the gallery's camera button).
+ - Set **Smoothing**, then tap **Smooth skin**. Moving the slider alone changes nothing; tap Smooth
+   skin again to apply a new strength. Both controls are off while it works.
+-- **Undo** takes back the whole slider session at once; **Save** writes the result.
++- **Undo** takes back the whole slider session at once. **Done** opens the Result screen with the
++  result, where **Save** writes it to `Pictures/Kanso` and **Share** sends it; Back from Result
++  returns here unchanged.
+ 
+ **Seen on the Android emulator (API 34, x86_64), 2026-10-14**, with test photos of a face (1024 x
+ 1024) and a 4000 x 3000 scene: Retouch took about 20 seconds and gave smoother skin, with no crash.
+@@ -50,7 +54,10 @@ flowchart TD
+     E -->|"no face"| N["NoFace message"]
+     E -->|"padded face boxes"| F["EngineSkinSmoother: OpenCV bilateralFilter per box"]
+     F --> G["Kotlin blend by strength, opaque"]
+-    G --> H["Save: JPEG q95, Pictures/Kanso"]
++    G --> I["shown on the card"]
++    I --> K["Done: RenderedPhotoStore, Result screen"]
++    K -->|Save| H["JPEG q95, Pictures/Kanso"]
++    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
+ ```
+ 
+ 1. **The panel.**
+@@ -112,8 +119,11 @@ flowchart TD
+    an OpenGL context, which a background coroutine does not have.
+ 8. **Undo.** A Retouch run straight after another Retouch run replaces it without a new Undo step,
+    so Undo goes back to the photo before the first Smooth skin.
+-9. **Save.** The result is opaque: a **JPEG at quality 95**, at the size shown, into
+-   `Pictures/Kanso`.
++9. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
++   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
++   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown, into
++   `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/` folder (see
++   [Done, the Result screen, Save and Share](saving-and-share.md)).
+ 
+ **What happens on failure:**
+ 
+diff --git a/docs/features/saving-and-share.md b/docs/features/saving-and-share.md
+index b6212a6..a204c82 100644
+--- a/docs/features/saving-and-share.md
++++ b/docs/features/saving-and-share.md
+@@ -1,4 +1,4 @@
+-# Saving, the Saved screen and Share
++# Done, the Result screen, Save and Share
+ 
+ [Back to README](../../README.md)
+ 
+@@ -9,61 +9,132 @@ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
+ 
+ ## What it is
+ 
+-**Save** on a tool screen writes the photo shown on screen as a **new file** in the phone's
+-`Pictures/Kanso` album, then opens the **Saved** screen: the photo over a blurred copy of itself,
+-a small success mark, the line "Your photo is saved in Pictures/Kanso.", a round **Share** button
+-and a wide **Edit another** button.
++**Done** on a tool screen hands the finished picture to the **Result** screen; it writes nothing
++(see [The tool screen](tool-screen.md#6-done)). Result shows the picture over a blurred copy of
++itself, titled "Your edit", with three actions at the bottom: a round **Share** button, a wide
++**Save** button and a round **Go home** button. Nothing is in the gallery until Save is tapped:
++**Save on Result is the only place Kanso writes a photo to the gallery.** Share sends a temporary
++copy from the app's cache, so sharing an unsaved edit leaves no trace in the gallery.
++
++Before Run 9, Save sat in a bar at the bottom of the tool screen, wrote the file at once and then
++opened a screen named `Saved`; Run 9 replaced both with Done and Result.
+ 
+ | | |
+ |---|---|
+ | **Folder** | `Pictures/Kanso/` |
+-| **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`, or `.png` for an edited picture with an alpha channel; `_1`, `_2`, ... when the name is taken. An existing file is never overwritten. |
+-| **Edited photo** | The bitmap on screen, at the size shown, never scaled back up or turned: a **JPEG at quality 95** when opaque, a lossless **PNG** when it has an alpha channel (a Remove background cut-out). |
+-| **Unedited photo** (no edit, or every edit undone) | A copy of the original file, byte for byte; or, if it has an EXIF rotation, a fresh JPEG at quality 95, turned upright, with no EXIF block. |
++| **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`, or `.png` for a picture with an alpha channel; `_1`, `_2`, ... when the name is taken. An existing file is never overwritten. |
++| **Edited photo** | The picture Done handed over, at its size, never scaled back up or turned: a **JPEG at quality 95** when opaque, a lossless **PNG** when it has an alpha channel (a Remove background cut-out). |
++| **Untouched photo** (no edit on Remove background, Enhance, Retouch or Artistic, or every edit undone there; no change at all on Edit) | A copy of the original file, byte for byte; or, if it has an EXIF rotation, a fresh JPEG at quality 95, turned upright, with no EXIF block. |
++| **Shared copy** | A file in the app's cache, `shared/Kanso_<milliseconds>.jpg` (JPEG quality 95) or `.png` (with alpha), at the picture's size; the copy from the previous share is deleted first. |
+ | **Original** | Opened only for reading. Never changed. |
+ 
+ Limits, from the code:
+ 
+ - An edited photo is saved at the tool's working size (2000 px for Edit, Remove background and
+   Retouch, up to 2048 px for Enhance, 1024 px for Artistic), never at the original's full size.
++- On Edit, any change, even one undone later, makes Done render the settings at 2000 px, so the
++  saved file is that render, not a copy of the original.
++- One picture per Done can be saved once: after a successful save, Save reads "Saved" and is
++  switched off. Back to the tool and Done again hands over a new picture that can be saved again.
+ - An unedited PNG or WebP with no rotation tag is copied byte for byte under a `.jpg` name with the
+   type `image/jpeg`; only a rotated photo is re-encoded as a real JPEG.
+-- A photo too large to turn upright in memory is copied with its tag, and the screen says "Saved.
++- A photo too large to turn upright in memory is copied with its tag, and Result says "Saved.
+   This photo is very large, so it was copied as it is and some apps may show it sideways."
+-- Share sends the photo only to the app you pick, with a one-off right to read that one file.
++- Share sends the picture only to the app you pick, with a one-off right to read that one file.
++  An untouched photo is shared as the decoded copy on screen (at most twice the screen's longest
++  edge), not as the original file.
++- The picture waits in memory only. If Android kills the app while Result is open, Result comes
++  back with "Nothing to show" and only Go home.
+ 
+ ## How to use it
+ 
+-1. On a tool screen, tap **Save**. On Android 8.1 and 9, allow storage access the first time.
+-2. The Saved screen opens. **Share** opens Android's share sheet; **Edit another** opens the same
+-   tool's gallery; the round close button (top left) or Back goes Home.
++1. On a tool screen, tap **Done**. On Edit, Done shows a small spinner while it renders.
++2. The Result screen opens with the picture. **Share** opens Android's share sheet. **Save** writes
++   the picture to `Pictures/Kanso` (on Android 8.1 and 9, allow storage access the first time);
++   a success mark plays over the photo and the line "Your photo is saved in Pictures/Kanso."
++   appears. **Go home** clears everything above Home. System Back returns to the tool screen with
++   the edits and Undo steps intact.
+ 
+ ## How it works
+ 
+ ```mermaid
+ flowchart TD
+-    A["ToolViewModel.save()"] -->|"edited bitmap"| B["save(bitmap): hasAlpha ? PNG : JPEG q95"]
+-    A -->|"no edit"| C["save(uri): EXIF tag? turn upright + JPEG q95 : copy bytes"]
+-    B --> D{"Android 10+?"}
+-    C --> D
+-    D -->|yes| E["MediaStore row, RELATIVE_PATH Pictures/Kanso/, IS_PENDING 1 -> write -> 0"]
+-    D -->|"8.1-9"| F["file in Pictures/Kanso + MediaScannerConnection.scanFile"]
+-    E --> G["Saved(tool, uri): clears the stack above Home"]
+-    F --> G
+-    G -->|Share| H["shareableUri -> shareMimeType -> ACTION_SEND chooser"]
++    D["ToolViewModel.done()"] -->|"picture (+ original Uri if untouched)"| S["RenderedPhotoStore (Koin single)"]
++    D -->|"doneEvents"| N["back stack add(Result)"]
++    N --> R["ResultViewModel reads the store once: Ready or Empty"]
++    R -->|Save| P{"needsWritePermission? (8.1-9)"}
++    P -->|"ask, refused"| PD["PermissionDenied message, nothing written"]
++    P -->|"no / granted"| SV{"original Uri held?"}
++    SV -->|yes| C["save(uri): EXIF tag? turn upright + JPEG q95 : copy bytes"]
++    SV -->|no| B["save(bitmap): hasAlpha ? PNG : JPEG q95"]
++    B --> M{"Android 10+?"}
++    C --> M
++    M -->|yes| E["MediaStore row, RELATIVE_PATH Pictures/Kanso/, IS_PENDING 1 -> write -> 0"]
++    M -->|"8.1-9"| F["file in Pictures/Kanso + MediaScannerConnection.scanFile"]
++    R -->|Share| SH["shareableBitmapUri: cache/shared/ file -> FileProvider content Uri"]
++    SH --> CH["shareChooserIntent: ACTION_SEND chooser"]
++    R -->|"Go home"| H["closeToHome()"]
+ ```
+ 
++### Handing over: Done and the store
++
++- `ToolViewModel.done()` (see [The tool screen](tool-screen.md#6-done)) puts the picture into
++  [`data/edit/RenderedPhotoStore.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/RenderedPhotoStore.kt)
++  with `put(picture, originalUri)`. `originalUri` is the photo's own Uri when the picture is that
++  photo untouched, else null. The store holds one picture; a newer `put` replaces the older one.
++- The navigation host pushes the key `Result`
++  ([`navigation/Result.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/Result.kt)), a
++  `data object` that carries nothing, above the tool screen.
++- [`ui/result/ResultViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultViewModel.kt)
++  is built by Koin with no parameters
++  ([`di/AppModule.kt`](../../app/src/main/java/com/phongkaster/kanso/di/AppModule.kt)) and reads the
++  store once, when it is built: `ResultPhoto.Ready(bitmap)` or, with an empty store,
++  `ResultPhoto.Empty` ([`ui/result/ResultPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultPhoto.kt)).
++  When this ViewModel is cleared (Back or Go home), it clears the store, so the bitmap does not stay
++  in memory.
++
++### The Result screen
++
++- [`ui/result/ResultScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultScreen.kt)
++  is split in two: `ResultScreen` (state, the permission request, Share) and the stateless
++  `ResultContent`, drawn by the previews. Back to front: a `BlurredBackdrop` of the picture filling
++  the window (a cut-out PNG is shown over it, not over a checkerboard), the whole picture centred on
++  it, a soft shade at the top with the title "Your edit", the success mark once Save has succeeded
++  (it grows and changes shape once), and at the bottom the line saying how Save went, then Share,
++  Save and Go home. The bottom block pads itself clear of the gesture zone.
++- With an empty store the screen says "Nothing to show" and offers Go home alone, centred.
++- The state is [`ui/result/ResultUiState.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultUiState.kt):
++  the picture, `viewer`, and `save`, one of `Idle`, `Saving`, `Saved(keptOriginalOrientation)`,
++  `Failed` and `PermissionDenied`. Save shows "Save" when idle, failed or refused; a small loading
++  indicator and "Saving…" while it writes; a check and "Saved" once done, switched off.
++- **Go home** calls `closeToHome()` in
++  [`navigation/BackStackActions.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/BackStackActions.kt),
++  which removes every key above Home, the tool screen included (its edits go with it).
++- The same screen, for the key `EditedPhoto(photoUri)`
++  ([`navigation/EditedPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/EditedPhoto.kt)),
++  is the My edits photo viewer: `viewer = true`, titled "My edits", a round close button at the top,
++  Share and a wide **Edit**, no Save and no success mark; the photo is decoded from the phone by
++  `PhotoLoader` (twice the screen's longest edge, upright). See [My edits](my-edits.md).
++
+ ### Saving
+ 
+-All in [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt),
+-on `Dispatchers.IO`, called from `ToolViewModel.save()` (see
+-[The tool screen](tool-screen.md#6-save)).
++`ResultViewModel.save()` does nothing in the viewer, without a picture, while a save runs or once
++it has saved. Otherwise it sets `Saving` and calls `saver.save(originalUri)` if the store held the
++photo's own Uri, else `saver.save(bitmap)`. On Android 8.1 and 9, `ResultScreen` first asks for
++`WRITE_EXTERNAL_STORAGE` if `needsWritePermission()` says so; a refusal sets `PermissionDenied`
++("Kanso needs permission to write to your storage to save the photo. Nothing was saved."). Android
++10 and later ask for nothing.
++
++The writing itself is all in
++[`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
++(behind [`data/photo/PhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/PhotoSaver.kt)),
++on `Dispatchers.IO`:
+ 
+ 1. **Choosing the content.**
+-   - `save(bitmap)` (an edited photo): `saveFormatFor(bitmap)` picks PNG when `bitmap.hasAlpha()`,
+-     else JPEG; extension and MIME type follow. The bitmap is compressed as it is and never
+-     recycled (the screen still shows it).
+-   - `save(uri)` (an unedited photo): `prepare` reads the EXIF orientation
++   - `save(bitmap)` (an edited picture): `saveFormatFor(bitmap)` picks PNG when `bitmap.hasAlpha()`,
++     else JPEG at quality 95 (`EDITED_JPEG_QUALITY`); extension and MIME type follow. The bitmap is
++     compressed as it is and never recycled (the screen still shows it).
++   - `save(uri)` (an untouched photo): `prepare` reads the EXIF orientation
+      ([`data/photo/UprightJpeg.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt),
+      `readExifOrientation`). No tag, or orientation 1: the bytes are copied untouched, EXIF
+      included. Orientations 2 to 8: the photo is decoded at **full size** (`BitmapFactory`, no
+@@ -79,48 +150,48 @@ on `Dispatchers.IO`, called from `ToolViewModel.save()` (see
+    needed.
+ 4. **Android 8.1 and 9 (API 27 and 28).** The file is created in
+    `Environment.getExternalStoragePublicDirectory(DIRECTORY_PICTURES)/Kanso/` with
+-   `createNewFile`, which claims a free name in one step, trying `_1` up to `_9999`; a failed write
+-   deletes it. `MediaScannerConnection.scanFile` then adds it to MediaStore. The result is a
+-   `file://` Uri. This needs `WRITE_EXTERNAL_STORAGE`, which the tool screen asks for first.
+-5. **Result.** `SaveResult.Saved(uri, keptOriginalOrientation)` or `SaveResult.Failed`
++   `createNewFile`, which claims a free name in one step, trying `_1` up to `_9999` (`MAX_SUFFIX`);
++   a failed write deletes it. `MediaScannerConnection.scanFile` then adds it to MediaStore. The
++   result is a `file://` Uri. This needs `WRITE_EXTERNAL_STORAGE`, which Result asks for first.
++5. **Outcome.** `SaveResult.Saved(uri, keptOriginalOrientation)` or `SaveResult.Failed`
+    ([`data/photo/SaveResult.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/SaveResult.kt)).
+-   Any exception or `OutOfMemoryError` is `Failed`, and the tool screen says "The photo could not
+-   be saved. Try again."
+-6. **Moving on.** The ViewModel sends the Uri once through a `Channel`; the navigation host removes
+-   every screen above Home and pushes `Saved(tool, uri)`
+-   ([`navigation/Saved.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/Saved.kt)), so
+-   Back from Saved goes Home.
+-
+-### The Saved screen
+-
+-- [`ui/saved/SavedViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/saved/SavedViewModel.kt)
+-  decodes the new photo with the same `PhotoLoader` as the tool screen (twice the screen's longest
+-  edge, upright), once per size.
+-- [`ui/saved/SavedScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/saved/SavedScreen.kt)
+-  draws, back to front: a `BlurredBackdrop` of the photo filling the window, the whole photo centred
+-  on it, a soft shade at the top with the close button and the title "Saved", the success mark
+-  (which grows and changes shape once), and at the bottom the saved line, **Share** and **Edit
+-  another**. A cut-out PNG is shown over the blurred copy, not a checkerboard.
+-- **Edit another** replaces Saved with `Gallery(tool)`; **close** clears the stack to Home.
+-- The same screen, with `viewer = true`, is the My edits photo viewer; see
+-  [My edits](my-edits.md).
++   Any exception or `OutOfMemoryError` is `Failed`; Result says "The photo could not be saved. Try
++   again." and Save can be tapped again. On success Result shows the saved line (or the sideways
++   warning) and the mark, and stays open. The new file is in `Pictures/Kanso`, the album My edits
++   and Home's Recent edits read when they next load (see [My edits](my-edits.md)).
+ 
+ ### Share
+ 
+-[`ui/saved/SharePhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/saved/SharePhoto.kt),
+-started from `SavedScreen` in a coroutine (Share ignores taps while one is being prepared):
++[`ui/result/SharePhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/SharePhoto.kt),
++started from `ResultScreen` in a coroutine (Share ignores taps while one is being prepared). The
++picture shared is the one in the state at the tap.
++
++**Right after Done** (nothing need be saved first):
++
++1. `shareableBitmapUri` (on `Dispatchers.IO`): deletes any earlier copy in the cache folder
++   `shared/` (`SHARE_CACHE_FOLDER`), then writes the picture there as `Kanso_<milliseconds>.png`
++   when it has alpha, else `.jpg` at quality 95 (`SHARE_JPEG_QUALITY`), at its own size. A failed
++   write gives null and the share sheet does not open.
++2. `fileProviderUri` turns the file into a `content://` Uri through AndroidX `FileProvider`, with
++   the authority `<applicationId>.fileprovider` (`SHARE_AUTHORITY_SUFFIX`; the `provider` in
++   `app/src/main/AndroidManifest.xml`). `app/src/main/res/xml/file_paths.xml` lets it hand out only
++   the cache's `shared/` folder.
++3. `bitmapShareMimeType`: `image/png` with alpha, else `image/jpeg`. So a cut-out is shared as a
++   PNG.
+ 
+-1. `shareableUri` (on `Dispatchers.IO`): a `content://` Uri is used as it is. A `file://` Uri (the
++**In the My edits viewer** (a photo already in the gallery):
++
++1. `shareableUri` (on `Dispatchers.IO`): a `content://` Uri is used as it is. A `file://` Uri (an
+    Android 8.1 and 9 save) is looked up in MediaStore by its path (the `DATA` column); if the media
+-   scanner has not added it yet, the scanner is asked and Kanso waits up to **5 seconds** for its
+-   content Uri. A `file://` Uri is never handed out (Android refuses that). With no content Uri, the
+-   share sheet does not open.
++   scanner has not added it yet, the scanner is asked and Kanso waits up to **5 seconds**
++   (`DEFAULT_SCAN_TIMEOUT_MILLIS`) for its content Uri. A `file://` Uri is never handed out (Android
++   refuses that). With no content Uri, the share sheet does not open.
+ 2. `shareMimeType`: the type MediaStore reports for the row if it is an image type; otherwise the
+-   name decides: `.png` → `image/png`, anything else → `image/jpeg`. So a cut-out is shared as a
+-   PNG.
+-3. `shareChooserIntent`: an `ACTION_SEND` intent of that type with the Uri in `EXTRA_STREAM` and in
+-   `ClipData`, `FLAG_GRANT_READ_URI_PERMISSION` on it and on the `Intent.createChooser` wrapper.
+-   No app is targeted; you choose in the system sheet.
++   name decides: `.png` → `image/png`, anything else → `image/jpeg`.
++
++Both end in `shareChooserIntent`: an `ACTION_SEND` intent of that type with the Uri in
++`EXTRA_STREAM` and in `ClipData`, `FLAG_GRANT_READ_URI_PERMISSION` on it and on the
++`Intent.createChooser` wrapper. No app is targeted; you choose in the system sheet.
+ 
+ ## Tests
+ 
+@@ -135,20 +206,40 @@ started from `SavedScreen` in a coroutine (Share ignores taps while one is being
+   an opaque edit is a JPEG and an edit with alpha a PNG in `Pictures/Kanso`; a failing stream
+   leaves no row; type and extension follow the format.
+ - [`save/SaveButtonTest.kt`](../../app/src/test/java/com/phongkaster/kanso/save/SaveButtonTest.kt):
+-  Save calls the saver once, shows progress, explains a sideways copy and a failure, is off without
+-  a photo, and asks nothing on Android 15.
+-- [`saved/SavedScreenTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/SavedScreenTest.kt),
+-  [`saved/SavedViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/SavedViewModelTest.kt):
+-  the screen's parts, loading, Share opening the chooser, Edit another and close.
+-- [`saved/ShareableUriTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/ShareableUriTest.kt)
+-  and [`saved/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/saved/SharePhotoTest.kt):
+-  a file Uri becomes its content Uri and an unknown file gives null; PNG and JPEG types.
+-- [`navigation/SavedNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/SavedNavigationTest.kt):
+-  Edit another leaves Home and the tool's gallery; close and Back leave only Home.
++  the tool screen's Done hands the photo over, asks for nothing and writes nothing on Android 8.1,
++  9, 10 and 15.
++- [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt):
++  what each tool's Done hands over, and that the tool's ViewModel holds no saver.
++- [`result/ResultViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultViewModelTest.kt):
++  the stored picture is ready at once and an empty store gives nothing to show; Save goes from
++  Saving to Saved and writes once, an untouched photo is saved from its own file, a second save is
++  ignored, a kept orientation is reported, a failure can be retried, a refused permission can be
++  retried; clearing the ViewModel empties the store; the viewer loads, never saves and ignores the
++  store.
++- [`result/ResultScreenTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultScreenTest.kt):
++  the backdrop, the title and shade, the actions row and the gesture zone; the mark's place and
++  single play; the saved line only after a save; failure and refusal messages; the Saving
++  indicator; Share, Save and Go home after Done, Go home alone with an empty store, Share, Edit and
++  close in the viewer; Save writes once and asks for the permission first when needed; Share after
++  Done sends a cache copy and writes nothing to the gallery; Share in the viewer and on Android 9.
++- [`result/ShareableUriTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ShareableUriTest.kt)
++  and [`result/SharePhotoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/SharePhotoTest.kt):
++  a file Uri becomes its content Uri and an unknown file gives null; PNG and JPEG types; a rendered
++  picture is written as a JPEG or PNG in the `shared` cache folder, a second share leaves one file,
++  and the manifest declares the FileProvider the share Uri names. (On a Windows JVM these tests pass
++  `HOST_URI` from [`result/HostFileUri.kt`](../../app/src/test/java/com/phongkaster/kanso/result/HostFileUri.kt)
++  instead of calling `FileProvider`.)
++- [`navigation/ResultNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/ResultNavigationTest.kt):
++  Back from Result returns to the tool screen; Go home leaves only Home.
++- [`screenshots/ResultScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ResultScreenshotTest.kt):
++  recorded pictures of the Result screen.
+ 
+ ## Known limits and open items
+ 
+ - The format caveat above: an unedited, unrotated PNG or WebP is saved under a `.jpg` name.
+-- **Awaiting a person, Run 7:** item 29e (Saved and viewer pictures).
++- The last shared copy stays in the app's cache (`shared/`) until the next share or until Android
++  clears the cache.
++- The hand-off store lives only in memory: after process death Result has nothing to show.
++- **Awaiting a person, Run 7:** item 29e (pictures of this screen and of the viewer on a phone).
+ 
+ [Back to README](../../README.md)
+diff --git a/docs/features/tool-screen.md b/docs/features/tool-screen.md
+index 5f5c5e8..a84ac17 100644
+--- a/docs/features/tool-screen.md
++++ b/docs/features/tool-screen.md
+@@ -5,8 +5,8 @@
+ Edit, Remove background, Enhance, Retouch and Artistic each open on a screen of their own, but all
+ five are drawn by one screen and driven by one ViewModel. This page explains that shared part once:
+ how a photo gets onto the screen, how an edit runs, how progress, Undo, Replace and failures work,
+-and how Save hands over to the [saving pipeline](saving-and-share.md). Each tool's own page then
+-only explains what is different.
++and how **Done** hands the finished picture to the [Result screen](saving-and-share.md), where it is
++shared or saved. Each tool's own page then only explains what is different.
+ 
+ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
+ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
+@@ -17,14 +17,21 @@ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
+ 
+ A tool screen shows, from top to bottom:
+ 
+-- a round **Back** button, the tool's name in the middle, and an **Undo** button on the right;
++- a top bar: a round **Back** button, the tool's name in the middle, and at the right an **Undo**
++  text button followed by a filled **Done** button (test tag `tool-done`, `TOOL_DONE_TAG`);
+ - the photo in a large rounded **card**, over a soft blurred copy of itself (or over a
+   checkerboard when a Remove background result has see-through parts), with a **Replace** chip
+   floating at the bottom of the card;
+-- the tool's own **controls** (its "panel") under the card;
+-- one full-width **Save** button at the bottom.
++- the tool's own **controls** (its "panel") under the card.
+ 
+-While an edit runs, a **progress ring** fills in the middle of the card, and Save, Undo and
++There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
++never writes a file; saving and sharing happen on the Result screen.
++
++The **Edit** screen is laid out differently (see [Edit](edit.md)): its photo keeps 60% of the
++height and has no Replace chip, a row of four tools sits under it, and Undo moves into a pill on the
++photo next to a Compare switch, so its top bar holds Done alone.
++
++While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
+ Replace are switched off. When an edit fails, a short message at the top of the card says why, and
+ the photo stays exactly as it was. Tapping the message hides it.
+ 
+@@ -34,10 +41,11 @@ Limits shared by every tool:
+ - The photo is decoded at most at **twice the screen's longest edge** (for example 4800 px on a
+   1080 x 2400 phone), never larger, and each tool then works on a smaller copy (its "working
+   size", below).
+-- Undo keeps every earlier version in memory, for as long as the screen is open. Leaving the
+-  screen loses the edits unless you saved.
++- Undo keeps every earlier version in memory, for as long as the screen is open. Done does not end
++  the session: Back from Result comes back to it intact. Leaving the tool screen (Back, or **Go
++  home** on Result) loses the edits unless they were saved on Result.
+ - Only one edit runs at a time. A tap that would start a second one while the first runs is
+-  ignored.
++  ignored, and so is Done.
+ 
+ ## How to use it
+ 
+@@ -47,8 +55,9 @@ Limits shared by every tool:
+ 2. Use the tool's controls. Each finished edit replaces the photo on the card.
+ 3. **Undo** takes back the last edit; tap again to go further back, down to the original.
+ 4. **Replace** goes back to this tool's photo gallery to pick another photo.
+-5. **Save** writes the photo shown on the card as a new file in `Pictures/Kanso` and opens the
+-   Saved screen.
++5. **Done** opens the Result screen with the finished picture. There, **Share** sends it,
++   **Save** writes it to `Pictures/Kanso`, and **Go home** ends the session; system Back returns to
++   the tool screen as it was. See [Done, the Result screen, Save and Share](saving-and-share.md).
+ 
+ ## How it works
+ 
+@@ -57,11 +66,12 @@ flowchart TD
+     K["Navigation key ToolPhoto(tool, photoUri)"] --> VM["ToolViewModel (one per screen)"]
+     VM -->|load| L["PhotoLoader on Dispatchers.IO: bounds, inSampleSize, EXIF turn"]
+     L --> S["ToolScreen shows the photo"]
+-    P["Tool panel"] -->|apply or runRegistered| VM
++    P["Tool panel"] -->|runRegistered| VM
+     VM -->|"Dispatchers.Default: fit to working size"| TP["ToolProcessor of the tool"]
+     TP -->|EditResult.Edited| VM2["shown photo replaced, old one kept for Undo"]
+     TP -->|EditResult.Failed| F["message on the card, photo unchanged"]
+-    VM2 -->|Save| SV["MediaStorePhotoSaver"]
++    VM2 -->|"Done: done()"| ST["RenderedPhotoStore.put(picture)"]
++    ST -->|"doneEvents (Channel)"| R["back stack add(Result)"]
+ ```
+ 
+ ### 1. Opening the screen
+@@ -72,16 +82,17 @@ flowchart TD
+   ([`navigation/ToolPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/ToolPhoto.kt)).
+   The photo travels as the text of its `content://` (gallery) or `file://` (camera) Uri. The key is
+   `@Serializable` and the back stack is saved, so the same tool reopens on the same photo after a
+-  rotation or after Android kills the app in the background.
++  rotation or after Android kills the app in the background (the edits themselves are not saved).
+ - [`navigation/KansoNavHost.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/KansoNavHost.kt)
+   draws the key with `ToolScreen` and asks Koin for a `ToolViewModel` with the key's tool and Uri.
+   The ViewModel lives in that back-stack entry's own `ViewModelStore`: it survives rotation and is
+   cleared when the screen is popped.
+ - [`di/AppModule.kt`](../../app/src/main/java/com/phongkaster/kanso/di/AppModule.kt) builds the
+-  ViewModel with `PhotoLoader`, `PhotoSaver` and the `ProcessorRegistry`. The registry is one
+-  app-wide object holding the processor of Remove background, Enhance, Retouch and Artistic, each
+-  built on its engine wrapper. Edit has no registry entry; its panel builds a new processor for each
+-  change.
++  ViewModel with `PhotoLoader`, a cleared-probe, the `ProcessorRegistry` and the
++  `RenderedPhotoStore`; it is given no saver. The registry is one app-wide object holding the
++  processor of Remove background, Enhance, Retouch and Artistic, each built on its engine wrapper.
++  Edit has no registry entry: its panel hands the ViewModel a recipe that turns the current
++  settings into a processor, used for the filter preview and the final render (see [Edit](edit.md)).
+ 
+ ### 2. Decoding the photo for the screen
+ 
+@@ -103,23 +114,25 @@ flowchart TD
+ ### 3. Running an edit
+ 
+ [`ui/tool/ToolViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt)
+-runs every tool the same way, through the
++runs the four registered tools the same way, through the
+ [`data/edit/ToolProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/ToolProcessor.kt)
+ interface: `suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult`.
+ 
+-- A panel either hands over a processor it built (`apply`, used by Edit) or asks for the tool's
+-  registered one (`runRegistered`, used by the other four). Retouch and Artistic set their strength
+-  and style on the registered processor just before it runs, and only when no edit is running.
+-- `apply` does nothing while an edit runs or while there is no photo. Otherwise it sets
+-  `Processing.Running(0)` and launches a coroutine that, on `Dispatchers.Default`:
+-  1. picks its input: the photo as now shown (the last edit, or the original) for Edit, Remove
++- A panel asks for the tool's registered processor (`runRegistered`). Retouch and Artistic set
++  their strength and style on it just before it runs, and only when no edit is running. Edit never
++  takes this path: `apply` does nothing on the Edit screen (its changes are settings, drawn live,
++  and rendered in full only at Done).
++- `apply` does nothing while an edit runs, while Done is working, while Compare is on, or while
++  there is no photo. Otherwise it sets `Processing.Running(0)` and launches a coroutine that, on
++  `Dispatchers.Default`:
++  1. picks its input: the photo as now shown (the last edit, or the original) for Remove
+      background and Enhance; the untouched original for Retouch and Artistic (`fromOriginal`);
+   2. shrinks it to the tool's working size with `WorkingSize.fit`
+      ([`data/edit/WorkingSize.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt)):
+ 
+      | Tool | Longest edge it works on |
+      |---|---|
+-     | Edit | 2000 px |
++     | Edit (the render at Done) | 2000 px |
+      | Remove background | 2000 px |
+      | Enhance | 512 px (the result is up to 4 times larger) |
+      | Retouch | 2000 px |
+@@ -156,28 +169,45 @@ The screen maps each one to a message (`failureMessageRes` in `ToolScreen.kt`, w
+ 
+ An exception that escapes a processor anyway becomes `Other` in the ViewModel, an
+ `OutOfMemoryError` becomes `OutOfMemory`. Leaving the screen cancels a running edit; that is not
+-reported as a failure.
++reported as a failure. A failed render at Done (Edit only) shows the same messages and keeps the
++person on the tool screen.
+ 
+ ### 5. Undo and Replace
+ 
+ - `undo()` pops the last version off the history; with the history empty it does nothing. Undo is
+-  switched off while an edit runs and when there is nothing to take back.
++  switched off while an edit runs, while Done is working, and when there is nothing to take back.
++  (On Edit, Undo steps back one settings action instead; see [Edit](edit.md).)
+ - Replace calls `replaceWithGallery(tool)` in
+   [`navigation/BackStackActions.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/BackStackActions.kt):
+   if the screen below is this tool's gallery it simply goes back to it, otherwise the tool screen
+   is swapped for that gallery.
+ 
+-### 6. Save
+-
+-- The Save button is enabled once the photo is shown, and not while a save or an edit runs.
+-- On Android 8.1 and 9 the screen first asks for `WRITE_EXTERNAL_STORAGE` if it is not granted; a
+-  refusal shows "Kanso needs permission to write to your storage to save the photo. Nothing was
+-  saved." Android 10 and later ask for nothing.
+-- `ToolViewModel.save()` saves the edited bitmap if there is one (`saver.save(bitmap)`), or the
+-  original file if nothing was edited or every edit was undone (`saver.save(photoUri)`). The rest
+-  is on [Saving, the Saved screen and Share](saving-and-share.md).
+-- On success the new Uri goes through a `Channel` (delivered once, not again after a rotation), and
+-  the navigation host clears everything above Home and opens `Saved(tool, uri)`.
++### 6. Done
++
++- The Done button (`DoneButton` in `ToolScreen.kt`, the word from
++  `app/src/main/res/values/strings_tool_done.xml`) is enabled once the photo is shown, and not
++  while an edit runs or while an earlier Done is still working. It asks for no permission and
++  writes nothing to storage on any Android version.
++- `ToolViewModel.done()` decides the picture to hand over:
++  - **Remove background, Enhance, Retouch, Artistic:** the picture shown now, at once. With an
++    edit, the last edited bitmap. With no edit, or every edit undone, the decoded original, handed
++    over together with its own Uri, so that Save on Result copies the original file instead of
++    re-encoding the screen-sized copy.
++  - **Edit:** with no change made yet, the decoded original and its Uri, as above. After any change
++    (even one later undone) the current settings are rendered in full from the original photo at
++    the working size (2000 px), on `Dispatchers.Default`. Meanwhile `finishing` is true in the
++    state: Done shows a small spinner (`tool-done-progress`) and ignores taps, and the editing
++    controls are off. A failed render keeps the person here with the failure's message; nothing is
++    handed over.
++- The picture goes into [`data/edit/RenderedPhotoStore.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/RenderedPhotoStore.kt),
++  an app-wide Koin `single` holding one picture (a navigation key is saved as text and cannot carry
++  a bitmap). Then one item goes through `doneEvents`, a `Channel` (delivered once, not again after a
++  rotation or on coming back from Result), and `ToolScreen` calls `onDone`.
++- The navigation host answers `onDone` by pushing the key `Result`
++  ([`navigation/Result.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/Result.kt))
++  above the tool screen, only while the tool screen is on top. Done does not end the session: the
++  edits, the settings and the Undo steps stay in the tool screen's ViewModel. The rest is on
++  [Done, the Result screen, Save and Share](saving-and-share.md).
+ 
+ ## Tests
+ 
+@@ -185,14 +215,25 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
+ 
+ - [`tool/ToolViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/ToolViewModelTest.kt):
+   an edit sets the edited photo and allows Undo, undoing every edit returns to the original, a
+-  running edit reports progress and blocks Save, a failure keeps the photo, a cancellation is not a
+-  failure, the input is fitted to the working size, Save after an edit saves the edited bitmap, and
+-  `runRegistered` runs the tool's own processor.
++  running edit reports progress and blocks Done, a failure keeps the photo, a cancellation is not a
++  failure, the input is fitted to the working size, Done after an edit hands over the edited
++  bitmap, a failed Done render hands nothing over, Edit's Done hands over the rendered settings (or
++  the original with nothing changed), the Edit screen ignores `apply`, and `runRegistered` runs the
++  tool's own processor.
++- [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt):
++  Edit's Done renders at full working size, the ViewModel holds no saver so Done writes nothing,
++  each other tool hands over its result, a second tap while Done runs is ignored and Result opens
++  once, the edits and Undo steps are intact after Done, and Done before the photo is shown does
++  nothing.
++- [`save/SaveButtonTest.kt`](../../app/src/test/java/com/phongkaster/kanso/save/SaveButtonTest.kt)
++  (the file kept its old name): Done hands the photo over and calls `onDone` once, is off with a
++  spinner while Edit renders, is off without a photo, and asks nothing and writes nothing on
++  Android 8.1, 9, 10 and 15.
+ - [`tool/ToolScreenTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/ToolScreenTest.kt):
+   the photo is asked for at twice the screen's longest edge, a turned photo is drawn upright, each
+-  tool has its own screen and panel, Undo is enabled only when there is something to undo, Save is
+-  off and the ring shows while an edit runs, and each failure shows its message over the unchanged
+-  photo.
++  tool has its own screen with Back, its name, the card, Replace, its strip and Done, Undo is
++  enabled only when there is something to undo, Done is off and the ring shows while an edit runs,
++  each failure shows its message over the unchanged photo, and the controls clear the gesture zone.
+ - [`tool/PhotoLoaderTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/PhotoLoaderTest.kt):
+   EXIF orientations 1, 2, 3, 6 and 8, the sample size for an 8000 x 6000 photo, and `null` for a
+   missing file, a non-image and a malformed Uri.
+@@ -203,6 +244,8 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
+ - [`navigation/ReplaceNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/ReplaceNavigationTest.kt)
+   and [`navigation/PhotoToToolNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/PhotoToToolNavigationTest.kt):
+   Replace and every way into a tool, double taps included.
++- [`navigation/ResultNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/ResultNavigationTest.kt):
++  Back from Result returns to the tool screen; Go home leaves only Home.
+ - [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
+   recorded pictures of the tool screens in light and dark (`verifyRoborazziDebug`).
+ 
+@@ -213,6 +256,11 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
+ - **A late progress report from an earlier edit can move a later edit's ring**
+   (`ToolViewModel.reportProgress`; Run 8 Phase 1).
+ - **The checkerboard also fills the letterbox margins** around a cut-out (Run 8 Phase 2 review).
++- **The hand-off store does not survive process death.** If Android kills the app while Result is
++  open, Result comes back saying "Nothing to show", and Back returns to a tool screen that decodes
++  the photo again without the edits.
++- **An untouched photo shared from Result is the screen-sized decode**, not the original file
++  (Save copies the original; Share sends the in-memory picture).
+ - **Awaiting a person, Run 8:** item 24 (each tool's layout in light and dark on a phone), item 26
+   (progress visible on a large photo), item 35 (all five tools on the Galaxy A13, saved result
+   shown in My edits).

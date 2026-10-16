@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** executing (Phase 5 done)
+- **Stage:** all tasks complete (Phase 6 done)
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** T-007, T-008, T-009 (Phase 6)
-- **DONE-candidate:** no
+- **Next Phase:** none; Verifier (SS11)
+- **DONE-candidate:** yes (next invocation is the Verifier)
 
 ## Progress
 
@@ -17,9 +17,9 @@
 | T-004 | complete | evidence/p4-final2.log |
 | T-005 | complete | evidence/p5-final.log |
 | T-006 | complete | evidence/p5-final.log |
-| T-007 | pending | - |
-| T-008 | pending | - |
-| T-009 | pending | - |
+| T-007 | complete | evidence/p6-final.log |
+| T-008 | complete | evidence/p6-final.log |
+| T-009 | complete | evidence/p6-final2.log |
 
 ## Assumptions
 

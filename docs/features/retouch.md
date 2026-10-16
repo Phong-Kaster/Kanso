@@ -4,7 +4,8 @@
 
 Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
+shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
+Share and Save are on [the Result screen](saving-and-share.md).
 
 ---
 
@@ -23,7 +24,8 @@ Limits, from the code:
 - It needs a face. With none, it says "No face found in this photo. Nothing was changed."
 - It always starts again from the **original** photo, so applying again at another strength
   **replaces** the last result instead of smoothing twice.
-- Works on at most **2000 px** on the longest edge; the saved JPEG is at that size or smaller.
+- Works on at most **2000 px** on the longest edge; the JPEG that Save on Result writes is at that
+  size or smaller.
 - Offline: the face model and OpenCV are inside the app.
 - It only smooths skin. (The original Retica app's "Retouch" screen removed objects; Kanso's does
   not.)
@@ -34,7 +36,9 @@ Limits, from the code:
   the **Retouch** shortcut, then pick a photo (or take one with the gallery's camera button).
 - Set **Smoothing**, then tap **Smooth skin**. Moving the slider alone changes nothing; tap Smooth
   skin again to apply a new strength. Both controls are off while it works.
-- **Undo** takes back the whole slider session at once; **Save** writes the result.
+- **Undo** takes back the whole slider session at once. **Done** opens the Result screen with the
+  result, where **Save** writes it to `Pictures/Kanso` and **Share** sends it; Back from Result
+  returns here unchanged.
 
 **Seen on the Android emulator (API 34, x86_64), 2026-10-14**, with test photos of a face (1024 x
 1024) and a 4000 x 3000 scene: Retouch took about 20 seconds and gave smoother skin, with no crash.
@@ -50,7 +54,10 @@ flowchart TD
     E -->|"no face"| N["NoFace message"]
     E -->|"padded face boxes"| F["EngineSkinSmoother: OpenCV bilateralFilter per box"]
     F --> G["Kotlin blend by strength, opaque"]
-    G --> H["Save: JPEG q95, Pictures/Kanso"]
+    G --> I["shown on the card"]
+    I --> K["Done: RenderedPhotoStore, Result screen"]
+    K -->|Save| H["JPEG q95, Pictures/Kanso"]
+    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
 ```
 
 1. **The panel.**
@@ -112,8 +119,11 @@ flowchart TD
    an OpenGL context, which a background coroutine does not have.
 8. **Undo.** A Retouch run straight after another Retouch run replaces it without a new Undo step,
    so Undo goes back to the photo before the first Smooth skin.
-9. **Save.** The result is opaque: a **JPEG at quality 95**, at the size shown, into
-   `Pictures/Kanso`.
+9. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
+   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
+   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown, into
+   `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/` folder (see
+   [Done, the Result screen, Save and Share](saving-and-share.md)).
 
 **What happens on failure:**
 

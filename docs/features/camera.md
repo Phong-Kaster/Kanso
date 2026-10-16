@@ -16,7 +16,8 @@ a shot you choose **Keep** (it opens in the tool) or **Retake**.
 Limits, from the code:
 
 - The shot is **not** added to the phone's gallery. It lives in Kanso's private storage until you
-  save the finished photo with Save in a tool.
+  tap Done in the tool and then Save on the Result screen (see
+  [Done, the Result screen, Save and Share](saving-and-share.md)).
 - Shots older than a day are deleted the next time you take one; a shot you leave without keeping
   is deleted at once.
 - The lens switch only shows when the phone has both a back and a front camera; the flash button
@@ -97,7 +98,7 @@ All with a fake `CameraController` that needs no hardware.
 - [`camera/CameraPermissionTest.kt`](../../app/src/test/java/com/phongkaster/kanso/camera/CameraPermissionTest.kt):
   launch asks for nothing; opening the camera asks once; a refusal explains, opens settings and
   does not ask again.
-- [`navigation/SavedNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/SavedNavigationTest.kt):
+- [`navigation/ResultNavigationTest.kt`](../../app/src/test/java/com/phongkaster/kanso/navigation/ResultNavigationTest.kt):
   a gallery's camera, then Keep, opens that gallery's own tool.
 - Screenshots: `CameraControlsScreenshotTest`, `CameraRefusedScreenshotTest`.
 
