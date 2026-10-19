@@ -40,7 +40,7 @@ reverted:
      earlier slices wrote under Pointers. -->
 
 Files shared with other tasks (navigation tables, route registries, manifests, dependency files) are
-deliberately excluded. The Iteration wires those itself after your work is merged. Do not touch them.
+deliberately excluded. A Wiring Worker writes those, never alongside you. Do not touch them.
 
 ## Status of other work
 

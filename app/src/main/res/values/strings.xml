@@ -48,13 +48,12 @@
     <string name="save_permission_denied">Kanso needs permission to write to your storage to save the photo. Nothing was saved.</string>
     <string name="save_kept_orientation">Saved. This photo is very large, so it was copied as it is and some apps may show it sideways.</string>
 
-    <!-- Saved screen: shown after a photo is saved. -->
-    <string name="saved_title">Saved</string>
-    <string name="saved_photo_description">The photo you saved</string>
-    <string name="saved_message">Your photo is saved in Pictures/Kanso.</string>
-    <string name="saved_share">Share</string>
-    <string name="saved_edit_another">Edit another</string>
-    <string name="saved_share_chooser">Share photo</string>
+    <!-- Result screen: shown after a photo is saved. -->
+    <string name="result_finished_label">Saved</string>
+    <string name="result_viewer_photo_description">The photo you saved</string>
+    <string name="result_finished_message">Your photo is saved in Pictures/Kanso.</string>
+    <string name="result_share">Share</string>
+    <string name="result_share_chooser">Share photo</string>
 
     <!-- Camera controls: lens switch, flash and the gallery's camera button. -->
     <string name="camera_switch_lens">Switch camera</string>

@@ -61,14 +61,18 @@ import com.phongkaster.kanso.ui.myedits.MY_EDITS_GRID_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_EDIT_TAG
+import com.phongkaster.kanso.ui.result.RESULT_HOME_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SAVE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SHARE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
+import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_SHEET_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import kotlin.math.max
 import org.junit.After
@@ -97,9 +101,15 @@ import org.robolectric.annotation.Config
  * Two kinds of check:
  * - The bottom controls end at least the larger of the two insets above the window's bottom, so no
  *   tap lands where the system listens for "go home": the floating bar (`nav-bar`) and its Camera
- *   button (`nav-camera`) on Home, My edits and Settings; Save (`tool-save`) on every tool's
- *   screen; Share and Edit (`saved-share`, `saved-edit-another`) on the Saved screen and on the
- *   photo opened from My edits; the live camera's shutter.
+ *   button (`nav-camera`) on Home, My edits and Settings; the tool's own controls on every tool's
+ *   screen (the options strip `editor-panel`, or on Edit the sheet area `edit-sheet`); Share,
+ *   Save and Go home (`result-share`, `result-save`, `result-home`) on the Result screen after
+ *   Done; Share and Edit (`result-share`, `result-edit`) on the photo opened from My edits; the
+ *   live camera's shutter.
+ * - Run 9 (T-006): Save moved from the bottom of the tool screens to Done at the top right, so
+ *   the tool screens' bottom check now reads the tool's controls, and Done is checked to sit
+ *   below the status bar instead. The Saved screen became the Result screen, reached with Done;
+ *   Back from it returns to the tool screen (DoD 11), so the walk goes back three times.
  * - Scrolled to its end, a tab screen's last item ends at or above the top of the floating bar:
  *   Home's last recent card, My edits' 40th tile (with 40 saved photos), and Settings' colour
  *   picker card (with Custom chosen).
@@ -166,7 +176,7 @@ class BottomClearanceTest {
     /**
      * Starts the app with the fakes, sends a [navigationBar] tall navigation bar and a [gestures]
      * tall bottom gesture area, and checks Home, My edits and its photo viewer, Settings, the live
-     * camera, every tool screen and the Saved screen (see the class comment).
+     * camera, every tool screen and the Result screen (see the class comment).
      */
     private fun walk(navigationBar: Dp, gestures: Dp) {
         this.navigationBar = navigationBar
@@ -199,6 +209,7 @@ class BottomClearanceTest {
     /**
      * My edits: the bar and Camera button clear the insets; the 40th tile scrolls above the bar.
      * The tile then opens the photo viewer, whose Share and Edit clear the insets; Back returns.
+     * Run 9 (T-006): the viewer is the Result screen now, with the Result screen's tags.
      */
     private fun checkMyEditsAndViewer(scenario: ActivityScenario<MainActivity>) {
         openTab(compose, KansoTab.MY_EDITS)
@@ -213,13 +224,13 @@ class BottomClearanceTest {
         assertAboveBar("My edits' 40th tile", myEditsTileTag(last))
 
         compose.onNodeWithTag(myEditsTileTag(last)).tapAboveBar()
-        waitFor { count(SAVED_SCREEN_TAG) > 0 && count(KANSO_TAB_BAR_TAG) == 0 && count(SAVED_SHARE_TAG) > 0 }
-        sendInsets(scenario, probeTag = SAVED_SHARE_TAG)
-        assertClearsInsets("The viewer's Share", SAVED_SHARE_TAG)
-        assertClearsInsets("The viewer's Edit", SAVED_EDIT_ANOTHER_TAG)
+        waitFor { count(RESULT_SCREEN_TAG) > 0 && count(KANSO_TAB_BAR_TAG) == 0 && count(RESULT_SHARE_TAG) > 0 }
+        sendInsets(scenario, probeTag = RESULT_SHARE_TAG)
+        assertClearsInsets("The viewer's Share", RESULT_SHARE_TAG)
+        assertClearsInsets("The viewer's Edit", RESULT_EDIT_TAG)
 
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        waitFor { count(SAVED_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
+        waitFor { count(RESULT_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
     }
 
     /**
@@ -253,9 +264,13 @@ class BottomClearanceTest {
     }
 
     /**
-     * Every tool's screen, each opened from Home through its gallery on photo 1: Save clears the
-     * insets. On [SAVE_TOOL] Save is pressed, and the Saved screen's Share and "Edit another"
+     * Every tool's screen, each opened from Home through its gallery on photo 1: the tool's own
+     * controls (the options strip, or Edit's sheet area) clear the insets, and Done sits below the
+     * status bar. On [DONE_TOOL] Done is pressed, and the Result screen's Share, Save and Go home
      * clear the insets too. Each screen is left with Back, back to Home.
+     *
+     * Run 9 (T-006): Save at the bottom became Done at the top right, so the bottom check reads
+     * the tool's controls; the Saved screen became Result, and Back from it returns to the tool.
      */
     private fun checkToolsAndSaved(scenario: ActivityScenario<MainActivity>) {
         openTab(compose, KansoTab.HOME)
@@ -263,26 +278,30 @@ class BottomClearanceTest {
             openToolGallery(compose, tool)
             waitFor { count(GALLERY_SCREEN_TAG) > 0 && count(galleryPhotoTag(galleryPhotos.first().id)) > 0 }
             compose.onNodeWithTag(galleryPhotoTag(galleryPhotos.first().id)).performClick()
-            waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(TOOL_IMAGE_TAG) > 0 && count(TOOL_SAVE_TAG) > 0 }
-            sendInsets(scenario, probeTag = TOOL_SAVE_TAG)
-            assertClearsInsets("${tool.name}'s Save", TOOL_SAVE_TAG)
+            // The Edit screen's lowest area is its sheet area; the others' is the options strip.
+            val controls = if (tool == Tool.EDIT) EDIT_SHEET_TAG else EDITOR_PANEL_TAG
+            waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(TOOL_IMAGE_TAG) > 0 && count(controls) > 0 }
+            sendInsets(scenario, probeTag = controls)
+            assertClearsInsets("${tool.name}'s controls", controls)
+            assertBelowStatusBar("${tool.name}'s Done", TOOL_DONE_TAG)
 
-            if (tool == SAVE_TOOL) {
-                waitFor { compose.onAllNodes(hasTestTag(TOOL_SAVE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-                waitFor { count(SAVED_SCREEN_TAG) > 0 && count(TOOL_SCREEN_TAG) == 0 && count(SAVED_SHARE_TAG) > 0 }
-                sendInsets(scenario, probeTag = SAVED_SHARE_TAG)
-                assertClearsInsets("The Saved screen's Share", SAVED_SHARE_TAG)
-                assertClearsInsets("The Saved screen's Edit another", SAVED_EDIT_ANOTHER_TAG)
+            if (tool == DONE_TOOL) {
+                waitFor { compose.onAllNodes(hasTestTag(TOOL_DONE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+                compose.onNodeWithTag(TOOL_DONE_TAG).performClick()
+                waitFor { count(RESULT_SCREEN_TAG) > 0 && count(TOOL_SCREEN_TAG) == 0 && count(RESULT_SHARE_TAG) > 0 }
+                sendInsets(scenario, probeTag = RESULT_SHARE_TAG)
+                assertClearsInsets("The Result screen's Share", RESULT_SHARE_TAG)
+                assertClearsInsets("The Result screen's Save", RESULT_SAVE_TAG)
+                assertClearsInsets("The Result screen's Go home", RESULT_HOME_TAG)
+                // Back from Result returns to the tool screen (DoD 11), then to the gallery.
                 scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-                waitFor { count(SAVED_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
-            } else {
-                // Back to the gallery, then back to Home.
-                scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-                waitFor { count(TOOL_SCREEN_TAG) == 0 && count(GALLERY_SCREEN_TAG) > 0 }
-                scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-                waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
+                waitFor { count(RESULT_SCREEN_TAG) == 0 && count(TOOL_SCREEN_TAG) > 0 }
             }
+            // Back to the gallery, then back to Home.
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            waitFor { count(TOOL_SCREEN_TAG) == 0 && count(GALLERY_SCREEN_TAG) > 0 }
+            scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+            waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
         }
     }
 
@@ -307,6 +326,19 @@ class BottomClearanceTest {
             "$what ends at $bottom px, less than $inset px above the window's bottom ($windowBottom px) " +
                 "with ${describeInsets()}",
             windowBottom - bottom >= inset - EPSILON,
+        )
+    }
+
+    /**
+     * Checks that the node tagged [tag] starts at or below the bottom of the status bar the walk
+     * sends, so a control at the top of a screen is never under the clock and the icons.
+     */
+    private fun assertBelowStatusBar(what: String, tag: String) {
+        val statusBar = with(compose.density) { STATUS_BAR.toPx() }
+        val top = compose.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot.y
+        assertTrue(
+            "$what starts at $top px, under the $statusBar px status bar with ${describeInsets()}",
+            top >= statusBar - EPSILON,
         )
     }
 
@@ -463,8 +495,8 @@ class BottomClearanceTest {
 
     /** The screens, insets, photos and numbers the tests share. */
     private companion object {
-        /** The tool whose screen is saved, to reach the Saved screen (as SavedNavigationTest does). */
-        val SAVE_TOOL = Tool.RETOUCH
+        /** The tool whose Done is pressed to reach the Result screen (Run 9, T-006: was Save). */
+        val DONE_TOOL = Tool.RETOUCH
 
         /** How many photos Kanso has saved: My edits' 40th tile is the last. */
         const val EDIT_COUNT = 40

@@ -62,7 +62,7 @@ class HomeViewModel(
 
     /**
      * Reads Kanso's saved photos again for the "Recent edits" strip. The screen function calls it
-     * each time Home is shown, so coming back from the Saved screen lists the photo just saved
+     * each time Home is shown, so coming back from the Result screen lists the photo just saved
      * first.
      *
      * The read runs in viewModelScope, a coroutine scope that is cancelled when this ViewModel is

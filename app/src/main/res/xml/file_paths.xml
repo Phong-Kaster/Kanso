@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where FileProvider may hand out files from: only the cache's `shared/` folder, which is where
+     Share writes the picture it is about to send. Nothing else of the app is ever exposed. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

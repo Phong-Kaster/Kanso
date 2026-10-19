@@ -5,7 +5,7 @@
 - **Blocked by decision:** -   <!-- Decision Queue entry id, when deferred -->
 - **Attempts:** 0 / 3
 - **Declared File Scope:** <!-- the files a Worker on this task may write. Shared/integration files
-     belong to no task: the Iteration wires those itself. -->
+     belong to no task: a Wiring Worker writes those. -->
 - **Model Tier:** Fast | Capable <!-- assigned at planning time by the arm's-length conflict-analysis
      role, sanity-checked by the critique role (ADR-013). Never self-assigned. Escalates to Capable
      automatically on a failed Fast-tier attempt. -->

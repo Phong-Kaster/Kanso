@@ -4,7 +4,8 @@
 
 Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
-shares (opening the photo, progress, Undo, Replace, Save) are on [The tool screen](tool-screen.md).
+shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
+Share and Save are on [the Result screen](saving-and-share.md).
 
 ---
 
@@ -21,8 +22,8 @@ then tap **Apply style**.
 
 Limits, from the code:
 
-- Works on at most **1024 px** on the longest edge, so the saved JPEG is at most 1024 px, even at
-  strength 0.
+- Works on at most **1024 px** on the longest edge, so the JPEG that Save on Result writes after a
+  run is at most 1024 px, even at strength 0.
 - Always starts again from the **original** photo: a new style or strength replaces the last
   result instead of painting over it.
 - The four style images are Kanso's own drawings, not paintings by anyone else: 256 x 256 WebP
@@ -40,7 +41,9 @@ Limits, from the code:
   works.
 - To try another strength, move the slider and tap **Apply style** again: with the same style this
   only re-mixes and does not run the model again. Another style runs the model again.
-- **Undo** takes back the whole session of Artistic runs at once; **Save** writes the result.
+- **Undo** takes back the whole session of Artistic runs at once. **Done** opens the Result screen
+  with the result, where **Save** writes it to `Pictures/Kanso` and **Share** sends it; Back from
+  Result returns here unchanged.
 
 **Seen on the Android emulator (API 34, x86_64), 2026-10-14:** each style took about 9 seconds,
 with no crash. The same day, the emulator showed that with the earlier `FULL_STYLE_RATIO = 1f`,
@@ -57,7 +60,10 @@ flowchart TD
     D -->|"otherwise"| E["EngineStylizer: StylePredict + StyleTransfer Inception v3, ratio 0"]
     E --> M
     M --> F["Kotlin mix by strength, opaque"]
-    F --> G["Save: JPEG q95, Pictures/Kanso"]
+    F --> I["shown on the card"]
+    I --> K["Done: RenderedPhotoStore, Result screen"]
+    K -->|Save| G["JPEG q95, Pictures/Kanso"]
+    K -->|Share| L["JPEG q95 copy in cache shared/, FileProvider"]
 ```
 
 1. **The panel.**
@@ -114,8 +120,11 @@ flowchart TD
    a short list of numbers) and `image_stylization_inceptionv3_dr_transfer.tflite` (repaints the
    photo with it), both bundled in the assets of `libs/localml.aar`. Nothing is downloaded.
 7. **Undo.** An Artistic run straight after another one replaces it without a new Undo step.
-8. **Save.** The result is opaque: a **JPEG at quality 95**, at the size shown (at most 1024 px),
-   into `Pictures/Kanso`.
+8. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
+   original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
+   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown (at
+   most 1024 px), into `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/`
+   folder (see [Done, the Result screen, Save and Share](saving-and-share.md)).
 
 **What happens on failure:**
 

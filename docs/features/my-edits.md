@@ -40,7 +40,7 @@ flowchart TD
     B --> C["MediaStoreSavedPhotoSource on Dispatchers.IO"]
     C -->|"API 29+: RELATIVE_PATH = 'Pictures/Kanso/'; API 27-28: _data path match"| D["rows DATE_MODIFIED DESC"]
     D --> E["grid of Coil thumbnails"]
-    E -->|tap| F["EditedPhoto(uri): SavedScreen with viewer = true"]
+    E -->|tap| F["EditedPhoto(uri): ResultScreen with viewer = true"]
     F -->|Edit| G["ToolPhoto(EDIT, uri)"]
 ```
 
@@ -68,12 +68,14 @@ flowchart TD
    gallery's `PhotoThumbnail`, loaded by Coil and decoded at about 160 dp.
 5. **The viewer.** A tap pushes `EditedPhoto(uri)`
    ([`navigation/EditedPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/EditedPhoto.kt)),
-   only while My edits is on top. The navigation host draws it with the Saved screen and a
-   `SavedViewModel` built with `viewer = true`: titled "My edits", no success mark, no saved line,
-   and **Edit** instead of Edit another. Share works as on the Saved screen (see
-   [Saving and Share](saving-and-share.md#share)).
-6. **Edit.** Pushes `ToolPhoto(Tool.EDIT, uri)` above the viewer; Replace there goes to the Edit
-   gallery and then back to the viewer.
+   only while My edits is on top. The navigation host draws it with the Result screen
+   ([`ui/result/ResultScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/ResultScreen.kt))
+   and a `ResultViewModel` built with `viewer = true`: titled "My edits", with a round close button
+   that goes Home, no success mark, and **Share** and **Edit** instead of Share, Save and Go home
+   (the photo is already saved, so Save is not offered). Share sends the photo's own MediaStore
+   Uri (see [Share](saving-and-share.md#share)).
+6. **Edit.** Pushes `ToolPhoto(Tool.EDIT, uri)` above the viewer. The Edit screen has no Replace
+   chip; Back from it returns to the viewer.
 
 ## Tests
 

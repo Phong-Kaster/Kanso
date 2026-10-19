@@ -41,7 +41,7 @@ const val BACKDROP_MAX_SIDE_PX = 64
  * A soft, blurred copy of [photo] that fills its whole box: the backdrop behind a photo that does
  * not fill its card (beside a narrow photo, above and below a wide one), so the empty space takes
  * the photo's own colours instead of a flat grey. The tool screens put the sharp photo on top of
- * it, and the Saved screen reuses it the same way.
+ * it, and the Result screen reuses it the same way.
  *
  * How the blur is made, in two layers, so it works on every phone Kanso runs on:
  * 1. A tiny copy. The photo is halved again and again (each step averaging neighbouring pixels,

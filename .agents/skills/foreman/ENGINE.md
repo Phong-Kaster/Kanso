@@ -210,6 +210,12 @@ If `PROJECT.md` still holds Reference text rather than an index, or a topic file
 it into `.harness/knowledge/reference/` now, in this Iteration's checkpoint. A subagent cannot read it
 where it is: the read guard allows it only `reference/` and `DOMAIN.md`.
 
+**You read no source code** (ADR-041). Your context lives the whole Iteration and is re-sent on every
+call, so a file you read early is paid for some ninety times; a Worker's context dies with its task. You
+read `.harness/` files, `git status`, `git diff --stat`, and the failure lines of build and test output,
+found with Grep. Anything that needs the repository's source - reading it, editing it, diagnosing a
+failure in it - goes to a Worker, and only its manifest comes back to you.
+
 If `STATE.md` records a DONE-candidate, skip to §11.
 
 ## 6.4 Select the Phase
@@ -221,7 +227,7 @@ Choose a set of tasks that satisfies **all** of:
 - at most the Phase size cap in `POLICIES.md`
 - within granted capabilities
 
-Files shared between tasks — navigation tables, route registries, manifests, dependency files — are **never** inside a Worker's scope. You wire those yourself in §6.6. Two independent screens still both touch the router; that is the conflict that looks absent in the plan and appears in the diff.
+Files shared between tasks — navigation tables, route registries, manifests, dependency files — are **never** inside a task Worker's scope. A Wiring Worker writes those (§6.6). Two independent screens still both touch the router; that is the conflict that looks absent in the plan and appears in the diff.
 
 If no task is executable, that is not a failure — go to §6.10 and report.
 
@@ -265,7 +271,11 @@ Before trusting any Worker's work:
 
 A violation means the plan was wrong to call these tasks independent. Revert, re-split the Phase, log a Tier-1 amendment, and do not proceed on the collided work.
 
-Then make the shared integration edits yourself — the wiring that no Worker was allowed to touch.
+The shared integration edits - the wiring no task Worker was allowed to touch - go to one **Wiring
+Worker**: a Worker Brief whose Declared File Scope is the shared files (sliced at six like any scope) and
+whose task is the wiring the Phase needs, with what the task Workers' manifests asked for. Dispatch it
+alone: before the task Workers when they need the wiring to exist, after them otherwise, never alongside
+them. Verify its scope the same way.
 
 ## 6.7 Build and Test once
 
@@ -273,7 +283,7 @@ Build and test the **combined** tree using the verified commands in `.harness/kn
 
 On failure, attribute it: the error names a file, and the file maps to exactly one Worker's Declared File Scope. Re-dispatch that Worker with the error text. **Before re-dispatching, revert that Worker's scope to the last checkpoint** — never let it build on its own failed debris. Each re-dispatch is one attempt against that task's counter.
 
-A failure that names no Worker's file — a dependency resolution error, or an interaction between two individually-correct changes — is **yours**. Fix it yourself; it counts against no task's attempts. If you cannot fix it in three tries, abandon the whole Phase, not one task.
+A failure that names no Worker's file — a dependency resolution error, or an interaction between two individually-correct changes — is **yours** to attribute, not to edit: dispatch a Worker with the error lines and the files they name as its scope. It counts against no task's attempts. If three such dispatches do not fix it, abandon the whole Phase, not one task.
 
 ## 6.8 Fresh-Context Review
 

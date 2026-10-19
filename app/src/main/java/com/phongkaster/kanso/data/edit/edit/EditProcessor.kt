@@ -1,32 +1,39 @@
 package com.phongkaster.kanso.data.edit.edit
 
 import android.graphics.Bitmap
-import android.graphics.ColorMatrix
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 
 /**
- * The Edit tool's processor: applies [settings] (crop, quarter turns, flips, the four colour
- * sliders and a filter, in that order) to a photo, all in plain Kotlin on the CPU.
+ * The Edit tool's processor: renders the WHOLE of [settings] onto a photo, all in plain Kotlin on
+ * the CPU, in this order: crop, quarter turns, flips, the filter, then the four colour sliders.
  *
  * Every step works on the photo's pixels as one `IntArray` (one ARGB int per pixel, row after
  * row): cropping copies a rectangle out, turning and flipping move each pixel to its new place,
- * the sliders send each pixel through one colour matrix, and a filter through a [FilterLut]. Plain
- * arrays make every step exact (a turn moves pixels, it never blurs them; a slider at its middle
- * leaves every pixel as it was) and runnable in a JVM test, where the engine's GPU code cannot load.
+ * a filter sends each pixel through a [FilterLut], and the sliders through one colour matrix.
+ * Plain arrays make every step exact (a turn moves pixels, it never blurs them; a slider at its
+ * middle leaves every pixel as it was) and runnable in a JVM test, where the engine's GPU code
+ * cannot load.
  *
- * **One processor, one change.** The tool screen's ViewModel runs each processor on the photo as
- * it is shown now, which already holds every earlier edit; so [settings] must hold only the change
- * still to be made, never the whole history, or each run would apply the earlier changes again.
- * The Edit panel builds such a one-change value for each action: a turn, a flip or a crop is
- * applied as soon as it is tapped, and the sliders and a filter when the person lets go (see
- * `EditPanel`). Each is then one step that Undo can take back.
+ * **Always from the original.** The tool screen's ViewModel hands this processor the ORIGINAL
+ * photo every time, never a picture an earlier run produced, and [settings] holds the session's
+ * complete state ([EditSettings]). So nothing is stacked or baked in: choosing a second filter
+ * replaces the first, moving a slider back to its middle gives the photo back exactly, and
+ * rendering the same settings twice gives the same pixels.
+ *
+ * **Why the filter comes before the sliders.** A filter is a fixed look designed for an ordinary
+ * photo; the sliders are the person's fine tuning of whatever they see. Applying the filter first
+ * and the sliders on top means "brightness +20" brightens the filtered look, the way photo apps
+ * usually behave (decision A-002).
  *
  * [filters] finds the look-up of the chosen filter: the app passes [FilterLut.fromAssets], a test
  * a source of look-ups it generated.
@@ -47,6 +54,8 @@ class EditProcessor(
      */
     override suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult =
         withContext(Dispatchers.Default) {
+            // Kept so the long loops below can notice a newer render has cancelled this one.
+            job = coroutineContext[Job]
             try {
                 onProgress(0f)
                 val result = render(input, onProgress)
@@ -62,13 +71,23 @@ class EditProcessor(
             }
         }
 
+    /** The job running [process], so a cancelled render stops early instead of running to the end. */
+    @Volatile
+    private var job: Job? = null
+
+    /** Throws a CancellationException when this render was cancelled (a newer one replaced it). */
+    private fun checkActive() {
+        job?.ensureActive()
+    }
+
     /** Runs every step in order on [input] and builds the result bitmap. */
     private fun render(input: Bitmap, onProgress: (Float) -> Unit): EditResult {
         // A photo above the working size is scaled down first (no copy when it already fits).
         val source = WorkingSize.fit(input, WorkingSize.EDIT)
 
-        // 1. Crop: read only the kept rectangle's pixels out of the photo.
-        val crop = cropBounds(source.width, source.height, settings)
+        // 1. Crop: read only the kept rectangle's pixels out of the photo. A fixed ratio is no
+        // special case here: choosing it already set settings.crop to a rectangle of that shape.
+        val crop = cropBounds(source.width, source.height, settings.crop)
         var image = Pixels(IntArray(crop.width * crop.height), crop.width, crop.height)
         source.getPixels(image.data, 0, crop.width, crop.left, crop.top, crop.width, crop.height)
         onProgress(PROGRESS_CROPPED)
@@ -79,16 +98,18 @@ class EditProcessor(
         if (settings.flipVertical) image = flip(image, horizontal = false)
         onProgress(PROGRESS_TURNED)
 
-        // 4. The colour sliders, only when one is away from its middle, so all four at the middle
-        // leave every pixel exactly as it was.
-        if (settings.hasColourChange) applyMatrix(image.data, colourMatrix(settings))
-        onProgress(PROGRESS_COLOURED)
-
-        // 5. The filter, mixed with the unfiltered colours by its intensity.
+        // 4. The filter, mixed with the unfiltered colours by its intensity (before the sliders,
+        // so the sliders fine-tune the filtered look: decision A-002).
         if (settings.hasFilter) {
             val lut = filters.lutFor(settings.filter) ?: return EditResult.Failed(EditFailure.Other)
             applyFilter(image.data, lut, settings.filterIntensity.coerceIn(0f, 1f))
         }
+        onProgress(PROGRESS_FILTERED)
+
+        // 5. The colour sliders, only when one is away from its middle, so all four at the middle
+        // leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
+        // builder the live preview hands to Compose, so the preview and Done agree.
+        if (settings.hasColourChange) applyMatrix(image.data, EditColourMatrix.of(settings))
 
         // An edited photo is opaque: every pixel's alpha is set to 255 and the bitmap says so.
         val data = image.data
@@ -125,6 +146,7 @@ class EditProcessor(
         val input = image.data
         val output = IntArray(input.size)
         for (y in 0 until h) {
+            checkActive()
             for (x in 0 until w) {
                 val pixel = input[y * w + x]
                 when (turns) {
@@ -147,6 +169,7 @@ class EditProcessor(
         val input = image.data
         val output = IntArray(input.size)
         for (y in 0 until h) {
+            checkActive()
             for (x in 0 until w) {
                 val target = if (horizontal) y * w + (w - 1 - x) else (h - 1 - y) * w + x
                 output[target] = input[y * w + x]
@@ -162,6 +185,7 @@ class EditProcessor(
      */
     private fun applyMatrix(data: IntArray, matrix: FloatArray) {
         for (i in data.indices) {
+            if (i and CHECK_MASK == 0) checkActive()
             val color = data[i]
             val r = ((color shr 16) and 0xFF).toFloat()
             val g = ((color shr 8) and 0xFF).toFloat()
@@ -174,26 +198,15 @@ class EditProcessor(
     }
 
     /**
-     * Sends every pixel of [data] through [lut] and mixes the result with the pixel's own colour:
-     * [intensity] 1 gives the filtered colour, 0 the colour as it was, 0.5 halfway between.
+     * Sends every pixel of [data] through [lut] at [intensity], one pixel at a time through
+     * [filterPixel] (the same function the live preview's [FilterPreviewRenderer] relies on).
      */
     private fun applyFilter(data: IntArray, lut: FilterLut, intensity: Float) {
         for (i in data.indices) {
-            val color = data[i]
-            val filtered = lut.map(color)
-            data[i] = if (intensity >= 1f) {
-                filtered
-            } else {
-                OPAQUE or
-                    (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
-                    (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
-                    mix(color and 0xFF, filtered and 0xFF, intensity)
-            }
+            if (i and CHECK_MASK == 0) checkActive()
+            data[i] = filterPixel(data[i], lut, intensity)
         }
     }
-
-    /** The value [amount] of the way from [from] to [to], rounded. */
-    private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
 
     /** Rounds [value] to a channel value, clamped to 0..255. */
     private fun channel(value: Float): Int = when {
@@ -208,11 +221,20 @@ class EditProcessor(
         /** The alpha bits of a fully opaque ARGB colour. */
         private const val OPAQUE = -0x1000000
 
-        /** How far brightness at its maximum lifts every channel, in 0..255 units. */
-        const val BRIGHTNESS_SHIFT = 80f
+        /**
+         * How far brightness at its maximum lifts every channel, in 0..255 units. The number lives
+         * in [EditColourMatrix]; this name is kept so existing code and tests still read it here.
+         */
+        const val BRIGHTNESS_SHIFT = EditColourMatrix.BRIGHTNESS_SHIFT
 
-        /** How far warmth at its maximum lifts red and lowers blue, in 0..255 units. */
-        const val WARMTH_SHIFT = 40f
+        /**
+         * How far warmth at its maximum lifts red and lowers blue, in 0..255 units (kept here for
+         * the same reason as [BRIGHTNESS_SHIFT]).
+         */
+        const val WARMTH_SHIFT = EditColourMatrix.WARMTH_SHIFT
+
+        /** A cancelled render is noticed every 65,536 pixels in the colour and filter loops. */
+        private const val CHECK_MASK = 0xFFFF
 
         /** Progress reported once the crop is done. */
         private const val PROGRESS_CROPPED = 0.25f
@@ -220,94 +242,50 @@ class EditProcessor(
         /** Progress reported once the turns and flips are done. */
         private const val PROGRESS_TURNED = 0.5f
 
-        /** Progress reported once the colour sliders are done. */
-        private const val PROGRESS_COLOURED = 0.75f
+        /** Progress reported once the filter is done. */
+        private const val PROGRESS_FILTERED = 0.75f
 
         /**
-         * Returns the rectangle that [settings]' crop keeps out of a [width] x [height] photo.
-         *
-         * - No crop: the whole photo.
-         * - A fixed ratio: the largest rectangle of that shape, centred. When the leftover is an
-         *   odd number of pixels, the extra one goes to the left (or top) margin, so the photo's
-         *   middle pixel stays the crop's middle pixel.
-         * - Free: [EditSettings.freeCrop]'s fractions turned into pixels, at least 1 x 1.
+         * Returns the pixels that [rect] keeps out of a [width] x [height] photo: its fractions
+         * turned into pixels (rounded), with the edges put in order, kept inside the photo and at
+         * least 1 x 1, so even a rectangle dragged to nothing still gives a picture.
+         * [CropRect.FULL][EditSettings.CropRect.FULL] gives the whole photo.
          */
-        private fun cropBounds(width: Int, height: Int, settings: EditSettings): Bounds {
-            val ratio = settings.cropRatio ?: return Bounds(0, 0, width, height)
-            if (ratio == CropRatio.FREE) {
-                val rect = settings.freeCrop
-                val left = (minOf(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(0, width - 1)
-                val top = (minOf(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(0, height - 1)
-                val right = (maxOf(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(left + 1, width)
-                val bottom = (maxOf(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(top + 1, height)
-                return Bounds(left, top, right - left, bottom - top)
-            }
-            val cropWidth: Int
-            val cropHeight: Int
-            // Compare width/height with the ratio by cross-multiplying, so no rounding sneaks in.
-            if (width.toLong() * ratio.heightPart > height.toLong() * ratio.widthPart) {
-                // The photo is wider than the shape: keep the full height, trim the sides.
-                cropHeight = height
-                cropWidth = (height.toFloat() * ratio.widthPart / ratio.heightPart).roundToInt().coerceIn(1, width)
-            } else {
-                // The photo is taller than (or exactly) the shape: keep the full width.
-                cropWidth = width
-                cropHeight = (width.toFloat() * ratio.heightPart / ratio.widthPart).roundToInt().coerceIn(1, height)
-            }
-            return Bounds((width - cropWidth + 1) / 2, (height - cropHeight + 1) / 2, cropWidth, cropHeight)
+        private fun cropBounds(width: Int, height: Int, rect: EditSettings.CropRect): Bounds {
+            val left = (minOf(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(0, width - 1)
+            val top = (minOf(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(0, height - 1)
+            val right = (maxOf(rect.left, rect.right).coerceIn(0f, 1f) * width).roundToInt().coerceIn(left + 1, width)
+            val bottom = (maxOf(rect.top, rect.bottom).coerceIn(0f, 1f) * height).roundToInt().coerceIn(top + 1, height)
+            return Bounds(left, top, right - left, bottom - top)
         }
 
         /**
-         * Builds the one colour matrix the four sliders of [settings] make together, applied in
-         * this order: contrast, saturation, warmth, brightness.
-         *
-         * A colour matrix (Android's `ColorMatrix`) is a 4 x 5 grid of numbers: each output channel
-         * is a weighted sum of the input red, green, blue and alpha plus an offset. Chaining two
-         * matrices (`postConcat`) gives one matrix that does both, so the pixels are visited once.
-         *
-         * - Contrast scales each channel away from (or towards) mid-grey 128: by up to 2 at the
-         *   maximum, down to 0.2 at the minimum.
-         * - Saturation uses `setSaturation`: 0 at the minimum (every channel becomes the pixel's
-         *   luminance, so black and white), 1 in the middle, 2 at the maximum.
-         * - Warmth adds up to [WARMTH_SHIFT] to red and takes it from blue (the reverse when cooler).
-         * - Brightness adds up to [BRIGHTNESS_SHIFT] to every channel (or takes it away).
+         * The one colour matrix the four sliders of [settings] make together. The formula lives
+         * in [EditColourMatrix.of], shared with the live preview; this delegate stays so existing
+         * code and tests can keep asking the processor. It is `internal` (visible to the app
+         * module and its tests, nowhere else).
          */
-        private fun colourMatrix(settings: EditSettings): FloatArray {
-            val matrix = ColorMatrix()
-            val contrast = settings.contrast.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (contrast != EditSettings.MIDDLE) {
-                val scale = if (contrast > 0f) 1f + contrast else 1f + contrast * 0.8f
-                val offset = 128f * (1f - scale)
-                matrix.postConcat(ColorMatrix(scaleAndShift(scale, offset, offset, offset)))
-            }
-            val saturation = settings.saturation.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (saturation != EditSettings.MIDDLE) {
-                val saturate = ColorMatrix()
-                saturate.setSaturation(1f + saturation)
-                matrix.postConcat(saturate)
-            }
-            val warmth = settings.warmth.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (warmth != EditSettings.MIDDLE) {
-                val shift = warmth * WARMTH_SHIFT
-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, 0f, -shift)))
-            }
-            val brightness = settings.brightness.coerceIn(EditSettings.MIN, EditSettings.MAX)
-            if (brightness != EditSettings.MIDDLE) {
-                val shift = brightness * BRIGHTNESS_SHIFT
-                matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, shift, shift)))
-            }
-            return matrix.array
-        }
+        internal fun colourMatrix(settings: EditSettings): FloatArray = EditColourMatrix.of(settings)
 
         /**
-         * A colour matrix's 20 numbers that multiply red, green and blue by [scale] and then add
-         * [red], [green] and [blue] to them, leaving alpha alone.
+         * Sends one ARGB pixel [color] through the filter look-up [lut] and mixes the result with
+         * the pixel's own colour: [intensity] 1 (or more) gives the filtered colour, 0 the colour
+         * as it was, 0.5 halfway between, each channel rounded.
+         *
+         * It is a pure function (same input, same output, nothing else touched) and `internal`, so
+         * Done ([EditProcessor]) and the live preview ([FilterPreviewRenderer], which runs this
+         * processor with only the filter set) mix a filter in exactly the same way.
          */
-        private fun scaleAndShift(scale: Float, red: Float, green: Float, blue: Float): FloatArray = floatArrayOf(
-            scale, 0f, 0f, 0f, red,
-            0f, scale, 0f, 0f, green,
-            0f, 0f, scale, 0f, blue,
-            0f, 0f, 0f, 1f, 0f,
-        )
+        internal fun filterPixel(color: Int, lut: FilterLut, intensity: Float): Int {
+            val filtered = lut.map(color)
+            if (intensity >= 1f) return filtered
+            return OPAQUE or
+                (mix((color shr 16) and 0xFF, (filtered shr 16) and 0xFF, intensity) shl 16) or
+                (mix((color shr 8) and 0xFF, (filtered shr 8) and 0xFF, intensity) shl 8) or
+                mix(color and 0xFF, filtered and 0xFF, intensity)
+        }
+
+        /** The value [amount] of the way from [from] to [to], rounded. */
+        private fun mix(from: Int, to: Int, amount: Float): Int = (from + (to - from) * amount).roundToInt()
     }
 }

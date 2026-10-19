@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Edit screen's layout: the row of four tools under the photo, the Undo and Compare pill on
+     the photo, and the sheet that holds the open tool's controls. -->
+<resources>
+    <string name="edit_layout_crop">Crop</string>
+    <string name="edit_layout_rotate">Rotate</string>
+    <string name="edit_layout_adjust">Adjust</string>
+    <string name="edit_layout_filters">Filters</string>
+    <string name="edit_layout_undo">Undo</string>
+    <string name="edit_layout_compare">Compare</string>
+    <string name="edit_layout_sheet">Tool settings</string>
+</resources>

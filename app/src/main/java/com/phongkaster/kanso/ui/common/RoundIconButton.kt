@@ -27,7 +27,7 @@ private val ROUND_BUTTON_SIZE = 48.dp
 
 /**
  * A round button showing one icon: a filled, tinted circle 48 dp across that calls [onClick] when
- * tapped. The tool screens, the gallery, Saved and Home use it wherever a single icon acts (Back,
+ * tapped. The tool screens, the gallery, Result and Home use it wherever a single icon acts (Back,
  * Close, Share, the tool shortcuts), so every such button in the app looks the same.
  *
  * It is Material 3's `FilledTonalIconButton`: "tonal" means its circle is filled with the theme's

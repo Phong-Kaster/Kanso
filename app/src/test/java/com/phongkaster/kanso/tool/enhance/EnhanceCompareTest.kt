@@ -68,7 +68,7 @@ class EnhanceCompareTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     panel = { EnhancePanel(onRun = onRun, original = original, enhanced = enhanced) },
                 )
             }

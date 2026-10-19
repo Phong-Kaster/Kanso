@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -45,24 +46,27 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.ARTISTIC_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
 import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_FAILURE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_PROGRESS_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
@@ -86,20 +90,28 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Checks the tool screen on Android 15 (DoD 8): a photo tagged "turned" is drawn upright and
  * fitted inside the photo card, the image node names the photo's Uri, an unreadable photo gives a
- * plain message with Save switched off, and Back calls back.
+ * plain message with Done switched off, and Back calls back.
  *
  * Run 7, DoD 10: each of the five tools has a screen of its own, with no way to change tools on
  * it. For each tool, with the 600 x 400 gradient photo: a round Back button at the top left; the
  * tool's name centred at the top, the only text on the screen equal to a tool's name; a full-width
  * rounded card holding the photo, which fills the card in one direction with its own shape; a
  * "Replace" chip inside the card near its bottom; the tool's own options strip under the card;
- * one full-width Save button under that; no toggle anywhere; the photo decoded exactly once.
- * Another test hands the screen the insets of a phone with a 0 dp navigation bar and a bottom
- * gesture zone, and checks that Save stays above the zone.
+ * no toggle anywhere; the photo decoded exactly once. Another test hands the screen the insets of
+ * a phone with a 0 dp navigation bar and a bottom gesture zone, and checks that the tool's
+ * controls stay above the zone.
  *
  * Run 8: each tool's options strip holds that tool's own panel, and no text promises a tool "in
  * a later run"; Undo works only when there is an edit to take back; while an edit runs a progress
- * ring shows and Save is off; and each kind of failed edit shows its plain message over the photo.
+ * ring shows and Done is off; and each kind of failed edit shows its plain message over the photo.
+ *
+ * Run 9 (T-006, DoD 19 and R5): the full-width Save button at the bottom is gone from all five
+ * tools. Done sits at the top right, in the top bar, on every tool screen; on the four tools other
+ * than Edit, Undo stands just left of it, and on Edit Undo stays in the pill on the photo.
+ *
+ * Run 9: the Edit screen became a real editor: no Replace chip, a row of four tools under the
+ * photo whose sheet holds the Edit panel (the strip exists only while a sheet is open), and Undo
+ * in a pill on the photo next to a Compare switch. The checks above follow that layout on Edit.
  *
  * The screen runs on the same phone size as the pictures (411 x 891 dp, xxhdpi).
  */
@@ -141,7 +153,7 @@ class ToolScreenTest {
             ExifInterface.ORIENTATION_ROTATE_90,
         )
         val uri = ToolFixtures.serve(context, file, "turned.jpg")
-        show(ToolViewModel(Tool.EDIT, uri, PhotoLoader(context), ViewModelClearedProbe(), NoSavePhotoSaver()))
+        show(ToolViewModel(Tool.EDIT, uri, PhotoLoader(context), ViewModelClearedProbe()))
         waitForImage()
 
         val image = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot
@@ -166,17 +178,20 @@ class ToolScreenTest {
             .assertIsDisplayed()
     }
 
-    /** The top bar shows the tool's name, and Save is visible and can be tapped once the photo is shown. */
+    /**
+     * The top bar shows the tool's name, and Done is visible and can be tapped once the photo is
+     * shown. Run 9 (T-006): Save became Done at the top right, so the test checks Done.
+     */
     @Test
-    fun the_top_bar_names_the_tool_and_save_is_visible_and_enabled() {
+    fun the_top_bar_names_the_tool_and_done_is_visible_and_enabled() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
-        show(ToolViewModel(Tool.RETOUCH, "content://media/external/images/media/7", loader, ViewModelClearedProbe(), NoSavePhotoSaver()))
+        show(ToolViewModel(Tool.RETOUCH, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
         waitForImage()
 
         compose.onNode(
             hasText(context.getString(R.string.tool_retouch)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
         ).assertIsDisplayed()
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsEnabled()
     }
 
     /**
@@ -186,16 +201,19 @@ class ToolScreenTest {
     @Test
     fun the_photo_is_asked_for_at_twice_the_screen_s_longest_edge() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
-        show(ToolViewModel(Tool.EDIT, "content://media/external/images/media/7", loader, ViewModelClearedProbe(), NoSavePhotoSaver()))
+        show(ToolViewModel(Tool.EDIT, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
         waitForImage()
 
         assertEquals(listOf(2 * 891 * 3), loader.requestedEdges.toList())
     }
 
-    /** A photo that cannot be opened gives the plain message, no image, and Save switched off. */
+    /**
+     * A photo that cannot be opened gives the plain message, no image, and Done switched off.
+     * Run 9 (T-006): Save became Done, so Done is the button checked to be off.
+     */
     @Test
     fun an_unreadable_photo_shows_a_plain_message() {
-        show(ToolViewModel(Tool.EDIT, ToolFixtures.MISSING_URI, PhotoLoader(context), ViewModelClearedProbe(), NoSavePhotoSaver()))
+        show(ToolViewModel(Tool.EDIT, ToolFixtures.MISSING_URI, PhotoLoader(context), ViewModelClearedProbe()))
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodes(hasTestTag(TOOL_UNREADABLE_TAG)).fetchSemanticsNodes().isNotEmpty()
         }
@@ -203,7 +221,7 @@ class ToolScreenTest {
         compose.onNodeWithTag(TOOL_UNREADABLE_TAG).assertIsDisplayed()
         compose.onNode(hasText(context.getString(R.string.tool_photo_unreadable))).assertIsDisplayed()
         assertTrue(compose.onAllNodes(hasTestTag(TOOL_IMAGE_TAG)).fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsNotEnabled()
     }
 
     /** The Back button calls onBack. */
@@ -211,7 +229,7 @@ class ToolScreenTest {
     fun the_back_arrow_calls_on_back() {
         var backCalls = 0
         val loader = FakePhotoLoader(context, null)
-        show(ToolViewModel(Tool.EDIT, "content://x/1", loader, ViewModelClearedProbe(), NoSavePhotoSaver()), onBack = { backCalls++ })
+        show(ToolViewModel(Tool.EDIT, "content://x/1", loader, ViewModelClearedProbe()), onBack = { backCalls++ })
 
         compose.onNodeWithContentDescription(context.getString(R.string.back)).performClick()
         compose.waitForIdle()
@@ -224,7 +242,7 @@ class ToolScreenTest {
         var replaceCalls = 0
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
         show(
-            ToolViewModel(Tool.ENHANCE, PHOTO_URI, loader, ViewModelClearedProbe(), NoSavePhotoSaver()),
+            ToolViewModel(Tool.ENHANCE, PHOTO_URI, loader, ViewModelClearedProbe()),
             onReplace = { replaceCalls++ },
         )
         waitForImage()
@@ -239,7 +257,7 @@ class ToolScreenTest {
     fun loading_is_done_once_per_size_and_clearing_is_reported() {
         val loader = FakePhotoLoader(context, null)
         val probe = ViewModelClearedProbe()
-        val viewModel = ToolViewModel(Tool.EDIT, "content://x/1", loader, probe, NoSavePhotoSaver())
+        val viewModel = ToolViewModel(Tool.EDIT, "content://x/1", loader, probe)
         // A ViewModelStore is what a navigation entry keeps its ViewModels in; clearing it is
         // what happens when the entry leaves the back stack.
         val store = ViewModelStore()
@@ -269,15 +287,23 @@ class ToolScreenTest {
      * DoD 10, once per tool: each tool's own screen, opened on the 600 x 400 gradient photo, has
      * the round Back button at the top left, the tool's name centred and alone among the tools'
      * names, the full-width rounded card holding the fitted photo, the Replace chip near the
-     * card's bottom, the tool's own options strip under the card and the full-width Save button
-     * under that. Nothing on it is a toggle, its state's tool stays the key's tool, and its photo
-     * is decoded exactly once.
+     * card's bottom and the tool's own options strip under the card. Nothing on it is a toggle, its
+     * state's tool stays the key's tool, and its photo is decoded exactly once.
+     *
+     * Run 9: the Edit screen has no Replace chip (checked absent there, present on the other
+     * four), its strip appears once a tool sheet is opened (the test opens Adjust), and its one
+     * toggle is the Compare switch in the pill on the photo.
+     *
+     * Run 9 (T-006, DoD 19 and R5): the full-width Save button under the strip is gone; the test
+     * now checks Done instead, at the top right (in the right half of the screen, above the card,
+     * level with the title) and enabled; Undo just left of it on the four other tools and in the
+     * pill on Edit; and no full-width button anywhere below the card.
      *
      * One screen is drawn at a time; the test hands it each tool's ViewModel in turn, as opening
      * each tool's screen from its own key would.
      */
     @Test
-    fun each_tool_has_its_own_screen_with_back_its_name_the_photo_card_replace_its_strip_and_save() {
+    fun each_tool_has_its_own_screen_with_back_its_name_the_photo_card_replace_its_strip_and_done() {
         var backCalls = 0
         val dp24 = with(compose.density) { 24.dp.toPx() }
         val dp48 = with(compose.density) { 48.dp.toPx() }
@@ -302,7 +328,19 @@ class ToolScreenTest {
             }
             val title = compose.onNode(hasText(label(tool)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)))
                 .fetchSemanticsNode().boundsInRoot
-            assertEquals("$tool: the name $title is not centred", root.center.x, title.center.x, 2f)
+            // Run 9: Undo and Done now sit at the right end, wider than Back, and Material's centred
+            // title is centred in the room between Back and the first of them; so it must lie
+            // between them and stay near the middle of the screen (within 96 dp of it).
+            val firstAction = compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)))
+                .fetchSemanticsNodes().map { it.boundsInRoot }.filter { it.top < title.bottom }
+                .plus(compose.onNodeWithTag(TOOL_DONE_TAG).fetchSemanticsNode().boundsInRoot)
+                .minOf { it.left }
+            assertTrue("$tool: the name $title overlaps Back $back", title.left >= back.right - 1f)
+            assertTrue("$tool: the name $title overlaps the actions at $firstAction", title.right <= firstAction + 1f)
+            assertTrue(
+                "$tool: the name $title is not near the middle of the screen",
+                kotlin.math.abs(root.center.x - title.center.x) <= with(compose.density) { 96.dp.toPx() },
+            )
             assertTrue("$tool: the name $title is not above the card", title.bottom <= cardBounds().top + SLACK)
 
             // The card: full width, holding the photo, which fills it one way with its own shape.
@@ -318,12 +356,25 @@ class ToolScreenTest {
             compose.onNode(hasTestTag(TOOL_IMAGE_TAG) and SemanticsMatcher.expectValue(TOOL_PHOTO_URI_KEY, PHOTO_URI))
                 .assertIsDisplayed()
 
-            // Replace: inside the card, its bottom near the card's bottom.
-            val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG)
-                .assert(hasText(context.getString(R.string.tool_screen_replace)))
-                .fetchSemanticsNode().boundsInRoot
-            assertInside(replace, card)
-            assertTrue("$tool: Replace $replace is not near the card's bottom ${card.bottom}", card.bottom - replace.bottom <= dp24)
+            // Run 9 (A-007): the Edit screen has no Replace chip; every other tool keeps it.
+            if (tool == Tool.EDIT) {
+                compose.onAllNodes(hasTestTag(TOOL_REPLACE_TAG)).assertCountEquals(0)
+                compose.onAllNodes(hasText(context.getString(R.string.tool_screen_replace))).assertCountEquals(0)
+            } else {
+                // Replace: inside the card, its bottom near the card's bottom.
+                val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG)
+                    .assert(hasText(context.getString(R.string.tool_screen_replace)))
+                    .fetchSemanticsNode().boundsInRoot
+                assertInside(replace, card)
+                assertTrue("$tool: Replace $replace is not near the card's bottom ${card.bottom}", card.bottom - replace.bottom <= dp24)
+            }
+
+            // Run 9: the Edit screen's options strip exists only while one of its tool sheets is
+            // open, so the test opens Adjust (as a tap on it would) before looking for the strip.
+            if (tool == Tool.EDIT) {
+                compose.runOnUiThread { viewModel.openTool(EditTool.ADJUST) }
+                compose.waitForIdle()
+            }
 
             // The options strip: under the card, holding this tool's own panel.
             val panel = compose.onNodeWithTag(EDITOR_PANEL_TAG).fetchSemanticsNode().boundsInRoot
@@ -335,16 +386,52 @@ class ToolScreenTest {
             compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
                 .assertExists()
 
-            // Save: full width, under the strip.
-            val save = compose.onNodeWithTag(TOOL_SAVE_TAG)
-                .assert(hasText(context.getString(R.string.tool_save)))
+            // Run 9 (T-006): Save under the strip became Done at the top right. Done: named "Done",
+            // enabled, in the right half, above the card and level with the title.
+            val done = compose.onNodeWithTag(TOOL_DONE_TAG)
+                .assert(hasText(context.getString(R.string.tool_done)))
                 .assertIsEnabled()
                 .fetchSemanticsNode().boundsInRoot
-            assertTrue("$tool: Save $save is not full width", save.left - root.left <= dp24 && root.right - save.right <= dp24)
-            assertTrue("$tool: Save $save is not under the strip $panel", panel.isEmpty || save.top >= panel.bottom - SLACK)
+            assertTrue("$tool: Done $done is not in the right half", done.left >= root.center.x)
+            assertTrue("$tool: Done $done is not near the right edge", root.right - done.right <= dp24)
+            assertTrue("$tool: Done $done is not above the card $card", done.bottom <= card.top + SLACK)
+            assertTrue(
+                "$tool: Done $done is not level with the title $title",
+                done.top <= title.center.y && done.bottom >= title.center.y,
+            )
+            // Undo: just left of Done on the four other tools; on Edit, in the pill on the photo.
+            val undo = compose.onNodeWithTag(TOOL_UNDO_TAG).fetchSemanticsNode().boundsInRoot
+            if (tool == Tool.EDIT) {
+                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
+                assertTrue("$tool: Undo $undo left the photo card", undo.top >= card.top - SLACK)
+            } else {
+                assertTrue("$tool: Undo $undo is not left of Done $done", undo.right <= done.left + SLACK)
+                assertTrue("$tool: Undo $undo is not in the top bar", undo.bottom <= card.top + SLACK)
+                assertTrue("$tool: Undo $undo is not in the right half", undo.left >= root.center.x - SLACK)
+            }
+            // No Save bar (R5): no "Save" text on the screen, and nothing clickable outside the
+            // tool's own options strip spans the screen below the card. The strip's own controls
+            // (a tool's run button) are the tool's, not a bottom bar.
+            compose.onAllNodes(hasText(context.getString(R.string.tool_save)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)))
+                .assertCountEquals(0)
+            val wideBelow = compose.onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick) and !hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)),
+            )
+                .fetchSemanticsNodes()
+                .map { it.boundsInRoot }
+                .filter { it.top >= card.bottom - SLACK && it.width >= root.width - 2 * dp24 }
+            assertTrue("$tool: a full-width button sits below the card: $wideBelow", wideBelow.isEmpty())
 
             // No way to change tools: nothing is a toggle, and the tool is still the key's.
-            compose.onAllNodes(isToggleable()).assertCountEquals(0)
+            // Run 9: on Edit the one toggle is the pill's Compare switch, which shows the
+            // original photo and changes no tool; any other toggle still fails.
+            if (tool == Tool.EDIT) {
+                compose.onAllNodes(isToggleable()).assertCountEquals(1)
+                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG)))
+                    .assertExists()
+            } else {
+                compose.onAllNodes(isToggleable()).assertCountEquals(0)
+            }
             assertEquals(tool, viewModel.state.value.tool)
             assertEquals("$tool: the photo was not decoded exactly once", 1, loader.requestedEdges.size)
         }
@@ -354,19 +441,28 @@ class ToolScreenTest {
      * Run 8: each of the five tools' screens (the stateless content, with the tool's own panel in
      * the slot) shows that tool's panel inside the options strip and no other tool's, and no text
      * on it still promises the tool is "coming in a later run".
+     *
+     * Run 9: the Edit screen draws its panel in the open tool's sheet (`editSheet`), not in the
+     * `panel` slot, so the content is given both slots and Edit's state has Adjust open.
      */
     @Test
     fun each_tool_shows_its_own_panel_and_no_later_run_message() {
         val photo = ToolFixtures.gradient(600, 400)
-        var state by mutableStateOf(readyState(Tool.entries.first(), photo))
+        var state by mutableStateOf(panelState(Tool.entries.first(), photo))
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = state, onBack = {}, onSave = {}, panel = { ToolPanel(state.tool) })
+                ToolContent(
+                    state = state,
+                    onBack = {},
+                    onDone = {},
+                    panel = { ToolPanel(state.tool) },
+                    editSheet = { open -> ToolPanel(Tool.EDIT, openTool = open) },
+                )
             }
         }
         compose.waitForIdle()
         Tool.entries.forEach { tool ->
-            compose.runOnUiThread { state = readyState(tool, photo) }
+            compose.runOnUiThread { state = panelState(tool, photo) }
             compose.waitForIdle()
 
             compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
@@ -382,6 +478,9 @@ class ToolScreenTest {
     /**
      * Undo (`tool-undo`) is switched off while there is nothing to take back, and switched on,
      * calling onUndo once per tap, once there is.
+     *
+     * Run 9: on the Edit screen Undo moved from the top bar into the pill on the photo, so the
+     * test also checks there is exactly one Undo and that it is the pill's.
      */
     @Test
     fun undo_is_enabled_only_when_there_is_an_edit_to_take_back() {
@@ -390,10 +489,12 @@ class ToolScreenTest {
         var state by mutableStateOf(readyState(Tool.EDIT, photo))
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = state, onBack = {}, onSave = {}, onUndo = { undoCalls++ })
+                ToolContent(state = state, onBack = {}, onDone = {}, onUndo = { undoCalls++ })
             }
         }
         compose.waitForIdle()
+        compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG)).assertCountEquals(1)
+        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
 
         compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }
@@ -405,11 +506,12 @@ class ToolScreenTest {
 
     /**
      * While an edit runs, the progress ring (`tool-progress`) is in the photo card at the value
-     * the state reports, and Save and Undo are switched off. The clock is held still from the
+     * the state reports, and Done and Undo are switched off. The clock is held still from the
      * start, as the Constraints ask of any test that shows a progress indicator.
+     * Run 9 (T-006): Save became Done, so Done is the button checked to be off.
      */
     @Test
-    fun while_an_edit_runs_save_is_off_and_the_progress_ring_is_shown() {
+    fun while_an_edit_runs_done_is_off_and_the_progress_ring_is_shown() {
         val state = readyState(Tool.REMOVE_BACKGROUND, ToolFixtures.gradient(600, 400)).copy(
             canUndo = true,
             processing = ToolUiState.Processing.Running(0.4f),
@@ -417,7 +519,7 @@ class ToolScreenTest {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = state, onBack = {}, onSave = {}, panel = { ToolPanel(state.tool) })
+                ToolContent(state = state, onBack = {}, onDone = {}, panel = { ToolPanel(state.tool) })
             }
         }
         compose.mainClock.advanceTimeBy(500)
@@ -430,7 +532,7 @@ class ToolScreenTest {
                     current != null && kotlin.math.abs(current - 0.4f) < 0.01f
                 },
             )
-        compose.onNodeWithTag(TOOL_SAVE_TAG).assertIsDisplayed().assertIsNotEnabled()
+        compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsNotEnabled()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsNotEnabled()
         // The photo stays on screen under the ring.
         compose.onNodeWithTag(TOOL_IMAGE_TAG).assertIsDisplayed()
@@ -448,7 +550,7 @@ class ToolScreenTest {
         var state by mutableStateOf(readyState(Tool.RETOUCH, photo))
         compose.setContent {
             MaterialTheme {
-                ToolContent(state = state, onBack = {}, onSave = {}, onDismissFailure = { dismissCalls++ })
+                ToolContent(state = state, onBack = {}, onDone = {}, onDismissFailure = { dismissCalls++ })
             }
         }
         compose.waitForIdle()
@@ -473,11 +575,12 @@ class ToolScreenTest {
     }
 
     /**
-     * Save stays above the bottom gesture zone even when the navigation bar is 0 dp tall
-     * (POLICIES.md, the bottom-edge rule), and so does the options strip above it.
+     * The tool's options strip, the lowest controls on the screen, stays above the bottom gesture
+     * zone even when the navigation bar is 0 dp tall (POLICIES.md, the bottom-edge rule).
+     * Run 9 (T-006): the bottom Save bar is gone (Done is at the top), so the strip is checked alone.
      *
      * The bottom gesture zone is the strip where a swipe up means "go home"; a tap inside it can
-     * bring up the phone's own navigation instead of pressing Save. With swipe gestures on and the
+     * bring up the phone's own navigation instead of pressing a control. With swipe gestures on and the
      * gesture hint off (as on the owner's Galaxy A13), the navigation bar's inset is 0 while the
      * zone is still there, so a button padded by the navigation bar alone would end inside a zone
      * [GESTURE_ZONE] tall.
@@ -489,10 +592,13 @@ class ToolScreenTest {
      * the zone it would prove nothing.
      */
     @Test
-    fun save_clears_the_bottom_gesture_zone_when_the_navigation_bar_is_zero_tall() {
+    fun the_tool_controls_clear_the_bottom_gesture_zone_when_the_navigation_bar_is_zero_tall() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
         // Built here, before the screen is drawn: lint forbids building a ViewModel while drawing.
-        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, loader, ViewModelClearedProbe(), NoSavePhotoSaver())
+        val viewModel = ToolViewModel(Tool.EDIT, PHOTO_URI, loader, ViewModelClearedProbe())
+        // Run 9: the Edit screen's options strip exists only while a tool sheet is open, so
+        // Adjust (the tallest sheet, four sliders) is opened for the strip to be measured.
+        viewModel.openTool(EditTool.ADJUST)
         var composeView: View? = null
         var seenZonePx = -1
         var seenNavigationBarPx = -1
@@ -510,7 +616,7 @@ class ToolScreenTest {
                 seenNavigationBarPx = navigationBar
             }
             MaterialTheme {
-                ToolScreen(viewModel = viewModel, onBack = {}, onSaved = {})
+                ToolScreen(viewModel = viewModel, onBack = {}, onDone = {})
             }
         }
         compose.waitForIdle()
@@ -528,7 +634,7 @@ class ToolScreenTest {
 
         // The zone's top edge, counted from the top of the screen's root.
         val zoneTop = (compose.onRoot().fetchSemanticsNode().size.height - zonePx).toFloat()
-        listOf(EDITOR_PANEL_TAG, TOOL_SAVE_TAG).forEach { tag ->
+        listOf(EDITOR_PANEL_TAG).forEach { tag ->
             val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
             // positionInRoot plus the size is where the node is laid out, never clipped to the
             // screen as boundsInRoot is, so a control pushed off the bottom cannot look inside.
@@ -562,12 +668,12 @@ class ToolScreenTest {
     ) {
         val loaders = Tool.entries.associateWith { FakePhotoLoader(context, ToolFixtures.gradient(600, 400)) }
         val viewModels = Tool.entries.associateWith { tool ->
-            ToolViewModel(tool, PHOTO_URI, loaders.getValue(tool), ViewModelClearedProbe(), NoSavePhotoSaver())
+            ToolViewModel(tool, PHOTO_URI, loaders.getValue(tool), ViewModelClearedProbe())
         }
         var shown by mutableStateOf(viewModels.getValue(Tool.entries.first()))
         compose.setContent {
             MaterialTheme {
-                ToolScreen(viewModel = shown, onBack = onBack, onSaved = {})
+                ToolScreen(viewModel = shown, onBack = onBack, onDone = {})
             }
         }
         compose.waitForIdle()
@@ -584,6 +690,13 @@ class ToolScreenTest {
         }
     }
 
+    /**
+     * Like [readyState], with the Edit screen's Adjust sheet open, so Edit's panel is drawn.
+     * Run 9: the Edit panel is drawn only while one of its tool sheets is open.
+     */
+    private fun panelState(tool: Tool, photo: Bitmap): ToolUiState =
+        readyState(tool, photo).let { if (tool == Tool.EDIT) it.copy(openTool = EditTool.ADJUST) else it }
+
     /** A snapshot of [tool]'s screen with [photo] decoded and shown, nothing edited or saved. */
     private fun readyState(tool: Tool, photo: Bitmap): ToolUiState =
         ToolUiState(tool = tool, photoUri = PHOTO_URI, photo = ToolUiState.PhotoState.Ready(photo))
@@ -595,7 +708,7 @@ class ToolScreenTest {
     private fun show(viewModel: ToolViewModel, onBack: () -> Unit = {}, onReplace: () -> Unit = {}) {
         compose.setContent {
             MaterialTheme {
-                ToolScreen(viewModel = viewModel, onBack = onBack, onSaved = {}, onReplace = onReplace)
+                ToolScreen(viewModel = viewModel, onBack = onBack, onDone = {}, onReplace = onReplace)
             }
         }
         compose.waitForIdle()
@@ -630,8 +743,8 @@ class ToolScreenTest {
 
         /**
          * The height of the bottom gesture zone the gesture test hands the screen: more than
-         * Save's own 12 dp bottom margin, so a button padded by the navigation bar alone (0 dp in
-         * that test) would end inside it.
+         * the screen's own 12 dp bottom margin, so a control padded by the navigation bar alone
+         * (0 dp in that test) would end inside it.
          */
         val GESTURE_ZONE = 40.dp
 

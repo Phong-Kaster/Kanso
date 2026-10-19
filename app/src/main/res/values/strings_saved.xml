@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Saved: what screen readers say for the success mark, the small badge above the photo
-         that grows and changes shape once when the screen opens. Never shown as text. -->
-    <string name="saved_mark_description">Photo saved</string>
-    <!-- Saved photo area: what screen readers say for the loading indicator shown while the
-         saved photo is being decoded. Never shown as text. -->
-    <string name="saved_loading">Opening your saved photo</string>
-</resources>

@@ -16,6 +16,9 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.artistic.ArtisticStyle
+import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -39,22 +42,33 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * The controls of [tool], shown in the options strip under the photo on that tool's screen.
  *
  * Each tool has its own panel, picked here by a `when` over the tool. A `when` on an enum must
- * name every case, so a new tool cannot be added without deciding what its panel is. [onApply]
- * runs a processor the panel built (Edit) and [onRun] runs the one the registry holds for the
+ * name every case, so a new tool cannot be added without deciding what its panel is. The Edit sheets' four
+ * `onEdit...` callbacks go to the ViewModel's settings session; [onRun] runs the one the registry holds for the
  * tool (Remove background, Enhance). [onRetouch] and [onStylize] run Retouch and Artistic with
  * the strength (and style) the person set, all through the ViewModel; [state]
  * gives the panel the photos and whether an edit is running. With the defaults a preview or test
  * gets the panel without any edit behind it.
+ *
+ * The Edit tool is split into four smaller tools (Crop, Rotate, Adjust, Filters), each opened in
+ * its own sheet under the photo. [openTool] says which of them the sheet shows; while it is null
+ * (no sheet open) the Edit panel draws nothing, only its empty, tagged slot. [enabled] switches
+ * the Edit controls off, which the screen does while an edit runs or while Compare shows the
+ * original photo. The other four tools ignore both.
  */
 @Composable
 fun ToolPanel(
     tool: Tool,
     modifier: Modifier = Modifier,
     state: ToolUiState? = null,
-    onApply: (ToolProcessor) -> Unit = {},
     onRun: () -> Unit = {},
     onRetouch: (strength: Float) -> Unit = {},
     onStylize: (style: ArtisticStyle, strength: Float) -> Unit = { _, _ -> },
+    openTool: EditTool? = null,
+    enabled: Boolean = true,
+    onEditChange: (EditSettings, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
+    onEditPreview: (EditSettings, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
+    onEditCommit: () -> Unit = {},
+    onEditRatio: (CropRatio, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
 ) {
     // With no state (a preview, or a test of the screen's frame) the slot stays an empty, tagged
     // box, so those pictures show the frame and not a tool's controls; the real screen passes it.
@@ -64,7 +78,21 @@ fun ToolPanel(
     }
     val idle = state.processing is ToolUiState.Processing.Idle
     when (tool) {
-        Tool.EDIT -> EditPanel(onApply = onApply, modifier = modifier)
+        // No Edit sheet open: keep the empty, tagged slot. Otherwise draw the open tool's controls.
+        Tool.EDIT -> if (openTool == null) {
+            EmptyPanel(tool, modifier)
+        } else {
+            EditPanel(
+                openTool = openTool,
+                settings = state.settings,
+                onChange = onEditChange,
+                onPreview = onEditPreview,
+                onCommit = onEditCommit,
+                onRatio = onEditRatio,
+                modifier = modifier,
+                enabled = enabled,
+            )
+        }
         // The checkerboard is drawn behind the photo by the screen, so the panel draws none.
         Tool.REMOVE_BACKGROUND -> CutoutPanel(
             onRun = onRun,

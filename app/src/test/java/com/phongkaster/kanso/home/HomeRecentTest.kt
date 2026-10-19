@@ -68,11 +68,13 @@ import com.phongkaster.kanso.ui.home.homeRecentTag
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.savedAtText
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_CLOSE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
+import com.phongkaster.kanso.ui.result.RESULT_HOME_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SAVE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
-import com.phongkaster.kanso.ui.tool.TOOL_SAVE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -260,8 +262,8 @@ class HomeRecentTest {
     }
 
     /**
-     * (e) Edit's shortcut, photo 1 in its gallery, Save (the saver answers Uri X and the edits
-     * source then holds X as its newest photo), the Saved screen, its close button: within ten
+     * (e) Edit's shortcut, photo 1 in its gallery, Done, Save on Result (the saver answers Uri X and the edits
+     * source then holds X as its newest photo), Go home: within ten
      * seconds of real time Home's first card is X.
      */
     @Test
@@ -277,15 +279,19 @@ class HomeRecentTest {
             waitFor { count(GALLERY_SCREEN_TAG) > 0 && count(galleryPhotoTag(1L)) > 0 }
             compose.onNodeWithTag(galleryPhotoTag(1L)).performClick()
             waitFor { count(TOOL_SCREEN_TAG) > 0 }
-            waitFor { compose.onAllNodes(hasTestTag(TOOL_SAVE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag(TOOL_SAVE_TAG).performClick()
-            waitFor { count(SAVED_SCREEN_TAG) > 0 }
+            waitFor { compose.onAllNodes(hasTestTag(TOOL_DONE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag(TOOL_DONE_TAG).performClick()
+            waitFor { count(RESULT_SCREEN_TAG) > 0 }
+            // Run 9: Done only opens Result; Save, there, is what writes the picture.
+            waitFor { compose.onAllNodes(hasTestTag(RESULT_SAVE_TAG) and isEnabled()).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag(RESULT_SAVE_TAG).performClick()
+            waitFor { count(RESULT_MARK_TAG) > 0 }
 
             // The phone's MediaStore would now list the new photo first: so does the fake.
             edits.photos = listOf(photo(id = 99L, uri = savedUri, modifiedSeconds = NEWEST_SECONDS + 600L)) + edits.photos
 
-            compose.onNodeWithTag(SAVED_CLOSE_TAG).performClick()
-            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
+            compose.onNodeWithTag(RESULT_HOME_TAG).performClick()
+            waitFor { count(RESULT_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
             waitFor { card0Uri() == savedUri }
             assertEquals(savedUri, card0Uri())
         }

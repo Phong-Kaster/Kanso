@@ -87,7 +87,7 @@ class CutoutPreviewTest {
                 ToolContent(
                     state = state,
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     panel = { CutoutPanel(onRun = { runs++ }, showCheckerboard = false) },
                 )
             }

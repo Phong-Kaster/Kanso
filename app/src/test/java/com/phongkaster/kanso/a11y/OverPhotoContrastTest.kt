@@ -21,15 +21,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.saved.SAVED_CLOSE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SHARE_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_TITLE_TAG
-import com.phongkaster.kanso.ui.saved.SavedContent
-import com.phongkaster.kanso.ui.saved.SavedPhoto
-import com.phongkaster.kanso.ui.saved.SavedUiState
+import com.phongkaster.kanso.ui.result.RESULT_SHARE_TAG
+import com.phongkaster.kanso.ui.result.ResultContent
+import com.phongkaster.kanso.ui.result.ResultPhoto
+import com.phongkaster.kanso.ui.result.ResultUiState
+import com.phongkaster.kanso.ui.result.RESULT_CLOSE_TAG
+import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
+import com.phongkaster.kanso.ui.result.RESULT_TITLE_TAG
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import java.util.Locale
@@ -50,13 +52,13 @@ import org.robolectric.annotation.GraphicsMode
  * Checks that the text and buttons drawn over a photo stay readable whatever the photo looks like
  * (DoD 24): on an all-white photo and on an all-black one, in light and in dark, with Kanso blue.
  *
- * The screens that draw over a photo are Saved (right after a save), the photo opened from My
- * edits (Saved's viewer form) and the five tool screens. Each test draws one of them in one mode
+ * The screens that draw over a photo are Result (right after a save), the photo opened from My
+ * edits (the Result screen's viewer form) and the five tool screens. Each test draws one of them in one mode
  * from its stateless `...Content` part, first with an all-white 600 x 800 photo, then with an
  * all-black one (the photo is swapped through Compose state, so the same window is drawn again),
  * and after each draw reads pixels and works out WCAG contrast ratios:
  *
- * - Saved's title ("Saved", or "My edits" in the viewer): the lightest and the darkest pixel
+ * - Result's title ("Saved", or "My edits" in the viewer): the lightest and the darkest pixel
  *   inside its text's bounds, at least [TEXT_MIN_CONTRAST]. The title sits on the top shade over
  *   the blurred photo, so the darkest or lightest pixel there is the shade and the other the ink.
  *   Because the shade fades from row to row, the title's ink is also compared, row by row, with
@@ -67,7 +69,13 @@ import org.robolectric.annotation.GraphicsMode
  *   [ICON_MIN_CONTRAST];
  * - the "Replace" chip on the tool screens: its word against the chip's container, at least
  *   [TEXT_MIN_CONTRAST];
- * - Saved's success mark: its check against the mark, at least [ICON_MIN_CONTRAST].
+ * - Done on every tool screen (Run 9, T-006: it replaced the bottom Save): its word against the
+ *   button, at least [TEXT_MIN_CONTRAST], over both photos;
+ * - Result's success mark: its check against the mark, at least [ICON_MIN_CONTRAST].
+ *
+ * Run 9 (T-006): the Saved screen became the Result screen (`ResultContent`), reached with Done;
+ * its close button belongs to the viewer form only, and its mark shows once Save has succeeded,
+ * so the after-Done form is drawn with a finished save.
  *
  * How a contrast is measured. The screen is drawn into a bitmap from the activity's content view,
  * as `ScreenPixels.kt` does (Compose's own captureToImage times out under Robolectric here), with
@@ -104,15 +112,15 @@ class OverPhotoContrastTest {
         stopKoin()
     }
 
-    // --- Saved -----------------------------------------------------------------------------
+    // --- Result -----------------------------------------------------------------------------
 
-    /** Saved in light mode over a white and a black photo: title, close, Share and the mark. */
+    /** Result in light mode over a white and a black photo: title, close, Share and the mark. */
     @Test
     fun saved_reads_over_white_and_black_photos_in_light() {
         checkSaved(ThemeMode.Light, viewer = false)
     }
 
-    /** Saved in dark mode over a white and a black photo: title, close, Share and the mark. */
+    /** Result in dark mode over a white and a black photo: title, close, Share and the mark. */
     @Test
     fun saved_reads_over_white_and_black_photos_in_dark() {
         checkSaved(ThemeMode.Dark, viewer = false)
@@ -132,13 +140,13 @@ class OverPhotoContrastTest {
 
     // --- Tool screens ----------------------------------------------------------------------
 
-    /** The Edit screen in light mode: "Replace" reads on its chip over a white and a black photo. */
+    /** The Edit screen in light mode: its Undo icon reads on the pill over a white and a black photo. */
     @Test
     fun tool_screen_edit_reads_over_white_and_black_photos_in_light() {
         checkToolScreen(ThemeMode.Light, Tool.EDIT)
     }
 
-    /** The Edit screen in dark mode: "Replace" reads on its chip over a white and a black photo. */
+    /** The Edit screen in dark mode: its Undo icon reads on the pill over a white and a black photo. */
     @Test
     fun tool_screen_edit_reads_over_white_and_black_photos_in_dark() {
         checkToolScreen(ThemeMode.Dark, Tool.EDIT)
@@ -236,7 +244,7 @@ class OverPhotoContrastTest {
     // --- One screen each -------------------------------------------------------------------
 
     /**
-     * Draws Saved in [mode] (its viewer form, the photo opened from My edits, when [viewer]) over
+     * Draws Result in [mode] (its viewer form, the photo opened from My edits, when [viewer]) over
      * each photo and checks its title, its close and Share buttons and, after a save only, its
      * success mark.
      */
@@ -246,32 +254,49 @@ class OverPhotoContrastTest {
             screen = screen,
             mode = mode,
             content = { photo ->
-                SavedContent(
-                    state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(photo), viewer = viewer),
-                    sharing = false,
+                // Run 9 (T-006): Saved became Result; after Done it is drawn with a finished save,
+                // the only time its success mark shows.
+                ResultContent(
+                    state = ResultUiState(
+                        photoUri = if (viewer) PHOTO_URI else null,
+                        photo = ResultPhoto.Ready(photo),
+                        viewer = viewer,
+                        save = if (viewer) ResultUiState.SaveState.Idle else ResultUiState.SaveState.Saved(),
+                    ),
                     onShare = {},
-                    onEditAnother = {},
+                    onSave = {},
                     onClose = {},
+                    onEdit = {},
                 )
             },
             measure = { bitmap ->
                 buildList {
-                    val title = nodeRect(SAVED_TITLE_TAG)
+                    val title = nodeRect(RESULT_TITLE_TAG)
                     add(Measure("title, lightest against darkest pixel", textExtremesContrast(bitmap, title), TEXT_MIN_CONTRAST))
                     add(Measure("title's ink against each row's own background", titleRowsContrast(bitmap, title), TEXT_MIN_CONTRAST))
-                    add(Measure("close icon", roundButtonContrast(bitmap, nodeRect(SAVED_CLOSE_TAG)), ICON_MIN_CONTRAST))
-                    add(Measure("share icon", roundButtonContrast(bitmap, nodeRect(SAVED_SHARE_TAG)), ICON_MIN_CONTRAST))
+                    // Run 9 (T-006): the round close button is the viewer's only.
+                    if (viewer) {
+                        add(Measure("close icon", roundButtonContrast(bitmap, nodeRect(RESULT_CLOSE_TAG)), ICON_MIN_CONTRAST))
+                    }
+                    add(Measure("share icon", roundButtonContrast(bitmap, nodeRect(RESULT_SHARE_TAG)), ICON_MIN_CONTRAST))
                     if (!viewer) {
-                        add(Measure("success mark's check", markContrast(bitmap, nodeRect(SAVED_MARK_TAG)), ICON_MIN_CONTRAST))
+                        add(Measure("success mark's check", markContrast(bitmap, nodeRect(RESULT_MARK_TAG)), ICON_MIN_CONTRAST))
                     }
                 }
             },
         )
     }
 
-    /** Draws the screen of [tool] in [mode] over each photo and checks the "Replace" chip's word. */
+    /**
+     * Draws the screen of [tool] in [mode] over each photo and checks the "Replace" chip's word
+     * (Edit: the Undo icon on its pill) and Done's word on its button.
+     *
+     * Run 9 (T-006): the state no longer has a save part (Save became Done), and Done's word is
+     * measured on every tool, since Done is the screen's way forward over whatever photo is shown.
+     */
     private fun checkToolScreen(mode: ThemeMode, tool: Tool) {
         val replace = app.getString(R.string.tool_screen_replace)
+        val done = app.getString(R.string.tool_done)
         checkOverPhotos(
             screen = "tool screen ${tool.name}",
             mode = mode,
@@ -281,22 +306,45 @@ class OverPhotoContrastTest {
                         tool = tool,
                         photoUri = PHOTO_URI,
                         photo = ToolUiState.PhotoState.Ready(photo),
-                        save = ToolUiState.SaveState.Idle,
+                        // Run 9: Edit's Undo sits in the pill over the photo, so it must be enabled to be read.
+                        canUndo = tool == Tool.EDIT,
                     ),
                     onBack = {},
-                    onSave = {},
+                    onDone = {},
                     onReplace = {},
                 )
             },
             measure = { bitmap ->
-                val word = compose.onNode(
-                    hasText(replace) and hasAnyAncestor(hasTestTag(TOOL_REPLACE_TAG)),
-                    useUnmergedTree = true,
-                ).fetchSemanticsNode()
-                val wordRect = Rect(word.positionInRoot, word.size.toSize())
-                listOf(Measure("\"$replace\" on its chip", chipWordContrast(bitmap, wordRect, nodeRect(TOOL_REPLACE_TAG)), TEXT_MIN_CONTRAST))
+                val doneWord = wordRect(done, TOOL_DONE_TAG)
+                val doneMeasure =
+                    Measure("\"$done\" on its button", chipWordContrast(bitmap, doneWord, nodeRect(TOOL_DONE_TAG)), TEXT_MIN_CONTRAST)
+                // Run 9: the Edit screen has no Replace chip (A-007); what floats over its photo is
+                // the Undo/Compare pill, so its Undo icon is measured against the pill instead.
+                if (tool == Tool.EDIT) {
+                    return@checkOverPhotos listOf(
+                        Measure("undo icon on the pill", roundButtonContrast(bitmap, nodeRect(TOOL_UNDO_TAG)), ICON_MIN_CONTRAST),
+                        doneMeasure,
+                    )
+                }
+                val replaceWord = wordRect(replace, TOOL_REPLACE_TAG)
+                listOf(
+                    Measure("\"$replace\" on its chip", chipWordContrast(bitmap, replaceWord, nodeRect(TOOL_REPLACE_TAG)), TEXT_MIN_CONTRAST),
+                    doneMeasure,
+                )
             },
         )
+    }
+
+    /**
+     * Returns where the word [text] inside the node tagged [container] is laid out, in the root's
+     * pixels, from the unmerged tree (the word's own node, not its button's).
+     */
+    private fun wordRect(text: String, container: String): Rect {
+        val word = compose.onNode(
+            hasText(text) and hasAnyAncestor(hasTestTag(container)),
+            useUnmergedTree = true,
+        ).fetchSemanticsNode()
+        return Rect(word.positionInRoot, word.size.toSize())
     }
 
     // --- Helpers ---------------------------------------------------------------------------
@@ -646,7 +694,7 @@ class OverPhotoContrastTest {
         val CHIP_CONTAINER_GAP = 3.dp
 
         /**
-         * How far past the end of Saved's title each row's background is read: clear of the last
+         * How far past the end of Result's title each row's background is read: clear of the last
          * letter's softened edge, on the shade over the photo, where nothing else is drawn.
          */
         val TITLE_BACKGROUND_GAP = 4.dp

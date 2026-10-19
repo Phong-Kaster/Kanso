@@ -7,9 +7,6 @@
     <string name="edit_tool_ratio_3_4">3:4</string>
     <string name="edit_tool_ratio_16_9">16:9</string>
     <string name="edit_tool_ratio_9_16">9:16</string>
-    <string name="edit_tool_free_width">Width</string>
-    <string name="edit_tool_free_height">Height</string>
-    <string name="edit_tool_free_apply">Crop</string>
     <string name="edit_tool_rotate_left">Turn left</string>
     <string name="edit_tool_rotate_right">Turn right</string>
     <string name="edit_tool_flip_horizontal">Flip across</string>

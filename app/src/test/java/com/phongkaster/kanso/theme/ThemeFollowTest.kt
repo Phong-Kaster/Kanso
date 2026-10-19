@@ -69,12 +69,12 @@ import com.phongkaster.kanso.ui.myedits.MyEditsContent
 import com.phongkaster.kanso.ui.myedits.MyEditsUiState
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.PermissionAccess
-import com.phongkaster.kanso.ui.saved.SAVED_MARK_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_SCRIM_TAG
-import com.phongkaster.kanso.ui.saved.SavedContent
-import com.phongkaster.kanso.ui.saved.SavedPhoto
-import com.phongkaster.kanso.ui.saved.SavedUiState
+import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_SCRIM_TAG
+import com.phongkaster.kanso.ui.result.ResultContent
+import com.phongkaster.kanso.ui.result.ResultPhoto
+import com.phongkaster.kanso.ui.result.ResultUiState
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SettingsContent
 import com.phongkaster.kanso.ui.settings.SettingsUiState
@@ -105,7 +105,7 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Each test draws one screen in KansoTheme with the mode forced to Light or Dark and the default
  * colour, Kanso blue, on Android 15: Home, the gallery with photos, the editor with a ready
- * photo, Saved, Settings, and the camera twice, once after camera access was refused and once
+ * photo, Result, Settings, and the camera twice, once after camera access was refused and once
  * live with a [FakeCameraController] (the real camera screen, its ViewModel and a camera that
  * reports itself ready at once). The other screens are their stateless `...Content` parts fed a
  * UiState built here, as the previews do.
@@ -130,7 +130,7 @@ import org.robolectric.annotation.GraphicsMode
  * top-bar pixel must lie above the content, and no pixel may lie on a node that shows text, a
  * picture or a control. Settings' colour swatches and the colour picker's white card are fixed
  * colours by design (the picker card is DoD 16's one named exception), so no pixel is read
- * there; the Saved success mark is the theme's primary colour, so its row is sampled at the
+ * there; the Result screen's success mark is the theme's primary colour, so its row is sampled at the
  * screen's left edge, well clear of it.
  *
  * Run 7's screens and states (DoD 23) are checked the same way, with Kanso blue in Light and in
@@ -207,13 +207,13 @@ class ThemeFollowTest {
         checkEditor(ThemeMode.Dark)
     }
 
-    /** Saved in light mode: light top bar and background. */
+    /** The Result screen in light mode: light top bar and background. */
     @Test
     fun saved_follows_the_light_theme() {
         checkSaved(ThemeMode.Light)
     }
 
-    /** Saved in dark mode: dark top bar and background. */
+    /** The Result screen in dark mode: dark top bar and background. */
     @Test
     fun saved_follows_the_dark_theme() {
         checkSaved(ThemeMode.Dark)
@@ -365,13 +365,13 @@ class ThemeFollowTest {
         checkEditor(ThemeMode.Dark, Tool.ARTISTIC)
     }
 
-    /** The photo opened from My edits (Saved's viewer form) in light mode. */
+    /** The photo opened from My edits (the Result screen's viewer form) in light mode. */
     @Test
     fun photo_opened_from_my_edits_follows_the_light_theme() {
         checkViewer(ThemeMode.Light)
     }
 
-    /** The photo opened from My edits (Saved's viewer form) in dark mode. */
+    /** The photo opened from My edits (the Result screen's viewer form) in dark mode. */
     @Test
     fun photo_opened_from_my_edits_follows_the_dark_theme() {
         checkViewer(ThemeMode.Dark)
@@ -477,10 +477,9 @@ class ThemeFollowTest {
             tool = tool,
             photoUri = PHOTO_URI,
             photo = ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)),
-            save = ToolUiState.SaveState.Idle,
         )
         show(mode) {
-            ToolContent(state = state, onBack = {}, onSave = {})
+            ToolContent(state = state, onBack = {}, onDone = {})
         }
         val card = nodeRect(TOOL_CARD_TAG)
         assertTrue(
@@ -504,21 +503,21 @@ class ThemeFollowTest {
     }
 
     /**
-     * Draws Saved in [mode] with its photo and checks the top bar and a background pixel at the
+     * Draws the Result screen in [mode] with its photo and checks the top bar and a background pixel at the
      * screen's left edge, level with the success mark: the body keeps 16 dp from the edges and
      * the mark sits in the middle, so that pixel is background and well clear of the mark.
      */
     private fun checkSaved(mode: ThemeMode) {
-        // Saved now draws the photo over a blurred copy of itself, so the screen's colours come
+        // The Result screen draws the photo over a blurred copy of itself, so the screen's colours come
         // from the photo. A photo in the theme's own background colour makes the backdrop, and the
         // shade (the theme's surface over it), read as the theme's colours: what this test follows.
         val themed = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
         themed.eraseColor(scheme(mode).background.toArgb())
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(themed))
+        val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(themed), save = ResultUiState.SaveState.Saved())
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
-        val mark = nodeRect(SAVED_MARK_TAG)
+        val mark = nodeRect(RESULT_MARK_TAG)
         assertFollows(
             screen = "Saved",
             mode = mode,
@@ -731,7 +730,7 @@ class ThemeFollowTest {
     }
 
     /**
-     * Draws the photo opened from My edits (Saved's viewer form: no mark, no "saved" line) in
+     * Draws the photo opened from My edits (the Result screen's viewer form: no mark, no "saved" line) in
      * [mode] over a plain red photo and checks two pixels of the top shade, at the middle of its
      * top edge and at its left edge: each must be the theme's `surface`, at the shade's
      * [VIEWER_SHADE_ALPHA], laid over the red.
@@ -750,12 +749,12 @@ class ThemeFollowTest {
     private fun checkViewer(mode: ThemeMode) {
         val red = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
         red.eraseColor(VIEWER_PHOTO_ARGB)
-        val state = SavedUiState(photoUri = PHOTO_URI, photo = SavedPhoto.Ready(red), viewer = true)
+        val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(red), viewer = true)
         show(mode) {
-            SavedContent(state = state, sharing = false, onShare = {}, onEditAnother = {}, onClose = {})
+            ResultContent(state = state, sharing = false, onShare = {}, onSave = {}, onEdit = {}, onClose = {})
         }
-        val shade = nodeRect(SAVED_SCRIM_TAG)
-        val photo = nodeRect(SAVED_PHOTO_TAG)
+        val shade = nodeRect(RESULT_SCRIM_TAG)
+        val photo = nodeRect(RESULT_PHOTO_TAG)
         val surface = scheme(mode).surface
         val expected = blendOver(surface, VIEWER_SHADE_ALPHA, Color(VIEWER_PHOTO_ARGB))
         // The shade holds its full strength over the status bar and 64 dp below it (SCRIM_HOLD), so its top
@@ -1162,7 +1161,7 @@ class ThemeFollowTest {
          */
         val VIEWER_PHOTO_ARGB = 0xFFFF0000.toInt()
 
-        /** The alpha of Saved's top shade where it holds full strength (`SCRIM_TOP_ALPHA` in SavedScreen.kt). */
+        /** The alpha of the Result screen's top shade where it holds full strength (`SCRIM_TOP_ALPHA` in ResultScreen.kt). */
         const val VIEWER_SHADE_ALPHA = 0.85f
 
         /**
@@ -1172,12 +1171,12 @@ class ThemeFollowTest {
         const val VIEWER_SHADE_TOLERANCE = 4
 
         /**
-         * How far below the top of Saved's shade it still holds full strength, at least: its hold
+         * How far below the top of the Result screen's shade it still holds full strength, at least: its hold
          * is 64 dp below the status bar (`SCRIM_HOLD`); 7 dp keeps clear of the status bar itself.
          */
         val VIEWER_SHADE_HOLD = 7.dp
 
-        /** The made-up Uri the tool screens and Saved say their photo came from. */
+        /** The made-up Uri the tool screens and the Result screen say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"
 
         /** The Custom seed colour the banner checks use, #2E7D32 (a deep green), as an ARGB number. */

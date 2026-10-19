@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.edit.cutout.CutoutProcessor
 import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
 import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
@@ -30,7 +31,7 @@ import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.CameraXController
 import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
-import com.phongkaster.kanso.ui.saved.SavedViewModel
+import com.phongkaster.kanso.ui.result.ResultViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -82,8 +83,8 @@ val appModule = module {
             photoUri = params.get(),
             loader = get(),
             probe = get(),
-            saver = get(),
             registry = get(),
+            store = get(),
         )
     }
 
@@ -99,14 +100,21 @@ val appModule = module {
         )
     }
 
-    // The Saved screen's ViewModel receives the saved photo's Uri (as text) from the navigation key.
-    viewModel { params -> SavedViewModel(
-            photoUri = params.get(),
-            loader = get(),
-            probe = get(),
-            // The photo viewer passes `true` as a second parameter; Saved passes only the Uri.
+    // The picture Done renders waits here for the Result screen (A-004).
+    single { RenderedPhotoStore() }
+
+    // The Result screen's ViewModel. After Done it gets no parameters and reads the hand-off store;
+    // the My edits viewer passes the photo's Uri (as text) and `true`.
+    viewModel { params ->
+        ResultViewModel(
+            photoUri = params.getOrNull<String>(),
             viewer = params.getOrNull<Boolean>() ?: false,
-        ) }
+            store = get(),
+            loader = get(),
+            saver = get(),
+            probe = get(),
+        )
+    }
 
     // Writes the finished photo into Pictures/Kanso on the phone.
     single<PhotoSaver> { MediaStorePhotoSaver(androidContext()) }

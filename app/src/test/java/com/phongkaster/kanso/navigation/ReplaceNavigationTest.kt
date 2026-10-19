@@ -47,10 +47,10 @@ import com.phongkaster.kanso.ui.home.homeTryTag
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
 import com.phongkaster.kanso.ui.permission.photoPermissionsFor
-import com.phongkaster.kanso.ui.saved.SAVED_EDIT_ANOTHER_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_TAG
-import com.phongkaster.kanso.ui.saved.SAVED_PHOTO_URI_KEY
-import com.phongkaster.kanso.ui.saved.SAVED_SCREEN_TAG
+import com.phongkaster.kanso.ui.result.RESULT_EDIT_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
+import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
+import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
@@ -76,13 +76,17 @@ import org.robolectric.annotation.Config
  * - (a) Home's carousel swiped to Retouch's banner, "Try now", photo 1, Replace: the gallery titled
  *   "Retouch: choose a photo" is on top, with no tool screen left; photo 2 there opens the Retouch
  *   screen on photo 2; Replace once more, and one Back from the gallery reaches Home.
- * - (b) Home's newest recent photo (`home-recent-0`) opens the Edit screen; Replace shows the Edit
- *   gallery, and one Back reaches Home.
- * - (c) The Camera button, shutter, Keep: the Edit screen; Replace shows the Edit gallery, and one
- *   Back reaches Home.
- * - (d) My edits, a tile, the viewer's "Edit": the Edit screen; Replace shows the Edit gallery;
- *   Back shows the photo screen (the viewer) again, and another Back shows My edits.
- * - Two taps on Replace before the screen can change open one gallery, not two.
+ * - (b) Home's newest recent photo (`home-recent-0`) opens the Edit screen, which has no Replace;
+ *   one Back reaches Home.
+ * - (c) The Camera button, shutter, Keep: the Edit screen, with no Replace; one Back reaches Home.
+ * - (d) My edits, a tile, the viewer's "Edit": the Edit screen, with no Replace; Back shows the
+ *   photo screen (the viewer) again, and another Back shows My edits.
+ * - Two taps on Replace (on the Retouch screen) before the screen can change open one gallery,
+ *   not two.
+ *
+ * Run 9 (A-007): Replace was removed from the Edit screen only; (b), (c) and (d) reach nothing
+ * but Edit, so they now check that Replace is absent there and where Back leads instead, and the
+ * double tap moved to Retouch.
  *
  * A test cannot read the app's back stack, so its shape is read from what is on screen and from
  * where Back leads. Photo and camera access are granted, and the photo library, the saved photos,
@@ -143,11 +147,16 @@ class ReplaceNavigationTest {
     }
 
     /**
-     * Case (b): Home's newest recent photo opens the Edit screen on it; Replace shows the Edit
-     * gallery, and one Back reaches Home.
+     * Case (b): Home's newest recent photo opens the Edit screen on it; the Edit screen has no
+     * Replace, and one Back reaches Home.
+     *
+     * Run 9 (A-007): the Edit screen no longer has a Replace chip, and a recent photo only ever
+     * opens Edit, so this case can no longer reach Replace. It now proves the route still opens
+     * the Edit screen on the right photo, that Replace is gone from it, and that Back from it
+     * reaches Home; Replace itself stays proven on Retouch by case (a) and the double tap.
      */
     @Test
-    fun replace_on_the_edit_screen_from_a_recent_photo_returns_to_the_edit_gallery() {
+    fun a_recent_photo_opens_the_edit_screen_without_replace_and_back_reaches_home() {
         val newest = editedPhotos.first()
         launchWithFakes { scenario ->
             waitForHome(compose)
@@ -155,19 +164,21 @@ class ReplaceNavigationTest {
             compose.onNodeWithTag(homeRecentTag(0)).tapAboveBar()
             waitForToolScreenOn(Tool.EDIT, newest.uri)
 
-            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
-            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
-            assertEquals(1, count(GALLERY_SCREEN_TAG))
-            assertOneBackReachesHome(scenario)
+            assertEquals("The Edit screen must have no Replace", 0, count(TOOL_REPLACE_TAG))
+            assertBackFromToolReachesHome(scenario)
         }
     }
 
     /**
-     * Case (c): the Camera button beside the tab bar, the shutter, Keep: the Edit screen; Replace
-     * shows the Edit gallery, and one Back reaches Home (the camera is not left below it).
+     * Case (c): the Camera button beside the tab bar, the shutter, Keep: the Edit screen, with no
+     * Replace; one Back reaches Home (the camera is not left below it).
+     *
+     * Run 9 (A-007): the Edit screen no longer has a Replace chip and a kept shot only ever opens
+     * Edit, so this case now proves the route, that Replace is gone, and that Back skips the
+     * camera; Replace itself stays proven on Retouch by case (a) and the double tap.
      */
     @Test
-    fun replace_on_the_edit_screen_from_the_camera_returns_to_the_edit_gallery() {
+    fun the_camera_opens_the_edit_screen_without_replace_and_back_reaches_home() {
         launchWithFakes { scenario ->
             waitForHome(compose)
             tapCameraButton(compose)
@@ -181,40 +192,39 @@ class ReplaceNavigationTest {
             waitFor { count(TOOL_IMAGE_TAG) > 0 }
             assertToolTitle(Tool.EDIT)
 
-            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
-            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
-            assertEquals(1, count(GALLERY_SCREEN_TAG))
-            assertOneBackReachesHome(scenario)
+            assertEquals("The Edit screen must have no Replace", 0, count(TOOL_REPLACE_TAG))
+            assertBackFromToolReachesHome(scenario)
         }
     }
 
     /**
-     * Case (d): My edits, tile 0, the viewer's "Edit": the Edit screen on that photo; Replace shows
-     * the Edit gallery; Back shows the photo screen on the same photo, and another Back shows My
-     * edits, its tab selected.
+     * Case (d): My edits, tile 0, the viewer's "Edit": the Edit screen on that photo, with no
+     * Replace; Back shows the photo screen on the same photo, and another Back shows My edits, its
+     * tab selected.
+     *
+     * Run 9 (A-007): the Edit screen no longer has a Replace chip and the viewer only ever opens
+     * Edit, so the step through the Edit gallery is gone; the test still proves the route, that
+     * Replace is absent, and the back stack below the Edit screen (viewer, then My edits).
      */
     @Test
-    fun replace_on_the_edit_screen_from_my_edits_returns_to_the_edit_gallery_then_the_viewer() {
+    fun my_edits_opens_the_edit_screen_without_replace_and_back_returns_to_the_viewer() {
         val photo = editedPhotos.first()
         launchWithFakes { scenario ->
             waitForHome(compose)
             openTab(compose, KansoTab.MY_EDITS)
             waitFor { count(MY_EDITS_SCREEN_TAG) > 0 && count(myEditsTileTag(0)) > 0 }
             compose.onNodeWithTag(myEditsTileTag(0)).tapAboveBar()
-            waitFor { count(SAVED_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
-            waitFor { count(SAVED_EDIT_ANOTHER_TAG) > 0 }
-            compose.onNodeWithTag(SAVED_EDIT_ANOTHER_TAG).performClick()
+            waitFor { count(RESULT_SCREEN_TAG) > 0 && count(MY_EDITS_SCREEN_TAG) == 0 }
+            waitFor { count(RESULT_EDIT_TAG) > 0 }
+            compose.onNodeWithTag(RESULT_EDIT_TAG).performClick()
             waitForToolScreenOn(Tool.EDIT, photo.uri)
-
-            compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
-            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
-            assertEquals(1, count(GALLERY_SCREEN_TAG))
+            assertEquals("The Edit screen must have no Replace", 0, count(TOOL_REPLACE_TAG))
 
             // Back: the photo screen the Edit screen was opened from, on the same photo.
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            val viewerPhoto = hasTestTag(SAVED_PHOTO_TAG) and SemanticsMatcher.expectValue(SAVED_PHOTO_URI_KEY, photo.uri)
+            val viewerPhoto = hasTestTag(RESULT_PHOTO_TAG) and SemanticsMatcher.expectValue(RESULT_PHOTO_URI_KEY, photo.uri)
             waitFor {
-                count(GALLERY_SCREEN_TAG) == 0 && count(SAVED_SCREEN_TAG) > 0 &&
+                count(TOOL_SCREEN_TAG) == 0 && count(GALLERY_SCREEN_TAG) == 0 && count(RESULT_SCREEN_TAG) > 0 &&
                     compose.onAllNodes(viewerPhoto).fetchSemanticsNodes().isNotEmpty()
             }
             assertEquals(0, count(TOOL_SCREEN_TAG))
@@ -222,7 +232,7 @@ class ReplaceNavigationTest {
 
             // Another Back: My edits, with its tab selected.
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            waitFor { count(SAVED_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
+            waitFor { count(RESULT_SCREEN_TAG) == 0 && count(MY_EDITS_SCREEN_TAG) > 0 }
             waitFor { count(kansoTabTag(KansoTab.MY_EDITS)) > 0 }
             compose.onNodeWithTag(kansoTabTag(KansoTab.MY_EDITS)).assertIsSelected()
             assertEquals(0, count(HOME_SCREEN_TAG))
@@ -241,15 +251,20 @@ class ReplaceNavigationTest {
      * second tap: Replace's own guard, the navigation's handling of a repeated key, or anything
      * else on the way would all pass it. Removing one guard while another still stops the second
      * tap leaves this test green.
+     *
+     * Run 9 (A-007): the Edit screen has no Replace any more, so the double tap is made on the
+     * Retouch screen, reached from Retouch's "Try now" and the gallery's first photo, as in case
+     * (a); what it proves is unchanged.
      */
     @Test
     fun a_double_tap_on_replace_opens_one_gallery() {
-        val newest = editedPhotos.first()
+        val photo1 = galleryPhotos.first()
         launchWithFakes { scenario ->
-            waitForHome(compose)
-            waitFor { count(homeRecentTag(0)) > 0 }
-            compose.onNodeWithTag(homeRecentTag(0)).tapAboveBar()
-            waitForToolScreenOn(Tool.EDIT, newest.uri)
+            bringRetouchBannerToFront()
+            compose.onNodeWithTag(homeTryTag(Tool.RETOUCH)).performSemanticsAction(SemanticsActions.OnClick)
+            waitForGallery(Tool.RETOUCH, photo1.id)
+            compose.onNodeWithTag(galleryPhotoTag(photo1.id)).performClick()
+            waitForToolScreenOn(Tool.RETOUCH, photo1.uri)
 
             val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG).fetchSemanticsNode()
             val click = checkNotNull(replace.config.getOrNull(SemanticsActions.OnClick)?.action) {
@@ -260,7 +275,7 @@ class ReplaceNavigationTest {
                 click()
             }
 
-            waitForGallery(Tool.EDIT, galleryPhotos.first().id)
+            waitForGallery(Tool.RETOUCH, photo1.id)
             compose.waitForIdle()
             assertEquals("A double tap on Replace must open one gallery", 1, count(GALLERY_SCREEN_TAG))
             assertOneBackReachesHome(scenario)
@@ -364,6 +379,20 @@ class ReplaceNavigationTest {
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
         assertEquals(0, count(TOOL_SCREEN_TAG))
+        compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
+        scenario.onActivity { assertFalse(it.isFinishing) }
+    }
+
+    /**
+     * With a tool screen on top, presses Back once and checks that Home is shown, with no tool
+     * screen or gallery left, and that the app is still open. Run 9: the Edit screen's routes,
+     * which can no longer reach Replace, check their way back with this.
+     */
+    private fun assertBackFromToolReachesHome(scenario: ActivityScenario<MainActivity>) {
+        assertEquals(1, count(TOOL_SCREEN_TAG))
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitFor { count(TOOL_SCREEN_TAG) == 0 && count(HOME_SCREEN_TAG) > 0 }
+        assertEquals(0, count(GALLERY_SCREEN_TAG))
         compose.onNodeWithTag(HOME_SCREEN_TAG).assertExists()
         scenario.onActivity { assertFalse(it.isFinishing) }
     }
