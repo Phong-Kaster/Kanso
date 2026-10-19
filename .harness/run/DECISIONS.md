@@ -70,3 +70,12 @@ cannot be lost.
 An item left unticked stays queued. Partial answers are fine and expected: answer what you have
 actually checked, and the rest waits.
 -->
+
+## D-003
+
+Signed by the owner, 2026-10-19, after installing the debug build of `2a272fe` on the Galaxy A13:
+"everything works as I expect".
+
+- Criteria 20, 21, 22, 23 and 34: verified by the owner.
+- A-001 (Loop Branch, not `main`), A-003 (Back from Result keeps the undo stack) and A-009 (R6
+  removes "Saved" as the screen's name only): accepted as taken.
