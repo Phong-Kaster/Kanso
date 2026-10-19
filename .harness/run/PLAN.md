@@ -29,6 +29,7 @@ Option A (kept from the PRD: `Tool` still means five tools with one screen each)
 | 6 | T-007, T-008, T-009 | `docs/adr/ADR-003-*.md`, `docs/features/my-edits.md`, recording baselines with the wrapper, `evidence/baseline-diffs/` |
 | 7 | T-010 (4 slices), T-011 | before dispatch: `git mv` `res/values/strings_saved.xml` to `strings_result_mark.xml` and `strings_saved_layout.xml` to `strings_result_layout.xml`; after: `evidence/test-edits.md` for any test whose code changed |
 | 8 | T-012 | none (comments and one doc sentence) |
+| 9 | T-013 | none (README and edit.md sentences, three KDocs) |
 
 ## Known Risks
 

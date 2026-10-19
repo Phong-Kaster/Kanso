@@ -33,3 +33,6 @@ A fresh Capable reader confirmed all nine T-011 fixes. It found that `edit.md:22
 
 ## Iteration (Phase 8)
 T-012 done by one Fast Worker: edit.md sentence and three KDocs corrected, comments only. Build+unit tests green (evidence/p8-final.log). Criterion 32 grep clean. PARTIAL-candidate recorded.
+
+## Third Verifier Iteration (2026-10-19)
+Whole set re-run fresh (`evidence/verifier3-final.log`, 812 tests, 0 failed; lint, verifyRoborazziDebug, assemble). Every machine criterion holds (`evidence/v3-verifier-2026-10-19.md`). A fresh Capable reader confirmed every T-011/T-012 fix but found sentences in README and edit.md that say less than the code (failed-Done message with Crop open, Retouch/Artistic Undo on a repeat run, untouched non-JPEG photo saved under a `.jpg` name, a glob missing `1977map.png`, the name suffix, `hasAlpha()`), and four stale KDocs. Filed T-013 as Phase 9; PARTIAL-candidate cleared. Devices not driven: gap first, and the A13 showed the notification shade.
