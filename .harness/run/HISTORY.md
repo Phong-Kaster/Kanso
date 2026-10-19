@@ -27,3 +27,6 @@ Fresh whole set green (812 tests, lint, assemble, verifyRoborazziDebug; 7m 45s).
 
 ## Iteration - Phase 7 (T-010, T-011)
 Renamed the ten `saved_*` string ids to `result_*` (two files git-mv'd), rewrote Saved-screen comments in 8 main and 13 test files, fixed five imprecise Edit doc sentences and three stale KDocs. assemble+test, lint, verifyRoborazziDebug exit 0, no picture changed. No Reviewer dispatched (ids and comments only). PARTIAL-candidate.
+
+## Second Verifier Iteration (2026-10-19)
+A fresh Capable reader confirmed all nine T-011 fixes. It found that `edit.md:229` ("Done with no change") is untrue for a session where every change was undone, and that three KDocs are stale. Filed T-012 as Phase 8 and cleared the PARTIAL-candidate. Whole set re-run fresh (`evidence/verifier2-final.log`). Devices were not driven because a gap was found first (§11 step 3). The A13 (R58W1120QVA) is attached, but `foreman-device.ps1` has no `gfxinfo` operation, so the jank half of criterion 20 cannot be driven by any Verifier; it stays for a person.
