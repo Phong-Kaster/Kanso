@@ -53,8 +53,9 @@ import kotlinx.coroutines.withContext
  *
  * - **The Edit screen** keeps one [EditSettings] object for the whole visit, inside an
  *   [EditSession] (the settings plus the earlier settings Undo can go back to). Every change goes
- *   through [changeSettings] (one action: a chip, a turn, a crop), [previewSettings] (a slider
- *   being dragged) and [commitSettings] (the slider let go), or [chooseCropRatio]; [undo] just
+ *   through [changeSettings] (one action: a filter chip, a turn, a flip), [commitCrop] (a crop
+ *   gesture finished, which goes on through [changeSettings]), [previewSettings] (a slider being
+ *   dragged), [commitSettings] (the slider let go) or [chooseCropRatio]; [undo] just
  *   goes back to earlier settings. None of them renders the full photo: the screen draws the
  *   crop, turns, flips and colour sliders live on top of the original as it draws, and only a
  *   filter is computed here, on a small copy of the original ([ToolUiState.filterPreview]). The

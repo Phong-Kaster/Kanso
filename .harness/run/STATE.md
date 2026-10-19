@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** second Verifier found one gap in criterion 34; Phase 8 (T-012) is next
+- **Stage:** Phase 8 (T-012) done; PARTIAL-candidate, the Verifier is next
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** 8 (T-012)
-- **DONE-candidate:** no. **PARTIAL-candidate:** no (cleared by the second Verifier)
+- **Next Phase:** none (Verifier)
+- **DONE-candidate:** no. **PARTIAL-candidate:** yes (recorded 2026-10-19 after Phase 8)
 
 ## Progress
 
@@ -22,7 +22,7 @@
 | T-009 | complete | evidence/p6-final2.log |
 | T-010 | complete | evidence/p7-test.log |
 | T-011 | complete | evidence/p7-test.log |
-| T-012 | pending | - |
+| T-012 | complete | evidence/p8-final.log |
 
 ## Assumptions
 

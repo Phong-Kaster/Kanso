@@ -30,3 +30,6 @@ Renamed the ten `saved_*` string ids to `result_*` (two files git-mv'd), rewrote
 
 ## Second Verifier Iteration (2026-10-19)
 A fresh Capable reader confirmed all nine T-011 fixes. It found that `edit.md:229` ("Done with no change") is untrue for a session where every change was undone, and that three KDocs are stale. Filed T-012 as Phase 8 and cleared the PARTIAL-candidate. Whole set re-run fresh (`evidence/verifier2-final.log`). Devices were not driven because a gap was found first (§11 step 3). The A13 (R58W1120QVA) is attached, but `foreman-device.ps1` has no `gfxinfo` operation, so the jank half of criterion 20 cannot be driven by any Verifier; it stays for a person.
+
+## Iteration (Phase 8)
+T-012 done by one Fast Worker: edit.md sentence and three KDocs corrected, comments only. Build+unit tests green (evidence/p8-final.log). Criterion 32 grep clean. PARTIAL-candidate recorded.

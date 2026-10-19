@@ -71,7 +71,7 @@ private val DOT_SIZE = 6.dp
  * small dot by its icon ([EditSettings.isNeutral] of that tool is false), so the person sees at a
  * glance which tools hold an edit.
  *
- * While [enabled] is false (the Compare switch is on) every entry is drawn faint and ignores taps.
+ * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture) every entry is drawn faint and ignores taps.
  *
  * A `LazyRow` is a row that only composes the entries it shows and scrolls sideways when they do
  * not fit; four entries usually fit, but a narrow phone with large text still reaches each one.

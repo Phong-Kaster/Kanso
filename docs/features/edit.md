@@ -226,8 +226,8 @@ flowchart TD
    - **Save** is the only gallery write. `ResultViewModel.save` calls
      [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
      on `Dispatchers.IO`: a rendered Edit picture is opaque, so it is written as a new JPEG at
-     quality 95, at its size, into `Pictures/Kanso`. An untouched photo (Done with no change) is
-     saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn; a
+     quality 95, at its size, into `Pictures/Kanso`. A photo on which no Edit control was used (Done with
+     no control touched) is saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn; a
      turned photo too large to turn in memory is copied as it is with its tag kept, and Result
      shows the "kept orientation" message). A
      picture is saved at most once; the button then reads "Saved". On Android 8.1 and 9 the

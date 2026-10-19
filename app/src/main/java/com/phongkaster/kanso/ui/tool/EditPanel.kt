@@ -107,13 +107,15 @@ fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALU
  * sheet area's `AnimatedContent` builds a new one each time a tool opens) nothing is lost:
  * brightness 70 is still 70 when Adjust is opened again, and a slider stays where it was let go.
  *
- * **Whole settings, never a change.** Every touch hands over a complete new [EditSettings] (made
- * from [settings] with `copy`), which the ViewModel renders against the original photo:
+ * **Whole settings, never a change.** A turn, a flip, a filter chip or a slider move hands over a
+ * complete new [EditSettings] (made from [settings] with `copy`), which the ViewModel renders
+ * against the original photo:
  *
- * - [onChange] is one action, one Undo step: a crop chip, a turn, a flip, a filter chip;
+ * - [onChange] is one action, one Undo step: a turn, a flip, a filter chip;
  * - [onPreview] is a slider being dragged: the photo follows the finger, but no Undo step is
- *   made yet, and [onCommit] is the finger let go, which makes the whole drag one Undo step;
- * - [onRatio] is a crop shape chosen; the ViewModel measures the original photo itself to fit
+ *   made yet, and [onCommit] (which carries nothing) is the finger let go, which makes the whole
+ *   drag one Undo step;
+ * - [onRatio] is a crop shape chip chosen, handed over as a [CropRatio], not as settings; the ViewModel measures the original photo itself to fit
  *   the shape's rectangle in it.
  *
  * Each callback that changes the picture also carries a `processorFor` function, which builds the
