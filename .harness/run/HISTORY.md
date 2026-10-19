@@ -39,3 +39,6 @@ Whole set re-run fresh (`evidence/verifier3-final.log`, 812 tests, 0 failed; lin
 
 ## Iteration (Phase 9)
 T-013 done by one Capable Worker: all six criterion 34 items held and were fixed in README, edit.md and three KDocs (comments only). `:app:testDebugUnitTest` green (evidence/p9-test.log). Criterion 32 grep clean. PARTIAL-candidate recorded.
+
+## Fourth Verifier Iteration (2026-10-19)
+Whole set re-run fresh on `2a272fe` (`evidence/verifier4-final.log`: 812 tests, 0 failed; lint, verifyRoborazziDebug, assemble; EXIT=0). Every machine criterion and Removal holds (`evidence/v4-verifier-2026-10-19.md`). A fresh Capable reader found no false sentence in README's Edit traces or edit.md and confirmed all six T-013 fixes; two stale KDocs outside the criterion's documents (`ToolScreen.kt:1042`, `ToolViewModel.kt:64-66`) recorded in ISSUES, not filed. A13 showed the notification shade: not driven. Checklist for 20-23, 34 written to ISSUES. Reported DONE_PARTIAL.
