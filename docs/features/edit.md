@@ -227,9 +227,13 @@ flowchart TD
      [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
      on `Dispatchers.IO`: a rendered Edit picture is opaque, so it is written as a new JPEG at
      quality 95, at its size, into `Pictures/Kanso`. A photo on which no Edit control was used (Done with
-     no control touched) is saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn; a
+     no control touched) is saved from its own file instead (its bytes copied unchanged, or turned upright and
+     written as a new JPEG at quality 95 if it carries an EXIF turn; a
      turned photo too large to turn in memory is copied as it is with its tag kept, and Result
-     shows the "kept orientation" message). A
+     shows the "kept orientation" message). Such a save is always named `.jpg` and typed
+     `image/jpeg`, whatever the photo's own format, so an untouched PNG, WebP or HEIC photo
+     copied byte for byte is saved as that PNG, WebP or HEIC data under a `.jpg` name and the
+     `image/jpeg` type (a known defect, not fixed yet). A
      picture is saved at most once; the button then reads "Saved". On Android 8.1 and 9 the
      storage-write permission is asked first.
    - **Share** writes a copy of the picture on screen in the cache's `shared/` folder (JPEG
@@ -244,9 +248,13 @@ flowchart TD
 - Done running out of memory shows "This photo is too large to edit on this phone. Try a smaller
   one. Your photo is unchanged."; a filter image that cannot be read, or any other exception,
   shows "Something went wrong and the edit was not made. Your photo is unchanged." The message sits
-  at the top of the photo card and a tap hides it. With the Crop sheet open the cropper replaces
-  the photo card, so no message is drawn: the spinner just stops and Done can be tapped again. In both cases the person stays on Edit with
-  every setting and Undo step kept, and nothing is handed over.
+  at the top of the photo card and a tap hides it. The failure stays in the screen's state until
+  that tap or the next Done (changing a setting, Undo and closing a sheet leave it in place). With the Crop sheet open
+  the cropper replaces the photo card, so at first no message is visible: the spinner stops and
+  Done can be tapped again. The message appears as soon as the photo card is shown again: when
+  the Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
+  place of the cropper). In every case the person stays on Edit with every setting and Undo step
+  kept, and nothing is handed over.
 - A filter preview that fails shows the photo without the filter, silently; Done reports a real
   failure.
 - A photo that cannot be decoded shows "This photo cannot be opened. Go back and pick another one."
@@ -260,8 +268,10 @@ flowchart TD
 - **Size.** The photo is decoded at most twice the screen's longest edge, and Done renders at most
   **2000 px** on the longest edge, so a 4000 x 3000 photo comes out at most 2000 x 1500. The saved
   file is a **JPEG at quality 95**. Done with no control used saves the original file instead (its
-  bytes, or re-encoded upright when it carries an EXIF turn; if it is too large to turn in memory,
-  copied as it is with its tag kept and Result shows the "kept orientation" message); once a control was used, even if
+  bytes copied unchanged, or re-encoded upright as a JPEG when it carries an EXIF turn; if it is
+  too large to turn in memory, copied as it is with its tag kept and Result shows the "kept
+  orientation" message). That save is always named `.jpg` and typed `image/jpeg`, so an untouched
+  PNG, WebP or HEIC photo keeps its own format inside a file named `.jpg` (a known defect). Once a control was used, even if
   every change was undone, Done renders a new JPEG of at most 2000 px.
 - **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
   edge, so on screen a filtered photo holds less detail than the picture Done renders.

@@ -186,8 +186,9 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  *
  * Done can be tapped once the photo is shown. It writes nothing: it hands the finished picture to
  * the Result screen (see `ToolViewModel.done`), which saves or shares it if asked. On the other
- * four tools that is the picture shown now; on Edit the current settings are first rendered at
- * full size from the original photo, and meanwhile Done shows a small spinner and ignores taps.
+ * four tools that is the picture shown now; on Edit the current settings are first rendered from
+ * the decoded photo (the screen-sized decode described below, shrunk further to at most 2000
+ * pixels on its longest edge), and meanwhile Done shows a small spinner and ignores taps.
  * The editing session is not ended, so Back from Result returns here with everything intact.
  *
  * Passing data in a Navigation 3 key: the screen needs two facts to open, which tool and which

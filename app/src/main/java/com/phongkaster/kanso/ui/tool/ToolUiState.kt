@@ -43,8 +43,8 @@ data class ToolUiState(
     /** What is shown in place of the photo: nothing yet, the photo itself, or a message. */
     val photo: PhotoState = PhotoState.Loading,
     /**
-     * True while Done is rendering the Edit screen's settings at full size from the original
-     * photo. The Done button then shows a small spinner and ignores taps; when the render ends,
+     * True while Done is rendering the Edit screen's settings from the decoded photo in [photo]
+     * (shrunk to at most 2000 pixels on its longest edge). The Done button then shows a small spinner and ignores taps; when the render ends,
      * well or badly, it goes false again. The other four tools hand their picture over at once,
      * so for them it never becomes true.
      */

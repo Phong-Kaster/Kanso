@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** third Verifier found a criterion 34 gap; Phase 9 (T-013) next
+- **Stage:** Phase 9 (T-013) done; PARTIAL-candidate, next invocation is the fourth Verifier
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** 9 (T-013)
-- **DONE-candidate:** no. **PARTIAL-candidate:** no (cleared by the third Verifier, 2026-10-19)
+- **Next Phase:** none (Verifier)
+- **DONE-candidate:** no. **PARTIAL-candidate:** yes (Phase 9, 2026-10-19; Tier-3 assumptions A-001, A-003, A-009)
 
 ## Progress
 
@@ -23,7 +23,7 @@
 | T-010 | complete | evidence/p7-test.log |
 | T-011 | complete | evidence/p7-test.log |
 | T-012 | complete | evidence/p8-final.log |
-| T-013 | pending | - |
+| T-013 | complete | evidence/p9-test.log |
 
 ## Assumptions
 
@@ -36,3 +36,5 @@ A-001 .. A-009 in `ASSUMPTIONS.md`. Tier-3: A-001 (criterion 29), A-003 (criteri
 2026-10-19 (second Verifier): the whole set was re-run (`evidence/verifier2-final.log`). All T-011 fixes were confirmed. A new gap in criterion 34, `edit.md:229` plus three stale KDocs, was filed as T-012. Devices were not driven because a gap was found first. Criterion 20's jank number can never be driven, because the device wrapper has no `gfxinfo` operation.
 
 2026-10-19 (third Verifier): whole set re-run fresh (`evidence/verifier3-final.log`, `evidence/v3-verifier-2026-10-19.md`); every machine criterion holds. Criterion 34's read found sentences that say less than the code in README and edit.md, and four stale KDocs: filed T-013. Devices not driven (gap first; the A13 showed the notification shade).
+
+2026-10-19 (Phase 9): T-013 fixed all six criterion 34 items (README, edit.md, three KDocs); tests pass (`evidence/p9-test.log`). Next: fourth Verifier re-proves and drives; devices still need a person.

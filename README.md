@@ -54,7 +54,7 @@ size, progress, Undo, failures and Done.
 
 | Feature | What it does |
 |---|---|
-| [Saving, the Result screen and Share](docs/features/saving-and-share.md) | Done hands the rendered picture to the Result screen through `RenderedPhotoStore` (nothing is written); Result's Save is the only gallery write, a new file in `Pictures/Kanso` (the original is never changed); Share writes a copy under the cache's `shared/` folder (PNG if it has see-through pixels, else JPEG quality 95) and sends it through FileProvider and Android's share sheet with a one-off read grant. After a process kill Result shows "Nothing to show". |
+| [Saving, the Result screen and Share](docs/features/saving-and-share.md) | Done hands the rendered picture to the Result screen through `RenderedPhotoStore` (nothing is written); Result's Save is the only gallery write, a new file in `Pictures/Kanso` (the original is never changed); Share writes a copy under the cache's `shared/` folder (PNG if the bitmap has an alpha channel, else JPEG quality 95) and sends it through FileProvider and Android's share sheet with a one-off read grant. After a process kill Result shows "Nothing to show". |
 | [My edits and the photo viewer](docs/features/my-edits.md) | A tab listing everything Kanso saved, newest first; a tapped photo opens in a viewer with Share and Edit. |
 
 ### Around the app
@@ -140,10 +140,14 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
 6. **Result.** `ui/result/ResultViewModel.kt` reads the store once; `ui/result/ResultScreen.kt`
    offers Share, Save and Go home. **Save** is the only gallery write:
    `data/photo/MediaStorePhotoSaver.kt`, on `Dispatchers.IO`, writes a new JPEG at quality 95, at
-   the rendered size, named `Kanso_<yyyyMMdd_HHmmss>.jpg`, into `Pictures/Kanso` (an untouched
-   photo is saved from its own file: its bytes, or re-encoded upright when it carries an EXIF
-   turn; a turned photo too large to turn in memory is copied as it is with its tag kept, and
-   Result shows the "kept orientation" message). A picture is saved once; the button then reads "Saved". On Android 8.1 and 9 the
+   the rendered size, named `Kanso_<yyyyMMdd_HHmmss>.jpg` (with `_1`, `_2`, ... added when that
+   name is taken), into `Pictures/Kanso` (an untouched photo is saved from its own file: its bytes
+   copied unchanged, or re-encoded upright as a JPEG when it carries an EXIF turn; a turned photo
+   too large to turn in memory is copied as it is with its tag kept, and Result shows the "kept
+   orientation" message). An untouched photo's save is always named `.jpg` and typed
+   `image/jpeg`, whatever its own format, so an untouched PNG, WebP or HEIC photo copied byte for
+   byte keeps its own format inside a file named `.jpg` (a known defect, not fixed yet). A picture
+   is saved once; the button then reads "Saved". On Android 8.1 and 9 the
    storage-write permission is asked first. **Share** (`ui/result/SharePhoto.kt`) writes a copy of
    the picture on screen under the cache's `shared/` folder (JPEG quality 95 for an opaque picture,
    which every Edit render is), on `Dispatchers.IO`, and sends it through FileProvider with a
@@ -151,9 +155,13 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    Result clears the store.
 7. **On failure.** A Done render that runs out of memory ("This photo is too large to edit on this
    phone...") or fails in any other way, such as a filter image that cannot be read ("Something
-   went wrong and the edit was not made..."), shows its message at the top of the photo card (with the Crop sheet open the cropper replaces the
-   photo card, so no message is drawn, the spinner just stops and Done can be tapped again), hands
-   nothing over and keeps every setting and Undo step. A failed filter preview silently shows the
+   went wrong and the edit was not made..."), shows its message at the top of the photo card, hands nothing over and keeps every setting and
+   Undo step. The failure stays in the state until a tap on the message or the next Done
+   (changing a setting, Undo and closing a sheet leave it in place). With the Crop sheet open the
+   cropper replaces the photo card, so at first no message is visible (the spinner stops and Done
+   can be tapped again); the message appears as soon as the photo card is shown again, when the
+   Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
+   place of the cropper). A failed filter preview silently shows the
    photo without the filter. A photo that cannot be decoded shows "This photo cannot be opened. Go
    back and pick another one." A failed Save says "The photo could not be saved. Try again."; a
    refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
@@ -164,10 +172,14 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
 These four share one path in `ui/tool/ToolViewModel.kt`: `apply` shrinks the photo to the tool's
 working size (`data/edit/WorkingSize.kt`: Remove background and Retouch 2000 px, Enhance 512 px,
 Artistic 1024 px) and runs its `ToolProcessor` on `Dispatchers.Default`; the result becomes the
-shown photo and the one before is kept for Undo. Each tool's processor is the one
+shown photo. Each tool's processor is the one
 `di/AppModule.kt` puts in `data/edit/ProcessorRegistry.kt`. Remove background and Enhance run on
 the photo as shown; Retouch and Artistic always run from the original with the strength (and
-style) set, so their results do not stack. A failure shows a message on the
+style) set, so their results do not stack. Undo: a run on the shown photo (Remove background,
+Enhance) keeps the photo from before it for Undo. A Retouch or Artistic run keeps the photo from
+before it only when the last result did not also come from such a run from the original; a repeat
+run (another strength or style) replaces that result without an Undo step of its own, so Undo goes
+back past the whole series to what was shown before it. A failure shows a message on the
 photo card and leaves the photo as it was. Done hands the shown photo to Result at once.
 
 - **Remove background**: `data/edit/cutout/CutoutProcessor.kt`, calling
@@ -219,7 +231,7 @@ native libraries and bundled assets, are packed into the APK. Only these files o
 
 | Tool | Wrapper file in `app/` | Engine class | Model or library (all bundled) |
 |---|---|---|---|
-| Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), `filter_materials/map/*Map.png` (`libs/editimage.aar`) |
+| Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), and six curve strips in `filter_materials/map/` (`libs/editimage.aar`): 1977map.png, kelvinMap.png, nashvilleMap.png, waldenMap.png, hudsonMap.png and amaroMap.png |
 | Edit (Crop) | `ui/tool/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`, package `com.mr0xf00.easycrop`) | none: Compose drawing and touch handling |
 | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` (its library ships the model) |
 | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |

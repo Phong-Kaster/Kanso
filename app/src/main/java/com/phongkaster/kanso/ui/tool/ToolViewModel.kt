@@ -142,7 +142,9 @@ class ToolViewModel(
      * yet. The photo is first shrunk, if it is larger, to the size this tool can handle on a
      * phone ([WorkingSize.maxEdgeFor]), so a very large photo never runs the phone out of
      * memory. While the edit runs, the state says how far along it is. When it works, the result
-     * becomes the shown photo and the one before it is kept for [undo]; when it fails, the shown
+     * becomes the shown photo and the one before it is kept for [undo] (except on a repeat run
+     * [fromOriginal], which replaces the last such result without an undo step of its own; see
+     * the comment where the result lands); when it fails, the shown
      * photo stays exactly as it was and the state says why, in [ToolUiState.failure].
      * Nothing happens either while the person is comparing with the original
      * ([ToolUiState.comparing]): every editing control is disabled then.
@@ -558,13 +560,15 @@ class ToolViewModel(
     // --- The Edit screen's full render -------------------------------------------------------------
 
     /**
-     * Renders the Edit session's CURRENT settings at full working size from the original photo and
-     * returns the result, or null when there is nothing to render yet (no decoded photo, or no
-     * processor recipe because nothing was changed). It changes no state: the caller (the Done
+     * Renders the Edit session's CURRENT settings from the decoded photo (the screen-sized decode,
+     * shrunk further to at most [WorkingSize.EDIT] pixels on its longest edge) and returns the
+     * result, or null when there is nothing to render yet (no decoded photo, or no processor
+     * recipe because no setting has been changed yet on this screen; once one has, the recipe
+     * stays set even if every change is later undone). It changes no state: the caller (the Done
      * button) decides what to show while it runs and what to do with the picture.
      *
-     * This is the only full-size render on the Edit screen, run once when the edit is finished:
-     * while the person edits, the screen draws the settings live instead.
+     * This is the only render of the whole picture on the Edit screen, run once when the edit is
+     * finished: while the person edits, the screen draws the settings live instead.
      */
     suspend fun renderFinal(): EditResult? {
         val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return null
@@ -639,12 +643,15 @@ class ToolViewModel(
      *
      * - **The other four tools** hand over the picture shown now: the last edit, or, with no edit
      *   yet, the decoded original photo. That is instant, so it needs no waiting state.
-     * - **The Edit screen** has no full-size picture while the person edits (the screen draws the
-     *   settings live), so Done renders the CURRENT settings in full from the original photo
-     *   ([renderFinal]'s path), off the main thread. Meanwhile [ToolUiState.finishing] is true:
-     *   the Done button shows a small spinner and ignores taps. A failed render keeps the person
-     *   on this screen and says why ([ToolUiState.failure]); nothing is handed over. With no
-     *   change made yet there is nothing to render, so the decoded original is handed over.
+     * - **The Edit screen** has no finished picture while the person edits (the screen draws the
+     *   settings live), so Done renders the CURRENT settings from the decoded photo, shrunk to at
+     *   most [WorkingSize.EDIT] pixels on its longest edge ([renderFinal]'s path), off the main
+     *   thread. Meanwhile [ToolUiState.finishing] is true: the Done button shows a small spinner
+     *   and ignores taps. A failed render keeps the person on this screen and stores why in
+     *   [ToolUiState.failure], which stays until [dismissFailure] or the next Done; nothing is
+     *   handed over. Only when no setting has been changed yet on this screen (no processor
+     *   recipe) is there nothing to render, and the decoded original is handed over as it is; once
+     *   a setting has been changed, Done renders even if every change was later undone.
      *
      * Done does not end the editing session: the settings, the undo steps and the edits stay here,
      * so Back from Result returns to this screen exactly as it was left.
@@ -656,7 +663,8 @@ class ToolViewModel(
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         val build = processorFor
         if (tool != Tool.EDIT || build == null) {
-            // Instant: the picture shown now (on Edit with nothing changed, the original).
+            // Instant: the picture shown now (on Edit before any setting was ever changed, so with
+            // no processor recipe, the decoded original).
             val edited = if (tool == Tool.EDIT) null else current.edited
             handOver(edited ?: original, originalUri = if (edited == null) photoUri else null)
             return
