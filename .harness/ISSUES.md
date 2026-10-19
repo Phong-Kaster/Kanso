@@ -1,9 +1,16 @@
 # ISSUES
 
-## Run 9 (the Edit screen becomes a real editor)
+## Run 9 (the Edit screen becomes a real editor), loop/kanso-real-editor
 
-- D-001 answered (approved). Assumptions A-001 to A-008 are in `.harness/run/ASSUMPTIONS.md`.
-- Phase 1 review, not fixed yet: Edit panel state (filter intensity, free-crop rectangle) resets when the person switches sheets (T-002 moves it into the ViewModel); `ToolViewModel.closeTool()` has no production caller (T-002 wires Back); Save stays enabled and saves the edit while Compare shows the original (T-006 replaces Save with Done); README and `docs/features/edit.md`, `tool-screen.md` still describe the old Edit frame (T-007/T-008).
+- **Verifier, 2026-10-19: two gaps, filed, run continues.** Fresh whole set green (812 tests, lint, `assembleDebug`, `verifyRoborazziDebug`); every other `machine` criterion holds (`.harness/run/evidence/v-verifier-2026-10-19.md`).
+  - R6: `saved_*` string ids and "the Saved screen" in KDoc and test comments remain. T-010 renames them. **A-009 (Tier 3):** `SaveResult.Saved`, `ResultUiState.SaveState.Saved` and the Result button's finished label "Saved" stay, because they mean "written", which the PRD keeps; R6 is therefore assumed.
+  - Criterion 34: a fresh read found no false claim of order, size, format, folder or failure, but four sentences say more or less than the code (the untouched-photo Save omits the "too large to turn" case; "complete new value" is not true of crop and slider release; the Camera button is beside the bar, not on it; Done "renders" even when nothing changed) and three KDocs are stale about what Done's render disables. T-011 fixes them.
+- **Tier-3 assumptions, so this run can end `DONE_PARTIAL` at best:** A-001 (Loop Branch, not `main`; criterion 29), A-003 (Back from Result keeps the undo stack; criterion 11), A-009 (above). All in `.harness/run/ASSUMPTIONS.md`.
+- **Awaiting a person once the gaps are closed:** criteria 20 (A13 smoothness), 21 and 22 (pictures 55-68 and the 19 re-recorded ones in `.harness/run/evidence/baseline-diffs/`), 23 (human-only) and 34 (read the docs). Not driven yet; the next Verifier drives them and writes the checklist here.
+- Carried (Phase 5): with Undo and Done on the right, a long tool name (Remove background) on a 360 dp phone may ellipsize; only checked at test widths. FileProvider is verified by manifest lookup only; Share through a real provider is unverified until the device run.
+- Carried (Phase 5): a second Share deletes the first cached copy; Share's JPEG quality 95 repeats the saver's constant.
+- Carried (Phase 5): `53_tool_enhance_done_light/dark.png` are covered by criterion 22's prose approval and are on DECISIONS.md `## Baselines`.
+- Not about the app: `.harness/ISSUES.md` holds Runs 1-8; moving their settled parts to `.harness/archive/` (ADR-040) was tried with Write on 2026-10-19 and denied by the permission rules (as in Run 7, S-013). Nothing moved, no item lost.
 
 ## Run 8 (the five editing tools edit the photo)
 
@@ -329,12 +336,3 @@ Defects found, not fixed:
 ## Run 8 (loop/kanso-editing-tools)
 
 No issues yet. Bootstrap only; D-001 (the DoD approval) is pending.
-
-## Run 9 (loop/kanso-real-editor)
-
-- Carried (T-004): choosing a fixed crop ratio and then turning the photo does not re-fit the rectangle, so the chip stays marked while the shape is rotated (`EditSession.cropRatioChosen`, `EditPanel` onTurn).
-- README and `docs/features/edit.md` still describe the old Edit tool (T-007 rewrites them; CLAUDE.md asks for the same change, deferred by plan).
-- Carried (Phase 5): `53_tool_enhance_done_light/dark.png` were re-recorded under criterion 22's prose approval but are not in DECISIONS.md `## Baselines`; add them there if the owner wants the record to be explicit.
-- Carried (Phase 5): `docs/features/saving-and-share.md`, `tool-screen.md`, `my-edits.md`, `remove-background.md` still describe the Saved screen and the Save bar (T-007/T-008).
-- Carried (Phase 5): with Undo and Done on the right, a long tool name (Remove background) on a 360 dp phone may ellipsize; only checked at test widths. FileProvider cannot be called on the Windows desktop JVM, so the provider is verified by manifest lookup only; Share through a real provider is unverified until the device run.
-- Carried (Phase 5): a second Share deletes the first cached copy (reviewer minor 9); Share's JPEG quality 95 repeats the saver's constant (minor 8).

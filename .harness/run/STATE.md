@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** all tasks complete (Phase 6 done)
+- **Stage:** Phase 7 (Verifier gaps: T-010, T-011)
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** none; Verifier (SS11)
-- **DONE-candidate:** yes (next invocation is the Verifier)
+- **Next Phase:** 7 - T-010 (4 slices), T-011
+- **DONE-candidate:** no (cleared by the Verifier of 2026-10-19: R6 and criterion 34 gaps)
 
 ## Progress
 
@@ -20,7 +20,13 @@
 | T-007 | complete | evidence/p6-final.log |
 | T-008 | complete | evidence/p6-final.log |
 | T-009 | complete | evidence/p6-final2.log |
+| T-010 | pending | - |
+| T-011 | pending | - |
 
 ## Assumptions
 
-A-001 .. A-008 in `ASSUMPTIONS.md`. Tier-3: A-001 (criterion 29), A-003 (criterion 11) - those criteria are assumed.
+A-001 .. A-009 in `ASSUMPTIONS.md`. Tier-3: A-001 (criterion 29), A-003 (criterion 11), A-009 (R6) - those criteria are assumed, so the run can end at best `DONE_PARTIAL`.
+
+## Verifier notes
+
+2026-10-19: every other `machine` criterion re-proved fresh (`evidence/v-verifier-2026-10-19.md`). Machine-then-human criteria 20, 21, 22, 34 not yet driven; the next Verifier drives them.

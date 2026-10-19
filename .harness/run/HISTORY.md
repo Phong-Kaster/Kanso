@@ -21,3 +21,6 @@ Iteration pre-wired Result key, RenderedPhotoStore, FileProvider, DI, nav; two W
 
 ## Iteration - Phase 6 (T-007, T-008, T-009)
 Recovered a crashed invocation's coherent debris (docs + 14 new picture tests), recorded baselines 55-68 (judged by opening 55, 57, 61, 63-65), three Workers wrote CONTEXT.md, ADR-003, retouch/artistic/my-edits/camera docs and verified README/edit.md against the code. Review: no blocking; fixed docs (failure message not drawn with Crop open), stale test KDocs, poll for filter chip. verifyRoborazziDebug, lint, assemble green. All tasks complete -> DONE-candidate.
+
+## Verifier Iteration (2026-10-19)
+Fresh whole set green (812 tests, lint, assemble, verifyRoborazziDebug; 7m 45s). Every machine criterion holds except R6 (`saved_*` string ids and "Saved screen" prose remain; Tier-3 A-009 reads R6 as the screen's name) and criterion 34's Verifier read (four imprecise doc sentences, three stale KDocs, found by a fresh Capable reader). Filed T-010, T-011 as Phase 7; DONE-candidate cleared. Devices not driven (gaps first). Tried to archive Runs 1-8 of ISSUES.md to `.harness/archive/` with Write: denied by the permission rules, nothing moved.

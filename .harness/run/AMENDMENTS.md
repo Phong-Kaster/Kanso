@@ -3,3 +3,5 @@
 Human approved the DoD as written; A-001..A-008 accepted; criterion 22 re-recording approved for the 21 baselines listed under `## Baselines` in DECISIONS.md (keep old pictures in `evidence/baseline-diffs/`). No plan change.
 
 - Run 9 Iteration 4 (Tier 1): T-003 scope extended with ToolScreen.kt (wiring), EditToolTest, EditUndoTest, CompareTest (tests broken by the live preview, rewritten per task note). FilterPreviewRenderer takes a processorFor instead of a lut source.
+
+- Run 9 Verifier, 2026-10-19 (Tier 1): DONE-candidate cleared. Added Phase 7: T-010 (R6's greps still find `saved_*` string ids and "Saved screen" prose; read by Tier-3 A-009) and T-011 (criterion 34: four imprecise sentences in README/edit.md and three stale KDocs). PRD, DoD and architecture unchanged.

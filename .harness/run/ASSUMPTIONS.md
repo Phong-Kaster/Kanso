@@ -143,3 +143,23 @@ They keep Replace and Undo (Undo left of Done); only Save becomes Done and goes 
 
 ### Taken, and why
 While Crop is open the card shows the un-turned original and the crop is stored as fractions of it, so it matches the processor's order exactly with no coordinate conversion. One crop gesture release is one undo action.
+
+---
+
+## A-009 - R6 removes "Saved" as the screen's name, not the word for "written"
+
+- **Tier:** 3 (intent: R6's Proof greps `-w "Saved"` over all of `app/src` and expects nothing)
+- **Iteration:** Verifier, 2026-10-19
+- **First dependent checkpoint:** the Verifier's checkpoint of 2026-10-19 (T-010 filed)
+- **Revert:** `git revert <sha>` of T-010's checkpoint; the literal reading would then need the renames below
+- **Assumed DoD criteria:** R6
+
+### Question
+R6's sentence is "'Saved' is gone as a name; Result replaces it". Its Proof's `grep -rnw "Saved"` also matches `SaveResult.Saved` (the saver's outcome, older than this run), `ResultUiState.SaveState.Saved` and the Result button's finished label "Saved", which all mean "this picture was written".
+
+### Options Considered
+1. Literal: rename both types and change the label's words so the grep prints nothing. Changes what the person reads after Save, which no criterion asks for.
+2. PRD's reading (PRD lines 69, 89: "`Saved` renamed" to Result, which "stops meaning 'already written'"): remove every use of Saved as the screen's name (string ids, KDoc, comments, test prose; T-010), keep the word where it means "written".
+
+### Taken, and why
+Option 2: closest to the PRD's literal text, and the label "Saved" after Save is exactly the "already written" meaning the PRD moves off the screen's name. R6 is listed as assumed in `STATE.md`.
