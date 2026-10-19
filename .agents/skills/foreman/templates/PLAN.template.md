@@ -18,8 +18,8 @@
 
 <!-- Produced by the conflict analysis at bootstrap and re-grouped freely as a Tier-1 amendment.
      A Phase needs: no unmet dependencies, pairwise DISJOINT file scopes, at most the cap in
-     POLICIES.md. Shared/integration files belong to no task - the Iteration wires those itself. -->
-| Phase | Tasks | Shared files the Iteration wires itself |
+     POLICIES.md. Shared/integration files belong to no task - a Wiring Worker writes those. -->
+| Phase | Tasks | Shared files the Wiring Worker writes |
 |---|---|---|
 | 1 | T-001 | - |
 | 2 | T-002, T-003 | `navigation/Routes.kt` |

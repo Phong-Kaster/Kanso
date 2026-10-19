@@ -41,5 +41,5 @@ reports no problems should say so plainly and briefly, not pad. Check in particu
   acceptance criteria that only a human could judge?
 
 When your job is **conflict analysis**, the file mapping is the deliverable and it must be precise.
-A file that two tasks both touch belongs to no task: name it as shared so the Iteration wires it
-itself.
+A file that two tasks both touch belongs to no task: name it as shared so a Wiring Worker
+writes it.
