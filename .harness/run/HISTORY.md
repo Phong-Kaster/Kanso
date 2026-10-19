@@ -24,3 +24,6 @@ Recovered a crashed invocation's coherent debris (docs + 14 new picture tests), 
 
 ## Verifier Iteration (2026-10-19)
 Fresh whole set green (812 tests, lint, assemble, verifyRoborazziDebug; 7m 45s). Every machine criterion holds except R6 (`saved_*` string ids and "Saved screen" prose remain; Tier-3 A-009 reads R6 as the screen's name) and criterion 34's Verifier read (four imprecise doc sentences, three stale KDocs, found by a fresh Capable reader). Filed T-010, T-011 as Phase 7; DONE-candidate cleared. Devices not driven (gaps first). Tried to archive Runs 1-8 of ISSUES.md to `.harness/archive/` with Write: denied by the permission rules, nothing moved.
+
+## Iteration - Phase 7 (T-010, T-011)
+Renamed the ten `saved_*` string ids to `result_*` (two files git-mv'd), rewrote Saved-screen comments in 8 main and 13 test files, fixed five imprecise Edit doc sentences and three stale KDocs. assemble+test, lint, verifyRoborazziDebug exit 0, no picture changed. No Reviewer dispatched (ids and comments only). PARTIAL-candidate.

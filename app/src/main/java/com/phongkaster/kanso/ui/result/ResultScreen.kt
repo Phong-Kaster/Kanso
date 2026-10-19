@@ -291,7 +291,7 @@ fun ResultScreen(
 
     // Share: find a Uri another app may read, off the main thread, then open the share sheet.
     val scope = rememberCoroutineScope()
-    val chooserTitle = stringResource(R.string.saved_share_chooser)
+    val chooserTitle = stringResource(R.string.result_share_chooser)
     var sharing by remember { mutableStateOf(false) }
     val share: () -> Unit = {
         if (!sharing) {
@@ -509,7 +509,7 @@ private fun TopShade(statusBarTop: Dp, modifier: Modifier = Modifier) {
  */
 @Composable
 private fun TopRow(viewer: Boolean, onClose: () -> Unit, modifier: Modifier = Modifier) {
-    val title = stringResource(if (viewer) R.string.saved_layout_viewer_title else R.string.result_title)
+    val title = stringResource(if (viewer) R.string.result_layout_viewer_title else R.string.result_title)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -524,7 +524,7 @@ private fun TopRow(viewer: Boolean, onClose: () -> Unit, modifier: Modifier = Mo
             RoundIconButton(
                 onClick = onClose,
                 iconRes = R.drawable.ic_close,
-                contentDescription = stringResource(R.string.saved_layout_close),
+                contentDescription = stringResource(R.string.result_layout_close),
                 modifier = Modifier.testTag(RESULT_CLOSE_TAG),
             )
         }
@@ -622,7 +622,7 @@ private fun BottomActions(
 @StringRes
 private fun resultMessageRes(save: ResultUiState.SaveState): Int? = when (save) {
     is ResultUiState.SaveState.Saved ->
-        if (save.keptOriginalOrientation) R.string.save_kept_orientation else R.string.saved_message
+        if (save.keptOriginalOrientation) R.string.save_kept_orientation else R.string.result_finished_message
     ResultUiState.SaveState.Failed -> R.string.save_failed
     ResultUiState.SaveState.PermissionDenied -> R.string.save_permission_denied
     ResultUiState.SaveState.Idle, ResultUiState.SaveState.Saving -> null
@@ -638,7 +638,7 @@ private fun ShareButton(sharing: Boolean, onShare: () -> Unit) {
     RoundIconButton(
         onClick = { if (!sharing) onShare() },
         iconRes = R.drawable.ic_share,
-        contentDescription = stringResource(R.string.saved_share),
+        contentDescription = stringResource(R.string.result_share),
         modifier = Modifier.testTag(RESULT_SHARE_TAG),
     )
 }
@@ -698,7 +698,7 @@ private fun SaveButton(save: ResultUiState.SaveState, onSave: () -> Unit, modifi
             )
             Spacer(Modifier.size(ButtonDefaults.iconSpacingFor(height)))
             Text(
-                text = stringResource(if (saved) R.string.saved_title else R.string.tool_save),
+                text = stringResource(if (saved) R.string.result_finished_label else R.string.tool_save),
                 style = ButtonDefaults.textStyleFor(height),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -748,7 +748,7 @@ private fun EditButton(onEdit: () -> Unit, modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.size(ButtonDefaults.iconSpacingFor(height)))
         Text(
-            text = stringResource(R.string.saved_layout_viewer_edit),
+            text = stringResource(R.string.result_layout_viewer_edit),
             style = ButtonDefaults.textStyleFor(height),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -878,7 +878,7 @@ private fun ResultMarkBadge(growth: Float, morphProgress: Float, modifier: Modif
     val path = remember { Path() }
     val scaleMatrix = remember { Matrix() }
     val badgeColour = MaterialTheme.colorScheme.primary
-    val description = stringResource(R.string.saved_mark_description)
+    val description = stringResource(R.string.result_mark_description)
 
     Box(
         modifier = modifier
@@ -933,7 +933,7 @@ private fun ResultMarkBadge(growth: Float, morphProgress: Float, modifier: Modif
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ResultLoadingIndicator() {
-    val description = stringResource(R.string.saved_loading)
+    val description = stringResource(R.string.result_loading)
     LoadingIndicator(
         modifier = Modifier
             .testTag(RESULT_LOADING_TAG)
@@ -951,7 +951,7 @@ private fun ResultLoadingIndicator() {
 @Composable
 private fun PhotoView(image: ImageBitmap, photoUri: String?, viewer: Boolean) {
     val description = stringResource(
-        if (viewer) R.string.saved_photo_description else R.string.result_photo_description,
+        if (viewer) R.string.result_viewer_photo_description else R.string.result_photo_description,
     )
     Image(
         bitmap = image,

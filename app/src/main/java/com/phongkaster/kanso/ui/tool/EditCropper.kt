@@ -69,7 +69,7 @@ private const val SAME_CROP_TOLERANCE = 0.001f
  * [onCropFinished] once: one finished gesture is one undo step. A pinch, a tap, or a rectangle the
  * session itself just set changes nothing, so nothing is reported.
  *
- * While [enabled] is false (Compare is on) the cropper ignores every touch.
+ * While [enabled] is false (Compare is on, or Done is rendering the final picture) the cropper ignores every touch.
  *
  * The drawing itself is the stateless [EditCropperContent].
  */

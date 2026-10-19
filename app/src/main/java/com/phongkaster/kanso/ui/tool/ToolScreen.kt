@@ -307,9 +307,10 @@ fun ToolScreen(
             }
         },
         // The Edit screen only: the open tool's controls, drawn in the sheet under the photo.
-        // They are switched off only while Compare shows the original: a render in progress must
-        // not disable a slider the finger is still on. Every change goes to the ViewModel's one
-        // settings session, which re-renders from the original photo.
+        // They are switched off while Compare shows the original and while Done is rendering the
+        // final picture (`!state.comparing && !state.finishing`). An ordinary preview render does
+        // not disable them. Every change goes to the ViewModel's one settings session, which
+        // re-renders from the original photo.
         editSheet = { tool ->
             ToolPanel(
                 tool = Tool.EDIT,

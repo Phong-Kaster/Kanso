@@ -66,12 +66,14 @@ import org.robolectric.annotation.Config
 
 /**
  * DoD 9 (the photo viewer) and the viewer clause of DoD 1, through the app's real navigation: on
- * the My edits tab, a tap on tile 3 opens that photo full screen, in the Saved screen's viewer
+ * the My edits tab, a tap on tile 3 opens that photo full screen, in the Result screen's viewer
  * form. The viewer shows photo 3, a round Share button with no visible text, a wide "Edit" button,
  * a round close button and the title "My edits"; it has no success mark, no "saved" line and no
  * floating tab bar. Share starts the system chooser with photo 3's content Uri; Edit opens the Edit
  * tool screen on photo 3; close shows Home; system Back returns to My edits with tile 3 still on
  * screen.
+ *
+ * Run 9 (T-010): the string ids `saved_*` became `result_*` (R6); the words asserted are unchanged.
  *
  * The fakes are loaded before the app starts (`createEmptyComposeRule`, `loadKoinModules`, then
  * `ActivityScenario.launch`): a screen's ViewModel keeps the source it was built with, so a swap
@@ -112,7 +114,7 @@ class MyEditsViewerNavigationTest {
             // Share: round, named "Share", no visible text.
             val share = compose.onNodeWithTag(RESULT_SHARE_TAG)
                 .assertIsDisplayed()
-                .assert(hasContentDescription(app.getString(R.string.saved_share)))
+                .assert(hasContentDescription(app.getString(R.string.result_share)))
                 .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
                 .fetchSemanticsNode()
             assertRound("Share", share.size.width, share.size.height)
@@ -120,8 +122,8 @@ class MyEditsViewerNavigationTest {
             // The wide button reads exactly "Edit".
             val edit = compose.onNodeWithTag(RESULT_EDIT_TAG).assertIsDisplayed().fetchSemanticsNode()
             val editTexts = edit.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
-            assertEquals(listOf(app.getString(R.string.saved_layout_viewer_edit)), editTexts)
-            assertEquals("Edit", app.getString(R.string.saved_layout_viewer_edit))
+            assertEquals(listOf(app.getString(R.string.result_layout_viewer_edit)), editTexts)
+            assertEquals("Edit", app.getString(R.string.result_layout_viewer_edit))
             assertTrue(
                 "The Edit button (${edit.size.width} px) is not at least twice Share's width (${share.size.width} px)",
                 edit.size.width >= 2 * share.size.width,
@@ -130,7 +132,7 @@ class MyEditsViewerNavigationTest {
             // Close: round, named.
             val close = compose.onNodeWithTag(RESULT_CLOSE_TAG)
                 .assertIsDisplayed()
-                .assert(hasContentDescription(app.getString(R.string.saved_layout_close)))
+                .assert(hasContentDescription(app.getString(R.string.result_layout_close)))
                 .fetchSemanticsNode()
             assertRound("Close", close.size.width, close.size.height)
 

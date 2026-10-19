@@ -107,7 +107,7 @@ import org.robolectric.annotation.GraphicsMode
  * the gallery), titled "Your edit", with Share, Save and Go home at the bottom and no close button;
  * Save writes it once, then reads "Saved" and plays the success mark; Share sends a copy from the
  * cache and writes nothing to the gallery; with nothing handed over the screen says "Nothing to
- * show". The viewer keeps the Saved screen's form: close button, "My edits", Share and Edit, no
+ * show". The viewer form keeps the old Saved layout: close button, "My edits", Share and Edit, no
  * Save and no mark.
  *
  * The layout: a blurred copy of the photo covers the whole window and the photo sits whole inside
@@ -312,11 +312,11 @@ class ResultScreenTest {
         update { save = ResultUiState.SaveState.Saved() }
         // The tagged node is the card of the line; its text is a child.
         compose.onNodeWithTag(RESULT_MESSAGE_TAG).assertIsDisplayed()
-        compose.onNodeWithText(app.getString(R.string.saved_message)).assertIsDisplayed()
+        compose.onNodeWithText(app.getString(R.string.result_finished_message)).assertIsDisplayed()
 
         update { viewer = true }
         compose.onAllNodesWithTag(RESULT_MESSAGE_TAG).assertCountEquals(0)
-        compose.onAllNodes(hasText(app.getString(R.string.saved_message))).assertCountEquals(0)
+        compose.onAllNodes(hasText(app.getString(R.string.result_finished_message))).assertCountEquals(0)
     }
 
     /**
@@ -360,7 +360,7 @@ class ResultScreenTest {
         update { save = ResultUiState.SaveState.Saved() }
         compose.onNodeWithTag(RESULT_SAVE_TAG)
             .assertIsNotEnabled()
-            .assert(hasText(app.getString(R.string.saved_title)))
+            .assert(hasText(app.getString(R.string.result_finished_label)))
         compose.onAllNodesWithTag(RESULT_SAVING_TAG, useUnmergedTree = true).assertCountEquals(0)
     }
 
@@ -422,8 +422,8 @@ class ResultScreenTest {
 
         compose.onNode(hasTestTag(RESULT_PHOTO_TAG) and SemanticsMatcher.expectValue(RESULT_PHOTO_URI_KEY, CONTENT_URI))
             .assertIsDisplayed()
-        compose.onNodeWithContentDescription(app.getString(R.string.saved_photo_description)).assertIsDisplayed()
-        compose.onNodeWithTag(RESULT_TITLE_TAG).assert(hasText(app.getString(R.string.saved_layout_viewer_title)))
+        compose.onNodeWithContentDescription(app.getString(R.string.result_viewer_photo_description)).assertIsDisplayed()
+        compose.onNodeWithTag(RESULT_TITLE_TAG).assert(hasText(app.getString(R.string.result_layout_viewer_title)))
         compose.onNodeWithTag(RESULT_CLOSE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(RESULT_SHARE_TAG).assertIsDisplayed()
         compose.onNodeWithTag(RESULT_EDIT_TAG).assertIsDisplayed()
@@ -451,8 +451,8 @@ class ResultScreenTest {
         val names = indicator.fetchSemanticsNode().config
             .getOrElse(SemanticsProperties.ContentDescription) { emptyList() }
         assertTrue(
-            "The loading indicator is not named \"${app.getString(R.string.saved_loading)}\": $names",
-            app.getString(R.string.saved_loading) in names,
+            "The loading indicator is not named \"${app.getString(R.string.result_loading)}\": $names",
+            app.getString(R.string.result_loading) in names,
         )
         compose.onAllNodesWithTag(RESULT_PHOTO_TAG).assertCountEquals(0)
 
@@ -489,10 +489,10 @@ class ResultScreenTest {
         assertTrue("The saver was given another picture", saver.bitmapCalls.single() === rendered)
         compose.onNodeWithTag(RESULT_SAVE_TAG)
             .assertIsNotEnabled()
-            .assert(hasText(app.getString(R.string.saved_title)))
+            .assert(hasText(app.getString(R.string.result_finished_label)))
         compose.onNodeWithTag(RESULT_MARK_TAG)
             .assertIsDisplayed()
-            .assert(hasContentDescription(app.getString(R.string.saved_mark_description)))
+            .assert(hasContentDescription(app.getString(R.string.result_mark_description)))
 
         compose.onNodeWithTag(RESULT_SAVE_TAG).performClick()
         compose.waitForIdle()
@@ -722,7 +722,7 @@ class ResultScreenTest {
         compose.onNodeWithTag(RESULT_TITLE_TAG).assertIsDisplayed().assert(hasText(app.getString(R.string.result_title)))
         compose.onAllNodesWithTag(RESULT_CLOSE_TAG).assertCountEquals(0)
         update { viewer = true }
-        checkViewerTopRow(app.getString(R.string.saved_layout_viewer_title))
+        checkViewerTopRow(app.getString(R.string.result_layout_viewer_title))
 
         val tolerance = px(1.dp)
         val screen = bounds(RESULT_SCREEN_TAG)
@@ -743,7 +743,7 @@ class ResultScreenTest {
     private fun checkViewerTopRow(title: String) {
         val close = compose.onNodeWithTag(RESULT_CLOSE_TAG)
             .assertIsDisplayed()
-            .assert(hasContentDescription(app.getString(R.string.saved_layout_close)))
+            .assert(hasContentDescription(app.getString(R.string.result_layout_close)))
             .assertHeightIsAtLeast(48.dp)
             .assertWidthIsAtLeast(48.dp)
             .fetchSemanticsNode()
@@ -837,7 +837,7 @@ class ResultScreenTest {
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
 
         update { viewer = true }
-        checkBottomRow(wideTag = RESULT_EDIT_TAG, wideLabel = app.getString(R.string.saved_layout_viewer_edit), endTag = null)
+        checkBottomRow(wideTag = RESULT_EDIT_TAG, wideLabel = app.getString(R.string.result_layout_viewer_edit), endTag = null)
     }
 
     /**
@@ -853,7 +853,7 @@ class ResultScreenTest {
         val screen = bounds(RESULT_SCREEN_TAG)
         val share = compose.onNodeWithTag(RESULT_SHARE_TAG)
             .assertIsDisplayed()
-            .assert(hasContentDescription(app.getString(R.string.saved_share)))
+            .assert(hasContentDescription(app.getString(R.string.result_share)))
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
             .assertHeightIsAtLeast(48.dp)
             .fetchSemanticsNode()
@@ -914,7 +914,7 @@ class ResultScreenTest {
 
         update { viewer = true }
         compose.onAllNodesWithTag(RESULT_MARK_TAG).assertCountEquals(0)
-        compose.onAllNodes(hasContentDescription(app.getString(R.string.saved_mark_description))).assertCountEquals(0)
+        compose.onAllNodes(hasContentDescription(app.getString(R.string.result_mark_description))).assertCountEquals(0)
     }
 
     /** The place checks of [checkMarkPosition] for the photo named [label]. */
@@ -922,7 +922,7 @@ class ResultScreenTest {
         val screen = bounds(RESULT_SCREEN_TAG)
         val mark = compose.onNodeWithTag(RESULT_MARK_TAG)
             .assertIsDisplayed()
-            .assert(hasContentDescription(app.getString(R.string.saved_mark_description)))
+            .assert(hasContentDescription(app.getString(R.string.result_mark_description)))
             .fetchSemanticsNode()
             .boundsInRoot
         assertTrue(
@@ -953,7 +953,7 @@ class ResultScreenTest {
 
         compose.onNodeWithTag(RESULT_MARK_TAG)
             .assertIsDisplayed()
-            .assert(hasContentDescription(app.getString(R.string.saved_mark_description)))
+            .assert(hasContentDescription(app.getString(R.string.result_mark_description)))
         compose.onAllNodesWithTag(RESULT_LOADING_TAG).assertCountEquals(0)
 
         val atStart = pictureOf(RESULT_MARK_TAG)
@@ -1232,7 +1232,7 @@ class ResultScreenTest {
         assertNull(chooser.`package`)
         assertNull(chooser.component)
         assertTrue(chooser.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
-        assertEquals(app.getString(R.string.saved_share_chooser), chooser.getCharSequenceExtra(Intent.EXTRA_TITLE)?.toString())
+        assertEquals(app.getString(R.string.result_share_chooser), chooser.getCharSequenceExtra(Intent.EXTRA_TITLE)?.toString())
 
         val send = IntentCompat.getParcelableExtra(chooser, Intent.EXTRA_INTENT, Intent::class.java)
         assertNotNull("The chooser wraps no intent", send)

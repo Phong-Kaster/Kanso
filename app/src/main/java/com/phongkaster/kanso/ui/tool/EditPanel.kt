@@ -122,8 +122,9 @@ fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALU
  * the app's assets (the engine's bundled images, see [FilterPreset]); a test passes its own. So
  * the screen simply forwards each callback to the ViewModel.
  *
- * While [enabled] is false (the Compare switch is on) every control is disabled. A render running
- * does not disable them: a slider switched off mid-drag would flicker and lose the finger.
+ * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture)
+ * every control is disabled. An ordinary preview render does not disable them: a slider switched
+ * off mid-drag would flicker and lose the finger.
  *
  * The drawing itself is the stateless [EditPanelContent].
  */

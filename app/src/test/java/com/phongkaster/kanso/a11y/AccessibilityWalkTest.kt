@@ -130,7 +130,7 @@ import org.robolectric.annotation.GraphicsMode
  * - My edits with photos, empty and loading;
  * - the gallery full, partially shared, refused, empty and loading;
  * - each of the five tool screens with a ready photo, with the photo unreadable, and while saving;
- * - Saved, and the photo opened from My edits (the same screen in its viewer form);
+ * - Result, and the photo opened from My edits (the same screen in its viewer form);
  * - the camera live, after a shot, refused and unavailable;
  * - Settings with Kanso blue, and with Custom selected (the engine's colour picker is then on
  *   screen, and [TouchTargetCheck] leaves out what is inside it, the DoD's named exception).
@@ -437,9 +437,9 @@ class AccessibilityWalkTest {
         walkToolScreen(Tool.ARTISTIC, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
-    // --- Saved -----------------------------------------------------------------------------
+    // --- Result -----------------------------------------------------------------------------
 
-    /** Saved right after a save, with its photo: the round close button, Share and "Edit another". */
+    /** Result right after a save, with its photo: the round close button, Share and "Edit another". */
     @Test
     fun saved() {
         val state = ResultUiState(photoUri = PHOTO_URI, photo = ResultPhoto.Ready(ToolFixtures.gradient(600, 400)))
@@ -448,7 +448,7 @@ class AccessibilityWalkTest {
         }
     }
 
-    /** The photo opened from My edits (Saved's viewer form): the round close button, Share and "Edit". */
+    /** The photo opened from My edits (the Result screen's viewer form): the round close button, Share and "Edit". */
     @Test
     fun photo_opened_from_my_edits() {
         val state = ResultUiState(
@@ -926,7 +926,7 @@ class AccessibilityWalkTest {
     private companion object {
         /**
          * How far the paused clock is moved on after a state is drawn, in milliseconds: long
-         * enough for every finite animation (a colour fade, the Saved mark) to end.
+         * enough for every finite animation (a colour fade, the Result mark) to end.
          */
         const val SETTLE_MS = 1_000L
 
@@ -937,7 +937,7 @@ class AccessibilityWalkTest {
          */
         const val REFUSED_TIMEOUT_MS = 10_000L
 
-        /** The made-up Uri the tool screen and Saved states say their photo came from. */
+        /** The made-up Uri the tool screen and Result states say their photo came from. */
         const val PHOTO_URI = "content://media/external/images/media/42"
 
         /** The test tag of the sample icon button the check is tried on. */

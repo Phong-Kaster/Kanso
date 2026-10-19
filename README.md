@@ -142,7 +142,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    `data/photo/MediaStorePhotoSaver.kt`, on `Dispatchers.IO`, writes a new JPEG at quality 95, at
    the rendered size, named `Kanso_<yyyyMMdd_HHmmss>.jpg`, into `Pictures/Kanso` (an untouched
    photo is saved from its own file: its bytes, or re-encoded upright when it carries an EXIF
-   turn). A picture is saved once; the button then reads "Saved". On Android 8.1 and 9 the
+   turn; a turned photo too large to turn in memory is copied as it is with its tag kept, and
+   Result shows the "kept orientation" message). A picture is saved once; the button then reads "Saved". On Android 8.1 and 9 the
    storage-write permission is asked first. **Share** (`ui/result/SharePhoto.kt`) writes a copy of
    the picture on screen under the cache's `shared/` folder (JPEG quality 95 for an opaque picture,
    which every Edit render is), on `Dispatchers.IO`, and sends it through FileProvider with a

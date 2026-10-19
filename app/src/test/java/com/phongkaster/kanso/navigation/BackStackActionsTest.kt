@@ -14,7 +14,7 @@ import org.junit.Test
  */
 class BackStackActionsTest {
 
-    /** Home, My edits and Settings are tab keys; a gallery, a tool screen, the camera and Saved are not. */
+    /** Home, My edits and Settings are tab keys; a gallery, a tool screen, the camera and Result are not. */
     @Test
     fun only_the_three_tab_keys_are_tab_keys() {
         assertTrue(isTabKey(Home))
@@ -143,7 +143,7 @@ class BackStackActionsTest {
 
     /** Values the tests share. */
     private companion object {
-        /** A photo's Uri as text, as the tool and Saved keys carry it. */
+        /** A photo's Uri as text, as the tool and Result keys carry it. */
         const val PHOTO = "content://media/external/images/media/42"
     }
 }

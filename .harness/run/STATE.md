@@ -2,10 +2,10 @@
 
 ## Current
 
-- **Stage:** Phase 7 (Verifier gaps: T-010, T-011)
+- **Stage:** Phase 7 done; PARTIAL-candidate (Tier-3 A-001, A-003, A-009; criteria 20, 21, 22, 34 await a signature)
 - **Loop Branch:** loop/kanso-real-editor
-- **Next Phase:** 7 - T-010 (4 slices), T-011
-- **DONE-candidate:** no (cleared by the Verifier of 2026-10-19: R6 and criterion 34 gaps)
+- **Next Phase:** none; next invocation is the Verifier (SS14.4)
+- **DONE-candidate:** no. **PARTIAL-candidate:** yes
 
 ## Progress
 
@@ -20,8 +20,8 @@
 | T-007 | complete | evidence/p6-final.log |
 | T-008 | complete | evidence/p6-final.log |
 | T-009 | complete | evidence/p6-final2.log |
-| T-010 | pending | - |
-| T-011 | pending | - |
+| T-010 | complete | evidence/p7-test.log |
+| T-011 | complete | evidence/p7-test.log |
 
 ## Assumptions
 

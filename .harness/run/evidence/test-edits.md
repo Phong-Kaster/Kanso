@@ -29,3 +29,6 @@ Baselines 51, 52 re-recorded (Undo now enabled after tapping Free; chip labels d
 
 ## Phase 6 (T-009, Run 9)
 - ToolScreenshotTest: 14 new captures (pictures 55-68: tool row, Crop, Rotate, Adjust 70, Filters 1977, compare on, pill; light and dark) plus helpers; stale KDocs about Save/sliders corrected. No test removed or weakened. Baselines 55-68 recorded new (evidence/p6-record.log).
+
+## Phase 7 (T-010, Run 9)
+- ResultScreenTest, MyEditsViewerNavigationTest: `R.string.saved_*` ids renamed to `result_*` (R6); the words asserted are unchanged. Other test files: comments only. No test removed, weakened or skipped.

@@ -52,13 +52,13 @@ import org.robolectric.annotation.GraphicsMode
  * Checks that the text and buttons drawn over a photo stay readable whatever the photo looks like
  * (DoD 24): on an all-white photo and on an all-black one, in light and in dark, with Kanso blue.
  *
- * The screens that draw over a photo are Saved (right after a save), the photo opened from My
- * edits (Saved's viewer form) and the five tool screens. Each test draws one of them in one mode
+ * The screens that draw over a photo are Result (right after a save), the photo opened from My
+ * edits (the Result screen's viewer form) and the five tool screens. Each test draws one of them in one mode
  * from its stateless `...Content` part, first with an all-white 600 x 800 photo, then with an
  * all-black one (the photo is swapped through Compose state, so the same window is drawn again),
  * and after each draw reads pixels and works out WCAG contrast ratios:
  *
- * - Saved's title ("Saved", or "My edits" in the viewer): the lightest and the darkest pixel
+ * - Result's title ("Saved", or "My edits" in the viewer): the lightest and the darkest pixel
  *   inside its text's bounds, at least [TEXT_MIN_CONTRAST]. The title sits on the top shade over
  *   the blurred photo, so the darkest or lightest pixel there is the shade and the other the ink.
  *   Because the shade fades from row to row, the title's ink is also compared, row by row, with
@@ -71,7 +71,7 @@ import org.robolectric.annotation.GraphicsMode
  *   [TEXT_MIN_CONTRAST];
  * - Done on every tool screen (Run 9, T-006: it replaced the bottom Save): its word against the
  *   button, at least [TEXT_MIN_CONTRAST], over both photos;
- * - Saved's success mark: its check against the mark, at least [ICON_MIN_CONTRAST].
+ * - Result's success mark: its check against the mark, at least [ICON_MIN_CONTRAST].
  *
  * Run 9 (T-006): the Saved screen became the Result screen (`ResultContent`), reached with Done;
  * its close button belongs to the viewer form only, and its mark shows once Save has succeeded,
@@ -112,15 +112,15 @@ class OverPhotoContrastTest {
         stopKoin()
     }
 
-    // --- Saved -----------------------------------------------------------------------------
+    // --- Result -----------------------------------------------------------------------------
 
-    /** Saved in light mode over a white and a black photo: title, close, Share and the mark. */
+    /** Result in light mode over a white and a black photo: title, close, Share and the mark. */
     @Test
     fun saved_reads_over_white_and_black_photos_in_light() {
         checkSaved(ThemeMode.Light, viewer = false)
     }
 
-    /** Saved in dark mode over a white and a black photo: title, close, Share and the mark. */
+    /** Result in dark mode over a white and a black photo: title, close, Share and the mark. */
     @Test
     fun saved_reads_over_white_and_black_photos_in_dark() {
         checkSaved(ThemeMode.Dark, viewer = false)
@@ -244,7 +244,7 @@ class OverPhotoContrastTest {
     // --- One screen each -------------------------------------------------------------------
 
     /**
-     * Draws Saved in [mode] (its viewer form, the photo opened from My edits, when [viewer]) over
+     * Draws Result in [mode] (its viewer form, the photo opened from My edits, when [viewer]) over
      * each photo and checks its title, its close and Share buttons and, after a save only, its
      * success mark.
      */
@@ -694,7 +694,7 @@ class OverPhotoContrastTest {
         val CHIP_CONTAINER_GAP = 3.dp
 
         /**
-         * How far past the end of Saved's title each row's background is read: clear of the last
+         * How far past the end of Result's title each row's background is read: clear of the last
          * letter's softened edge, on the shade over the photo, where nothing else is drawn.
          */
         val TITLE_BACKGROUND_GAP = 4.dp

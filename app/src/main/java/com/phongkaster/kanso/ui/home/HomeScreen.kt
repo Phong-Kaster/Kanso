@@ -254,7 +254,7 @@ private const val RECENT_CARD_CONTENT_TYPE = "recent-photo"
  * - It asks the ViewModel to read the saved photos again each time Home enters the composition.
  *   `LaunchedEffect` runs its block once when the composable first appears (and again only if its
  *   key, here [viewModel], changes). Home leaves the composition while another screen covers it,
- *   so coming back from the Saved screen runs it again and the photo just saved is first in the
+ *   so coming back from the Result screen runs it again and the photo just saved is first in the
  *   strip. The photos already shown stay while the new read runs (see [HomeViewModel.refresh]).
  * - It wraps the content in `ProvideSkeletonPulse`, which makes the placeholder cards' soft band
  *   move while the photos load. [HomeContent] on its own keeps them still, which is what previews

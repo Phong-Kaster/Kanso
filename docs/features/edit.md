@@ -14,7 +14,8 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 Edit is Kanso's general editor. Under the photo sits a row of four tools, **Crop**, **Rotate**,
 **Adjust** and **Filters**; tapping one opens its sheet under the row (tapping it again closes it).
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
-rendered once, in plain Kotlin on the phone's processor, when you tap **Done**. No model and no
+rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
+used there is nothing to render, and the decoded original is handed over). No model and no
 network are used. You can:
 
 - **Crop**: choose Free, 1:1, 4:3, 3:4, 16:9 or 9:16. While the Crop sheet is open the photo becomes
@@ -34,7 +35,8 @@ network are used. You can:
   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
   Done stays usable while comparing and renders the edit, not the original.
-- **Done** at the top right renders the picture and opens the Result screen (Share, Save, Go home).
+- **Done** at the top right renders the picture (with no control used, it hands over the decoded
+  original) and opens the Result screen (Share, Save, Go home).
   Nothing is written to the gallery until Save is tapped there.
 
 Each tool with a change carries a small dot on its entry in the row.
@@ -42,7 +44,7 @@ Each tool with a change carries a small dot on its entry in the row.
 ## How to use it
 
 - Reach it from the **Edit** shortcut on Home (then pick a photo in the gallery), by tapping a
-  **Recent edits** card on Home, from the round **Camera** button on the tab bar (a kept shot opens
+  **Recent edits** card on Home, from the round **Camera** button beside the tab bar (a kept shot opens
   in Edit), or with **Edit** in the My edits photo viewer. Edit has no carousel banner and no
   Replace chip.
 - Tap a tool in the row to open its sheet, change what you like, open another tool; the photo keeps
@@ -98,8 +100,11 @@ flowchart TD
    flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1). It is
    held, with its undo stack, by
    [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
-   Every control hands the ViewModel a complete new value, never a change on top of the last
-   result:
+   No control ever asks for a change on top of the last result: each re-renders from the original
+   photo. What a control hands the ViewModel differs, though. A turn, a flip, a filter chip and a
+   slider move pass a complete new `EditSettings`; a crop chip passes only a `CropRatio`, which
+   `EditSession.cropRatioChosen` turns into the rectangle; the cropper passes a `CropRect`; and a
+   slider release (`commitSettings`) passes nothing, it just closes the drag as one undo step:
    - [`ui/tool/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt)
      draws the open sheet from the session's settings (it keeps no state of its own, so a slider
      reopens where it was left). A turn, a flip or a filter chip calls `changeSettings`; a crop
@@ -222,7 +227,9 @@ flowchart TD
      [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
      on `Dispatchers.IO`: a rendered Edit picture is opaque, so it is written as a new JPEG at
      quality 95, at its size, into `Pictures/Kanso`. An untouched photo (Done with no change) is
-     saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn). A
+     saved from its own file instead (its bytes, or turned upright if it carries an EXIF turn; a
+     turned photo too large to turn in memory is copied as it is with its tag kept, and Result
+     shows the "kept orientation" message). A
      picture is saved at most once; the button then reads "Saved". On Android 8.1 and 9 the
      storage-write permission is asked first.
    - **Share** writes a copy of the picture on screen in the cache's `shared/` folder (JPEG
@@ -253,7 +260,8 @@ flowchart TD
 - **Size.** The photo is decoded at most twice the screen's longest edge, and Done renders at most
   **2000 px** on the longest edge, so a 4000 x 3000 photo comes out at most 2000 x 1500. The saved
   file is a **JPEG at quality 95**. Done with no control used saves the original file instead (its
-  bytes, or re-encoded upright when it carries an EXIF turn); once a control was used, even if
+  bytes, or re-encoded upright when it carries an EXIF turn; if it is too large to turn in memory,
+  copied as it is with its tag kept and Result shows the "kept orientation" message); once a control was used, even if
   every change was undone, Done renders a new JPEG of at most 2000 px.
 - **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
