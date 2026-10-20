@@ -355,6 +355,7 @@ fun HomeContent(
 
     Scaffold(
         modifier = modifier.testTag(HOME_SCREEN_TAG),
+        bottomBar = {}
     ) { innerPadding ->
         Column(
             modifier = Modifier
