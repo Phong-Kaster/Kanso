@@ -174,10 +174,11 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * - the options strip, holding the tool's own controls (`ToolPanel`).
  * There is no bar at the bottom: the finished picture leaves this screen through Done.
  *
- * The Edit screen differs (see [ToolContent]): its photo keeps 60% of the height, with no
- * "Replace" chip; under it a row of four tools (Crop, Rotate, Adjust, Filters) each opens its
- * controls in a sheet below; and Undo sits with a Compare switch in a pill at the photo's bottom
- * right instead of in the top bar, so the top bar's right end holds Done alone.
+ * The Edit screen differs (see [ToolContent]): a row of four tools (Crop, Rotate, Adjust,
+ * Filters) sits in the screen's bottom bar, and a tap on one opens its controls in a panel just
+ * above the row, the photo shrinking to make room, as in Adobe Lightroom. The photo has no
+ * "Replace" chip, and Undo sits with a Compare switch in a pill at the photo's bottom right
+ * instead of in the top bar, so the top bar's right end holds Done alone.
  *
  * While an edit runs, a progress ring fills in the middle of the card and Done and Undo are
  * switched off, so a half-made edit is never handed over by mistake; the screen stays responsive
@@ -322,6 +323,7 @@ fun ToolScreen(
                 onEditPreview = viewModel::previewSettings,
                 onEditCommit = viewModel::commitSettings,
                 onEditRatio = viewModel::chooseCropRatio,
+                onEditAdjustSlider = viewModel::chooseAdjustSlider,
             )
         },
     )
@@ -355,10 +357,11 @@ fun ToolScreen(
  *   the edited photo in place of the original once an edit has been made; a progress ring while
  *   an edit runs; the message about the last failed edit at its top; and the "Replace" chip at
  *   its bottom. It takes all the height the options strip leaves.
- * - The options strip: [panel], the tool's own controls, at the bottom. There is no bottom bar.
+ * - The options strip: [panel], the tool's own controls, at the bottom. There is no bottom bar
+ *   (except on Edit, below).
  *
- * `Scaffold` is Material's frame for a screen: it places a top bar and hands the content the
- * space left under it (`innerPadding`), so nothing is drawn under the bar.
+ * `Scaffold` is Material's frame for a screen: it places a top bar and a bottom bar and hands the
+ * content the space left between them (`innerPadding`), so nothing is drawn under either bar.
  *
  * [panel] is a composable lambda, a slot: the caller decides what is drawn there and this function
  * only decides where. It is empty by default, so tests and previews that do not care about the
@@ -372,11 +375,13 @@ fun ToolScreen(
  * The root node sets `testTagsAsResourceId`, still marked experimental (hence the opt-in), so
  * tools such as uiautomator can find the tags.
  *
- * **The Edit screen is laid out differently.** Its body is [EditToolContent]: the photo card fixed
- * at 60% of the height below the top bar (without the "Replace" chip), the row of four tools
- * (Crop, Rotate, Adjust, Filters) under it, and the open tool's sheet in the rest. [editSheet] is
- * the slot for that sheet's controls; it is given the open tool, so one lambda serves all four.
- * [panel] is not used on Edit. The Undo control moves from the top bar into the pill floating at
+ * **The Edit screen is laid out differently.** The `Scaffold`'s `bottomBar` slot holds
+ * [EditBottomBar]: the row of four tools (Crop, Rotate, Adjust, Filters) at the very bottom, and
+ * the open tool's panel appearing just above it. The body is [EditPhotoArea]: the photo card
+ * (without the "Replace" chip) filling all the space between the top bar and the bottom bar, so it
+ * shrinks while a panel is open. [editSheet] is the slot for that panel's controls; it is given
+ * the open tool, so one lambda serves all four. [panel] is not used on Edit. The Undo control
+ * moves from the top bar into the pill floating at
  * the photo's bottom right, next to the Compare switch: [onCompare] is called with its new value,
  * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
  * row tapped. The other four tools never call these three.
@@ -419,25 +424,40 @@ fun ToolContent(
                 onDone = onDone,
             )
         },
+        // Only the Edit screen has a bottom bar: its row of tools, with the open tool's panel
+        // appearing just above it. The other tools keep their controls in the body.
+        bottomBar = {
+            if (isEdit) {
+                EditBottomBar(
+                    state = state,
+                    onOpenTool = onOpenTool,
+                    sheet = { tool ->
+                        // The same options-strip tag as the other tools' panels carry, so the open
+                        // tool's controls are found in the same place on every tool screen.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag(EDITOR_PANEL_TAG),
+                        ) {
+                            editSheet(tool)
+                        }
+                    },
+                )
+            }
+        },
     ) { innerPadding ->
-        // innerPadding is the space the top bar and the system bars take. consumeWindowInsets
-        // tells the content below that those insets are already dealt with.
-        val bodyModifier = Modifier
+        // innerPadding is the space the top bar, the bottom bar (on Edit) and the system bars
+        // take. consumeWindowInsets tells the content below that those insets are already dealt
+        // with.
+        val insetModifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
             .consumeWindowInsets(innerPadding)
-            // With no bottom bar, the tool's controls are the lowest thing on screen, so they keep
-            // clear of the gesture area too: with swipe gestures the navigation bar can be 0 dp
-            // tall while a swipe up from the edge still means "go home". Only the part of it not
-            // already in innerPadding is added, then a small margin.
-            .windowInsetsPadding(
-                WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
-            )
-            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         if (isEdit) {
-            EditToolContent(
+            // The bottom bar already keeps clear of the navigation bar and the gesture area, so the
+            // photo only needs a small gap above it.
+            EditPhotoArea(
                 state = state,
-                onOpenTool = onOpenTool,
                 onUndo = onUndo,
                 onCompare = onCompare,
                 photo = {
@@ -450,20 +470,18 @@ fun ToolContent(
                     )
                 },
                 cropper = editCropper,
-                sheet = { tool ->
-                    // The same options-strip tag as the other tools' panels carry, so the open
-                    // tool's controls are found in the same place on every tool screen.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag(EDITOR_PANEL_TAG),
-                    ) {
-                        editSheet(tool)
-                    }
-                },
-                modifier = bodyModifier,
+                modifier = insetModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         } else {
+            // With no bottom bar, the tool's controls are the lowest thing on screen, so they keep
+            // clear of the gesture area too: with swipe gestures the navigation bar can be 0 dp
+            // tall while a swipe up from the edge still means "go home". Only the part of it not
+            // already in innerPadding is added, then a small margin.
+            val bodyModifier = insetModifier
+                .windowInsetsPadding(
+                    WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+                )
+                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             Column(modifier = bodyModifier) {
                 // weight(1f) gives the card all the height the options strip leaves, so the photo
                 // is as large as it can be.
@@ -1131,9 +1149,9 @@ private fun SampleEditSheet(tool: EditTool, enabled: Boolean) {
 }
 
 /**
- * The Edit screen with Adjust's sheet open and an edit to undo, drawn once in light and once in
- * dark: the photo in its fixed 60%, the Undo and Compare pill at its bottom right, no "Replace"
- * chip, the row of four tools and Adjust's sliders in the sheet under it.
+ * The Edit screen with Adjust's panel open and an edit to undo, drawn once in light and once in
+ * dark: the row of four tools at the bottom, Adjust's sliders in the panel just above it, and the
+ * photo filling the rest, with the Undo and Compare pill at its bottom right and no "Replace" chip.
  */
 @PreviewLightDark
 @Composable

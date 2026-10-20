@@ -5,6 +5,15 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemGestures
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
@@ -22,8 +31,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -31,7 +38,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,140 +57,170 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
-/** Test tag of the area under the row of tools where the open tool's sheet is drawn. */
+/** Test tag of the open tool's panel, which appears just above the row of tools while a tool is open. */
 const val EDIT_SHEET_TAG = "edit-sheet"
 
-/** The share of the space below the top bar the photo always takes; the controls get the rest. */
-private const val PHOTO_SHARE = 0.6f
+/**
+ * The fixed height of the panel area above the row of tools, open or not. It fits the tallest
+ * panel, Adjust's or Filters' (a row of chips with a 48 dp touch target, plus one 48 dp slider
+ * row), with the surface's padding and the gap above the row.
+ */
+private val SHEET_HEIGHT = 136.dp
 
 /**
- * The Edit screen's body below the top bar, stateless: the photo on top, the row of tools and the
- * open tool's sheet under it. It draws [state] and reports touches through callbacks.
+ * The Edit screen's photo area, stateless: the photo (or, while Crop is open, the cropper) filling
+ * all the space between the top bar and the bottom bar, with the Undo and Compare pill floating at
+ * its bottom right. It draws [state] and reports touches through callbacks.
  *
- * **Why the photo never changes size.** The body is a column split by weights: the photo area
- * takes 60% of the height ([PHOTO_SHARE]) and the controls area the other 40%, whatever is inside
- * them. Opening or closing a sheet only changes what is drawn inside the 40%, so the photo stays
- * put instead of jumping each time a tool is tapped.
+ * **Why the photo never changes size.** The row of tools and the open tool's panel live in the
+ * screen's bottom bar ([EditBottomBar]). `Scaffold` measures that bar first and hands this area
+ * what is left. The bar is one fixed height whether a tool is open or not and whichever tool it
+ * is, so the photo keeps one size while the person moves between tools. Nothing ever covers or
+ * dims it.
  *
- * **Why the sheet is not a modal bottom sheet.** Material's `ModalBottomSheet` dims everything
- * behind it and swallows touches outside it, so the Undo and Compare pill on the photo could not
- * be tapped while a sheet is open. Here the sheet is an ordinary surface in the controls area:
- * nothing dims the photo and the pill stays in reach.
+ * [photo] draws the photo (the screen passes its photo card); it is a slot, so this function knows
+ * nothing of bitmaps or processors and a preview can pass a plain sample. [onUndo] is the pill's
+ * Undo and [onCompare] its Compare switch flipped, with the new value.
  *
- * [photo] draws the photo (the screen passes its photo card) and [sheet] draws the controls of the
- * tool it is given; both are slots, so this function knows nothing of bitmaps or processors and a
- * preview can pass plain samples. [onOpenTool] is a tool entry tapped, [onUndo] the pill's Undo
- * and [onCompare] its Compare switch flipped, with the new value.
- *
- * [cropper], when given, takes the photo's place while the Crop sheet is open (the screen passes
+ * [cropper], when given, takes the photo's place while the Crop panel is open (the screen passes
  * [EditCropper]); while Compare is on, or with no cropper given, [photo] is drawn as usual. The
- * Undo and Compare pill stays on top of either.
- *
- * While Compare is on, the row of tools is disabled, and so is Undo; the screen also passes the
- * comparing flag to the sheet's controls, which disable themselves.
+ * pill stays on top of either. While Compare is on, Undo is disabled.
  */
 @Composable
-fun EditToolContent(
+fun EditPhotoArea(
     state: ToolUiState,
-    onOpenTool: (EditTool) -> Unit,
     onUndo: () -> Unit,
     onCompare: (Boolean) -> Unit,
     photo: @Composable () -> Unit,
-    sheet: @Composable (EditTool) -> Unit,
     modifier: Modifier = Modifier,
     cropper: (@Composable () -> Unit)? = null,
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .weight(PHOTO_SHARE)
-                .fillMaxWidth(),
-        ) {
-            // While Crop is open the photo card becomes the cropper (handles, drag, pinch); while
-            // comparing, the plain photo is shown instead, so the original can be seen.
-            if (state.openTool == EditTool.CROP && !state.comparing && cropper != null) {
-                cropper()
-            } else {
-                photo()
-            }
-            // Undo is usable only with an edit to take back, nothing running, and Compare off.
-            EditPill(
-                undoEnabled = state.canUndo &&
-                    state.processing is ToolUiState.Processing.Idle &&
-                    !state.comparing,
-                comparing = state.comparing,
-                onUndo = onUndo,
-                onCompare = onCompare,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp),
-            )
+    Box(modifier = modifier.fillMaxSize()) {
+        // While Crop is open the photo card becomes the cropper (handles, drag, pinch); while
+        // comparing, the plain photo is shown instead, so the original can be seen.
+        if (state.openTool == EditTool.CROP && !state.comparing && cropper != null) {
+            cropper()
+        } else {
+            photo()
         }
-        Column(
+        // Undo is usable only with an edit to take back, nothing running, and Compare off.
+        EditPill(
+            undoEnabled = state.canUndo &&
+                state.processing is ToolUiState.Processing.Idle &&
+                !state.comparing,
+            comparing = state.comparing,
+            onUndo = onUndo,
+            onCompare = onCompare,
             modifier = Modifier
-                .weight(1f - PHOTO_SHARE)
-                .fillMaxWidth(),
-        ) {
-            // The session's settings tell the row which tools hold a change (their dot).
-            EditToolRow(
-                openTool = state.openTool,
-                enabled = !state.comparing && !state.finishing,
-                onOpen = onOpenTool,
-                settings = state.settings,
-            )
-            EditSheetArea(
-                openTool = state.openTool,
-                sheet = sheet,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            )
-        }
+                .align(Alignment.BottomEnd)
+                .padding(12.dp),
+        )
     }
 }
 
 /**
- * The area under the row of tools: empty while [openTool] is null, otherwise a surface with
- * rounded top corners holding [sheet] for that tool. The area itself always exists and carries
- * [EDIT_SHEET_TAG]; the surface, present only while a sheet is open, is described to screen
- * readers as the tool settings.
+ * The Edit screen's bottom bar, the lowest thing on screen: the row of tools (Crop, Rotate,
+ * Adjust, Filters), and just above it the fixed-height panel area, which holds the open tool's
+ * panel ([sheet]) or a hint when none is open. It is passed to `Scaffold`'s `bottomBar` slot, so
+ * the photo area above always ends where this bar begins, and since the bar never changes height
+ * neither does the photo.
  *
- * `AnimatedContent` (Compose's own animation API) animates between what it shows for one value
- * and for the next: here the sheet slides up and fades in when a tool opens, and the old content
- * fades out as the new one comes in when the person switches tools or closes the sheet.
+ * The bar keeps clear of the navigation bar and of the bottom gesture area: with swipe gestures
+ * the navigation bar can be 0 dp tall while a swipe up from the edge still means "go home".
+ *
+ * **Why the panel is not a modal bottom sheet.** Material's `ModalBottomSheet` dims everything
+ * behind it and swallows touches outside it, so the Undo and Compare pill on the photo could not
+ * be tapped while a panel is open. Here the panel is an ordinary surface in the bar: nothing dims
+ * the photo and the pill stays in reach.
+ *
+ * [onOpenTool] is a tool entry tapped (the ViewModel opens that tool, or closes it if it was
+ * open). While Compare is on, or Done is rendering, the row is disabled; the screen also passes
+ * that flag to the panel's controls, which disable themselves.
  */
 @Composable
-private fun EditSheetArea(
+fun EditBottomBar(
+    state: ToolUiState,
+    onOpenTool: (EditTool) -> Unit,
+    sheet: @Composable (EditTool) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(
+                WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+            )
+            .padding(bottom = 8.dp),
+    ) {
+        EditSheet(
+            openTool = state.openTool,
+            sheet = sheet,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        // The session's settings tell the row which tools hold a change (their dot).
+        EditToolRow(
+            openTool = state.openTool,
+            enabled = !state.comparing && !state.finishing,
+            onOpen = onOpenTool,
+            settings = state.settings,
+        )
+    }
+}
+
+/**
+ * The open tool's panel, just above the row of tools, in an area of one fixed height
+ * ([SHEET_HEIGHT]) whether a tool is open or not and whichever tool it is. That is what keeps the
+ * photo one size: the bottom bar never changes height, so the space `Scaffold` leaves the photo
+ * never changes either. Every tool's controls are made to fit it (Adjust shows one slider at a
+ * time, picked by chips); with very large text they scroll inside it rather than grow it.
+ *
+ * With [openTool] null the area shows a short hint to pick a tool. Otherwise it is a rounded
+ * surface holding [sheet] for that tool, tagged [EDIT_SHEET_TAG] and described to screen readers
+ * as the tool settings, its controls centred in it.
+ *
+ * `AnimatedContent` (Compose's own animation API) cross-fades between what it shows for one value
+ * and the next: the hint and a tool's panel, or one tool's controls and another's. Only what is
+ * inside the area fades; the area itself never moves.
+ */
+@Composable
+private fun EditSheet(
     openTool: EditTool?,
     sheet: @Composable (EditTool) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetText = stringResource(R.string.edit_layout_sheet)
-    Box(modifier = modifier.testTag(EDIT_SHEET_TAG)) {
-        AnimatedContent(
-            targetState = openTool,
-            transitionSpec = {
-                (fadeIn() + slideInVertically { height -> height / 4 }) togetherWith
-                    (fadeOut() + slideOutVertically { height -> height / 4 })
-            },
-            label = "edit-sheet",
-            modifier = Modifier.fillMaxSize(),
-        ) { tool ->
-            if (tool != null) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .semantics { contentDescription = sheetText },
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    AnimatedContent(
+        targetState = openTool,
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        label = "edit-sheet",
+        modifier = modifier
+            .fillMaxWidth()
+            .height(SHEET_HEIGHT)
+            .padding(bottom = 8.dp),
+    ) { tool ->
+        if (tool != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(EDIT_SHEET_TAG)
+                    .semantics { contentDescription = sheetText },
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Box(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        sheet(tool)
-                    }
+                    sheet(tool)
                 }
-            } else {
-                // Nothing open: the area stays empty, keeping its height so the photo never moves.
-                Box(modifier = Modifier.fillMaxSize())
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.edit_sheet_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -354,16 +390,25 @@ private fun LivePreviewImagePreview() {
 }
 
 /**
- * A sample Edit screen body for the previews: plain coloured boxes stand in for the photo and the
- * cropper, and a line of text for the sheet, so nothing touches a ViewModel or decodes a photo.
+ * A sample Edit screen for the previews, laid out as the real one: a `Scaffold` whose bottom bar
+ * is [EditBottomBar], with [EditPhotoArea] above it. Plain coloured boxes stand in for the photo
+ * and the cropper, and a line of text for the panel, so nothing touches a ViewModel or decodes a
+ * photo.
  */
 @Composable
 private fun SampleEditToolContent(state: ToolUiState) {
     KansoTheme(themeMode = ThemeMode.System) {
-        Box(Modifier.fillMaxSize()) {
-            EditToolContent(
+        Scaffold(
+            bottomBar = {
+                EditBottomBar(
+                    state = state,
+                    onOpenTool = {},
+                    sheet = { tool -> Text(text = tool.name) },
+                )
+            },
+        ) { innerPadding ->
+            EditPhotoArea(
                 state = state,
-                onOpenTool = {},
                 onUndo = {},
                 onCompare = {},
                 photo = {
@@ -373,7 +418,6 @@ private fun SampleEditToolContent(state: ToolUiState) {
                             .background(MaterialTheme.colorScheme.primaryContainer),
                     )
                 },
-                sheet = { tool -> Text(text = tool.name) },
                 // A box of another colour stands in for the cropper, so Crop's swap is visible.
                 cropper = {
                     Box(
@@ -382,14 +426,17 @@ private fun SampleEditToolContent(state: ToolUiState) {
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                     )
                 },
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
     }
 }
 
 /**
- * The Edit screen body with Adjust's sheet open and an edit to undo, in light and in dark: the
- * sample settings raise brightness, so Adjust's entry carries the "changed" dot.
+ * The Edit screen with Adjust's panel open above the row of tools and an edit to undo, in light
+ * and in dark: the sample settings raise brightness, so Adjust's entry carries the "changed" dot.
  */
 @PreviewLightDark
 @Composable
@@ -406,8 +453,8 @@ private fun EditToolContentPreview() {
 }
 
 /**
- * The Edit screen body with every sheet closed, in light and in dark: the photo keeps the same
- * size, and the area under the row of tools is empty.
+ * The Edit screen with no tool open, in light and in dark: the row of tools sits alone at the
+ * bottom and the photo takes all the space above it.
  */
 @PreviewLightDark
 @Composable
@@ -416,8 +463,8 @@ private fun EditToolContentClosedPreview() {
 }
 
 /**
- * The Edit screen body with Crop's sheet open, in light and in dark: the cropper (here a plain
- * stand-in box) takes the photo's place, with the pill still on top.
+ * The Edit screen with Crop open, in light and in dark: the cropper (here a plain stand-in box)
+ * takes the photo's place, with the pill still on top, and Crop's panel above the row of tools.
  */
 @PreviewLightDark
 @Composable
@@ -431,7 +478,7 @@ private fun EditToolContentCropPreview() {
     )
 }
 
-/** The Edit screen body while Compare is on, in light and in dark: the row and Undo are faint. */
+/** The Edit screen while Compare is on, in light and in dark: the row and Undo are faint. */
 @PreviewLightDark
 @Composable
 private fun EditToolContentComparingPreview() {

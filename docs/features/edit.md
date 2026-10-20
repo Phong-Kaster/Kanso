@@ -11,8 +11,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 
 ## What it is
 
-Edit is Kanso's general editor. Under the photo sits a row of four tools, **Crop**, **Rotate**,
-**Adjust** and **Filters**; tapping one opens its sheet under the row (tapping it again closes it).
+Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
+**Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
+Lightroom (tapping it again closes it).
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
 rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
 used there is nothing to render, and the decoded original is handed over). No model and no
@@ -25,8 +26,10 @@ network are used. You can:
   shape and locks the handles to it; Free unlocks them and keeps the rectangle as it is.
 - **Rotate**: Turn left or Turn right a quarter turn, Flip across (left to right) or Flip upside
   down (a second tap flips back).
-- **Adjust**: four sliders, **Brightness**, **Contrast**, **Saturation** and **Warmth**, each from
-  -100 through 0 (no change) to +100, with the number beside the name. The photo follows the finger
+- **Adjust**: four chips, **Brightness**, **Contrast**, **Saturation** and **Warmth**, and one
+  slider for the chosen chip, as in Adobe Lightroom. Each runs from -100 through 0 (no change) to
+  +100, with the number beside the name. Choosing a chip changes nothing in the photo; the chip
+  chosen last is shown again when Adjust is reopened. The photo follows the finger
   while it drags, and the slider stays where it is let go.
 - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
@@ -47,9 +50,9 @@ Each tool with a change carries a small dot on its entry in the row.
   **Recent edits** card on Home, from the round **Camera** button beside the tab bar (a kept shot opens
   in Edit), or with **Edit** in the My edits photo viewer. Edit has no carousel banner and no
   Replace chip.
-- Tap a tool in the row to open its sheet, change what you like, open another tool; the photo keeps
-  the same size because it always takes 60% of the height below the top bar and the controls the
-  other 40%.
+- Tap a tool in the row to open its sheet, change what you like, open another tool; the photo never changes
+  size: the sheet area above the row keeps one fixed height whether a tool is open or not (with
+  none open it says "Pick a tool to start editing").
 - Switch **Compare** on to see the original, and off again to go on editing.
 - Tap **Done**. While it renders, a small spinner shows in the Done button, which ignores taps, and
   the row of tools, the sheet and the cropper are disabled (with no control used yet there is
@@ -80,10 +83,17 @@ flowchart TD
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
    [`ui/tool/EditToolContent.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt)
-   for its body: the photo area, the
+   for its layout: `EditPhotoArea`, the photo with the
    [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
-   the [`ui/tool/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolRow.kt)
-   and the sheet area. The sheet is an ordinary `Surface` animated in with `AnimatedContent`, not a
+   filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
+   [`ui/tool/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolRow.kt)
+   at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
+   height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
+   it (Adjust shows four sub-tool chips and one slider, see
+   [`ui/tool/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/AdjustSlider.kt);
+   the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`), and
+   very large text scrolls inside it. It is an ordinary `Surface` cross-faded with
+   `AnimatedContent`, not a
    Material `ModalBottomSheet`, because a modal sheet dims the photo and swallows touches, and the
    pill must stay usable. Its ViewModel is
    [`ui/tool/ToolViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt),

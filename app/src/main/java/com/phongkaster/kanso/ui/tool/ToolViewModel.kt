@@ -303,6 +303,11 @@ class ToolViewModel(
         mutableState.update { it.copy(openTool = if (it.openTool == tool) null else tool) }
     }
 
+    /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
+    fun chooseAdjustSlider(slider: AdjustSlider) {
+        mutableState.update { it.copy(adjustSlider = slider) }
+    }
+
     /** Closes the open tool sheet, if any, leaving the photo and the row of tools. */
     fun closeTool() {
         mutableState.update { it.copy(openTool = null) }

@@ -380,7 +380,9 @@ class ToolScreenTest {
             val panel = compose.onNodeWithTag(EDITOR_PANEL_TAG).fetchSemanticsNode().boundsInRoot
             // An empty slot is placed nowhere and measures nothing, so the position is only
             // checked once a tool's own controls fill the strip.
-            assertTrue("$tool: the strip $panel is not under the card $card", panel.isEmpty || panel.top >= card.bottom - SLACK)
+            // On Edit the photo shrinks while a sheet is open, so the card is measured again now.
+            val cardNow = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
+            assertTrue("$tool: the strip $panel is not under the card $cardNow", panel.isEmpty || panel.top >= cardNow.bottom - SLACK)
             // The panel may still be an empty slot (zero tall), so it is checked to exist in the
             // strip rather than to be displayed.
             compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))

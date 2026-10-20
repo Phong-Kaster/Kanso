@@ -15,21 +15,25 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.ui.tool.AdjustSlider
 import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_CONTRAST_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_SATURATION_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_WARMTH_TAG
 import com.phongkaster.kanso.ui.tool.EditPanelContent
+import com.phongkaster.kanso.ui.tool.editAdjustChipTag
 import com.phongkaster.kanso.ui.tool.editSliderValueTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,16 +47,18 @@ import kotlin.math.roundToInt
  * Checks on Android 15 the Edit screen's Adjust sheet, drawn by the stateless `EditPanelContent`
  * (DoD 5, 15, R2):
  *
- * - it holds four sliders, Brightness, Contrast, Saturation and Warmth, each running from -100
- *   through 0 to +100, starting at 0 in the centre, with its number right beside its name;
+ * - it holds four sub-tool chips, Brightness, Contrast, Saturation and Warmth, and one slider, for
+ *   the chosen chip; each sub-tool's slider runs from -100 through 0 to +100, starting at 0 in
+ *   the centre, with its number right beside its name;
  * - brightness set to 70 is still 70 after the sheet is drawn afresh (another sheet opened, then
  *   Adjust again), because the sheet keeps no state of its own;
  * - a slider let go stays where it was let go (no spring back to the middle);
  * - dragging calls `onPreview` (the photo follows, no Undo step yet) and letting go calls
  *   `onCommit` (the drag becomes one Undo step).
  *
- * The test holds the settings itself in a `mutableStateOf`, the way the ViewModel holds them for
- * the real screen: every `onPreview` or `onChange` replaces them, and the sheet redraws from them.
+ * The test holds the settings and the chosen sub-tool itself in `mutableStateOf`s, the way the
+ * ViewModel holds them for the real screen: every `onPreview` or `onChange` replaces the settings,
+ * a chip tap replaces the chosen sub-tool, and the sheet redraws from them.
  * No ViewModel, Koin or photo is involved.
  */
 @RunWith(AndroidJUnit4::class)
@@ -66,6 +72,9 @@ class AdjustSheetTest {
     /** The settings the sheet draws, held by the test as the ViewModel holds them in the app. */
     private var settings by mutableStateOf(EditSettings())
 
+    /** Adjust's chosen sub-tool, held by the test as the ViewModel holds it in the app. */
+    private var adjustSlider by mutableStateOf(AdjustSlider.BRIGHTNESS)
+
     /** Which sheet is drawn; switching it away and back draws the Adjust sheet afresh. */
     private var openTool by mutableStateOf(EditTool.ADJUST)
 
@@ -78,25 +87,34 @@ class AdjustSheetTest {
     /** How many times `onCommit` was called. */
     private var commits = 0
 
-    /** The four sliders, by their tag, with the name shown beside each. */
+    /** The four sub-tools, with the slider tag and the name shown on the chip and beside the slider. */
     private val sliders = listOf(
-        EDIT_BRIGHTNESS_TAG to "Brightness",
-        EDIT_CONTRAST_TAG to "Contrast",
-        EDIT_SATURATION_TAG to "Saturation",
-        EDIT_WARMTH_TAG to "Warmth",
+        Triple(AdjustSlider.BRIGHTNESS, EDIT_BRIGHTNESS_TAG, "Brightness"),
+        Triple(AdjustSlider.CONTRAST, EDIT_CONTRAST_TAG, "Contrast"),
+        Triple(AdjustSlider.SATURATION, EDIT_SATURATION_TAG, "Saturation"),
+        Triple(AdjustSlider.WARMTH, EDIT_WARMTH_TAG, "Warmth"),
     )
 
-    /** The sheet holds exactly four sliders, each named, each tagged as the screen expects. */
+    /**
+     * The sheet holds four named chips and exactly one slider. Tapping a chip shows that
+     * sub-tool's slider, tagged as the screen expects, in place of the others, with its name beside
+     * it (so the name is shown twice: on the chip and by the slider).
+     */
     @Test
-    fun adjust_has_four_named_sliders() {
+    fun adjust_has_four_chips_and_one_slider_for_the_chosen_one() {
         show()
-        compose.onAllNodes(
-            hasAnyAncestor(hasTestTag(EDIT_PANEL_TAG)) and
-                SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),
-        ).assertCountEquals(4)
-        sliders.forEach { (tag, name) ->
+        sliders.forEach { (slider, tag, name) ->
+            choose(slider)
+            compose.onNodeWithTag(editAdjustChipTag(slider)).assertExists()
+            compose.onAllNodes(
+                hasAnyAncestor(hasTestTag(EDIT_PANEL_TAG)) and
+                    SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo),
+            ).assertCountEquals(1)
             compose.onNodeWithTag(tag).assertExists()
-            compose.onAllNodesWithText(name).assertCountEquals(1)
+            sliders.filter { it.second != tag }.forEach { other ->
+                compose.onNodeWithTag(other.second).assertDoesNotExist()
+            }
+            compose.onAllNodesWithText(name).assertCountEquals(2)
         }
     }
 
@@ -107,7 +125,8 @@ class AdjustSheetTest {
     @Test
     fun each_slider_runs_from_minus_100_through_0_to_100() {
         show()
-        sliders.forEach { (tag, _) ->
+        sliders.forEach { (slider, tag, _) ->
+            choose(slider)
             val info = rangeInfo(tag)
             assertEquals(EditSettings.MIN, info.range.start, 0f)
             assertEquals(EditSettings.MAX, info.range.endInclusive, 0f)
@@ -129,8 +148,10 @@ class AdjustSheetTest {
     @Test
     fun each_number_is_shown_beside_its_name() {
         show()
-        sliders.forEach { (tag, name) ->
-            val label = compose.onAllNodesWithText(name)[0].fetchSemanticsNode()
+        sliders.forEach { (slider, tag, name) ->
+            choose(slider)
+            // The name by the slider, not the one on the chip.
+            val label = compose.onNode(hasText(name) and !hasTestTag(editAdjustChipTag(slider))).fetchSemanticsNode()
             val number = compose.onNodeWithTag(editSliderValueTag(tag)).fetchSemanticsNode()
             val slider = compose.onNodeWithTag(tag).fetchSemanticsNode()
             assertTrue("$name: the number overlaps its name", left(number) >= right(label) - 1f)
@@ -170,6 +191,7 @@ class AdjustSheetTest {
     @Test
     fun a_released_slider_does_not_spring_back() {
         show()
+        choose(AdjustSlider.WARMTH)
         setProgress(EDIT_WARMTH_TAG, -0.4f)
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
@@ -235,10 +257,18 @@ class AdjustSheetTest {
                         },
                         onCommit = { commits++ },
                         onRatio = {},
+                        adjustSlider = adjustSlider,
+                        onAdjustSlider = { adjustSlider = it },
                     )
                 }
             }
         }
+        compose.waitForIdle()
+    }
+
+    /** Taps [slider]'s chip, so its slider is the one shown. */
+    private fun choose(slider: AdjustSlider) {
+        compose.onNodeWithTag(editAdjustChipTag(slider)).performClick()
         compose.waitForIdle()
     }
 

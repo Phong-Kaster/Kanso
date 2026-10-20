@@ -70,7 +70,7 @@ import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_SHEET_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
@@ -278,8 +278,9 @@ class BottomClearanceTest {
             openToolGallery(compose, tool)
             waitFor { count(GALLERY_SCREEN_TAG) > 0 && count(galleryPhotoTag(galleryPhotos.first().id)) > 0 }
             compose.onNodeWithTag(galleryPhotoTag(galleryPhotos.first().id)).performClick()
-            // The Edit screen's lowest area is its sheet area; the others' is the options strip.
-            val controls = if (tool == Tool.EDIT) EDIT_SHEET_TAG else EDITOR_PANEL_TAG
+            // The Edit screen's lowest area is its row of tools (the bottom bar); the others' is
+            // the options strip.
+            val controls = if (tool == Tool.EDIT) EDIT_TOOL_ROW_TAG else EDITOR_PANEL_TAG
             waitFor { count(GALLERY_SCREEN_TAG) == 0 && count(TOOL_IMAGE_TAG) > 0 && count(controls) > 0 }
             sendInsets(scenario, probeTag = controls)
             assertClearsInsets("${tool.name}'s controls", controls)
