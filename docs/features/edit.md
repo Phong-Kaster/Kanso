@@ -13,7 +13,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 
 Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
 **Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
-Lightroom (tapping it again closes it).
+Lightroom (tapping it again closes it). The tools are large (84 dp wide, 28 dp icons) and sit in a
+row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Undo** and
+**Compare** stay pinned at the right, behind a thin divider, and never scroll away.
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
 rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
 used there is nothing to render, and the decoded original is handed over). No model and no

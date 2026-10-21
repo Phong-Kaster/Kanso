@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
@@ -65,6 +70,15 @@ fun editToolDotTag(tool: EditTool): String = "edit-tool-dot-${tool.name}"
 /** The diameter of the "this tool holds a change" dot. */
 private val DOT_SIZE = 6.dp
 
+/** The width of a tool's entry in the scrolling row. */
+private val TOOL_ENTRY_WIDTH = 84.dp
+
+/** The width of the pinned Undo and Compare entries. */
+private val ACTION_ENTRY_WIDTH = 68.dp
+
+/** The size of an entry's icon. */
+private val ENTRY_ICON_SIZE = 28.dp
+
 /**
  * The Edit screen's one row under the photo: the four tools (Crop, Rotate, Adjust, Filters), then
  * Undo and Compare, each an icon over its name, all six the same width. Tapping a tool calls
@@ -85,8 +99,10 @@ private val DOT_SIZE = 6.dp
  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture) the
  * four tools are drawn faint and ignore taps.
  *
- * Six entries share the width equally (`weight(1f)`); a name too long for its share is cut short
- * with an ellipsis rather than pushing an entry off screen.
+ * The four tools sit in a row that scrolls sideways, each [TOOL_ENTRY_WIDTH] wide, so they stay
+ * large and a tool past the edge is reached by swiping. Undo and Compare stay pinned at the right,
+ * [ACTION_ENTRY_WIDTH] wide each, behind a thin divider, so they are always in reach. A name too
+ * long for its entry is cut short with an ellipsis.
  */
 @Composable
 fun EditToolRow(
@@ -106,37 +122,50 @@ fun EditToolRow(
             .fillMaxWidth()
             .testTag(EDIT_TOOL_ROW_TAG)
             .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        EditTool.entries.forEach { tool ->
-            EditToolEntry(
-                icon = toolIcon(tool),
-                title = toolName(tool),
-                modifier = Modifier.weight(1f).testTag(editToolTag(tool)),
-                highlighted = tool == openTool,
-                changed = !settings.isNeutral(tool),
-                dotTag = editToolDotTag(tool),
-                enabled = enabled,
-                tap = {
-                    Modifier.selectable(
-                        selected = tool == openTool,
-                        enabled = enabled,
-                        role = Role.Tab,
-                        onClick = { onOpen(tool) },
-                    )
-                },
-            )
+        // The tools take the free width and scroll sideways when they do not all fit, so more
+        // tools can be added later without shrinking the entries. `rememberScrollState` keeps the
+        // scroll position across recompositions.
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EditTool.entries.forEach { tool ->
+                EditToolEntry(
+                    icon = toolIcon(tool),
+                    title = toolName(tool),
+                    modifier = Modifier.width(TOOL_ENTRY_WIDTH).testTag(editToolTag(tool)),
+                    highlighted = tool == openTool,
+                    changed = !settings.isNeutral(tool),
+                    dotTag = editToolDotTag(tool),
+                    enabled = enabled,
+                    tap = {
+                        Modifier.selectable(
+                            selected = tool == openTool,
+                            enabled = enabled,
+                            role = Role.Tab,
+                            onClick = { onOpen(tool) },
+                        )
+                    },
+                )
+            }
         }
+        // A thin line separates the tools (which scroll) from Undo and Compare (which stay put).
+        VerticalDivider(modifier = Modifier.padding(horizontal = 4.dp).height(40.dp))
         EditToolEntry(
             icon = R.drawable.ic_undo,
             title = R.string.edit_layout_undo,
-            modifier = Modifier.weight(1f).testTag(TOOL_UNDO_TAG),
+            modifier = Modifier.width(ACTION_ENTRY_WIDTH).testTag(TOOL_UNDO_TAG),
             enabled = undoEnabled,
             tap = { Modifier.clickable(enabled = undoEnabled, role = Role.Button, onClick = onUndo) },
         )
         EditToolEntry(
             icon = R.drawable.ic_compare,
             title = R.string.edit_layout_compare,
-            modifier = Modifier.weight(1f).testTag(EDIT_COMPARE_TAG),
+            modifier = Modifier.width(ACTION_ENTRY_WIDTH).testTag(EDIT_COMPARE_TAG),
             highlighted = comparing,
             enabled = compareEnabled,
             // A toggle, so a screen reader reads it as one switch named Compare, on or off.
@@ -181,18 +210,23 @@ private fun EditToolEntry(
     val content = if (highlighted) colours.onSecondaryContainer else colours.onSurfaceVariant
     Column(
         modifier = modifier
-            .sizeIn(minHeight = 48.dp)
+            .sizeIn(minHeight = 64.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(background)
             .then(tap())
             .alpha(if (enabled) 1f else DISABLED_ALPHA)
-            .padding(horizontal = 2.dp, vertical = 6.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {
         // The name under the icon names the entry, so the icon itself says nothing to a screen reader.
         Box {
-            Icon(painter = painterResource(icon), contentDescription = null, tint = content)
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = content,
+                modifier = Modifier.size(ENTRY_ICON_SIZE),
+            )
             if (changed && dotTag != null) {
                 Box(
                     modifier = Modifier
@@ -211,7 +245,7 @@ private fun EditToolEntry(
         }
         Text(
             text = stringResource(title),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             color = content,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
