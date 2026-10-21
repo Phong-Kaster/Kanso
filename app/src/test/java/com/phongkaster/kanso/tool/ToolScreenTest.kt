@@ -55,7 +55,7 @@ import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
@@ -404,7 +404,7 @@ class ToolScreenTest {
             // Undo: just left of Done on the four other tools; on Edit, in the pill on the photo.
             val undo = compose.onNodeWithTag(TOOL_UNDO_TAG).fetchSemanticsNode().boundsInRoot
             if (tool == Tool.EDIT) {
-                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
+                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
                 assertTrue("$tool: Undo $undo left the photo card", undo.top >= card.top - SLACK)
             } else {
                 assertTrue("$tool: Undo $undo is not left of Done $done", undo.right <= done.left + SLACK)
@@ -429,7 +429,7 @@ class ToolScreenTest {
             // original photo and changes no tool; any other toggle still fails.
             if (tool == Tool.EDIT) {
                 compose.onAllNodes(isToggleable()).assertCountEquals(1)
-                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG)))
+                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG)))
                     .assertExists()
             } else {
                 compose.onAllNodes(isToggleable()).assertCountEquals(0)
@@ -496,7 +496,7 @@ class ToolScreenTest {
         }
         compose.waitForIdle()
         compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG)).assertCountEquals(1)
-        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
+        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
 
         compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }

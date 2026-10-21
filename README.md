@@ -30,14 +30,14 @@ step by step with file paths, which tests cover it, and what is still open.
 
 ### Editing tools
 
-Every tool opens on its own screen with the same frame: Back, the tool's name, Undo (Edit keeps it in a pill on the photo), Done at the top right, the photo in
+Every tool opens on its own screen with the same frame: Back, the tool's name, Undo (Edit keeps it in its bottom row), Done at the top right, the photo in
 a card with a Replace chip (not on Edit), and the tool's controls. There is no Save bar: Done renders and opens Result.
 [The tool screen](docs/features/tool-screen.md) explains that shared part: decoding, the working
 size, progress, Undo, failures and Done.
 
 | Feature | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | A row of four tools (Crop, Rotate, Adjust, Filters), and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom and Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare sit in a pill on the photo. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
+| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters, Undo and Compare, and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare are the last two entries of the bottom row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
 | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
@@ -78,7 +78,7 @@ from the control to the saved file; none of them has yet been checked on the own
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
 | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
-| Edit: Undo and Compare | Works | A pill on the photo; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
+| Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
 | Retouch | Works | Face landmarks plus OpenCV bilateral smoothing, with a strength slider. |
@@ -107,8 +107,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    with no tool open it shows "Pick a tool to start editing". Every tool fits it: Adjust shows four
    sub-tool chips and one slider (`ui/tool/AdjustSlider.kt`); very large text scrolls inside it.
    The sheet is a plain `Surface` cross-faded with `AnimatedContent`, not a `ModalBottomSheet`,
-   so the Undo and Compare pill
-   (`ui/tool/EditPill.kt`) on the photo stays usable. The sheets' controls are
+   so Undo and Compare, the last two entries of the row
+   (`ui/tool/EditToolRow.kt`), stay usable. The sheets' controls are
    `ui/tool/EditPanel.kt`.
 2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
    (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the

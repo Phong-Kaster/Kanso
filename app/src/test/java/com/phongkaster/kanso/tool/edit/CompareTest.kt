@@ -42,7 +42,7 @@ import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.editAdjustChipTag
 import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_INTENSITY_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
 import com.phongkaster.kanso.ui.tool.LIVE_PREVIEW_TAG
 import com.phongkaster.kanso.ui.tool.LivePreviewMatrix
@@ -227,12 +227,12 @@ class CompareTest {
     }
 
     /**
-     * The pill holds both Undo and Compare and floats in the bottom-right quarter of the photo
-     * card, near its corner, with no sheet open and with each sheet open; Undo is the screen's
-     * only Undo. With a sheet open, a real tap on Compare reaches it and switches it on.
+     * Undo and Compare are the last two entries of the one row under the photo, level with the four
+     * tools, with no sheet open and with each sheet open; Undo is the screen's only Undo. With a
+     * sheet open, a real tap on Compare reaches it and switches it on.
      */
     @Test
-    fun the_pill_holds_undo_and_compare_at_the_photos_bottom_right() {
+    fun undo_and_compare_sit_in_the_tool_row() {
         val viewModel = showEdit(null)
         (listOf<EditTool?>(null) + EditTool.entries).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
@@ -240,16 +240,15 @@ class CompareTest {
             assertEquals(open, viewModel.state.value.openTool)
 
             compose.onAllNodesWithTag(TOOL_UNDO_TAG).assertCountEquals(1)
-            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertIsDisplayed()
-            compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertIsDisplayed()
+            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
+            compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
 
-            val card = bounds(TOOL_CARD_TAG)
-            val pill = bounds(EDIT_PILL_TAG)
-            assertTrue("pill $pill not in the right half of $card with $open open", pill.left >= card.center.x)
-            assertTrue("pill $pill not in the lower half of $card with $open open", pill.top >= card.center.y)
-            assertTrue("pill $pill sticks out of $card with $open open", pill.right <= card.right && pill.bottom <= card.bottom)
-            assertTrue("pill $pill far from the right edge with $open open", card.right - pill.right <= dp(24f))
-            assertTrue("pill $pill far from the bottom edge with $open open", card.bottom - pill.bottom <= dp(24f))
+            val filters = bounds(editToolTag(EditTool.FILTERS))
+            val undo = bounds(TOOL_UNDO_TAG)
+            val compare = bounds(EDIT_COMPARE_TAG)
+            assertTrue("Undo $undo is not right of Filters $filters with $open open", undo.left >= filters.right - 1f)
+            assertTrue("Compare $compare is not right of Undo $undo with $open open", compare.left >= undo.right - 1f)
+            assertTrue("Undo $undo is not level with Filters $filters with $open open", undo.top == filters.top)
         }
 
         viewModel.openTool(EditTool.ADJUST)

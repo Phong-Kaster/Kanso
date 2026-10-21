@@ -177,7 +177,7 @@ val TOOL_PHOTO_URI_KEY = SemanticsPropertyKey<String>("PhotoUriKey")
  * The Edit screen differs (see [ToolContent]): a row of four tools (Crop, Rotate, Adjust,
  * Filters) sits in the screen's bottom bar, and a tap on one opens its controls in a panel just
  * above the row, the photo shrinking to make room, as in Adobe Lightroom. The photo has no
- * "Replace" chip, and Undo sits with a Compare switch in a pill at the photo's bottom right
+ * "Replace" chip, and Undo sits with a Compare switch at the end of the row of tools
  * instead of in the top bar, so the top bar's right end holds Done alone.
  *
  * While an edit runs, a progress ring fills in the middle of the card and Done and Undo are
@@ -284,7 +284,7 @@ fun ToolScreen(
         onUndo = viewModel::undo,
         onDismissFailure = viewModel::dismissFailure,
         // The Edit screen only: a tap on Crop, Rotate, Adjust or Filters opens (or closes) that
-        // tool's sheet, and the pill's Compare switch shows the original photo while it is on.
+        // tool's sheet, and the row's Compare switch shows the original photo while it is on.
         onOpenTool = viewModel::openTool,
         onCompare = viewModel::setComparing,
         // The Edit screen only: while Crop is open (and the photo is decoded) the photo card is the
@@ -377,12 +377,12 @@ fun ToolScreen(
  *
  * **The Edit screen is laid out differently.** The `Scaffold`'s `bottomBar` slot holds
  * [EditBottomBar]: the row of four tools (Crop, Rotate, Adjust, Filters) at the very bottom, and
- * the open tool's panel appearing just above it. The body is [EditPhotoArea]: the photo card
+ * the open tool's panel appearing just above it; Undo and Compare are the last two entries of that
+ * same row. The body is [EditPhotoArea]: the photo card
  * (without the "Replace" chip) filling all the space between the top bar and the bottom bar, so it
  * shrinks while a panel is open. [editSheet] is the slot for that panel's controls; it is given
  * the open tool, so one lambda serves all four. [panel] is not used on Edit. The Undo control
- * moves from the top bar into the pill floating at
- * the photo's bottom right, next to the Compare switch: [onCompare] is called with its new value,
+ * moves from the top bar into the row; [onCompare] is called with the Compare switch's new value,
  * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
  * row tapped. The other four tools never call these three.
  */
@@ -413,7 +413,7 @@ fun ToolContent(
             ToolTopBar(
                 tool = state.tool,
                 onBack = onBack,
-                // On Edit, Undo lives in the pill on the photo instead, so there is only one.
+                // On Edit, Undo lives in the row under the photo instead, so there is only one.
                 showUndo = !isEdit,
                 undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle &&
                     !state.finishing,
@@ -431,6 +431,8 @@ fun ToolContent(
                 EditBottomBar(
                     state = state,
                     onOpenTool = onOpenTool,
+                    onUndo = onUndo,
+                    onCompare = onCompare,
                     sheet = { tool ->
                         // The same options-strip tag as the other tools' panels carry, so the open
                         // tool's controls are found in the same place on every tool screen.
@@ -458,8 +460,6 @@ fun ToolContent(
             // photo only needs a small gap above it.
             EditPhotoArea(
                 state = state,
-                onUndo = onUndo,
-                onCompare = onCompare,
                 photo = {
                     PhotoCard(
                         state = state,
@@ -513,7 +513,7 @@ fun ToolContent(
  * centred across the screen, and at the right the Undo control (calls [onUndo]; it does nothing
  * while [undoEnabled] is false) followed by the Done button (calls [onDone]; it does nothing while
  * [doneEnabled] is false, and shows a small spinner while [finishing]). With [showUndo] false (the
- * Edit screen, whose Undo sits in the pill on the photo) Done stands alone at the right end, so
+ * Edit screen, whose Undo sits in the row under the photo) Done stands alone at the right end, so
  * the screen never has two Undo controls.
  *
  * `CenterAlignedTopAppBar` is Material 3's top bar whose title sits in the middle of the screen
@@ -653,7 +653,7 @@ private fun UndoButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier
  *
  * Replace is switched off while an edit runs, so the screen cannot be left under work that has
  * not finished. With [showReplace] false (the Edit screen) no Replace chip is drawn at
- * all, so the bottom right of the photo is free for the Undo and Compare pill.
+ * all, so nothing sits at the photo's bottom right.
  */
 @Composable
 private fun PhotoCard(
@@ -1151,7 +1151,7 @@ private fun SampleEditSheet(tool: EditTool, enabled: Boolean) {
 /**
  * The Edit screen with Adjust's panel open and an edit to undo, drawn once in light and once in
  * dark: the row of four tools at the bottom, Adjust's sliders in the panel just above it, and the
- * photo filling the rest, with the Undo and Compare pill at its bottom right and no "Replace" chip.
+ * photo filling the rest, with no "Replace" chip.
  */
 @PreviewLightDark
 @Composable
@@ -1238,7 +1238,7 @@ private fun ToolTopBarPreview() {
 
 /**
  * The Edit screen's top bar, in light and in dark, twice: above, Done usable; below, Done
- * switched off, as before the photo is shown. Edit's Undo lives in the pill on the photo, so Done
+ * switched off, as before the photo is shown. Edit's Undo lives in the row under the photo, so Done
  * stands alone at the right end. The rendering state (a turning spinner inside Done) is not shown:
  * a preview draws one still picture, and a spinner never stops turning.
  */

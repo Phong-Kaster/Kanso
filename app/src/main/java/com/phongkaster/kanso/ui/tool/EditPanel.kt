@@ -221,7 +221,7 @@ fun EditPanelContent(
     ) {
         when (openTool) {
             EditTool.CROP -> {
-                CropChips(chosen = settings.cropRatio, enabled = enabled, onRatio = onRatio)
+                CropChips(chosen = settings.cropRatio, cropIsFull = settings.crop == EditSettings.CropRect.FULL, enabled = enabled, onRatio = onRatio)
                 // The rectangle itself is moved on the photo (the cropper); this line says how.
                 Text(
                     text = stringResource(R.string.edit_crop_hint),
@@ -340,7 +340,7 @@ private fun AdjustChips(chosen: AdjustSlider, enabled: Boolean, onChoose: (Adjus
  * disabled.
  */
 @Composable
-private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
+private fun CropChips(chosen: CropRatio?, cropIsFull: Boolean, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -353,7 +353,8 @@ private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio)
                 icon = ratioIcon(ratio),
                 title = ratioLabel(ratio),
                 onClick = { onRatio(ratio) },
-                selected = ratio == chosen,
+                // Original reads as chosen only while the whole photo is kept, not after the handles moved.
+                selected = ratio == chosen && (ratio != CropRatio.ORIGINAL || cropIsFull),
                 enabled = enabled,
                 modifier = Modifier.testTag(editRatioTag(ratio)),
             )
@@ -528,6 +529,7 @@ private fun adjustIcon(slider: AdjustSlider): Int = when (slider) {
 /** The icon drawn on crop shape [ratio]'s tile: a rectangle of that shape ([CropRatio.FREE] shows the crop icon). */
 @DrawableRes
 private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
+    CropRatio.ORIGINAL -> R.drawable.ic_refresh
     CropRatio.FREE -> R.drawable.ic_crop
     CropRatio.SQUARE -> R.drawable.ic_ratio_square
     CropRatio.FOUR_THREE -> R.drawable.ic_ratio_4_3
@@ -539,6 +541,7 @@ private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
 /** The string resource naming crop shape [ratio] on its tile. */
 @StringRes
 private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
+    CropRatio.ORIGINAL -> R.string.edit_tool_ratio_original
     CropRatio.FREE -> R.string.edit_tool_ratio_free
     CropRatio.SQUARE -> R.string.edit_tool_ratio_square
     CropRatio.FOUR_THREE -> R.string.edit_tool_ratio_4_3

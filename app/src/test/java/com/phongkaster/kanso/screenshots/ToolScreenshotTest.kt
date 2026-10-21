@@ -10,7 +10,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.editFilterTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -314,7 +314,7 @@ class ToolScreenshotTest {
         showTool(Tool.EDIT, ThemeMode.Light)
         openSheet(EditTool.ADJUST)
         setBrightness70()
-        compose.onNodeWithTag(EDIT_PILL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).assertIsDisplayed()
         capture("67_edit_pill_light.png")
     }
 
@@ -324,7 +324,7 @@ class ToolScreenshotTest {
         showTool(Tool.EDIT, ThemeMode.Dark)
         openSheet(EditTool.ADJUST)
         setBrightness70()
-        compose.onNodeWithTag(EDIT_PILL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).assertIsDisplayed()
         capture("68_edit_pill_dark.png")
     }
 

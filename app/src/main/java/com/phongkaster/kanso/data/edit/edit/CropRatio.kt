@@ -14,6 +14,13 @@ package com.phongkaster.kanso.data.edit.edit
  */
 enum class CropRatio(val widthPart: Int, val heightPart: Int) {
 
+    /**
+     * Back to the whole photo at its own size and shape: choosing it resets the crop rectangle to
+     * [EditSettings.CropRect.FULL]. It has no ratio of its own (the parts are 0) and, like
+     * [FREE], leaves the handles unlocked.
+     */
+    ORIGINAL(0, 0),
+
     /** Any rectangle the person sets; the parts are 0 because there is no fixed ratio. */
     FREE(0, 0),
 

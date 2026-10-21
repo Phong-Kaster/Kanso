@@ -69,8 +69,8 @@ private val SHEET_HEIGHT = 136.dp
 
 /**
  * The Edit screen's photo area, stateless: the photo (or, while Crop is open, the cropper) filling
- * all the space between the top bar and the bottom bar, with the Undo and Compare pill floating at
- * its bottom right. It draws [state] and reports touches through callbacks.
+ * all the space between the top bar and the bottom bar. It draws [state] and reports nothing: Undo
+ * and Compare live in the bottom bar's row ([EditToolRow]).
  *
  * **Why the photo never changes size.** The row of tools and the open tool's panel live in the
  * screen's bottom bar ([EditBottomBar]). `Scaffold` measures that bar first and hands this area
@@ -79,18 +79,14 @@ private val SHEET_HEIGHT = 136.dp
  * dims it.
  *
  * [photo] draws the photo (the screen passes its photo card); it is a slot, so this function knows
- * nothing of bitmaps or processors and a preview can pass a plain sample. [onUndo] is the pill's
- * Undo and [onCompare] its Compare switch flipped, with the new value.
+ * nothing of bitmaps or processors and a preview can pass a plain sample.
  *
  * [cropper], when given, takes the photo's place while the Crop panel is open (the screen passes
- * [EditCropper]); while Compare is on, or with no cropper given, [photo] is drawn as usual. The
- * pill stays on top of either. While Compare is on, Undo is disabled.
+ * [EditCropper]); while Compare is on, or with no cropper given, [photo] is drawn as usual.
  */
 @Composable
 fun EditPhotoArea(
     state: ToolUiState,
-    onUndo: () -> Unit,
-    onCompare: (Boolean) -> Unit,
     photo: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     cropper: (@Composable () -> Unit)? = null,
@@ -103,24 +99,12 @@ fun EditPhotoArea(
         } else {
             photo()
         }
-        // Undo is usable only with an edit to take back, nothing running, and Compare off.
-        EditPill(
-            undoEnabled = state.canUndo &&
-                state.processing is ToolUiState.Processing.Idle &&
-                !state.comparing,
-            comparing = state.comparing,
-            onUndo = onUndo,
-            onCompare = onCompare,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(12.dp),
-        )
     }
 }
 
 /**
- * The Edit screen's bottom bar, the lowest thing on screen: the row of tools (Crop, Rotate,
- * Adjust, Filters), and just above it the fixed-height panel area, which holds the open tool's
+ * The Edit screen's bottom bar, the lowest thing on screen: one row of Crop, Rotate, Adjust,
+ * Filters, Undo and Compare, and just above it the fixed-height panel area, which holds the open tool's
  * panel ([sheet]) or a hint when none is open. It is passed to `Scaffold`'s `bottomBar` slot, so
  * the photo area above always ends where this bar begins, and since the bar never changes height
  * neither does the photo.
@@ -129,9 +113,9 @@ fun EditPhotoArea(
  * the navigation bar can be 0 dp tall while a swipe up from the edge still means "go home".
  *
  * **Why the panel is not a modal bottom sheet.** Material's `ModalBottomSheet` dims everything
- * behind it and swallows touches outside it, so the Undo and Compare pill on the photo could not
+ * behind it and swallows touches outside it, so the Undo and Compare entries of the row could not
  * be tapped while a panel is open. Here the panel is an ordinary surface in the bar: nothing dims
- * the photo and the pill stays in reach.
+ * the photo and the row stays in reach.
  *
  * [onOpenTool] is a tool entry tapped (the ViewModel opens that tool, or closes it if it was
  * open). While Compare is on, or Done is rendering, the row is disabled; the screen also passes
@@ -143,6 +127,8 @@ fun EditBottomBar(
     onOpenTool: (EditTool) -> Unit,
     sheet: @Composable (EditTool) -> Unit,
     modifier: Modifier = Modifier,
+    onUndo: () -> Unit = {},
+    onCompare: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -163,6 +149,15 @@ fun EditBottomBar(
             enabled = !state.comparing && !state.finishing,
             onOpen = onOpenTool,
             settings = state.settings,
+            // Undo is usable only with an edit to take back, nothing running, and Compare off.
+            undoEnabled = state.canUndo &&
+                state.processing is ToolUiState.Processing.Idle &&
+                !state.comparing,
+            comparing = state.comparing,
+            // Compare is the way back from comparing, so only Done's render switches it off.
+            compareEnabled = !state.finishing,
+            onUndo = onUndo,
+            onCompare = onCompare,
         )
     }
 }
@@ -409,8 +404,6 @@ private fun SampleEditToolContent(state: ToolUiState) {
         ) { innerPadding ->
             EditPhotoArea(
                 state = state,
-                onUndo = {},
-                onCompare = {},
                 photo = {
                     Box(
                         modifier = Modifier
@@ -464,7 +457,7 @@ private fun EditToolContentClosedPreview() {
 
 /**
  * The Edit screen with Crop open, in light and in dark: the cropper (here a plain stand-in box)
- * takes the photo's place, with the pill still on top, and Crop's panel above the row of tools.
+ * takes the photo's place, and Crop's panel above the row of tools.
  */
 @PreviewLightDark
 @Composable
