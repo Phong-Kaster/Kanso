@@ -1,5 +1,6 @@
 package com.phongkaster.kanso.ui.tool
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,6 +87,9 @@ private const val SHOWN_SCALE = 100f
 /** Returns the test tag of [ratio]'s crop chip, such as `edit-ratio-SQUARE`. */
 fun editRatioTag(ratio: CropRatio): String = "edit-ratio-${ratio.name}"
 
+/** Returns the test tag of [slider]'s chip in the Adjust panel, such as `edit-adjust-CONTRAST`. */
+fun editAdjustChipTag(slider: AdjustSlider): String = "edit-adjust-${slider.name}"
+
 /** Returns the test tag of [preset]'s filter chip, such as `edit-filter-KELVIN`. */
 fun editFilterTag(preset: FilterPreset): String = "edit-filter-${preset.name}"
 
@@ -128,6 +130,9 @@ fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALU
  * every control is disabled. An ordinary preview render does not disable them: a slider switched
  * off mid-drag would flicker and lose the finger.
  *
+ * [adjustSlider] is Adjust's chosen sub-tool (kept in the screen's state) and [onAdjustSlider] a
+ * sub-tool chip tapped.
+ *
  * The drawing itself is the stateless [EditPanelContent].
  */
 @Composable
@@ -141,6 +146,8 @@ fun EditPanel(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     filterSource: FilterLut.Source? = null,
+    adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+    onAdjustSlider: (AdjustSlider) -> Unit = {},
 ) {
     // The real look-up source reads the assets through the application's context, made once.
     val context = LocalContext.current
@@ -163,6 +170,8 @@ fun EditPanel(
         onRatio = { ratio -> onRatio(ratio, processorFor) },
         enabled = enabled,
         modifier = modifier,
+        adjustSlider = adjustSlider,
+        onAdjustSlider = onAdjustSlider,
     )
 }
 
@@ -176,8 +185,11 @@ fun EditPanel(
  *   saying how to crop; a fixed shape locks the crop to it, Free unlocks it. The rectangle itself
  *   is dragged on the photo, where the screen shows the cropper ([EditCropper]) instead;
  * - Rotate: turn left, turn right, flip across and flip upside down, each one action;
- * - Adjust: brightness, contrast, saturation and warmth, each from -100 through 0 (no change, the
- *   centre) to +100, with its number beside its name;
+ * - Adjust: a row of four sub-tool chips (brightness, contrast, saturation, warmth) and ONE
+ *   slider, for the chosen chip ([adjustSlider]), from -100 through 0 (no change, the centre) to
+ *   +100, with its number beside its name. A chip tap calls [onAdjustSlider] and changes nothing
+ *   in the photo. One slider at a time keeps Adjust as short as the other tools, so the panel
+ *   area never has to grow;
  * - Filters: None and the seven presets, one at a time (the chosen one is marked), and the
  *   intensity from 0 to 100, which is only usable while a filter is chosen.
  *
@@ -196,6 +208,8 @@ fun EditPanelContent(
     onRatio: (CropRatio) -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+    onAdjustSlider: (AdjustSlider) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -207,7 +221,7 @@ fun EditPanelContent(
     ) {
         when (openTool) {
             EditTool.CROP -> {
-                CropChips(chosen = settings.cropRatio, enabled = enabled, onRatio = onRatio)
+                CropChips(chosen = settings.cropRatio, cropIsFull = settings.crop == EditSettings.CropRect.FULL, enabled = enabled, onRatio = onRatio)
                 // The rectangle itself is moved on the photo (the cropper); this line says how.
                 Text(
                     text = stringResource(R.string.edit_crop_hint),
@@ -230,36 +244,14 @@ fun EditPanelContent(
                 },
             )
             EditTool.ADJUST -> {
+                AdjustChips(chosen = adjustSlider, enabled = enabled, onChoose = onAdjustSlider)
+                // One slider, for the chosen sub-tool only, so Adjust is no taller than the others.
                 LabelledSlider(
-                    label = R.string.edit_tool_brightness,
-                    value = settings.brightness,
-                    onValueChange = { onPreview(settings.copy(brightness = it)) },
+                    label = adjustSlider.labelRes,
+                    value = adjustValue(settings, adjustSlider),
+                    onValueChange = { onPreview(withAdjust(settings, adjustSlider, it)) },
                     onValueChangeFinished = onCommit,
-                    tag = EDIT_BRIGHTNESS_TAG,
-                    enabled = enabled,
-                )
-                LabelledSlider(
-                    label = R.string.edit_tool_contrast,
-                    value = settings.contrast,
-                    onValueChange = { onPreview(settings.copy(contrast = it)) },
-                    onValueChangeFinished = onCommit,
-                    tag = EDIT_CONTRAST_TAG,
-                    enabled = enabled,
-                )
-                LabelledSlider(
-                    label = R.string.edit_tool_saturation,
-                    value = settings.saturation,
-                    onValueChange = { onPreview(settings.copy(saturation = it)) },
-                    onValueChangeFinished = onCommit,
-                    tag = EDIT_SATURATION_TAG,
-                    enabled = enabled,
-                )
-                LabelledSlider(
-                    label = R.string.edit_tool_warmth,
-                    value = settings.warmth,
-                    onValueChange = { onPreview(settings.copy(warmth = it)) },
-                    onValueChangeFinished = onCommit,
-                    tag = EDIT_WARMTH_TAG,
+                    tag = adjustSlider.sliderTag,
                     enabled = enabled,
                 )
             }
@@ -296,6 +288,50 @@ private fun withFilter(settings: EditSettings, preset: FilterPreset): EditSettin
     else -> settings.copy(filter = preset)
 }
 
+/** The value of [slider]'s setting in [settings], from -1 to 1 (0 is no change). */
+private fun adjustValue(settings: EditSettings, slider: AdjustSlider): Float = when (slider) {
+    AdjustSlider.BRIGHTNESS -> settings.brightness
+    AdjustSlider.CONTRAST -> settings.contrast
+    AdjustSlider.SATURATION -> settings.saturation
+    AdjustSlider.WARMTH -> settings.warmth
+}
+
+/** [settings] with [slider]'s setting moved to [value], every other setting left as it was. */
+private fun withAdjust(settings: EditSettings, slider: AdjustSlider, value: Float): EditSettings = when (slider) {
+    AdjustSlider.BRIGHTNESS -> settings.copy(brightness = value)
+    AdjustSlider.CONTRAST -> settings.copy(contrast = value)
+    AdjustSlider.SATURATION -> settings.copy(saturation = value)
+    AdjustSlider.WARMTH -> settings.copy(warmth = value)
+}
+
+/**
+ * One row of Adjust's sub-tool chips (Brightness, Contrast, Saturation, Warmth), scrolling
+ * sideways if the screen is narrow. The [chosen] one is marked selected; a tap calls [onChoose]
+ * with the chip's sub-tool, whose slider then takes the other's place under the row. Choosing a
+ * chip changes nothing in the photo. While [enabled] is false every chip is disabled.
+ */
+@Composable
+private fun AdjustChips(chosen: AdjustSlider, enabled: Boolean, onChoose: (AdjustSlider) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AdjustSlider.entries.forEach { slider ->
+            EditFeatureTile(
+                icon = adjustIcon(slider),
+                title = slider.labelRes,
+                onClick = { onChoose(slider) },
+                selected = slider == chosen,
+                enabled = enabled,
+                modifier = Modifier.testTag(editAdjustChipTag(slider)),
+            )
+        }
+    }
+}
+
 /**
  * One row of crop chips, scrolling sideways if the screen is narrow. Each is a filter chip marked
  * selected while it is the [chosen] shape: a fixed shape crops at once to the largest centred
@@ -304,7 +340,7 @@ private fun withFilter(settings: EditSettings, preset: FilterPreset): EditSettin
  * disabled.
  */
 @Composable
-private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
+private fun CropChips(chosen: CropRatio?, cropIsFull: Boolean, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -313,10 +349,12 @@ private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CropRatio.entries.forEach { ratio ->
-            FilterChip(
-                selected = ratio == chosen,
+            EditFeatureTile(
+                icon = ratioIcon(ratio),
+                title = ratioLabel(ratio),
                 onClick = { onRatio(ratio) },
-                label = { Text(text = stringResource(ratioLabel(ratio)), maxLines = 1) },
+                // Original reads as chosen only while the whole photo is kept, not after the handles moved.
+                selected = ratio == chosen && (ratio != CropRatio.ORIGINAL || cropIsFull),
                 enabled = enabled,
                 modifier = Modifier.testTag(editRatioTag(ratio)),
             )
@@ -339,34 +377,34 @@ private fun TurnButtons(enabled: Boolean, onTurn: (Int) -> Unit, onFlip: (Boolea
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(
+        EditFeatureTile(
+            icon = R.drawable.ic_rotate_left,
+            title = R.string.edit_tool_rotate_left,
             onClick = { onTurn(-1) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_ROTATE_LEFT_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_rotate_left), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_rotate_right,
+            title = R.string.edit_tool_rotate_right,
             onClick = { onTurn(1) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_ROTATE_RIGHT_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_rotate_right), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_flip_horizontal,
+            title = R.string.edit_tool_flip_horizontal,
             onClick = { onFlip(true) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_FLIP_HORIZONTAL_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_flip_horizontal), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_flip_vertical,
+            title = R.string.edit_tool_flip_vertical,
             onClick = { onFlip(false) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_FLIP_VERTICAL_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_flip_vertical), maxLines = 1)
-        }
+        )
     }
 }
 
@@ -386,10 +424,11 @@ private fun FilterChips(chosen: FilterPreset, enabled: Boolean, onFilter: (Filte
     ) {
         // NONE is the enum's first entry, so None leads the row.
         FilterPreset.entries.forEach { preset ->
-            FilterChip(
-                selected = preset == chosen,
+            EditFeatureTile(
+                icon = if (preset == FilterPreset.NONE) R.drawable.ic_hide_image else R.drawable.ic_filter_vintage,
+                title = filterLabel(preset),
                 onClick = { onFilter(preset) },
-                label = { Text(text = stringResource(filterLabel(preset)), maxLines = 1) },
+                selected = preset == chosen,
                 enabled = enabled,
                 modifier = Modifier.testTag(editFilterTag(preset)),
             )
@@ -478,9 +517,31 @@ private fun LabelledRow(
     }
 }
 
-/** The string resource naming crop shape [ratio] on its chip. */
+/** The icon drawn on [slider]'s tile in Adjust. */
+@DrawableRes
+private fun adjustIcon(slider: AdjustSlider): Int = when (slider) {
+    AdjustSlider.BRIGHTNESS -> R.drawable.ic_brightness
+    AdjustSlider.CONTRAST -> R.drawable.ic_contrast
+    AdjustSlider.SATURATION -> R.drawable.ic_saturation
+    AdjustSlider.WARMTH -> R.drawable.ic_warmth
+}
+
+/** The icon drawn on crop shape [ratio]'s tile: a rectangle of that shape ([CropRatio.FREE] shows the crop icon). */
+@DrawableRes
+private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
+    CropRatio.ORIGINAL -> R.drawable.ic_refresh
+    CropRatio.FREE -> R.drawable.ic_crop
+    CropRatio.SQUARE -> R.drawable.ic_ratio_square
+    CropRatio.FOUR_THREE -> R.drawable.ic_ratio_4_3
+    CropRatio.THREE_FOUR -> R.drawable.ic_ratio_3_4
+    CropRatio.SIXTEEN_NINE -> R.drawable.ic_ratio_16_9
+    CropRatio.NINE_SIXTEEN -> R.drawable.ic_ratio_9_16
+}
+
+/** The string resource naming crop shape [ratio] on its tile. */
 @StringRes
 private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
+    CropRatio.ORIGINAL -> R.string.edit_tool_ratio_original
     CropRatio.FREE -> R.string.edit_tool_ratio_free
     CropRatio.SQUARE -> R.string.edit_tool_ratio_square
     CropRatio.FOUR_THREE -> R.string.edit_tool_ratio_4_3
@@ -489,7 +550,7 @@ private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
     CropRatio.NINE_SIXTEEN -> R.string.edit_tool_ratio_9_16
 }
 
-/** The string resource naming filter [preset] on its chip. */
+/** The string resource naming filter [preset] on its tile. */
 @StringRes
 private fun filterLabel(preset: FilterPreset): Int = when (preset) {
     FilterPreset.NONE -> R.string.edit_tool_filter_none
@@ -509,7 +570,12 @@ private fun filterLabel(preset: FilterPreset): Int = when (preset) {
  * otherwise stretch its single child to the whole screen.
  */
 @Composable
-private fun SampleEditPanel(openTool: EditTool, settings: EditSettings, enabled: Boolean = true) {
+private fun SampleEditPanel(
+    openTool: EditTool,
+    settings: EditSettings,
+    enabled: Boolean = true,
+    adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+) {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
             Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
@@ -522,6 +588,7 @@ private fun SampleEditPanel(openTool: EditTool, settings: EditSettings, enabled:
                     onRatio = {},
                     enabled = enabled,
                     modifier = Modifier.padding(16.dp),
+                    adjustSlider = adjustSlider,
                 )
             }
         }
@@ -529,13 +596,27 @@ private fun SampleEditPanel(openTool: EditTool, settings: EditSettings, enabled:
 }
 
 /**
- * The Adjust sheet as it looks mid-edit, in light and in dark: brightness at 30 and warmth at -20
- * (each number beside its name), contrast and saturation at the centre.
+ * The Adjust sheet as it looks mid-edit, in light and in dark: the Brightness chip chosen, and
+ * its one slider at 30 with the number beside its name.
  */
 @PreviewLightDark
 @Composable
 private fun EditPanelPreview() {
     SampleEditPanel(openTool = EditTool.ADJUST, settings = EditSettings(brightness = 0.3f, warmth = -0.2f))
+}
+
+/**
+ * The Adjust sheet with the Warmth chip chosen, in light and in dark: the one slider now shows
+ * warmth, at -20.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelWarmthPreview() {
+    SampleEditPanel(
+        openTool = EditTool.ADJUST,
+        settings = EditSettings(brightness = 0.3f, warmth = -0.2f),
+        adjustSlider = AdjustSlider.WARMTH,
+    )
 }
 
 /**

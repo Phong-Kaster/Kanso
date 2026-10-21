@@ -37,14 +37,13 @@ import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
+import com.phongkaster.kanso.ui.tool.AdjustSlider
 import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.editAdjustChipTag
 import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_CONTRAST_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_INTENSITY_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_SATURATION_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_WARMTH_TAG
 import com.phongkaster.kanso.ui.tool.LIVE_PREVIEW_TAG
 import com.phongkaster.kanso.ui.tool.LivePreviewMatrix
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
@@ -164,7 +163,7 @@ class CompareTest {
 
     /**
      * While Compare is on, every editing control is disabled at once and Compare stays enabled:
-     * the four colour sliders, the four tool entries (a tap on one opens nothing) and Undo; the
+     * Adjust's chips and its slider, the four tool entries (a tap on one opens nothing) and Undo; the
      * controls of the other three sheets too (each opened through the ViewModel, since the row is
      * disabled). The ViewModel refuses an edit and an undo meanwhile. Switching Compare off
      * enables the sliders, the entries and Undo again.
@@ -228,12 +227,12 @@ class CompareTest {
     }
 
     /**
-     * The pill holds both Undo and Compare and floats in the bottom-right quarter of the photo
-     * card, near its corner, with no sheet open and with each sheet open; Undo is the screen's
-     * only Undo. With a sheet open, a real tap on Compare reaches it and switches it on.
+     * Undo and Compare are the last two entries of the one row under the photo, level with the four
+     * tools, with no sheet open and with each sheet open; Undo is the screen's only Undo. With a
+     * sheet open, a real tap on Compare reaches it and switches it on.
      */
     @Test
-    fun the_pill_holds_undo_and_compare_at_the_photos_bottom_right() {
+    fun undo_and_compare_sit_in_the_tool_row() {
         val viewModel = showEdit(null)
         (listOf<EditTool?>(null) + EditTool.entries).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
@@ -241,16 +240,15 @@ class CompareTest {
             assertEquals(open, viewModel.state.value.openTool)
 
             compose.onAllNodesWithTag(TOOL_UNDO_TAG).assertCountEquals(1)
-            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertIsDisplayed()
-            compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertIsDisplayed()
+            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
+            compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
 
-            val card = bounds(TOOL_CARD_TAG)
-            val pill = bounds(EDIT_PILL_TAG)
-            assertTrue("pill $pill not in the right half of $card with $open open", pill.left >= card.center.x)
-            assertTrue("pill $pill not in the lower half of $card with $open open", pill.top >= card.center.y)
-            assertTrue("pill $pill sticks out of $card with $open open", pill.right <= card.right && pill.bottom <= card.bottom)
-            assertTrue("pill $pill far from the right edge with $open open", card.right - pill.right <= dp(24f))
-            assertTrue("pill $pill far from the bottom edge with $open open", card.bottom - pill.bottom <= dp(24f))
+            val filters = bounds(editToolTag(EditTool.FILTERS))
+            val undo = bounds(TOOL_UNDO_TAG)
+            val compare = bounds(EDIT_COMPARE_TAG)
+            assertTrue("Undo $undo is not right of Filters $filters with $open open", undo.left >= filters.right - 1f)
+            assertTrue("Compare $compare is not right of Undo $undo with $open open", compare.left >= undo.right - 1f)
+            assertTrue("Undo $undo is not level with Filters $filters with $open open", undo.top == filters.top)
         }
 
         viewModel.openTool(EditTool.ADJUST)
@@ -376,11 +374,13 @@ class CompareTest {
     )
 
     /**
-     * Fails unless the Adjust sheet's four sliders, the four tool entries and Undo are all
-     * enabled ([enabled] true) or all disabled ([enabled] false).
+     * Fails unless the Adjust sheet's four sub-tool chips and its one slider (Brightness, the
+     * chip chosen at the start), the four tool entries and Undo are all enabled ([enabled] true)
+     * or all disabled ([enabled] false).
      */
     private fun assertEditingEnabled(enabled: Boolean) {
-        val tags = listOf(EDIT_BRIGHTNESS_TAG, EDIT_CONTRAST_TAG, EDIT_SATURATION_TAG, EDIT_WARMTH_TAG, TOOL_UNDO_TAG) +
+        val tags = listOf(EDIT_BRIGHTNESS_TAG, TOOL_UNDO_TAG) +
+            AdjustSlider.entries.map(::editAdjustChipTag) +
             EditTool.entries.map(::editToolTag)
         tags.forEach { tag ->
             val node = compose.onNodeWithTag(tag)

@@ -55,11 +55,11 @@
         android:theme="@style/Theme.Kanso">
 
         <!-- The one activity. It starts with the system splash theme and switches to
-             Theme.Kanso once installSplashScreen() runs. The launcher reaches it only through
-             one of the aliases below, so it has no launcher entry of its own. -->
+             Theme.Kanso once installSplashScreen() runs. It is exported so IDEs and ADB can
+             launch it directly even when LauncherKansoBlue or other icon aliases are disabled. -->
         <activity
             android:name=".MainActivity"
-            android:exported="false"
+            android:exported="true"
             android:taskAffinity="com.phongkaster.kanso.main"
             android:theme="@style/Theme.Kanso.Starting" />
 
@@ -70,7 +70,7 @@
              still shows the icon. -->
         <activity
             android:name=".LauncherActivity"
-            android:exported="false"
+            android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""

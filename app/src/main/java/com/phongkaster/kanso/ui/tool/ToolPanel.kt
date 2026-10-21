@@ -53,7 +53,8 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * its own sheet under the photo. [openTool] says which of them the sheet shows; while it is null
  * (no sheet open) the Edit panel draws nothing, only its empty, tagged slot. [enabled] switches
  * the Edit controls off, which the screen does while an edit runs or while Compare shows the
- * original photo. The other four tools ignore both.
+ * original photo. [onEditAdjustSlider] is one of Adjust's sub-tool chips tapped; the chosen one
+ * comes from [state]. The other four tools ignore all three.
  */
 @Composable
 fun ToolPanel(
@@ -69,6 +70,7 @@ fun ToolPanel(
     onEditPreview: (EditSettings, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
     onEditCommit: () -> Unit = {},
     onEditRatio: (CropRatio, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
+    onEditAdjustSlider: (AdjustSlider) -> Unit = {},
 ) {
     // With no state (a preview, or a test of the screen's frame) the slot stays an empty, tagged
     // box, so those pictures show the frame and not a tool's controls; the real screen passes it.
@@ -91,6 +93,8 @@ fun ToolPanel(
                 onRatio = onEditRatio,
                 modifier = modifier,
                 enabled = enabled,
+                adjustSlider = state.adjustSlider,
+                onAdjustSlider = onEditAdjustSlider,
             )
         }
         // The checkerboard is drawn behind the photo by the screen, so the panel draws none.

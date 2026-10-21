@@ -27,8 +27,9 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): its photo keeps 60% of the
-height and has no Replace chip, a row of four tools sits under it, and Undo moves into a pill on the
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of four tools is its
+`Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
+photo never changes size, the photo has no Replace chip, and Undo moves into a pill on the
 photo next to a Compare switch, so its top bar holds Done alone.
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and

@@ -84,7 +84,8 @@ data class EditSession(
      *
      * A fixed ratio locks the handles to it ([EditSettings.cropRatio]) and sets the crop to the
      * largest centred rectangle of that shape inside the photo (choosing a ratio must change the
-     * rectangle too; only locking it would keep the old shape). [CropRatio.FREE] or null only
+     * rectangle too; only locking it would keep the old shape). [CropRatio.ORIGINAL] resets the
+     * rectangle to the whole photo and unlocks the handles. [CropRatio.FREE] or null only
      * unlock the handles and keep the current rectangle.
      *
      * [photoAspect] is the ORIGINAL photo's width divided by its height, before any turn. The
@@ -93,6 +94,9 @@ data class EditSession(
      * chosen.
      */
     fun cropRatioChosen(ratio: CropRatio?, photoAspect: Float): EditSession {
+        if (ratio == CropRatio.ORIGINAL) {
+            return change(settings.copy(cropRatio = ratio, crop = EditSettings.CropRect.FULL))
+        }
         if (ratio == null || ratio == CropRatio.FREE || photoAspect <= 0f) {
             return change(settings.copy(cropRatio = ratio))
         }

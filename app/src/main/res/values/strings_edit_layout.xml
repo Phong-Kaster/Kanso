@@ -9,4 +9,6 @@
     <string name="edit_layout_undo">Undo</string>
     <string name="edit_layout_compare">Compare</string>
     <string name="edit_layout_sheet">Tool settings</string>
+    <!-- Shown in the panel area above the row of tools while no tool is open. -->
+    <string name="edit_sheet_hint">Pick a tool to start editing</string>
 </resources>

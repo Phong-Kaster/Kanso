@@ -189,7 +189,9 @@ fun EditCropperContent(
  * reported is not set again.
  */
 private fun showCrop(state: CropState, settings: EditSettings, width: Int, height: Int) {
-    val locked = settings.cropRatio != null && settings.cropRatio != CropRatio.FREE
+    val locked = settings.cropRatio != null &&
+        settings.cropRatio != CropRatio.FREE &&
+        settings.cropRatio != CropRatio.ORIGINAL
     if (!sameCrop(fractionsOf(state.region, width, height), settings.crop)) {
         state.aspectLock = false
         state.region = pixelsOf(settings.crop, width, height)

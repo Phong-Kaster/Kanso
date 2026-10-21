@@ -82,6 +82,12 @@ data class ToolUiState(
      */
     val openTool: EditTool? = null,
     /**
+     * The Edit screen's Adjust sub-tool whose slider is shown (Adjust shows one slider at a time,
+     * picked by a chip). It is kept here rather than in the panel, so reopening Adjust shows the
+     * slider the person used last.
+     */
+    val adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+    /**
      * True while the Compare switch is on: the screen shows the untouched original photo instead
      * of the edit, and every editing control is disabled until it is switched off again.
      */

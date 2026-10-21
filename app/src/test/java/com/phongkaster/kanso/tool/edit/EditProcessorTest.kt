@@ -76,11 +76,23 @@ class EditProcessorTest {
      * the rectangle in pixels itself).
      */
     @Test
+    fun original_puts_the_whole_photo_back_after_a_crop() {
+        val photo = quarters()
+        val aspect = photo.width.toFloat() / photo.height
+        val cropped = EditSession().cropRatioChosen(CropRatio.SQUARE, aspect)
+        val back = cropped.cropRatioChosen(CropRatio.ORIGINAL, aspect).settings
+        assertEquals(EditSettings.CropRect.FULL, back.crop)
+        val edited = run(photo, back)
+        assertEquals(photo.width, edited.width)
+        assertEquals(photo.height, edited.height)
+    }
+
+    @Test
     fun each_ratio_crops_to_its_shape_around_the_middle() {
         val photo = quarters()
         val centreX = photo.width / 2
         val centreY = photo.height / 2
-        CropRatio.entries.filter { it != CropRatio.FREE }.forEach { ratio ->
+        CropRatio.entries.filter { it != CropRatio.FREE && it != CropRatio.ORIGINAL }.forEach { ratio ->
             val settings = EditSession().cropRatioChosen(ratio, photo.width.toFloat() / photo.height).settings
             val edited = run(photo, settings)
             val expectedWidth = edited.height * ratio.widthPart / ratio.heightPart.toFloat()

@@ -55,7 +55,7 @@ import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PILL_TAG
+import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
@@ -380,7 +380,9 @@ class ToolScreenTest {
             val panel = compose.onNodeWithTag(EDITOR_PANEL_TAG).fetchSemanticsNode().boundsInRoot
             // An empty slot is placed nowhere and measures nothing, so the position is only
             // checked once a tool's own controls fill the strip.
-            assertTrue("$tool: the strip $panel is not under the card $card", panel.isEmpty || panel.top >= card.bottom - SLACK)
+            // On Edit the photo shrinks while a sheet is open, so the card is measured again now.
+            val cardNow = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
+            assertTrue("$tool: the strip $panel is not under the card $cardNow", panel.isEmpty || panel.top >= cardNow.bottom - SLACK)
             // The panel may still be an empty slot (zero tall), so it is checked to exist in the
             // strip rather than to be displayed.
             compose.onNode(hasTestTag(PANEL_TAGS.getValue(tool)) and hasAnyAncestor(hasTestTag(EDITOR_PANEL_TAG)))
@@ -402,7 +404,7 @@ class ToolScreenTest {
             // Undo: just left of Done on the four other tools; on Edit, in the pill on the photo.
             val undo = compose.onNodeWithTag(TOOL_UNDO_TAG).fetchSemanticsNode().boundsInRoot
             if (tool == Tool.EDIT) {
-                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
+                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
                 assertTrue("$tool: Undo $undo left the photo card", undo.top >= card.top - SLACK)
             } else {
                 assertTrue("$tool: Undo $undo is not left of Done $done", undo.right <= done.left + SLACK)
@@ -427,7 +429,7 @@ class ToolScreenTest {
             // original photo and changes no tool; any other toggle still fails.
             if (tool == Tool.EDIT) {
                 compose.onAllNodes(isToggleable()).assertCountEquals(1)
-                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG)))
+                compose.onNode(isToggleable() and hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG)))
                     .assertExists()
             } else {
                 compose.onAllNodes(isToggleable()).assertCountEquals(0)
@@ -494,7 +496,7 @@ class ToolScreenTest {
         }
         compose.waitForIdle()
         compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG)).assertCountEquals(1)
-        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_PILL_TAG))).assertExists()
+        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
 
         compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }
