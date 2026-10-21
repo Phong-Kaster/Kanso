@@ -1,6 +1,7 @@
 package com.phongkaster.kanso.ui.settings
 
 import androidx.compose.ui.graphics.toArgb
+import com.phongkaster.kanso.data.settings.TextScale
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
@@ -20,6 +21,8 @@ import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
  * keeps it, and Kanso blue's seed when no colour was ever picked. It has a default value so a
  * snapshot can be written with just the two choices, as the previews do.
  *
+ * [textScale] is Kanso's own text size multiplier (see TextScale), 1.0 by default.
+ *
  * Whether the phone offers wallpaper colours (Android 12 and later) is not in here: it is a fact
  * about the phone, not a saved choice, so the drawing side asks for it itself.
  */
@@ -27,4 +30,5 @@ data class SettingsUiState(
     val themeMode: ThemeMode,
     val themeColour: ThemeColour,
     val customSeedArgb: Int = KANSO_BLUE_SEED.toArgb(),
+    val textScale: Float = TextScale.DEFAULT,
 )

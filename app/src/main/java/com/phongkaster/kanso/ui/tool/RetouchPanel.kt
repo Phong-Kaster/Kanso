@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+﻿package com.phongkaster.kanso.ui.tool
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.ui.common.ClassicSlider
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.roundToInt
@@ -75,7 +75,7 @@ fun RetouchPanel(
                 style = MaterialTheme.typography.labelLarge,
             )
         }
-        Slider(
+        ClassicSlider(
             value = strength,
             onValueChange = { strength = it.coerceIn(0f, 1f) },
             enabled = enabled,

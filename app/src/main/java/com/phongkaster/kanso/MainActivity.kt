@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
         val savedMode = runBlocking { settings.themeMode.first() }
         // The same for the theme colour, so the first frame already has the chosen colours.
         val savedColour = runBlocking { settings.themeColour.first() }
+        // And the text size, so the first frame is already drawn at the chosen size.
+        val savedTextScale = runBlocking { settings.textScale.first() }
         // setContent hands the window to Compose: everything inside the braces is a composable,
         // a function that describes the UI and is re-run whenever the state it reads changes.
         setContent {
@@ -55,7 +57,8 @@ class MainActivity : ComponentActivity() {
             val themeMode by settings.themeMode.collectAsState(initial = savedMode)
             val themeColour by settings.themeColour.collectAsState(initial = savedColour)
             // KansoTheme gives every Material 3 component below it its colours, type and shapes.
-            KansoTheme(themeMode, themeColour) {
+            val textScale by settings.textScale.collectAsState(initial = savedTextScale)
+            KansoTheme(themeMode, themeColour, textScale) {
                 KansoNavHost()
             }
         }

@@ -20,9 +20,24 @@ Settings is the third tab. Its one section, **Appearance**, holds two choices:
 A change re-colours the whole app at once, with no restart, and is kept across restarts. The
 launcher icon follows the theme colour too; see [Launcher icon](launcher-icon.md).
 
+**Text size.** Kanso ignores the phone's own font size setting (Settings > Display > Font size), so a
+large system text size cannot break its layout. Instead, Settings has a **Text size** slider from
+85% to 130% (default 100%), stored as `text_scale` in the settings file. The slider
+is continuous (no steps; the thumb stops anywhere) and looks like the classic Material 2 slider
+(thin track, round thumb; drawn by
+`ClassicSlider` through Material 3's `thumb` and `track` slots) and
+saves when you lift your finger; the sample sentence under it grows while you drag. The value is
+applied in `KansoTheme` by providing a `Density` whose `fontScale` is Kanso's own value, so every
+`sp` size in the app follows it at once. `dp` sizes do not change. Files:
+`data/settings/TextScale.kt`, `SettingsRepository.textScale`, `ui/settings/SettingsScreen.kt`
+(`TextSizeChoice`).
+
 Limits, from the code:
 
-- These are the only settings. There is nothing about editing, quality or storage here.
+- The only settings are theme mode, theme colour and text size. There is nothing about editing,
+  quality or storage here.
+- Text in system dialogs and the system share sheet still follows the phone's font size, because
+  Kanso does not draw them.
 - From wallpaper is not offered below Android 12; a wallpaper choice restored there reads as Kanso
   blue.
 - A custom colour is always opaque; the picker hides its transparency bar.

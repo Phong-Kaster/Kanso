@@ -16,6 +16,10 @@
     <!-- Appearance section of Settings and its theme mode choice. -->
     <string name="appearance">Appearance</string>
     <string name="theme_mode">Theme mode</string>
+    <string name="text_size">Text size</string>
+    <string name="text_size_description">Kanso ignores the phone\'s font size. Choose its text size here.</string>
+    <string name="text_size_value">%1$d%%</string>
+    <string name="text_size_preview">The quick brown fox jumps over the lazy dog.</string>
     <string name="theme_mode_system">System default</string>
     <string name="theme_mode_light">Light</string>
     <string name="theme_mode_dark">Dark</string>

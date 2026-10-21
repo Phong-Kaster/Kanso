@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+﻿package com.phongkaster.kanso.ui.tool
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.ui.common.ClassicSlider
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
@@ -461,7 +461,7 @@ private fun LabelledSlider(
     val text = stringResource(label)
     val shown = stringResource(R.string.edit_session_slider_value, (value * SHOWN_SCALE).roundToInt())
     LabelledRow(label = label, value = shown, valueTag = editSliderValueTag(tag)) {
-        Slider(
+        ClassicSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,

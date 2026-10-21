@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.settings
+﻿package com.phongkaster.kanso.ui.settings
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
@@ -36,17 +38,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -59,12 +69,15 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.library.colorpicker.HSVColorPicker
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.TextScale
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
+import com.phongkaster.kanso.ui.common.ClassicSlider
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
+import kotlin.math.roundToInt
 
 /** The test tag on the root of the Settings screen, so tests can tell it apart from Home. */
 const val SETTINGS_SCREEN_TAG = "settings-screen"
@@ -95,6 +108,15 @@ const val SETTINGS_GROUP_APPEARANCE_TAG = "settings-group-appearance"
 
 /** The test tag on the rounded container that holds the theme colour rows. */
 const val SETTINGS_GROUP_COLOUR_TAG = "settings-group-colour"
+
+/** The test tag on the rounded container that holds the text size slider. */
+const val SETTINGS_GROUP_TEXT_SIZE_TAG = "settings-group-text-size"
+
+/** The test tag on the text size slider. */
+const val TEXT_SIZE_SLIDER_TAG = "text-size-slider"
+
+/** The test tag on the text showing the chosen text size as a percentage. */
+const val TEXT_SIZE_VALUE_TAG = "text-size-value"
 
 /** The test tag on the swatch of the Kanso blue row: a circle of Kanso blue's light primary. */
 const val THEME_COLOUR_KANSO_BLUE_SWATCH_TAG = "theme-colour-kanso-blue-swatch"
@@ -227,6 +249,7 @@ fun SettingsScreen(
         onCustomColourChosen = viewModel::onCustomColourChosen,
         modifier = modifier,
         contentPadding = contentPadding,
+        onTextScaleChosen = viewModel::setTextScale,
     )
 }
 
@@ -269,6 +292,7 @@ fun SettingsContent(
     onCustomColourChosen: (Color) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    onTextScaleChosen: (Float) -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.testTag(SETTINGS_SCREEN_TAG),
@@ -308,6 +332,63 @@ fun SettingsContent(
                 onWallpaper = onWallpaperChosen,
                 onCustom = onCustomChosen,
                 onCustomColourChanged = onCustomColourChosen,
+            )
+            TextSizeChoice(
+                savedScale = state.textScale,
+                onScaleChosen = onTextScaleChosen,
+            )
+        }
+    }
+}
+
+/**
+ * The text size setting: a small label, then a rounded group (tagged [SETTINGS_GROUP_TEXT_SIZE_TAG])
+ * with a slider from [TextScale.MIN] to [TextScale.MAX] in [TextScale.STEP] steps, the chosen
+ * percentage, a sample sentence and a note that the phone's own font size is ignored.
+ *
+ * `remember(savedScale)` keeps the slider's own value while the finger drags it. Saving on every
+ * movement would rewrite the settings file and redraw the whole app at each step (and the slider
+ * itself would grow under the finger), so the value is saved by [onScaleChosen] only when the drag
+ * ends (`onValueChangeFinished`). Meanwhile the sample sentence is drawn at the size being picked:
+ * its font size is multiplied by `dragged / savedScale`, because the rest of the app is still
+ * drawn at [savedScale].
+ */
+@Composable
+private fun TextSizeChoice(savedScale: Float, onScaleChosen: (Float) -> Unit) {
+    var dragged by remember(savedScale) { mutableFloatStateOf(savedScale) }
+    GroupLabel(text = stringResource(R.string.text_size))
+    SettingsGroup(testTag = SETTINGS_GROUP_TEXT_SIZE_TAG) {
+        Column(
+            modifier = Modifier.padding(horizontal = ROW_PADDING, vertical = ROW_VERTICAL_PADDING),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.text_size_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.text_size_value, (dragged * 100).roundToInt()),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.testTag(TEXT_SIZE_VALUE_TAG),
+                )
+            }
+            ClassicSlider(
+                value = dragged,
+                onValueChange = { dragged = it },
+                onValueChangeFinished = { onScaleChosen(dragged) },
+                valueRange = TextScale.MIN..TextScale.MAX,
+                // Continuous: no steps, so the thumb stops anywhere between the two ends.
+                steps = 0,
+                modifier = Modifier.testTag(TEXT_SIZE_SLIDER_TAG),
+            )
+            val sample = MaterialTheme.typography.bodyLarge
+            Text(
+                text = stringResource(R.string.text_size_preview),
+                style = sample.copy(fontSize = sample.fontSize * (dragged / savedScale)),
             )
         }
     }
@@ -563,7 +644,7 @@ private fun SettingsGroup(
  * content description), because the label already names the row.
  *
  * The description is held to one line (`maxLines = 1`): a row stays one even height, and a text
- * too long for a narrow phone ends in "…" instead of pushing the row taller.
+ * too long for a narrow phone ends in "â€¦" instead of pushing the row taller.
  *
  * [trailing] is a slot: a parameter that takes a piece of composable content instead of a plain
  * value, so the caller decides what goes there (a swatch for the colour rows, nothing for the
@@ -922,6 +1003,19 @@ private fun ColourRowPreview() {
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** The text size group on its own, in light and in dark, with the text 15% larger than the design. */
+@PreviewLightDark
+@Composable
+private fun TextSizeChoicePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.padding(vertical = 16.dp)) {
+                TextSizeChoice(savedScale = 1.15f, onScaleChosen = {})
             }
         }
     }

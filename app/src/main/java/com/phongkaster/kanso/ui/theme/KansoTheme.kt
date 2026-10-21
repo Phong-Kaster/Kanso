@@ -28,11 +28,13 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -40,7 +42,9 @@ import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.phongkaster.kanso.data.settings.TextScale
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
@@ -69,7 +73,8 @@ private var SemanticsPropertyReceiver.kansoColorScheme by KansoColorSchemeKey
  * [ThemeMode.Dark] force one scheme. [ThemeColour.KansoBlue] (the default, on every Android
  * version) is the scheme generated from [KANSO_BLUE_SEED]; [ThemeColour.Wallpaper] uses the
  * phone's wallpaper colours (Android 12 and later; Kanso blue below), and [ThemeColour.Custom]
- * a scheme generated from the picked seed colour. Because both are parameters, passing a new
+ * a scheme generated from the picked seed colour. [textScale] is Kanso's own text size multiplier
+ * (see [TextScale]); the phone's font size setting is ignored. Because these are parameters, passing a new
  * value re-draws everything below with the new colours at once, with no restart.
  *
  * What `MaterialExpressiveTheme` is: Material 3 Expressive is the newer, livelier style of
@@ -112,6 +117,7 @@ private var SemanticsPropertyReceiver.kansoColorScheme by KansoColorSchemeKey
 fun KansoTheme(
     themeMode: ThemeMode,
     themeColour: ThemeColour = ThemeColour.KansoBlue,
+    textScale: Float = TextScale.DEFAULT,
     content: @Composable () -> Unit,
 ) {
     val dark = isDarkTheme(themeMode)
@@ -146,13 +152,24 @@ fun KansoTheme(
         // A Box that only passes its size on (propagateMinConstraints) and publishes the scheme
         // the content sees, read back from MaterialTheme, so tests can check it.
         val applied = MaterialTheme.colorScheme
-        Box(
-            modifier = Modifier
-                .testTag(KANSO_THEME_TAG)
-                .semantics { kansoColorScheme = applied },
-            propagateMinConstraints = true,
-        ) {
-            content()
+        // Text size: `sp` sizes are multiplied by the density's fontScale, which normally comes
+        // from the phone's "font size" setting. Providing a Density whose fontScale is Kanso's own
+        // [textScale] replaces the phone's value for everything below, so the phone's setting no
+        // longer changes Kanso's layout, and the Settings slider does. `density` is kept as it is,
+        // so dp sizes do not move.
+        val density = LocalDensity.current
+        val kansoDensity = remember(density.density, textScale) {
+            Density(density = density.density, fontScale = textScale)
+        }
+        CompositionLocalProvider(LocalDensity provides kansoDensity) {
+            Box(
+                modifier = Modifier
+                    .testTag(KANSO_THEME_TAG)
+                    .semantics { kansoColorScheme = applied },
+                propagateMinConstraints = true,
+            ) {
+                content()
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
@@ -49,6 +50,21 @@ class SettingsRepository(
     suspend fun setThemeMode(mode: ThemeMode) {
         // edit { } reads the current file, applies the change and writes it back in one step.
         dataStore.edit { preferences -> preferences[THEME_MODE_KEY] = mode.name }
+    }
+
+    /**
+     * The saved text size multiplier (see [TextScale]), emitted once at first and again every time
+     * it changes. Nothing saved reads as [TextScale.DEFAULT]; a stored value outside the slider's
+     * range is pulled back into it.
+     */
+    val textScale: Flow<Float> = dataStore.data
+        .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
+        .map { preferences -> TextScale.clamp(preferences[TEXT_SCALE_KEY] ?: TextScale.DEFAULT) }
+        .distinctUntilChanged()
+
+    /** Saves [scale], limited to the slider's range, as the text size multiplier. */
+    suspend fun setTextScale(scale: Float) {
+        dataStore.edit { preferences -> preferences[TEXT_SCALE_KEY] = TextScale.clamp(scale) }
     }
 
     /** The theme colour a fresh install starts with on this phone (see [ThemeColour.defaultFor]). */
@@ -145,6 +161,9 @@ class SettingsRepository(
     private companion object {
         /** The theme mode, saved as the [ThemeMode] entry's name, such as "Dark". */
         val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
+
+        /** The text size multiplier, saved as a Float. */
+        val TEXT_SCALE_KEY = floatPreferencesKey("text_scale")
 
         /** Where the theme colour comes from, saved as one of the SOURCE_ names below. */
         val THEME_COLOUR_SOURCE_KEY = stringPreferencesKey("theme_colour_source")
