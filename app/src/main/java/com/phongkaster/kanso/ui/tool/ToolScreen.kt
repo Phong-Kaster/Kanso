@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+﻿package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -413,10 +413,10 @@ fun ToolContent(
             ToolTopBar(
                 tool = state.tool,
                 onBack = onBack,
-                // On Edit, Undo lives in the row under the photo instead, so there is only one.
-                showUndo = !isEdit,
+                showUndo = true,
+                // Undo sits beside Done on every tool, Edit included. It is off while Compare shows the original.
                 undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle &&
-                    !state.finishing,
+                    !state.finishing && !state.comparing,
                 onUndo = onUndo,
                 doneEnabled = state.photo is ToolUiState.PhotoState.Ready &&
                     state.processing is ToolUiState.Processing.Idle && !state.finishing,
@@ -431,7 +431,6 @@ fun ToolContent(
                 EditBottomBar(
                     state = state,
                     onOpenTool = onOpenTool,
-                    onUndo = onUndo,
                     onCompare = onCompare,
                     sheet = { tool ->
                         // The same options-strip tag as the other tools' panels carry, so the open

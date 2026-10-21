@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+﻿package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
 import android.graphics.LinearGradient
@@ -104,7 +104,7 @@ fun EditPhotoArea(
 
 /**
  * The Edit screen's bottom bar, the lowest thing on screen: one row of Crop, Rotate, Adjust,
- * Filters, Undo and Compare, and just above it the fixed-height panel area, which holds the open tool's
+ * Filters and Compare, and just above it the fixed-height panel area, which holds the open tool's
  * panel ([sheet]) or a hint when none is open. It is passed to `Scaffold`'s `bottomBar` slot, so
  * the photo area above always ends where this bar begins, and since the bar never changes height
  * neither does the photo.
@@ -113,7 +113,7 @@ fun EditPhotoArea(
  * the navigation bar can be 0 dp tall while a swipe up from the edge still means "go home".
  *
  * **Why the panel is not a modal bottom sheet.** Material's `ModalBottomSheet` dims everything
- * behind it and swallows touches outside it, so the Undo and Compare entries of the row could not
+ * behind it and swallows touches outside it, so the entries of the row could not
  * be tapped while a panel is open. Here the panel is an ordinary surface in the bar: nothing dims
  * the photo and the row stays in reach.
  *
@@ -127,7 +127,6 @@ fun EditBottomBar(
     onOpenTool: (EditTool) -> Unit,
     sheet: @Composable (EditTool) -> Unit,
     modifier: Modifier = Modifier,
-    onUndo: () -> Unit = {},
     onCompare: (Boolean) -> Unit = {},
 ) {
     Column(
@@ -149,14 +148,9 @@ fun EditBottomBar(
             enabled = !state.comparing && !state.finishing,
             onOpen = onOpenTool,
             settings = state.settings,
-            // Undo is usable only with an edit to take back, nothing running, and Compare off.
-            undoEnabled = state.canUndo &&
-                state.processing is ToolUiState.Processing.Idle &&
-                !state.comparing,
             comparing = state.comparing,
             // Compare is the way back from comparing, so only Done's render switches it off.
             compareEnabled = !state.finishing,
-            onUndo = onUndo,
             onCompare = onCompare,
         )
     }

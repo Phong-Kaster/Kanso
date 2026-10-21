@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+﻿package com.phongkaster.kanso.ui.tool
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +48,7 @@ import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
-/** Test tag of the Edit screen's row under the photo: four tools, Undo and Compare. */
+/** Test tag of the Edit screen's row under the photo: four tools and Compare. */
 const val EDIT_TOOL_ROW_TAG = "edit-tool-row"
 
 /** Test tag of the row's Compare switch, which shows the original photo while it is on. */
@@ -73,7 +72,7 @@ private val DOT_SIZE = 6.dp
 /** The width of a tool's entry in the scrolling row. */
 private val TOOL_ENTRY_WIDTH = 84.dp
 
-/** The width of the pinned Undo and Compare entries. */
+/** The width of the pinned Compare entry. */
 private val ACTION_ENTRY_WIDTH = 68.dp
 
 /** The size of an entry's icon. */
@@ -81,13 +80,11 @@ private val ENTRY_ICON_SIZE = 28.dp
 
 /**
  * The Edit screen's one row under the photo: the four tools (Crop, Rotate, Adjust, Filters), then
- * Undo and Compare, each an icon over its name, all six the same width. Tapping a tool calls
+ * Compare, each an icon over its name, . Tapping a tool calls
  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
  * colour Material uses for "this one is chosen".
  *
- * - **Undo** calls [onUndo] to take back the last edit; it is faint and ignores taps while
- *   [undoEnabled] is false (nothing to take back, an edit running, or Compare on).
  * - **Compare** is a switch, on while [comparing] and highlighted like an open tool; flipping it
  *   calls [onCompare] with the new value. Compare being on never disables it, because it is the
  *   way back from comparing; only [compareEnabled] false (Done is rendering) does.
@@ -100,8 +97,8 @@ private val ENTRY_ICON_SIZE = 28.dp
  * four tools are drawn faint and ignore taps.
  *
  * The four tools sit in a row that scrolls sideways, each [TOOL_ENTRY_WIDTH] wide, so they stay
- * large and a tool past the edge is reached by swiping. Undo and Compare stay pinned at the right,
- * [ACTION_ENTRY_WIDTH] wide each, behind a thin divider, so they are always in reach. A name too
+ * large and a tool past the edge is reached by swiping. Compare stays pinned at the right,
+ * [ACTION_ENTRY_WIDTH] wide, behind a thin divider, so they are always in reach. A name too
  * long for its entry is cut short with an ellipsis.
  */
 @Composable
@@ -111,10 +108,8 @@ fun EditToolRow(
     onOpen: (EditTool) -> Unit,
     modifier: Modifier = Modifier,
     settings: EditSettings = EditSettings(),
-    undoEnabled: Boolean = false,
     comparing: Boolean = false,
     compareEnabled: Boolean = true,
-    onUndo: () -> Unit = {},
     onCompare: (Boolean) -> Unit = {},
 ) {
     Row(
@@ -153,15 +148,8 @@ fun EditToolRow(
                 )
             }
         }
-        // A thin line separates the tools (which scroll) from Undo and Compare (which stay put).
+        // A thin line separates the tools (which scroll) from Compare (which stays put).
         VerticalDivider(modifier = Modifier.padding(horizontal = 4.dp).height(40.dp))
-        EditToolEntry(
-            icon = R.drawable.ic_undo,
-            title = R.string.edit_layout_undo,
-            modifier = Modifier.width(ACTION_ENTRY_WIDTH).testTag(TOOL_UNDO_TAG),
-            enabled = undoEnabled,
-            tap = { Modifier.clickable(enabled = undoEnabled, role = Role.Button, onClick = onUndo) },
-        )
         EditToolEntry(
             icon = R.drawable.ic_compare,
             title = R.string.edit_layout_compare,

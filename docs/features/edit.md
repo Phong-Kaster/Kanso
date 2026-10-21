@@ -14,8 +14,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
 **Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
 Lightroom (tapping it again closes it). The tools are large (84 dp wide, 28 dp icons) and sit in a
-row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Undo** and
-**Compare** stay pinned at the right, behind a thin divider, and never scroll away.
+row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Compare** stays
+pinned at the right, behind a thin divider, and never scrolls away. **Undo** sits at the top right,
+next to **Done**, as on the other tools.
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
 rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
 used there is nothing to render, and the decoded original is handed over). No model and no
@@ -36,7 +37,7 @@ network are used. You can:
 - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
-- **Undo** and **Compare**, in a small pill at the photo's bottom right that stays in reach whatever
+- **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
   Done stays usable while comparing and renders the edit, not the original.
