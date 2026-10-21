@@ -26,7 +26,9 @@ My edits, Settings) and a round **Camera** button beside it.
 
 Limits, from the code:
 
-- The carousel never moves on its own; only your swipes move it, one banner per swipe.
+- The carousel slides on its own: every 3.5 s it moves one banner forward over 0.9 s at constant
+  (linear) speed, then returns to the first banner after the last. A round is skipped while you
+  are swiping. Your swipes still move it one banner per swipe.
 - Banners have no pictures; their colours come from the theme (primary, secondary, tertiary
   containers in turn), so they follow the theme colour.
 - Recent edits shows at most 10 photos; My edits has them all. It never asks for a permission (see
