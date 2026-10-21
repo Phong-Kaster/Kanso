@@ -1,4 +1,4 @@
-﻿package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.common.ClassicSlider
+import com.phongkaster.kanso.ui.common.SliderWithValue
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
@@ -460,15 +460,17 @@ private fun LabelledSlider(
 ) {
     val text = stringResource(label)
     val shown = stringResource(R.string.edit_session_slider_value, (value * SHOWN_SCALE).roundToInt())
-    LabelledRow(label = label, value = shown, valueTag = editSliderValueTag(tag)) {
-        ClassicSlider(
+    // The number sits at the slider's right end (see SliderWithValue), where the eye is while dragging.
+    LabelledRow(label = label) {
+        SliderWithValue(
             value = value,
             onValueChange = onValueChange,
+            valueText = shown,
+            valueTag = editSliderValueTag(tag),
             valueRange = valueRange,
             onValueChangeFinished = onValueChangeFinished,
             enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
+            sliderModifier = Modifier
                 .testTag(tag)
                 .semantics { contentDescription = text },
         )

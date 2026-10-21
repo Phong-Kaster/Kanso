@@ -1,4 +1,4 @@
-﻿package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +30,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.common.ClassicSlider
+import com.phongkaster.kanso.ui.common.SliderWithValue
+import kotlin.math.roundToInt
 import com.phongkaster.kanso.data.edit.artistic.ArtisticStyle
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -95,13 +96,13 @@ fun ArtisticPanel(
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.fillMaxWidth(),
         )
-        ClassicSlider(
+        SliderWithValue(
             value = strength,
             onValueChange = onStrengthChange,
+            valueText = stringResource(R.string.retouch_strength_value, (strength * 100).roundToInt()),
             valueRange = 0f..1f,
             enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
+            sliderModifier = Modifier
                 .testTag(ARTISTIC_STRENGTH_TAG)
                 // A screen reader names the slider by this, as the label above it is a separate text.
                 .semantics { contentDescription = strengthLabel },

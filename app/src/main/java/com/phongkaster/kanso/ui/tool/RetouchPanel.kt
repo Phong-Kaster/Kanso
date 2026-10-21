@@ -1,4 +1,4 @@
-﻿package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,7 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.common.ClassicSlider
+import com.phongkaster.kanso.ui.common.SliderWithValue
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.roundToInt
@@ -64,24 +64,14 @@ fun RetouchPanel(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
-            Text(
-                stringResource(R.string.retouch_strength_value, (strength * PERCENT).roundToInt()),
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-        ClassicSlider(
+        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth())
+        SliderWithValue(
             value = strength,
             onValueChange = { strength = it.coerceIn(0f, 1f) },
+            valueText = stringResource(R.string.retouch_strength_value, (strength * PERCENT).roundToInt()),
             enabled = enabled,
             valueRange = 0f..1f,
-            modifier = Modifier
-                .fillMaxWidth()
+            sliderModifier = Modifier
                 // 48 dp is the smallest touch target Android's accessibility guidance allows.
                 .heightIn(min = 48.dp)
                 .testTag(RETOUCH_STRENGTH_TAG)
