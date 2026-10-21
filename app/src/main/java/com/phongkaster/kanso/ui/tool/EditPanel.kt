@@ -1,5 +1,6 @@
 package com.phongkaster.kanso.ui.tool
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -321,10 +320,11 @@ private fun AdjustChips(chosen: AdjustSlider, enabled: Boolean, onChoose: (Adjus
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AdjustSlider.entries.forEach { slider ->
-            FilterChip(
-                selected = slider == chosen,
+            EditFeatureTile(
+                icon = adjustIcon(slider),
+                title = slider.labelRes,
                 onClick = { onChoose(slider) },
-                label = { Text(text = stringResource(slider.labelRes), maxLines = 1) },
+                selected = slider == chosen,
                 enabled = enabled,
                 modifier = Modifier.testTag(editAdjustChipTag(slider)),
             )
@@ -349,10 +349,11 @@ private fun CropChips(chosen: CropRatio?, enabled: Boolean, onRatio: (CropRatio)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CropRatio.entries.forEach { ratio ->
-            FilterChip(
-                selected = ratio == chosen,
+            EditFeatureTile(
+                icon = ratioIcon(ratio),
+                title = ratioLabel(ratio),
                 onClick = { onRatio(ratio) },
-                label = { Text(text = stringResource(ratioLabel(ratio)), maxLines = 1) },
+                selected = ratio == chosen,
                 enabled = enabled,
                 modifier = Modifier.testTag(editRatioTag(ratio)),
             )
@@ -375,34 +376,34 @@ private fun TurnButtons(enabled: Boolean, onTurn: (Int) -> Unit, onFlip: (Boolea
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(
+        EditFeatureTile(
+            icon = R.drawable.ic_rotate_left,
+            title = R.string.edit_tool_rotate_left,
             onClick = { onTurn(-1) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_ROTATE_LEFT_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_rotate_left), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_rotate_right,
+            title = R.string.edit_tool_rotate_right,
             onClick = { onTurn(1) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_ROTATE_RIGHT_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_rotate_right), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_flip_horizontal,
+            title = R.string.edit_tool_flip_horizontal,
             onClick = { onFlip(true) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_FLIP_HORIZONTAL_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_flip_horizontal), maxLines = 1)
-        }
-        OutlinedButton(
+        )
+        EditFeatureTile(
+            icon = R.drawable.ic_flip_vertical,
+            title = R.string.edit_tool_flip_vertical,
             onClick = { onFlip(false) },
             enabled = enabled,
             modifier = Modifier.testTag(EDIT_FLIP_VERTICAL_TAG),
-        ) {
-            Text(text = stringResource(R.string.edit_tool_flip_vertical), maxLines = 1)
-        }
+        )
     }
 }
 
@@ -422,10 +423,11 @@ private fun FilterChips(chosen: FilterPreset, enabled: Boolean, onFilter: (Filte
     ) {
         // NONE is the enum's first entry, so None leads the row.
         FilterPreset.entries.forEach { preset ->
-            FilterChip(
-                selected = preset == chosen,
+            EditFeatureTile(
+                icon = if (preset == FilterPreset.NONE) R.drawable.ic_hide_image else R.drawable.ic_filter_vintage,
+                title = filterLabel(preset),
                 onClick = { onFilter(preset) },
-                label = { Text(text = stringResource(filterLabel(preset)), maxLines = 1) },
+                selected = preset == chosen,
                 enabled = enabled,
                 modifier = Modifier.testTag(editFilterTag(preset)),
             )
@@ -514,7 +516,27 @@ private fun LabelledRow(
     }
 }
 
-/** The string resource naming crop shape [ratio] on its chip. */
+/** The icon drawn on [slider]'s tile in Adjust. */
+@DrawableRes
+private fun adjustIcon(slider: AdjustSlider): Int = when (slider) {
+    AdjustSlider.BRIGHTNESS -> R.drawable.ic_brightness
+    AdjustSlider.CONTRAST -> R.drawable.ic_contrast
+    AdjustSlider.SATURATION -> R.drawable.ic_saturation
+    AdjustSlider.WARMTH -> R.drawable.ic_warmth
+}
+
+/** The icon drawn on crop shape [ratio]'s tile: a rectangle of that shape ([CropRatio.FREE] shows the crop icon). */
+@DrawableRes
+private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
+    CropRatio.FREE -> R.drawable.ic_crop
+    CropRatio.SQUARE -> R.drawable.ic_ratio_square
+    CropRatio.FOUR_THREE -> R.drawable.ic_ratio_4_3
+    CropRatio.THREE_FOUR -> R.drawable.ic_ratio_3_4
+    CropRatio.SIXTEEN_NINE -> R.drawable.ic_ratio_16_9
+    CropRatio.NINE_SIXTEEN -> R.drawable.ic_ratio_9_16
+}
+
+/** The string resource naming crop shape [ratio] on its tile. */
 @StringRes
 private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
     CropRatio.FREE -> R.string.edit_tool_ratio_free
@@ -525,7 +547,7 @@ private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
     CropRatio.NINE_SIXTEEN -> R.string.edit_tool_ratio_9_16
 }
 
-/** The string resource naming filter [preset] on its chip. */
+/** The string resource naming filter [preset] on its tile. */
 @StringRes
 private fun filterLabel(preset: FilterPreset): Int = when (preset) {
     FilterPreset.NONE -> R.string.edit_tool_filter_none
