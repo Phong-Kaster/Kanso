@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes

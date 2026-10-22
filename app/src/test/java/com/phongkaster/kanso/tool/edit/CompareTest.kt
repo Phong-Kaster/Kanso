@@ -38,24 +38,25 @@ import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.ui.tool.AdjustSlider
-import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
-import com.phongkaster.kanso.ui.tool.editAdjustChipTag
-import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_INTENSITY_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_ROTATE_LEFT_TAG
-import com.phongkaster.kanso.ui.tool.LIVE_PREVIEW_TAG
-import com.phongkaster.kanso.ui.tool.LivePreviewMatrix
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editAdjustChipTag
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_INTENSITY_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
+import com.phongkaster.kanso.ui.tool.components.photocard.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewMatrix
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
-import com.phongkaster.kanso.ui.tool.ToolPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.editFilterTag
-import com.phongkaster.kanso.ui.tool.editRatioTag
-import com.phongkaster.kanso.ui.tool.editToolTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editFilterTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editRatioTag
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -227,12 +228,13 @@ class CompareTest {
     }
 
     /**
-     * Undo and Compare are the last two entries of the one row under the photo, level with the four
-     * tools, with no sheet open and with each sheet open; Undo is the screen's only Undo. With a
-     * sheet open, a real tap on Compare reaches it and switches it on.
+     * Compare is the last entry of the one row under the photo, level with the four tools, with no
+     * sheet open and with each sheet open; Undo is not in that row but in the top bar, left of
+     * Done, and is the screen's only Undo. With a sheet open, a real tap on Compare reaches it and
+     * switches it on.
      */
     @Test
-    fun undo_and_compare_sit_in_the_tool_row() {
+    fun compare_sits_in_the_tool_row_and_undo_beside_done() {
         val viewModel = showEdit(null)
         (listOf<EditTool?>(null) + EditTool.entries).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
@@ -240,15 +242,18 @@ class CompareTest {
             assertEquals(open, viewModel.state.value.openTool)
 
             compose.onAllNodesWithTag(TOOL_UNDO_TAG).assertCountEquals(1)
-            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
+            compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertDoesNotExist()
+            compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed()
             compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
 
             val filters = bounds(editToolTag(EditTool.FILTERS))
             val undo = bounds(TOOL_UNDO_TAG)
+            val done = bounds(TOOL_DONE_TAG)
             val compare = bounds(EDIT_COMPARE_TAG)
-            assertTrue("Undo $undo is not right of Filters $filters with $open open", undo.left >= filters.right - 1f)
-            assertTrue("Compare $compare is not right of Undo $undo with $open open", compare.left >= undo.right - 1f)
-            assertTrue("Undo $undo is not level with Filters $filters with $open open", undo.top == filters.top)
+            assertTrue("Compare $compare is not right of Filters $filters with $open open", compare.left >= filters.left)
+            assertTrue("Compare $compare is not level with Filters $filters with $open open", compare.top == filters.top)
+            assertTrue("Undo $undo is not left of Done $done with $open open", undo.right <= done.left + 1f)
+            assertTrue("Undo $undo is not above the tool row $filters with $open open", undo.bottom <= filters.top)
         }
 
         viewModel.openTool(EditTool.ADJUST)

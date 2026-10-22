@@ -2,6 +2,10 @@ package com.phongkaster.kanso.ui.tool
 
 import androidx.annotation.StringRes
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_CONTRAST_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_SATURATION_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_WARMTH_TAG
 
 /**
  * The four sub-tools of the Edit screen's Adjust tool. Adjust shows one chip per entry and a

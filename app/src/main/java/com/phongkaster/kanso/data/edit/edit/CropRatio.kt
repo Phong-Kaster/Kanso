@@ -9,7 +9,7 @@ package com.phongkaster.kanso.data.edit.edit
  * of its own: the person sets the rectangle themselves (see [EditSettings.CropRect]).
  *
  * The enum holds only numbers, never words: what each shape is called on screen lives in the
- * panel (`ui/tool/EditPanel.kt`), so this file stays free of Android resources and can be used
+ * panel (`ui/tool/components/toolpanel/editpanel/EditPanel.kt`), so this file stays free of Android resources and can be used
  * by the processor and its tests alone.
  */
 enum class CropRatio(val widthPart: Int, val heightPart: Int) {

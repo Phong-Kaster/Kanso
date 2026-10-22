@@ -67,7 +67,7 @@ flowchart TD
 ```
 
 1. **The panel.**
-   [`ui/tool/ArtisticPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ArtisticPanel.kt):
+   [`ui/tool/components/toolpanel/ArtisticPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/ArtisticPanel.kt):
    `ArtisticPanelHost` keeps the chosen style (Warm wash at first) and the strength (1 at first)
    with `rememberSaveable`, so both survive a rotation and the app being stopped in the background.
    The stateless `ArtisticPanel` draws the chips (scrolling sideways on a narrow screen), the slider

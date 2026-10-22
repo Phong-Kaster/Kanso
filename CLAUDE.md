@@ -17,13 +17,45 @@ Standing rules for anyone writing code here, human or agent. Each one is the own
 
 - Every top-level class, interface, object and enum lives in its own file, named after it — never two
   in one file. Types nested inside one (the cases of a sealed interface) stay with it. Top-level
-  functions, composables included, are not classes: a screen's composables share its `…Screen.kt`.
+  functions, composables included, are not classes (see "Screen packages show the hierarchy" below
+  for where each composable lives).
 - A screen's package holds at least three files, for example `ui/home/`: `HomeScreen.kt` (the
-  composables), `HomeViewModel.kt` and `HomeUiState.kt`.
+  parent layout), `HomeViewModel.kt` and `HomeUiState.kt`.
 - Every screen has a ViewModel and a UiState, even one whose content is fixed, so every screen reads
   the same way. The ViewModel exposes exactly one `StateFlow<…UiState>`; the stateless `…Content`
   composable takes that UiState and its callbacks.
 - The rule covers `app/src/test` too: a fake, a helper or a test's own data class gets its own file.
+
+## Screen packages show the hierarchy
+
+The folder tree of a screen shows which composable is the parent layout, which are its children and
+which are their sub-components (owner's decision, 2026-10-21). One composable per file, named after it; a
+stateful composable and its stateless `…Content` twin (and a preview's sample helper) share the file.
+
+```
+ui/tool/
+  ToolScreen.kt        the parent layout: the screen's one stateful + stateless pair
+  ToolViewModel.kt
+  ToolUiState.kt
+  components/          every child composable the screen draws, one level below it
+    topbar/            a child that has its own sub-components gets a folder named after it
+      ToolTopBar.kt    the child itself, with its preview
+      DoneButton.kt    its sub-components, each with a preview
+      UndoButton.kt
+    photocard/ …
+```
+
+- The screen file stays at the top of the screen's package; it never holds a child composable.
+- A child with no sub-components is a single file straight in `components/`.
+- A child that has sub-components gets a folder `components/<child>/` holding the child and its
+  sub-components. A sub-component with children of its own repeats the rule one level further down.
+- Parts shared by several children of one screen stay in `components/`; parts shared by several
+  screens go in `ui/common/`.
+- Exception: a composable that cannot be drawn in a preview (an endless animation such as Material's
+  `LoadingIndicator`, which hangs the preview renderer) stays `private` in its parent's file, so the
+  parent's preview covers it (`PhotoLoadingIndicator` in `PhotoCard.kt`).
+- A composable that moved out of the screen file becomes `internal` (it was `private`). Previews of the
+  whole screen stay in the screen file; each component's own previews sit in its own file.
 
 ## Motion uses the Compose Animation APIs
 

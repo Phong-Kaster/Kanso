@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,11 +30,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.common.SliderWithValue
-import kotlin.math.roundToInt
 import com.phongkaster.kanso.data.edit.artistic.ArtisticStyle
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.common.SliderWithValue
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import kotlin.math.roundToInt
 
 /** Test tag of the Artistic panel's strength slider. */
 const val ARTISTIC_STRENGTH_TAG = "artistic-strength"

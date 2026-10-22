@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.ToolProcessor
@@ -22,6 +21,10 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.AdjustSlider
+import com.phongkaster.kanso.ui.tool.ToolUiState
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.enhancepanel.EnhancePanel
 
 /** Test tag of the Edit tool's controls, in the options strip under the photo. */
 const val EDIT_PANEL_TAG = "edit-panel"
@@ -112,18 +115,6 @@ fun ToolPanel(
         )
         Tool.RETOUCH -> RetouchPanel(onApply = onRetouch, modifier = modifier, enabled = idle)
         Tool.ARTISTIC -> ArtisticPanelHost(onApply = onStylize, modifier = modifier, enabled = idle)
-    }
-}
-
-/** The empty, tagged slot of [tool]'s panel: the place its controls go, with none drawn. */
-@Composable
-private fun EmptyPanel(tool: Tool, modifier: Modifier) {
-    when (tool) {
-        Tool.EDIT -> Box(modifier.testTag(EDIT_PANEL_TAG))
-        Tool.REMOVE_BACKGROUND -> Box(modifier.testTag(CUTOUT_PANEL_TAG))
-        Tool.ENHANCE -> Box(modifier.testTag(ENHANCE_PANEL_TAG))
-        Tool.RETOUCH -> Box(modifier.testTag(RETOUCH_PANEL_TAG))
-        Tool.ARTISTIC -> Box(modifier.testTag(ARTISTIC_PANEL_TAG))
     }
 }
 

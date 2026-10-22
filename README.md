@@ -62,7 +62,7 @@ size, progress, Undo, failures and Done.
 | Feature | What it does |
 |---|---|
 | [Home](docs/features/home.md) | The carousel of the four AI tools, five round tool shortcuts, the Recent edits strip, and the floating tab bar with its Camera button. |
-| [Settings: theme mode and theme colour](docs/features/settings-and-theme.md) | Light, dark or system; Kanso blue, wallpaper colours (Android 12+) or a custom colour. Applied at once and kept across restarts. |
+| [Settings: theme mode, theme colour and text size](docs/features/settings-and-theme.md) | A menu of three settings, each on its own screen: light, dark or system; Kanso blue, wallpaper colours (Android 12+) or an exact custom colour; Kanso's own text size (the phone's font size is ignored). Applied at once and kept across restarts. |
 | [Launcher icon](docs/features/launcher-icon.md) | The home-screen icon switches to the closest of nine background colours to match the theme colour. |
 
 ---
@@ -100,7 +100,7 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    (`navigation/ToolPhoto.kt`) with `ui/tool/ToolScreen.kt` and a `ui/tool/ToolViewModel.kt`, which
    exposes one
    `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit layout is
-   `ui/tool/EditToolContent.kt`: the row of tools (`ui/tool/EditToolRow.kt`) is the `Scaffold`'s
+   `ui/tool/components/editbottombar/EditBottomBar.kt`: the row of tools (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) is the `Scaffold`'s
    `bottomBar` (`EditBottomBar`), and a tapped tool's sheet appears just above the row, as in Adobe
    Lightroom; the photo (`EditPhotoArea`) fills the space between the top bar and the bottom bar.
    The sheet area is one fixed height (136 dp) open or not, so the photo never changes size;
@@ -108,8 +108,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    sub-tool chips and one slider (`ui/tool/AdjustSlider.kt`); very large text scrolls inside it.
    The sheet is a plain `Surface` cross-faded with `AnimatedContent`, not a `ModalBottomSheet`,
    so Undo and Compare, the last two entries of the row
-   (`ui/tool/EditToolRow.kt`), stay usable. The sheets' controls are
-   `ui/tool/EditPanel.kt`.
+   (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`), stay usable. The sheets' controls are
+   `ui/tool/components/toolpanel/editpanel/EditPanel.kt`.
 2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
    (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the
    original for the whole visit; the photo's file is never changed.
@@ -118,13 +118,13 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    with its undo stack. A chip, turn or flip calls `changeSettings`, a crop shape
    `chooseCropRatio`, a finished cropper gesture `commitCrop`, a slider `previewSettings` while it
    moves and `commitSettings` when let go (the whole drag is one Undo step). The cropper,
-   `ui/tool/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview`
+   `ui/tool/components/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview`
    (`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`) and its `CropState`;
    it always shows the plain decoded photo, un-turned and un-flipped, because the crop is kept as
    fractions of the original and the render crops before it turns. When the last finger lifts, a
    rectangle that moved by more than a tenth of a percent becomes one `commitCrop`. All of this,
    and the row and the sheets, runs on the main thread as Compose draws; no pixel is computed.
-4. **Live preview.** `LivePreviewImage` (in `ui/tool/EditToolContent.kt`) draws the original on a
+4. **Live preview.** `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) draws the original on a
    Compose `Canvas` every frame: crop, quarter turns, flips, and the four sliders as one
    `ColorFilter.colorMatrix` from `data/edit/edit/EditColourMatrix.kt`. A filter is the one part
    computed on the CPU: the ViewModel sends filter changes through a conflated `Channel`, and
@@ -210,7 +210,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
   the icon colour never closes the app (see [Launcher icon](docs/features/launcher-icon.md)).
   `KansoApplication` starts Koin with `di/AppModule.kt`.
 - **Navigation 3** (`navigation/KansoNavHost.kt`): one saved back stack of `@Serializable` keys:
-  `Home`, `MyEdits`, `Settings` (the tabs), `Gallery(tool)`, `Camera(tool)`, `ToolPhoto(tool, uri)`,
+  `Home`, `MyEdits`, `Settings` (the tabs), `ThemeModeSettings`, `ThemeColourSettings`, `TextSizeSettings` (the three setting screens), `Gallery(tool)`, `Camera(tool)`, `ToolPhoto(tool, uri)`,
   `Result`, `EditedPhoto(uri)`. Each entry gets its own `ViewModelStore`, so a ViewModel
   survives rotation and is cleared when its screen is popped. The tabs live in `KansoTabShell`,
   under a floating tab bar.
@@ -237,7 +237,7 @@ native libraries and bundled assets, are packed into the APK. Only these files o
 | Tool | Wrapper file in `app/` | Engine class | Model or library (all bundled) |
 |---|---|---|---|
 | Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), and six curve strips in `filter_materials/map/` (`libs/editimage.aar`): 1977map.png, kelvinMap.png, nashvilleMap.png, waldenMap.png, hudsonMap.png and amaroMap.png |
-| Edit (Crop) | `ui/tool/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`, package `com.mr0xf00.easycrop`) | none: Compose drawing and touch handling |
+| Edit (Crop) | `ui/tool/components/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`, package `com.mr0xf00.easycrop`) | none: Compose drawing and touch handling |
 | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` (its library ships the model) |
 | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |
 | Retouch | `data/edit/retouch/EngineFaceFinder.kt` | `DetectFaceLandmarkUC` (with `UnifyPoint` from `core/common`) | `face_landmarker.task` |
@@ -283,7 +283,7 @@ only exercised on a device or emulator. Each feature page lists its own tests.
 | Path | What it is |
 |---|---|
 | `app/` | The Kanso app, written by Foreman. |
-| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor`. The Edit screen's Crop uses `core/imagecrop`'s cropper (handles, drag, pinch; `ui/tool/EditCropper.kt`); `core/overlaybrush` is built in but not called. |
+| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor`. The Edit screen's Crop uses `core/imagecrop`'s cropper (handles, drag, pinch; `ui/tool/components/EditCropper.kt`); `core/overlaybrush` is built in but not called. |
 | `libs/` | Those prebuilt libraries (AARs), plus two TensorFlow Lite AARs. `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. No build file references `tensorflow-lite.aar`. |
 | `opencv/` | The OpenCV Android SDK module the engine depends on. |
 | `reference/retica-app/` | Retica's original app code, **read-only**: how the engine's use cases are called. It is not built, and nothing in Kanso imports it. |

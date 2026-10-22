@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.components.Checkerboard
 
 /**
  * Remove background's controls, shown in the tool screen's options strip: one button, "Cut out

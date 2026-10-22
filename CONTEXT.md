@@ -10,7 +10,7 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 its own `Camera` key).
 
 **EditTool** - One of the four groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`. Each is an entry in the row under the photo (`ui/tool/EditToolRow.kt`) and
+`ADJUST`, `FILTERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
 opens one sheet; only one sheet is open at a time. Holds no strings or icons.
 `data/edit/edit/EditTool.kt`. *Not* a `Tool`: all four live inside `Tool.EDIT`.
 
@@ -36,7 +36,7 @@ tools' Undo steps back through a list of earlier pictures in `ToolViewModel`.
 
 **Preview (live preview)** - What the Edit screen draws while the person edits, with no full-size
 render:
-- `LivePreviewImage` (`ui/tool/EditToolContent.kt`) draws the photo with Compose every frame,
+- `LivePreviewImage` (`ui/tool/components/photocard/LivePreviewImage.kt`) draws the photo with Compose every frame,
   applying crop, then turns, then flips, and the four sliders as a GPU
   `ColorFilter.colorMatrix`.
 - `EditColourMatrix` (`data/edit/edit/EditColourMatrix.kt`) is the one place the four sliders

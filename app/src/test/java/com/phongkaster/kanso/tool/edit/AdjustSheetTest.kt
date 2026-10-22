@@ -27,14 +27,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.ui.tool.AdjustSlider
-import com.phongkaster.kanso.ui.tool.EDIT_BRIGHTNESS_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_CONTRAST_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_SATURATION_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_WARMTH_TAG
-import com.phongkaster.kanso.ui.tool.EditPanelContent
-import com.phongkaster.kanso.ui.tool.editAdjustChipTag
-import com.phongkaster.kanso.ui.tool.editSliderValueTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_CONTRAST_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_SATURATION_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_WARMTH_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editAdjustChipTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editSliderValueTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -142,8 +142,8 @@ class AdjustSheetTest {
     }
 
     /**
-     * Each slider's number sits right beside its name, on the same line: to the name's right,
-     * before the slider's track, and vertically centred with it.
+     * Each slider's number sits at the right end of its slider, on the same line: after the name
+     * and the slider's track, and vertically centred with the slider.
      */
     @Test
     fun each_number_is_shown_beside_its_name() {
@@ -155,11 +155,11 @@ class AdjustSheetTest {
             val number = compose.onNodeWithTag(editSliderValueTag(tag)).fetchSemanticsNode()
             val slider = compose.onNodeWithTag(tag).fetchSemanticsNode()
             assertTrue("$name: the number overlaps its name", left(number) >= right(label) - 1f)
-            assertTrue("$name: the number reaches into the slider", right(number) <= left(slider) + SLIDER_TARGET_SLACK)
-            val labelMiddle = middleY(label)
+            assertTrue("$name: the number is not at the slider's right end", right(number) >= right(slider) - SLIDER_TARGET_SLACK)
+            val sliderMiddle = middleY(slider)
             assertTrue(
-                "$name: the number is not on the name's line",
-                labelMiddle >= top(number) && labelMiddle <= bottom(number),
+                "$name: the number is not on the slider's line",
+                sliderMiddle >= top(number) && sliderMiddle <= bottom(number),
             )
         }
     }

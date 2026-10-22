@@ -85,11 +85,11 @@ flowchart TD
 1. **The screen and its state.** The Edit screen is
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
-   [`ui/tool/EditToolContent.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt)
+   [`ui/tool/components/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt)
    for its layout: `EditPhotoArea`, the photo with the
    [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
    filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
-   [`ui/tool/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolRow.kt)
+   [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
    height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
@@ -118,12 +118,12 @@ flowchart TD
    slider move pass a complete new `EditSettings`; a crop chip passes only a `CropRatio`, which
    `EditSession.cropRatioChosen` turns into the rectangle; the cropper passes a `CropRect`; and a
    slider release (`commitSettings`) passes nothing, it just closes the drag as one undo step:
-   - [`ui/tool/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt)
+   - [`ui/tool/components/toolpanel/editpanel/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt)
      draws the open sheet from the session's settings (it keeps no state of its own, so a slider
      reopens where it was left). A turn, a flip or a filter chip calls `changeSettings`; a crop
      shape calls `chooseCropRatio`; a slider calls `previewSettings` while it moves and
      `commitSettings` when let go.
-   - [`ui/tool/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditCropper.kt)
+   - [`ui/tool/components/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditCropper.kt)
      wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
      [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
      It always shows the original photo un-turned and un-flipped, because the crop is stored as
@@ -141,7 +141,7 @@ flowchart TD
      side when the photo has an odd number of quarter turns, so the turned picture comes out in the
      shape chosen; `undo` goes back to the last entry. There is no redo.
 4. **The live preview.** The photo card draws
-   `LivePreviewImage` (in `ui/tool/EditToolContent.kt`) whenever Compare is off and the Crop sheet
+   `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) whenever Compare is off and the Crop sheet
    is closed. It is a Compose `Canvas` that, every frame, takes only the crop rectangle from the
    bitmap (rounded exactly as the final render rounds it), turns it, mirrors it, fits it inside the
    card, and draws it through `ColorFilter.colorMatrix` with the four sliders' matrix from

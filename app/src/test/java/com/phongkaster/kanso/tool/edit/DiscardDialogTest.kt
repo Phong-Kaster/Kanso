@@ -15,10 +15,10 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.tool.DISCARD_CONFIRM_TAG
-import com.phongkaster.kanso.ui.tool.DISCARD_DIALOG_TAG
-import com.phongkaster.kanso.ui.tool.DISCARD_KEEP_TAG
-import com.phongkaster.kanso.ui.tool.DiscardChangesDialog
+import com.phongkaster.kanso.ui.tool.components.DISCARD_CONFIRM_TAG
+import com.phongkaster.kanso.ui.tool.components.DISCARD_DIALOG_TAG
+import com.phongkaster.kanso.ui.tool.components.DISCARD_KEEP_TAG
+import com.phongkaster.kanso.ui.tool.components.DiscardChangesDialog
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
