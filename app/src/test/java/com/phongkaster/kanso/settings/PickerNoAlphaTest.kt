@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeColourScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
@@ -85,12 +86,9 @@ class PickerNoAlphaTest {
         assertTrue("No percentage text expected, found: $percentages", percentages.isEmpty())
     }
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme colour screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeColourScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

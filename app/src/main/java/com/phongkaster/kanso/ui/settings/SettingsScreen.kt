@@ -1,4 +1,4 @@
-﻿package com.phongkaster.kanso.ui.settings
+package com.phongkaster.kanso.ui.settings
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -57,7 +60,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -74,6 +80,7 @@ import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
 import com.phongkaster.kanso.ui.common.ClassicSlider
+import com.phongkaster.kanso.ui.common.RoundBackButton
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme
@@ -102,6 +109,21 @@ const val THEME_COLOUR_CUSTOM_TAG = "theme-colour-custom"
 
 /** The test tag on the node holding the colour picker, shown while Custom is selected. */
 const val CUSTOM_COLOUR_PICKER_TAG = "custom-colour-picker"
+
+/** The test tag on the rounded container that holds the Settings menu rows. */
+const val SETTINGS_GROUP_MENU_TAG = "settings-group-menu"
+
+/** The test tag on the Theme mode row of the Settings menu. */
+const val SETTINGS_MENU_THEME_MODE_TAG = "settings-menu-theme-mode"
+
+/** The test tag on the Theme colour row of the Settings menu. */
+const val SETTINGS_MENU_THEME_COLOUR_TAG = "settings-menu-theme-colour"
+
+/** The test tag on the colour swatch of the Theme colour row of the Settings menu. */
+const val SETTINGS_MENU_THEME_COLOUR_SWATCH_TAG = "settings-menu-theme-colour-swatch"
+
+/** The test tag on the Text size row of the Settings menu. */
+const val SETTINGS_MENU_TEXT_SIZE_TAG = "settings-menu-text-size"
 
 /** The test tag on the rounded container that holds the three theme mode rows. */
 const val SETTINGS_GROUP_APPEARANCE_TAG = "settings-group-appearance"
@@ -162,77 +184,76 @@ fun settingsRowDescriptionTag(rowTag: String): String = "$rowTag-description"
 private val PickerSurfaceColor = Color.White
 
 /** The space between the screen's left and right edges and the grouped containers. */
-private val SCREEN_PADDING = 16.dp
+internal val SCREEN_PADDING = 16.dp
 
 /**
  * Where the small "Theme mode" and "Theme colour" labels start: in line with the icons of the
  * rows below them (the container's edge, its own padding and the row's padding add up to this).
  */
-private val GROUP_LABEL_START = 32.dp
+internal val GROUP_LABEL_START = 32.dp
 
 /** The space between a grouped container's edge and the rows inside it. */
-private val GROUP_PADDING = 4.dp
+internal val GROUP_PADDING = 4.dp
 
 /** The space between the left and right edges of a row and its icon and radio button. */
-private val ROW_PADDING = 12.dp
+internal val ROW_PADDING = 12.dp
 
 /** The smallest height of a row: 56 dp, comfortably above Android's 48 dp touch target. */
-private val ROW_MIN_HEIGHT = 56.dp
+internal val ROW_MIN_HEIGHT = 56.dp
 
 /** The space above and below a row's title and description, inside the row. */
-private val ROW_VERTICAL_PADDING = 8.dp
+internal val ROW_VERTICAL_PADDING = 8.dp
 
 /** The side of the tinted rounded square that holds a row's icon. */
-private val BADGE_SIZE = 40.dp
+internal val BADGE_SIZE = 40.dp
 
 /** The size of a colour swatch: big enough to read the colour at a glance. */
-private val SWATCH_SIZE = 28.dp
+internal val SWATCH_SIZE = 28.dp
 
 /**
  * The space above the large "Settings" title: 8 dp, the same as above Home's "Kanso" title, so the
  * two titles sit at the same height and a tab change does not make the title jump.
  */
-private val TITLE_TOP_PADDING = 8.dp
+internal val TITLE_TOP_PADDING = 8.dp
 
 /**
- * The Settings screen: one scrolling column that starts with a large "Settings" title, then the
- * "Appearance" section, where the user picks the theme mode and the theme colour. Each setting
- * is a rounded group of rows, and each colour row shows a small circle of its colour.
+ * The Settings screen, now a short menu: a large "Settings" title, then one row for each setting
+ * (Theme mode, Theme colour, Text size). A row shows the setting's name and what it is set to now,
+ * and tapping it opens that setting on a screen of its own (see ThemeModeScreen,
+ * ThemeColourScreen and TextSizeScreen), so each setting has the whole screen to itself instead of
+ * sharing one long page.
  *
  * Settings is one of the app's three tabs, reached from the floating tab bar the navigation host
  * draws over it, so it has no back arrow of its own: the system Back gesture or button takes the
- * person Home, and the bar takes them to any other tab.
+ * person Home, and the bar takes them to any other tab. The three screens it opens are not tabs;
+ * they have a Back button.
  *
  * Like Home, this screen is split in two (state hoisting; see `HomeScreen` for the full story).
- * This function is the *stateful* part: it reads Settings' state (the saved theme mode and theme
- * colour, one [SettingsUiState]) from [viewModel], asks the phone for its wallpaper colour
- * (Android 12 and later), and hands all of that, with the ViewModel's functions as callbacks, to
- * the stateless [SettingsContent], which does all the drawing.
+ * This function is the *stateful* part: it reads the saved choices (one [SettingsUiState]) from
+ * [viewModel], asks the phone for its wallpaper colour (Android 12 and later), and hands them to
+ * the stateless [SettingsContent], which does all the drawing. [onOpenThemeMode],
+ * [onOpenThemeColour] and [onOpenTextSize] are the three row taps.
  *
- * What is specific here: the wallpaper colour is a fact about the phone, not a saved choice, so
- * it is gathered here and passed down as a plain colour. `LocalContext.current` is the Android
- * context the screen is drawn in, through which the system's colours are read, and
- * `dynamicLightColorScheme(context)` is the light colour scheme Android builds from the
- * wallpaper; its `primary` is the colour the wallpaper row's swatch shows. A phone older than
- * Android 12 has no wallpaper colours, so it gets null, which leaves the wallpaper row out. A
- * preview can pass any colour, or null, whatever Android version it is drawn on.
- *
- * The [viewModel] is passed in by the navigation entry, which owns it. [contentPadding] is the
- * extra space the caller asks for at the end of the list: the navigation host passes the height
- * the floating tab bar covers, so the last row can be scrolled up above the bar.
+ * The wallpaper colour is a fact about the phone, not a saved choice, so it is gathered here and
+ * passed down as a plain colour: `dynamicLightColorScheme(context)` is the light colour scheme
+ * Android builds from the wallpaper, and its `primary` is the colour the Theme colour row's
+ * swatch shows while "From wallpaper" is chosen. A phone older than Android 12 has no wallpaper
+ * colours, so it gets null. [contentPadding]'s bottom is the floating tab bar's height, which the
+ * last row can be scrolled above.
  */
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
+    onOpenThemeMode: () -> Unit,
+    onOpenThemeColour: () -> Unit,
+    onOpenTextSize: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
-    // collectAsState reads the ViewModel's StateFlow as Compose state: when the saved mode or
-    // colour changes, a new snapshot arrives and this screen re-draws with the new selection.
+    // collectAsState reads the ViewModel's StateFlow as Compose state: when a saved choice
+    // changes, a new snapshot arrives and the rows' summaries update.
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    // The wallpaper colours exist only from Android 12 (API 31); older phones get null and are
-    // not offered the wallpaper row. The check also tells Android's lint the call below is safe.
     val wallpaperColour = if (isWallpaperColourAvailable()) {
         dynamicLightColorScheme(context).primary
     } else {
@@ -242,57 +263,40 @@ fun SettingsScreen(
     SettingsContent(
         state = state,
         wallpaperColour = wallpaperColour,
-        onThemeModeSelected = viewModel::setThemeMode,
-        onKansoBlueChosen = viewModel::onKansoBlueChosen,
-        onWallpaperChosen = viewModel::onWallpaperChosen,
-        onCustomChosen = viewModel::onCustomChosen,
-        onCustomColourChosen = viewModel::onCustomColourChosen,
+        onOpenThemeMode = onOpenThemeMode,
+        onOpenThemeColour = onOpenThemeColour,
+        onOpenTextSize = onOpenTextSize,
         modifier = modifier,
         contentPadding = contentPadding,
-        onTextScaleChosen = viewModel::setTextScale,
     )
 }
 
 /**
- * The stateless part of Settings (see [SettingsScreen] for why there are two): draws the large
- * "Settings" title and the "Appearance" section, with the theme mode and theme colour of [state]
- * marked as chosen.
+ * The stateless part of Settings (see [SettingsScreen] for why there are two): the large title,
+ * the "Appearance" section header and one [SettingsMenuRow] per setting inside a rounded group
+ * (tagged [SETTINGS_GROUP_MENU_TAG]).
  *
- * The section holds two rounded groups. The first holds the three theme mode rows; the second
- * the colour rows, in this order: Kanso blue, then From wallpaper when [wallpaperColour] is not
- * null, then Custom colour. Each colour row shows a swatch of its colour; the wallpaper row's is
- * [wallpaperColour], the light `primary` of the phone's wallpaper scheme. It is a separate
- * parameter, not part of [state], because it is a fact about the phone rather than a saved
- * choice; null means the phone has no wallpaper colours (below Android 12).
+ * Each row's summary says what the setting is now, taken from [state]: the theme mode's name, the
+ * colour's name ("Kanso blue", "From wallpaper", or the custom colour's hex code, with a swatch of
+ * the colour) and the text size as a percentage. [wallpaperColour] is the swatch of the wallpaper
+ * choice; null means the phone has none (below Android 12).
  *
  * The title is the first item of the scrolling column, not a top bar: Settings is a tab, so it
  * has no back arrow to put in one, and like Home's title it scrolls away with the rest. It uses
- * `headlineLargeEmphasized`, one of the bolder "Emphasized" text styles of Material 3 Expressive
- * (see `HomeTitle` for the idea), with 8 dp above it and 16 dp at each side: exactly Home's
- * title, so moving between the two tabs keeps the title in one place. With no top bar, the [Scaffold] adds the status
- * bar's height to `innerPadding` instead, so the title never sits under the clock.
- *
- * A plain scrolling Column holds the section: the list is short, so it is drawn all at once, and
- * every row exists for tests and screen readers even when it is scrolled out of view.
- *
- * Every tap is reported through a callback and nothing is saved here: [onThemeModeSelected] for a
- * mode row, [onKansoBlueChosen], [onWallpaperChosen] and [onCustomChosen] for the colour rows,
- * and [onCustomColourChosen] for each colour picked in the colour picker. [contentPadding]'s
- * bottom is added after the last row, inside the scrolling part, so the person can scroll the
- * last row up above the floating tab bar.
+ * `headlineLargeEmphasized`, one of the bolder "Emphasized" text styles of Material 3 Expressive,
+ * with 8 dp above it and 16 dp at each side: exactly Home's title, so moving between the two tabs
+ * keeps the title in one place. [contentPadding]'s bottom is added after the last row, inside the
+ * scrolling part, so the last row can be scrolled up above the floating tab bar.
  */
 @Composable
 fun SettingsContent(
     state: SettingsUiState,
     wallpaperColour: Color?,
-    onThemeModeSelected: (ThemeMode) -> Unit,
-    onKansoBlueChosen: () -> Unit,
-    onWallpaperChosen: () -> Unit,
-    onCustomChosen: () -> Unit,
-    onCustomColourChosen: (Color) -> Unit,
+    onOpenThemeMode: () -> Unit,
+    onOpenThemeColour: () -> Unit,
+    onOpenTextSize: () -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    onTextScaleChosen: (Float) -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier.testTag(SETTINGS_SCREEN_TAG),
@@ -307,8 +311,7 @@ fun SettingsContent(
                 .consumeWindowInsets(innerPadding)
                 .verticalScroll(rememberScrollState())
                 // Empty space after the last row, so scrolled to its end the list comes to rest
-                // above the navigation bar and the bottom gesture zone, whichever is taller (the
-                // same rule as Home's column; see HomeContent).
+                // above the navigation bar and the bottom gesture zone, whichever is taller.
                 .windowInsetsPadding(
                     WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
                 )
@@ -320,26 +323,170 @@ fun SettingsContent(
         ) {
             SettingsTitle()
             SectionHeader(text = stringResource(R.string.appearance))
-            ThemeModeChoice(
-                selected = state.themeMode,
-                onSelect = onThemeModeSelected,
-            )
-            ThemeColourChoice(
-                selected = state.themeColour,
-                customSeedArgb = state.customSeedArgb,
-                wallpaperColour = wallpaperColour,
-                onKansoBlue = onKansoBlueChosen,
-                onWallpaper = onWallpaperChosen,
-                onCustom = onCustomChosen,
-                onCustomColourChanged = onCustomColourChosen,
-            )
-            TextSizeChoice(
-                savedScale = state.textScale,
-                onScaleChosen = onTextScaleChosen,
-            )
+            SettingsGroup(testTag = SETTINGS_GROUP_MENU_TAG) {
+                SettingsMenuRow(
+                    label = stringResource(R.string.theme_mode),
+                    summary = stringResource(state.themeMode.labelRes()),
+                    iconRes = state.themeMode.iconRes(),
+                    onClick = onOpenThemeMode,
+                    testTag = SETTINGS_MENU_THEME_MODE_TAG,
+                )
+                SettingsMenuRow(
+                    label = stringResource(R.string.theme_colour_title),
+                    summary = themeColourSummary(state.themeColour),
+                    iconRes = R.drawable.ic_palette,
+                    onClick = onOpenThemeColour,
+                    testTag = SETTINGS_MENU_THEME_COLOUR_TAG,
+                    trailing = {
+                        ColourSwatch(
+                            colour = themeColourSwatch(state.themeColour, wallpaperColour),
+                            testTag = SETTINGS_MENU_THEME_COLOUR_SWATCH_TAG,
+                        )
+                    },
+                )
+                SettingsMenuRow(
+                    label = stringResource(R.string.text_size),
+                    summary = stringResource(R.string.text_size_value, (state.textScale * 100).roundToInt()),
+                    iconRes = R.drawable.ic_text_fields,
+                    onClick = onOpenTextSize,
+                    testTag = SETTINGS_MENU_TEXT_SIZE_TAG,
+                )
+            }
         }
     }
 }
+
+/** Returns the words that name [colour] on the Theme colour row: its name, or the hex code of a custom one. */
+@Composable
+private fun themeColourSummary(colour: ThemeColour): String = when (colour) {
+    ThemeColour.KansoBlue -> stringResource(R.string.theme_colour_kanso_blue)
+    ThemeColour.Wallpaper -> stringResource(R.string.theme_colour_wallpaper)
+    // %06X writes the red, green and blue parts as six hex digits; and 0xFFFFFF drops the alpha.
+    is ThemeColour.Custom -> "#%06X".format(colour.seedArgb and 0xFFFFFF)
+}
+
+/**
+ * Returns the colour of the swatch on the Theme colour row: Kanso blue's light primary, the
+ * wallpaper's (blue when the phone has none), or the custom colour itself.
+ */
+@Composable
+private fun themeColourSwatch(colour: ThemeColour, wallpaperColour: Color?): Color {
+    val kansoBlue = remember { seedColorScheme(KANSO_BLUE_SEED, dark = false).primary }
+    return when (colour) {
+        ThemeColour.KansoBlue -> kansoBlue
+        ThemeColour.Wallpaper -> wallpaperColour ?: kansoBlue
+        is ThemeColour.Custom -> Color(colour.seedArgb)
+    }
+}
+
+/**
+ * One row of the Settings menu: the icon [iconRes] in a tinted rounded square, the [label] with
+ * the setting's current value [summary] under it, an optional [trailing] element (a colour's
+ * swatch) and an arrow at the end that says "opens another screen". Tapping anywhere on the row
+ * calls [onClick]. The row is tagged [testTag].
+ *
+ * Unlike [SettingsChoiceRow] it is not a choice, so it has no radio button and no selected look:
+ * it is a plain button (`Role.Button`) that leads to the setting's own screen.
+ */
+@Composable
+internal fun SettingsMenuRow(
+    label: String,
+    summary: String,
+    @DrawableRes iconRes: Int,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = ROW_MIN_HEIGHT)
+            .clip(MaterialTheme.shapes.large)
+            .clickable(role = Role.Button, onClick = onClick)
+            .testTag(testTag)
+            .padding(horizontal = ROW_PADDING, vertical = ROW_VERTICAL_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsIconBadge(iconRes = iconRes, rowTag = testTag)
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(settingsRowDescriptionTag(testTag)),
+            )
+        }
+        if (trailing != null) {
+            Spacer(Modifier.width(12.dp))
+            trailing()
+        }
+        Spacer(Modifier.width(8.dp))
+        // Decorative: the row itself is the button, and its label names where it leads.
+        Icon(
+            painter = painterResource(R.drawable.ic_arrow_forward),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The frame every setting's own screen shares: the round Back button and the setting's [title] in
+ * a bar at the top, and [content] below it in a column that scrolls. [onBack] is the Back button.
+ *
+ * The column keeps clear of the on-screen keyboard (`imePadding`) and scrolls, so a text field
+ * low on the screen (the colour picker's hex box) is never hidden behind the keyboard and the
+ * rest of the screen can still be reached while it is open. The screen is tagged [testTag].
+ */
+@Composable
+internal fun SettingsDetailScreen(
+    title: String,
+    onBack: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Scaffold(
+        modifier = modifier.testTag(testTag),
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = SCREEN_PADDING, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RoundBackButton(onClick = onBack)
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(
+                    WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+                )
+                .imePadding()
+                .padding(bottom = 24.dp),
+            content = content,
+        )
+    }
+}
+
 
 /**
  * The text size setting: a small label, then a rounded group (tagged [SETTINGS_GROUP_TEXT_SIZE_TAG])
@@ -354,7 +501,7 @@ fun SettingsContent(
  * drawn at [savedScale].
  */
 @Composable
-private fun TextSizeChoice(savedScale: Float, onScaleChosen: (Float) -> Unit) {
+internal fun TextSizeChoice(savedScale: Float, onScaleChosen: (Float) -> Unit) {
     var dragged by remember(savedScale) { mutableFloatStateOf(savedScale) }
     GroupLabel(text = stringResource(R.string.text_size))
     SettingsGroup(testTag = SETTINGS_GROUP_TEXT_SIZE_TAG) {
@@ -405,7 +552,7 @@ private fun TextSizeChoice(savedScale: Float, onScaleChosen: (Float) -> Unit) {
  * text "Settings" is on screen twice; tests tell the two apart by the tab's test tag.
  */
 @Composable
-private fun SettingsTitle(modifier: Modifier = Modifier) {
+internal fun SettingsTitle(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.settings),
         style = MaterialTheme.typography.headlineLargeEmphasized,
@@ -421,7 +568,7 @@ private fun SettingsTitle(modifier: Modifier = Modifier) {
  * [selected] marked. Tapping a row calls [onSelect] with that row's mode.
  */
 @Composable
-private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+internal fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
     GroupLabel(text = stringResource(R.string.theme_mode))
     SettingsGroup(testTag = SETTINGS_GROUP_APPEARANCE_TAG) {
         ThemeMode.entries.forEach { mode ->
@@ -458,7 +605,7 @@ private fun ThemeModeChoice(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) 
  * [onKansoBlue], [onWallpaper] or [onCustom].
  */
 @Composable
-private fun ThemeColourChoice(
+internal fun ThemeColourChoice(
     selected: ThemeColour,
     customSeedArgb: Int,
     wallpaperColour: Color?,
@@ -529,7 +676,8 @@ private fun ThemeColourChoice(
  * fixed black text stays readable in light and dark mode. Every change calls [onColorChanged].
  */
 @Composable
-private fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
+internal fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
+    val focusManager = LocalFocusManager.current
     // A Surface is a Material 3 container with its own background colour and shape. Its colour
     // is fixed white on purpose, not taken from the theme (see PickerSurfaceColor). No content
     // colour is set: the picker gives every piece of its own text an explicit colour and never
@@ -541,7 +689,20 @@ private fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = SCREEN_PADDING, vertical = 8.dp)
-            .testTag(CUSTOM_COLOUR_PICKER_TAG),
+            .testTag(CUSTOM_COLOUR_PICKER_TAG)
+            // Touching the picker while the hex box has the keyboard open: the first finger down
+            // anywhere on the card takes the focus away from the box, which closes the keyboard,
+            // so dragging the colour is never fought over by a typing session. It only watches
+            // (the Initial pass sees the touch before the picker does) and consumes nothing, so
+            // the picker still gets the touch.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.pressed && !it.previousPressed }) focusManager.clearFocus()
+                    }
+                }
+            },
     ) {
         // The picker remembers its own colour once it is shown, so [seedArgb] only sets where it
         // starts; it does not jump back while the person drags. showAlpha = false hides the
@@ -560,7 +721,7 @@ private fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
  * title style. `heading()` marks it as a heading for screen readers, so TalkBack can jump to it.
  */
 @Composable
-private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
+internal fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleMediumEmphasized,
@@ -576,7 +737,7 @@ private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
  * colour and lined up with the icons of the rows below it.
  */
 @Composable
-private fun GroupLabel(text: String, modifier: Modifier = Modifier) {
+internal fun GroupLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
@@ -605,7 +766,7 @@ private fun GroupLabel(text: String, modifier: Modifier = Modifier) {
  * tappable; its rows are.
  */
 @Composable
-private fun SettingsGroup(
+internal fun SettingsGroup(
     testTag: String,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
@@ -659,7 +820,7 @@ private fun SettingsGroup(
  * clipped to rounded corners first, so the tint and the ripple a tap draws are rounded too.
  */
 @Composable
-private fun SettingsChoiceRow(
+internal fun SettingsChoiceRow(
     label: String,
     description: String,
     @DrawableRes iconRes: Int,
@@ -733,7 +894,7 @@ private fun SettingsChoiceRow(
  * a light square.
  */
 @Composable
-private fun SettingsIconBadge(@DrawableRes iconRes: Int, rowTag: String, modifier: Modifier = Modifier) {
+internal fun SettingsIconBadge(@DrawableRes iconRes: Int, rowTag: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(BADGE_SIZE)
@@ -761,7 +922,7 @@ private fun SettingsIconBadge(@DrawableRes iconRes: Int, rowTag: String, modifie
  * choice.
  */
 @Composable
-private fun ColourSwatch(colour: Color, testTag: String, modifier: Modifier = Modifier) {
+internal fun ColourSwatch(colour: Color, testTag: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(SWATCH_SIZE)
@@ -773,7 +934,7 @@ private fun ColourSwatch(colour: Color, testTag: String, modifier: Modifier = Mo
 
 /** Returns the string resource naming this theme mode on its row. */
 @StringRes
-private fun ThemeMode.labelRes(): Int = when (this) {
+internal fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.System -> R.string.theme_mode_system
     ThemeMode.Light -> R.string.theme_mode_light
     ThemeMode.Dark -> R.string.theme_mode_dark
@@ -781,7 +942,7 @@ private fun ThemeMode.labelRes(): Int = when (this) {
 
 /** Returns the string resource of the one-line description under this theme mode's title. */
 @StringRes
-private fun ThemeMode.descriptionRes(): Int = when (this) {
+internal fun ThemeMode.descriptionRes(): Int = when (this) {
     ThemeMode.System -> R.string.settings_rows_system_description
     ThemeMode.Light -> R.string.settings_rows_light_description
     ThemeMode.Dark -> R.string.settings_rows_dark_description
@@ -793,14 +954,14 @@ private fun ThemeMode.descriptionRes(): Int = when (this) {
  * and a moon for "Dark".
  */
 @DrawableRes
-private fun ThemeMode.iconRes(): Int = when (this) {
+internal fun ThemeMode.iconRes(): Int = when (this) {
     ThemeMode.System -> R.drawable.ic_settings
     ThemeMode.Light -> R.drawable.ic_contrast
     ThemeMode.Dark -> R.drawable.ic_dark_mode
 }
 
 /** Returns the test tag of this theme mode's row. */
-private fun ThemeMode.testTag(): String = when (this) {
+internal fun ThemeMode.testTag(): String = when (this) {
     ThemeMode.System -> THEME_MODE_SYSTEM_TAG
     ThemeMode.Light -> THEME_MODE_LIGHT_TAG
     ThemeMode.Dark -> THEME_MODE_DARK_TAG
@@ -818,130 +979,6 @@ private val sampleCustomColour = ThemeColour.Custom(seedArgb = 0xFF2E7D32.toInt(
  */
 private val sampleWallpaperColour = Color(0xFF8B5000)
 
-/**
- * Settings as a fresh install shows it on a phone running Android 12 or later: "System default"
- * chosen as the theme mode and Kanso blue chosen as the colour, with the wallpaper row (in the
- * sample amber) offered below it but not picked, drawn once in light and once in dark.
- *
- * `@PreviewLightDark` gives two pictures, day and night; `ThemeMode.System` makes KansoTheme
- * follow them (see `HomePreview`). The taps do nothing: a preview only draws.
- */
-@PreviewLightDark
-@Composable
-private fun SettingsSystemModePreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        SettingsContent(
-            state = SettingsUiState(
-                themeMode = ThemeMode.System,
-                themeColour = ThemeColour.KansoBlue,
-            ),
-            wallpaperColour = sampleWallpaperColour,
-            onThemeModeSelected = {},
-            onKansoBlueChosen = {},
-            onWallpaperChosen = {},
-            onCustomChosen = {},
-            onCustomColourChosen = {},
-        )
-    }
-}
-
-/**
- * Settings with "Light" chosen as the theme mode, on an older phone (below Android 12) where the
- * colour list has no wallpaper row, only Kanso blue (the one chosen) and Custom colour.
- *
- * Only the selection moves: the preview itself still follows its own light or dark picture,
- * so both pictures show the "Light" row marked.
- */
-@PreviewLightDark
-@Composable
-private fun SettingsLightModePreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        SettingsContent(
-            state = SettingsUiState(
-                themeMode = ThemeMode.Light,
-                themeColour = ThemeColour.KansoBlue,
-            ),
-            wallpaperColour = null,
-            onThemeModeSelected = {},
-            onKansoBlueChosen = {},
-            onWallpaperChosen = {},
-            onCustomChosen = {},
-            onCustomColourChosen = {},
-        )
-    }
-}
-
-/**
- * Settings with "Dark" chosen as the theme mode and the wallpaper colour chosen, drawn once in
- * light and once in dark so the marked "Dark" row can be checked against both backgrounds.
- */
-@PreviewLightDark
-@Composable
-private fun SettingsDarkModePreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        SettingsContent(
-            state = SettingsUiState(
-                themeMode = ThemeMode.Dark,
-                themeColour = ThemeColour.Wallpaper,
-            ),
-            wallpaperColour = sampleWallpaperColour,
-            onThemeModeSelected = {},
-            onKansoBlueChosen = {},
-            onWallpaperChosen = {},
-            onCustomChosen = {},
-            onCustomColourChosen = {},
-        )
-    }
-}
-
-/**
- * Settings with the wallpaper colour chosen (Android 12 and later), the colour choice this
- * preview is about; the theme mode is left at "System default".
- */
-@PreviewLightDark
-@Composable
-private fun SettingsWallpaperColourPreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        SettingsContent(
-            state = SettingsUiState(
-                themeMode = ThemeMode.System,
-                themeColour = ThemeColour.Wallpaper,
-            ),
-            wallpaperColour = sampleWallpaperColour,
-            onThemeModeSelected = {},
-            onKansoBlueChosen = {},
-            onWallpaperChosen = {},
-            onCustomChosen = {},
-            onCustomColourChosen = {},
-        )
-    }
-}
-
-/**
- * Settings with the Custom colour row chosen, so the colour picker is shown below it, starting
- * at the sample green [sampleCustomColour], and the custom swatch shows that green. The theme is
- * tinted with that same green, as the real app is once a custom colour is picked. The picker
- * sits on its fixed white card in both pictures, which is how its black text stays readable in
- * dark mode.
- */
-@PreviewLightDark
-@Composable
-private fun SettingsCustomColourPreview() {
-    KansoTheme(themeMode = ThemeMode.System, themeColour = sampleCustomColour) {
-        SettingsContent(
-            state = SettingsUiState(
-                themeMode = ThemeMode.System,
-                themeColour = sampleCustomColour,
-            ),
-            wallpaperColour = sampleWallpaperColour,
-            onThemeModeSelected = {},
-            onKansoBlueChosen = {},
-            onWallpaperChosen = {},
-            onCustomChosen = {},
-            onCustomColourChosen = {},
-        )
-    }
-}
 
 /**
  * The theme mode group on its own, with "Dark" chosen: the "Theme mode" label, then three rows,
@@ -1046,6 +1083,114 @@ private fun SettingsIconBadgePreview() {
                     SettingsIconBadge(iconRes = icon, rowTag = "sample-row-$index")
                 }
             }
+        }
+    }
+}
+
+/**
+ * The Settings menu as a fresh install shows it on a phone with wallpaper colours: System default,
+ * Kanso blue and 100%, drawn once in light and once in dark. The taps do nothing: a preview only
+ * draws.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsMenuPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
+            wallpaperColour = sampleWallpaperColour,
+            onOpenThemeMode = {},
+            onOpenThemeColour = {},
+            onOpenTextSize = {},
+        )
+    }
+}
+
+/**
+ * The Settings menu with Dark, a custom colour (its hex code and swatch on the row) and a text
+ * size of 115% chosen, in light and in dark.
+ */
+@PreviewLightDark
+@Composable
+private fun SettingsMenuCustomPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        SettingsContent(
+            state = SettingsUiState(
+                themeMode = ThemeMode.Dark,
+                themeColour = sampleCustomColour,
+                textScale = 1.15f,
+            ),
+            wallpaperColour = null,
+            onOpenThemeMode = {},
+            onOpenThemeColour = {},
+            onOpenTextSize = {},
+        )
+    }
+}
+
+/** One menu row with a swatch, in light and in dark. */
+@PreviewLightDark
+@Composable
+private fun SettingsMenuRowPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.padding(vertical = 16.dp)) {
+                SettingsGroup(testTag = SETTINGS_GROUP_MENU_TAG) {
+                    SettingsMenuRow(
+                        label = stringResource(R.string.theme_colour_title),
+                        summary = "#2E7D32",
+                        iconRes = R.drawable.ic_palette,
+                        onClick = {},
+                        testTag = SETTINGS_MENU_THEME_COLOUR_TAG,
+                        trailing = { ColourSwatch(colour = Color(0xFF2E7D32), testTag = SETTINGS_MENU_THEME_COLOUR_SWATCH_TAG) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The frame of a setting's own screen with sample content, in light and in dark. */
+@PreviewLightDark
+@Composable
+private fun SettingsDetailScreenPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Box(Modifier.fillMaxSize()) {
+            SettingsDetailScreen(title = stringResource(R.string.text_size), onBack = {}, testTag = "settings-detail-preview") {
+                Text(text = stringResource(R.string.text_size_preview), modifier = Modifier.padding(16.dp))
+            }
+        }
+    }
+}
+
+/** The colour choices with a custom colour selected, so the picker shows, in light and in dark. */
+@PreviewLightDark
+@Composable
+private fun ThemeColourChoicePreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            Column(modifier = Modifier.padding(vertical = 16.dp)) {
+                ThemeColourChoice(
+                    selected = sampleCustomColour,
+                    customSeedArgb = sampleCustomColour.seedArgb,
+                    wallpaperColour = sampleWallpaperColour,
+                    onKansoBlue = {},
+                    onWallpaper = {},
+                    onCustom = {},
+                    onCustomColourChanged = {},
+                )
+            }
+        }
+    }
+}
+
+/** The colour picker card on its own, in light and in dark. */
+@PreviewLightDark
+@Composable
+private fun CustomColourPickerPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            CustomColourPicker(seedArgb = sampleCustomColour.seedArgb, onColorChanged = {})
         }
     }
 }

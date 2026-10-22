@@ -25,6 +25,7 @@ import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeColourScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.scrollAboveBar
 import com.phongkaster.kanso.navigation.tapAboveBar
@@ -152,7 +153,7 @@ class ThemeSwatchTest {
         val wallpaper = dynamicLightColorScheme(context)
         val kansoBlue = kansoBlueScheme()
         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
-        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false)
+        val custom = seedColorScheme(Color(KANSO_BLUE_SEED.toArgb()), dark = false, exactPrimary = true)
         waitForHome()
         openSettings()
 
@@ -181,7 +182,7 @@ class ThemeSwatchTest {
     @Test
     fun the_custom_swatch_shows_the_last_custom_colour_while_another_choice_is_selected() {
         // KansoTheme builds the custom scheme from the saved seed, an ARGB number.
-        val green = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false)
+        val green = seedColorScheme(Color(CUSTOM_GREEN.toArgb()), dark = false, exactPrimary = true)
         waitForHome()
         openSettings()
 
@@ -488,12 +489,9 @@ class ThemeSwatchTest {
     /** Returns the app's one settings repository from Koin. */
     private fun repository(): SettingsRepository = KoinPlatform.getKoin().get()
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme colour screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeColourScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

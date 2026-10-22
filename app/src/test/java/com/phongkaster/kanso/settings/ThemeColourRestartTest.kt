@@ -17,6 +17,7 @@ import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.di.appModule
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeColourScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
@@ -88,7 +89,7 @@ class ThemeColourRestartTest {
     /** The custom colour is picked, the app is "restarted", and Home opens in its colours. */
     @Test
     fun custom_colour_survives_a_restart() {
-        val expected = seedColorScheme(GREEN, dark = false).primary
+        val expected = seedColorScheme(GREEN, dark = false, exactPrimary = true).primary
 
         ActivityScenario.launch(MainActivity::class.java).use {
             waitForHome()
@@ -187,12 +188,9 @@ class ThemeColourRestartTest {
     private fun appliedScheme(): ColorScheme =
         compose.onNodeWithTag(KANSO_THEME_TAG).fetchSemanticsNode().config[KansoColorSchemeKey]
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme colour screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeColourScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

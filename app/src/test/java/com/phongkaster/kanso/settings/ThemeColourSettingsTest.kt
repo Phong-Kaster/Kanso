@@ -28,6 +28,10 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeColourScreen
+import com.phongkaster.kanso.navigation.openThemeModeScreen
+import com.phongkaster.kanso.navigation.backToSettingsMenu
+import com.phongkaster.kanso.navigation.backToHomeFromSettings
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
@@ -192,7 +196,7 @@ class ThemeColourSettingsTest {
      */
     @Test
     fun custom_colour_applies_at_once_in_light_mode() {
-        val expected = seedColorScheme(GREEN, dark = false).primary
+        val expected = seedColorScheme(GREEN, dark = false, exactPrimary = true).primary
         waitForHome()
         openSettings()
 
@@ -201,8 +205,7 @@ class ThemeColourSettingsTest {
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().assertIsSelected()
         compose.onNodeWithTag(CUSTOM_COLOUR_PICKER_TAG).assertExists()
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertEquals(expected, appliedScheme().primary)
     }
 
@@ -212,16 +215,17 @@ class ThemeColourSettingsTest {
      */
     @Test
     fun custom_colour_applies_at_once_in_dark_mode() {
-        val expected = seedColorScheme(GREEN, dark = true).primary
+        val expected = seedColorScheme(GREEN, dark = true, exactPrimary = true).primary
         waitForHome()
-        openSettings()
+        openThemeModeScreen(compose)
         compose.onNodeWithTag(THEME_MODE_DARK_TAG).tapAboveBar()
+        backToSettingsMenu(compose)
+        openSettings()
 
         pickCustomColour()
         compose.waitUntil(timeoutMillis = 10_000) { appliedScheme().primary == expected }
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertEquals(expected, appliedScheme().primary)
         assertEquals(seedColorScheme(GREEN, dark = true).background, appliedScheme().background)
     }
@@ -336,12 +340,9 @@ class ThemeColourSettingsTest {
         }
     }
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme colour screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeColourScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

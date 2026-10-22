@@ -31,6 +31,11 @@ import com.phongkaster.kanso.ui.home.homeShortcutTag
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_COLOUR_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_MODE_TAG
+import com.phongkaster.kanso.ui.settings.TEXT_SIZE_SCREEN_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_SCREEN_TAG
+import com.phongkaster.kanso.ui.settings.THEME_MODE_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_SWATCH_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_KANSO_BLUE_SWATCH_TAG
@@ -164,6 +169,8 @@ class ScreenshotTest {
         openSettings()
         chooseThemeMode(ThemeMode.Light)
         chooseCustomColour()
+        backToSettingsMenu()
+        openSetting(SETTINGS_MENU_THEME_COLOUR_TAG, THEME_COLOUR_SCREEN_TAG)
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).performScrollTo().assertIsSelected()
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(CUSTOM_COLOUR_PICKER_TAG).fetchSemanticsNodes().isNotEmpty()
@@ -182,6 +189,8 @@ class ScreenshotTest {
         waitForHome()
         openSettings()
         chooseThemeMode(ThemeMode.Light)
+        backToSettingsMenu()
+        openSetting(SETTINGS_MENU_THEME_COLOUR_TAG, THEME_COLOUR_SCREEN_TAG)
         assertThreeSwatchRowsShown()
         capture("24_settings_swatches_light.png")
     }
@@ -197,6 +206,8 @@ class ScreenshotTest {
         waitForHome()
         openSettings()
         chooseThemeMode(ThemeMode.Dark)
+        backToSettingsMenu()
+        openSetting(SETTINGS_MENU_THEME_COLOUR_TAG, THEME_COLOUR_SCREEN_TAG)
         assertThreeSwatchRowsShown()
         capture("25_settings_swatches_dark.png")
     }
@@ -239,6 +250,7 @@ class ScreenshotTest {
      */
     private fun chooseThemeMode(mode: ThemeMode) {
         val tag = if (mode == ThemeMode.Dark) THEME_MODE_DARK_TAG else THEME_MODE_LIGHT_TAG
+        openSetting(SETTINGS_MENU_THEME_MODE_TAG, THEME_MODE_SCREEN_TAG)
         compose.onNodeWithTag(tag).tapAboveBar()
         awaitSaved("theme mode $mode") { savedThemeMode() == mode }
         val expected = seedColorScheme(KANSO_BLUE_SEED, dark = mode == ThemeMode.Dark)
@@ -254,7 +266,7 @@ class ScreenshotTest {
      * until it is saved and the light scheme generated from it is applied.
      */
     private fun chooseCustomColour() {
-        val expected = seedColorScheme(GREEN, dark = false)
+        val expected = seedColorScheme(GREEN, dark = false, exactPrimary = true)
         SettingsViewModel(repository()).onCustomColourChosen(GREEN)
         awaitSaved("a custom theme colour") { savedThemeColour() is ThemeColour.Custom }
         compose.waitUntil(timeoutMillis = 10_000) {
@@ -298,9 +310,37 @@ class ScreenshotTest {
         }
     }
 
-    /** Presses Back on Settings, waits until Home alone is shown, and keeps the applied scheme. */
+    /**
+     * Taps the Settings menu row tagged [menuTag] and waits until the setting's own screen, tagged
+     * [screenTag], is shown.
+     */
+    private fun openSetting(menuTag: String, screenTag: String) {
+        compose.onNodeWithTag(menuTag).tapAboveBar()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(screenTag).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    /** Presses Back on a setting's own screen and waits until the Settings menu is shown again. */
+    private fun backToSettingsMenu() {
+        Espresso.pressBack()
+        compose.waitUntil(timeoutMillis = 10_000) { isShown(SETTINGS_SCREEN_TAG) && !onSettingDetail() }
+    }
+
+    /** Tells whether one of the three setting screens is shown. */
+    private fun onSettingDetail(): Boolean =
+        isShown(THEME_MODE_SCREEN_TAG) || isShown(THEME_COLOUR_SCREEN_TAG) || isShown(TEXT_SIZE_SCREEN_TAG)
+
+    /** Tells whether a node with [tag] is in the tree. */
+    private fun isShown(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+
+    /**
+     * Presses Back until Home alone is shown (from a setting's own screen that is twice: to the
+     * Settings menu, then Home), and keeps the applied scheme.
+     */
     private fun backToHome() {
         val scheme = appliedScheme()
+        if (onSettingDetail()) backToSettingsMenu()
         Espresso.pressBack()
         waitForHomeOnly()
         assertEquals(scheme.primary, appliedScheme().primary)

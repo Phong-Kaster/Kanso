@@ -178,23 +178,22 @@ class HomeScreenTest {
     }
 
     /**
-     * The carousel never moves on its own: with the clock moved on ten seconds and no touch,
-     * banner 1's "Try now" is where it was, still wholly on screen, and the dots still mark
-     * banner 1.
+     * The carousel slides on its own: banner 1 stays in front while the clock is moved on two
+     * seconds (the carousel rests 3.5 s on a banner), and after five seconds with no touch the
+     * dots mark banner 2, whose "Try now" is wholly on screen.
      */
     @Test
-    fun ten_seconds_without_a_touch_leave_banner_one_in_front() {
+    fun the_carousel_slides_to_the_next_banner_by_itself() {
         show()
-        val first = AI_TOOLS.first()
-        val before = box(homeTryTag(first))
-
         compose.mainClock.autoAdvance = false
-        compose.mainClock.advanceTimeBy(TEN_SECONDS_MS)
 
-        val after = box(homeTryTag(first))
-        assertEquals("Banner 1's Try now must not move: $before, $after", before.left, after.left, EPSILON)
-        assertTrue(tryNowWhollyInCarousel(first))
+        compose.mainClock.advanceTimeBy(TWO_SECONDS_MS)
         assertDotSelected(0)
+
+        compose.mainClock.advanceTimeBy(FIVE_SECONDS_MS - TWO_SECONDS_MS)
+        compose.waitForIdle()
+        assertDotSelected(1)
+        assertTrue(tryNowWhollyInCarousel(AI_TOOLS[1]))
     }
 
     /**
@@ -462,8 +461,11 @@ class HomeScreenTest {
         /** The solid colour of the recent cards' stand-in pictures: a soft indigo. */
         const val STAND_IN_COLOUR = 0xFF5C6BC0
 
-        /** Ten seconds, in milliseconds: how long the carousel is left alone. */
-        const val TEN_SECONDS_MS = 10_000L
+        /** Two seconds, in milliseconds: less than the carousel rests on a banner. */
+        const val TWO_SECONDS_MS = 2_000L
+
+        /** Five seconds, in milliseconds: long enough for the carousel to move to the next banner. */
+        const val FIVE_SECONDS_MS = 5_000L
 
         /** How far, in pixels, two positions may differ and still count as the same. */
         const val EPSILON = 1f

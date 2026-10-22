@@ -30,6 +30,9 @@ import com.phongkaster.kanso.ui.result.ResultScreen
 import com.phongkaster.kanso.ui.result.ResultViewModel
 import com.phongkaster.kanso.ui.settings.SettingsScreen
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
+import com.phongkaster.kanso.ui.settings.TextSizeScreen
+import com.phongkaster.kanso.ui.settings.ThemeColourScreen
+import com.phongkaster.kanso.ui.settings.ThemeModeScreen
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -226,8 +229,23 @@ fun KansoNavHost(modifier: Modifier = Modifier) {
                 val viewModel = koinViewModel<SettingsViewModel>()
                 SettingsScreen(
                     viewModel = viewModel,
+                    // Each row of the menu opens one setting on a screen of its own, above
+                    // Settings. Only act while Settings is on top, so a fast double tap opens one.
+                    onOpenThemeMode = { if (backStack.last() == Settings) backStack.add(ThemeModeSettings) },
+                    onOpenThemeColour = { if (backStack.last() == Settings) backStack.add(ThemeColourSettings) },
+                    onOpenTextSize = { if (backStack.last() == Settings) backStack.add(TextSizeSettings) },
                     contentPadding = tabPadding,
                 )
+            }
+            // The three setting screens are not tabs: no tab bar, a Back button that pops them.
+            entry<ThemeModeSettings> {
+                ThemeModeScreen(viewModel = koinViewModel<SettingsViewModel>(), onBack = goBack)
+            }
+            entry<ThemeColourSettings> {
+                ThemeColourScreen(viewModel = koinViewModel<SettingsViewModel>(), onBack = goBack)
+            }
+            entry<TextSizeSettings> {
+                TextSizeScreen(viewModel = koinViewModel<SettingsViewModel>(), onBack = goBack)
             }
         },
         )

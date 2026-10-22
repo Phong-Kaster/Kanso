@@ -206,7 +206,7 @@ private fun colorSchemeFor(themeColour: ThemeColour, dark: Boolean): ColorScheme
         // it out again only when one of its keys changes. Generating a scheme takes real work,
         // so it is done once per seed and light/dark look, not on every frame.
         is ThemeColour.Custom -> remember(themeColour.seedArgb, dark) {
-            seedColorScheme(Color(themeColour.seedArgb), dark)
+            seedColorScheme(Color(themeColour.seedArgb), dark, exactPrimary = true)
         }
     }
 }

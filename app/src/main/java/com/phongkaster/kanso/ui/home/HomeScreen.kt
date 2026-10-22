@@ -256,6 +256,8 @@ private const val RECENT_CARD_CONTENT_TYPE = "recent-photo"
  * the "Try now" button or the shortcut that was tapped; the caller opens that tool's photo
  * gallery, and the photo picked there opens in that tool. [onRecentClick] is called with the Uri
  * (as text) of the recent photo card that was tapped; the caller opens it in the Edit tool.
+ * [autoScroll] false stops the carousel sliding by itself (tests that swipe it use that, so a timer
+ * cannot move it between two swipes).
  * [onSeeAllEdits] is called by the round arrow beside "Recent edits"; the caller selects the My
  * edits tab.
  *
@@ -348,6 +350,7 @@ fun HomeContent(
     contentPadding: PaddingValues = PaddingValues(),
     onRecentClick: (String) -> Unit = {},
     onSeeAllEdits: () -> Unit = {},
+    autoScroll: Boolean = true,
     thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit = { photo, cardModifier ->
         PhotoThumbnail(
             photo = photo,
@@ -402,6 +405,7 @@ fun HomeContent(
                 tools = state.carouselTools,
                 carouselState = carouselState,
                 onToolClick = onToolClick,
+                autoScroll = autoScroll,
             )
             Spacer(Modifier.height(ROW_GAP))
             CarouselDots(count = state.carouselTools.size, current = carouselState.currentItem)
@@ -484,6 +488,7 @@ private fun HeroCarousel(
     carouselState: CarouselState,
     onToolClick: (Tool) -> Unit,
     modifier: Modifier = Modifier,
+    autoScroll: Boolean = true,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         // Read in composition: the shape comes from the theme.
@@ -492,8 +497,8 @@ private fun HeroCarousel(
         val stepPx = with(LocalDensity.current) { (maxWidth - CAROUSEL_PEEK + CAROUSEL_ITEM_SPACING).toPx() }
         // Keyed on the banner count and step so it restarts if either changes. It loops for as
         // long as the carousel is on screen; leaving the screen cancels it.
-        LaunchedEffect(carouselState, tools.size, stepPx) {
-            while (tools.size > 1) {
+        LaunchedEffect(carouselState, tools.size, stepPx, autoScroll) {
+            while (autoScroll && tools.size > 1) {
                 delay(CAROUSEL_AUTO_SCROLL_PAUSE_MS)
                 // The person is swiping or a fling is settling: leave it alone this round.
                 if (carouselState.isScrollInProgress) continue

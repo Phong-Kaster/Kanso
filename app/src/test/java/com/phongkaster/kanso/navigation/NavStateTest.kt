@@ -33,7 +33,7 @@ import com.phongkaster.kanso.ui.permission.photoPermissionsFor
 import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
 import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
-import com.phongkaster.kanso.ui.settings.THEME_MODE_SYSTEM_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_MODE_TAG
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -71,7 +71,7 @@ import org.robolectric.annotation.Config
  * activity starts again from `[Home]`, so if the tab comes back, the saved stack was restored.
  *
  * "With its first tile": on My edits the first tile is checked by opening it, so the photo viewer
- * must show the newest saved photo. On Settings the first row (System, of the mode choice) is
+ * must show the newest saved photo. On Settings the first row (Theme mode, of the menu) is
  * checked to be there.
  *
  * Process death is simulated as `ToolPhotoKeyTest` does it: the activity's saved state is captured
@@ -123,7 +123,7 @@ class NavStateTest {
         }
     }
 
-    /** Settings selected, then the activity is recreated: Settings is back, selected, with its first row. */
+    /** Settings selected, then the activity is recreated: Settings is back, selected, with its first menu row. */
     @Test
     fun settings_survives_recreate() {
         loadKoinModules(fakes())
@@ -132,11 +132,11 @@ class NavStateTest {
             scenario.recreate()
             compose.waitForIdle()
             assertTabRestored(KansoTab.SETTINGS)
-            waitFor { count(THEME_MODE_SYSTEM_TAG) > 0 }
+            waitFor { count(SETTINGS_MENU_THEME_MODE_TAG) > 0 }
         }
     }
 
-    /** Settings selected, then process death: Settings is back, selected, with its first row. */
+    /** Settings selected, then process death: Settings is back, selected, with its first menu row. */
     @Test
     fun settings_survives_process_death() {
         loadKoinModules(fakes())
@@ -144,7 +144,7 @@ class NavStateTest {
         openAndCheck(KansoTab.SETTINGS)
         killAndRestore(first) {
             assertTabRestored(KansoTab.SETTINGS)
-            waitFor { count(THEME_MODE_SYSTEM_TAG) > 0 }
+            waitFor { count(SETTINGS_MENU_THEME_MODE_TAG) > 0 }
         }
     }
 

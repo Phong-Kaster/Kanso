@@ -85,6 +85,9 @@ import com.phongkaster.kanso.ui.result.ResultPhoto
 import com.phongkaster.kanso.ui.result.ResultUiState
 import com.phongkaster.kanso.ui.settings.SettingsContent
 import com.phongkaster.kanso.ui.settings.SettingsUiState
+import com.phongkaster.kanso.ui.settings.TextSizeContent
+import com.phongkaster.kanso.ui.settings.ThemeColourContent
+import com.phongkaster.kanso.ui.settings.ThemeModeContent
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
@@ -514,11 +517,9 @@ class AccessibilityWalkTest {
             SettingsContent(
                 state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
                 wallpaperColour = WALLPAPER_COLOUR,
-                onThemeModeSelected = {},
-                onKansoBlueChosen = {},
-                onWallpaperChosen = {},
-                onCustomChosen = {},
-                onCustomColourChosen = {},
+                onOpenThemeMode = {},
+                onOpenThemeColour = {},
+                onOpenTextSize = {},
             )
         }
     }
@@ -537,11 +538,55 @@ class AccessibilityWalkTest {
                     themeColour = ThemeColour.Custom(seedArgb = CUSTOM_SEED_ARGB),
                 ),
                 wallpaperColour = WALLPAPER_COLOUR,
+                onOpenThemeMode = {},
+                onOpenThemeColour = {},
+                onOpenTextSize = {},
+            )
+        }
+    }
+
+    /** The Theme mode screen: Back and the three mode rows. */
+    @Test
+    fun theme_mode_screen() {
+        walk("theme mode screen") {
+            ThemeModeContent(
+                state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
                 onThemeModeSelected = {},
+                onBack = {},
+            )
+        }
+    }
+
+    /**
+     * The Theme colour screen with Custom colour selected: Back and the three colour rows. The
+     * colour picker below them is the engine's and is left out by [TouchTargetCheck].
+     */
+    @Test
+    fun theme_colour_screen_with_custom_selected() {
+        walk("theme colour screen custom selected") {
+            ThemeColourContent(
+                state = SettingsUiState(
+                    themeMode = ThemeMode.System,
+                    themeColour = ThemeColour.Custom(seedArgb = CUSTOM_SEED_ARGB),
+                ),
+                wallpaperColour = WALLPAPER_COLOUR,
                 onKansoBlueChosen = {},
                 onWallpaperChosen = {},
                 onCustomChosen = {},
                 onCustomColourChosen = {},
+                onBack = {},
+            )
+        }
+    }
+
+    /** The Text size screen: Back and the slider. */
+    @Test
+    fun text_size_screen() {
+        walk("text size screen") {
+            TextSizeContent(
+                state = SettingsUiState(themeMode = ThemeMode.System, themeColour = ThemeColour.KansoBlue),
+                onTextScaleChosen = {},
+                onBack = {},
             )
         }
     }
@@ -704,7 +749,9 @@ class AccessibilityWalkTest {
     private fun walkHomeCarouselAt(index: Int) {
         useSolidColourThumbnails()
         showOnTab(KansoTab.HOME) {
-            HomeContent(state = HOME_WITH_PHOTOS, onToolClick = {})
+            // autoScroll = false: with the clock running, the carousel's own timer would slide it
+            // between two swipes and the banner counted below would not be the one in front.
+            HomeContent(state = HOME_WITH_PHOTOS, onToolClick = {}, autoScroll = false)
         }
         compose.mainClock.autoAdvance = true
         repeat(index) {

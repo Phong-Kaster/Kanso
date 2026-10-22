@@ -26,6 +26,7 @@ import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeColourScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.scrollAboveBar
 import com.phongkaster.kanso.navigation.tapAboveBar
@@ -112,7 +113,7 @@ class ThemeColourHexTest {
      */
     @Test
     fun android_15_a_typed_code_turns_the_app_that_colour_and_a_partial_one_changes_nothing() {
-        val green = rolesOf(seedColorScheme(Color(GREEN_ARGB), dark = false))
+        val green = rolesOf(seedColorScheme(Color(GREEN_ARGB), dark = false, exactPrimary = true))
         openCustomPicker()
 
         typeGreenAndCheckEverythingTurnsGreen()
@@ -190,7 +191,7 @@ class ThemeColourHexTest {
      * shows the green in its middle pixel.
      */
     private fun typeGreenAndCheckEverythingTurnsGreen() {
-        val expected = rolesOf(seedColorScheme(Color(GREEN_ARGB), dark = false))
+        val expected = rolesOf(seedColorScheme(Color(GREEN_ARGB), dark = false, exactPrimary = true))
         // One deadline on the wall clock for everything that follows the keystroke.
         val deadline = System.currentTimeMillis() + TYPE_TO_SCHEME_MILLIS
         field().performTextReplacement("2E7D32")
@@ -340,12 +341,9 @@ class ThemeColourHexTest {
     /** Returns the app's one settings repository from Koin. */
     private fun repository(): SettingsRepository = KoinPlatform.getKoin().get()
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme colour screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeColourScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */
