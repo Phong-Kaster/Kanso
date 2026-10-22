@@ -25,11 +25,18 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.backToSettingsMenu
+import com.phongkaster.kanso.navigation.openThemeColourScreen
+import com.phongkaster.kanso.navigation.openThemeModeScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.scrollAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_COLOUR_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_MENU_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_TEXT_SIZE_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_COLOUR_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_MODE_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_KANSO_BLUE_TAG
@@ -91,23 +98,28 @@ class SettingsRowsTest {
         stopKoin()
     }
 
-    /** In light mode both cards are rounded and stand out from the light background; no Back. */
+    /**
+     * In light mode the menu's card and the cards of the Theme mode and Theme colour screens are
+     * rounded and stand out from the light background; the menu, a tab, has no Back.
+     */
     @Test
     @Config(qualifiers = "notnight")
     fun cards_are_rounded_and_set_apart_from_a_light_background() {
         openSettings()
         assertNoBackButton()
-        assertRoundedCard(SETTINGS_GROUP_APPEARANCE_TAG)
-        assertRoundedCard(SETTINGS_GROUP_COLOUR_TAG)
+        assertRoundedCard(SETTINGS_GROUP_MENU_TAG)
+        onScreenOf(SETTINGS_GROUP_APPEARANCE_TAG) { assertRoundedCard(SETTINGS_GROUP_APPEARANCE_TAG) }
+        onScreenOf(SETTINGS_GROUP_COLOUR_TAG) { assertRoundedCard(SETTINGS_GROUP_COLOUR_TAG) }
     }
 
-    /** In dark mode both cards are rounded and stand out from the dark background. */
+    /** In dark mode the menu's card and the setting screens' cards are rounded and stand out. */
     @Test
     @Config(qualifiers = "night")
     fun cards_are_rounded_and_set_apart_from_a_dark_background() {
         openSettings()
-        assertRoundedCard(SETTINGS_GROUP_APPEARANCE_TAG)
-        assertRoundedCard(SETTINGS_GROUP_COLOUR_TAG)
+        assertRoundedCard(SETTINGS_GROUP_MENU_TAG)
+        onScreenOf(SETTINGS_GROUP_APPEARANCE_TAG) { assertRoundedCard(SETTINGS_GROUP_APPEARANCE_TAG) }
+        onScreenOf(SETTINGS_GROUP_COLOUR_TAG) { assertRoundedCard(SETTINGS_GROUP_COLOUR_TAG) }
     }
 
     /** At SDK 35 every row, the wallpaper row included, shows its icon in a tinted rounded square. */
@@ -115,7 +127,7 @@ class SettingsRowsTest {
     @Config(qualifiers = "notnight")
     fun every_row_has_its_icon_in_a_tinted_rounded_square_at_sdk_35() {
         openSettings()
-        ROWS_SDK_35.forEach { (rowTag, groupTag) -> assertBadge(rowTag, groupTag) }
+        ROWS_SDK_35.forEach { (rowTag, groupTag) -> onScreenOf(groupTag) { assertBadge(rowTag, groupTag) } }
     }
 
     /** At SDK 35 the squares are also set apart from the cards in dark mode. */
@@ -123,7 +135,7 @@ class SettingsRowsTest {
     @Config(qualifiers = "night")
     fun every_row_has_its_icon_in_a_tinted_rounded_square_in_dark_at_sdk_35() {
         openSettings()
-        ROWS_SDK_35.forEach { (rowTag, groupTag) -> assertBadge(rowTag, groupTag) }
+        ROWS_SDK_35.forEach { (rowTag, groupTag) -> onScreenOf(groupTag) { assertBadge(rowTag, groupTag) } }
     }
 
     /** At SDK 30 there is no wallpaper row, and every other row shows its tinted square. */
@@ -131,8 +143,8 @@ class SettingsRowsTest {
     @Config(sdk = [30], qualifiers = "notnight")
     fun every_row_has_its_icon_in_a_tinted_rounded_square_at_sdk_30() {
         openSettings()
-        assertNoWallpaperRow()
-        ROWS_SDK_30.forEach { (rowTag, groupTag) -> assertBadge(rowTag, groupTag) }
+        onScreenOf(SETTINGS_GROUP_COLOUR_TAG) { assertNoWallpaperRow() }
+        ROWS_SDK_30.forEach { (rowTag, groupTag) -> onScreenOf(groupTag) { assertBadge(rowTag, groupTag) } }
     }
 
     /** At SDK 35 every row holds its title and a one-line description of its own. */
@@ -141,6 +153,7 @@ class SettingsRowsTest {
     fun every_row_has_a_title_and_a_one_line_description_at_sdk_35() {
         openSettings()
         assertDescriptions(ROWS_SDK_35)
+        assertMenuSummaries()
     }
 
     /** At SDK 30 every row but the absent wallpaper one holds its title and description. */
@@ -148,7 +161,7 @@ class SettingsRowsTest {
     @Config(sdk = [30], qualifiers = "notnight")
     fun every_row_has_a_title_and_a_one_line_description_at_sdk_30() {
         openSettings()
-        assertNoWallpaperRow()
+        onScreenOf(SETTINGS_GROUP_COLOUR_TAG) { assertNoWallpaperRow() }
         assertDescriptions(ROWS_SDK_30)
     }
 
@@ -275,7 +288,54 @@ class SettingsRowsTest {
      * share a description.
      */
     private fun assertDescriptions(rows: List<Pair<String, String>>) {
-        val descriptions = rows.map { (rowTag, _) ->
+        val descriptions = rows.map { (rowTag, groupTag) -> onScreenOf(groupTag) { descriptionOf(rowTag) } }
+        assertEquals(
+            "Every row must have a description of its own: $descriptions",
+            descriptions.size,
+            descriptions.toSet().size,
+        )
+    }
+
+    /**
+     * Fails unless the Settings menu shows its three rows (Theme mode, Theme colour, Text size),
+     * each with a non-empty one-line summary (the setting's current value) of its own.
+     */
+    private fun assertMenuSummaries() {
+        val summaries = listOf(
+            SETTINGS_MENU_THEME_MODE_TAG,
+            SETTINGS_MENU_THEME_COLOUR_TAG,
+            SETTINGS_MENU_TEXT_SIZE_TAG,
+        ).map { rowTag ->
+            compose.onNodeWithTag(rowTag).scrollAboveBar(compose)
+            val node = compose.onNode(
+                hasTestTag(settingsRowDescriptionTag(rowTag)) and hasAnyAncestor(hasTestTag(rowTag)),
+                useUnmergedTree = true,
+            ).fetchSemanticsNode()
+            assertTrue("The summary of $rowTag must not be empty", textOf(node).isNotBlank())
+            assertEquals("The summary of $rowTag must be drawn on one line", 1, lineCountOf(node))
+            textOf(node)
+        }
+        assertEquals("Every menu row needs its own summary: $summaries", summaries.size, summaries.toSet().size)
+    }
+
+    /**
+     * Opens the setting screen that holds the card [groupTag] (the Theme mode screen for the mode
+     * card, the Theme colour screen for the colour card), runs [block] on it, and goes back to the
+     * Settings menu. Returns what [block] returns.
+     */
+    private fun <T> onScreenOf(groupTag: String, block: () -> T): T {
+        if (groupTag == SETTINGS_GROUP_APPEARANCE_TAG) openThemeModeScreen(compose) else openThemeColourScreen(compose)
+        val result = block()
+        backToSettingsMenu(compose)
+        return result
+    }
+
+    /**
+     * Fails unless the row [rowTag] holds its title and its description (`<row>-description`),
+     * which is not empty, is laid out on one line and is not the title; returns the description.
+     */
+    private fun descriptionOf(rowTag: String): String {
+        val descriptions = listOf(rowTag).map { rowTag ->
             compose.onNode(
                 hasText(context.getString(titleOf(rowTag))) and hasAnyAncestor(hasTestTag(rowTag)),
                 useUnmergedTree = true,
@@ -293,11 +353,7 @@ class SettingsRowsTest {
             assertEquals("The description of $rowTag must be drawn on one line", 1, lineCountOf(node))
             text
         }
-        assertEquals(
-            "Every row must have a description of its own: $descriptions",
-            descriptions.size,
-            descriptions.toSet().size,
-        )
+        return descriptions.single()
     }
 
     /** Returns the text of the text node [node]. */

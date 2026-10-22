@@ -24,10 +24,10 @@ import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
-import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.RETOUCH_RUN_TAG
-import com.phongkaster.kanso.ui.tool.RETOUCH_STRENGTH_TAG
-import com.phongkaster.kanso.ui.tool.RetouchPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.RETOUCH_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.RETOUCH_RUN_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.RETOUCH_STRENGTH_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.RetouchPanel
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel

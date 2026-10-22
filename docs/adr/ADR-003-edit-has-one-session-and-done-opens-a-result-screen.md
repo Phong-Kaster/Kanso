@@ -39,13 +39,13 @@ their sheets. ADR-002 is not edited by this run; read it together with this reco
   was left.
 - **The all-at-once options strip: Edit shows all its tools at once, a row of four tools with
   non-modal sheets.** Instead of one options strip, the Edit screen keeps the photo at a fixed 60% of the height and puts the row of
-  **Crop**, **Rotate**, **Adjust** and **Filters** under it (`ui/tool/EditToolRow.kt`), all four
-  always on screen. A tap opens that tool's sheet (`ui/tool/EditPanel.kt`) below the row; another
+  **Crop**, **Rotate**, **Adjust** and **Filters** under it (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`), all four
+  always on screen. A tap opens that tool's sheet (`ui/tool/components/toolpanel/editpanel/EditPanel.kt`) below the row; another
   tool can be opened at any time, and the changes of all four add up. The sheet is an ordinary
-  `Surface` animated with `AnimatedContent` (`ui/tool/EditToolContent.kt`), not Material's
+  `Surface` animated with `AnimatedContent` (`ui/tool/components/editbottombar/EditSheet.kt`), not Material's
   `ModalBottomSheet`, because a modal sheet dims the photo and takes every touch outside it, and the
   floating **Undo** / **Compare** pill on the photo (`ui/tool/EditPill.kt`) must stay usable while a
-  sheet is open. While Crop is open the photo becomes the cropper (`ui/tool/EditCropper.kt`, around
+  sheet is open. While Crop is open the photo becomes the cropper (`ui/tool/components/EditCropper.kt`, around
   `core/imagecrop`'s `CropperPreview`).
 - **One immutable session of settings, always rendered from the original.** Everything done on Edit
   is one `EditSettings` value (`data/edit/edit/EditSettings.kt`: crop, crop shape, quarter turns,
@@ -57,7 +57,7 @@ their sheets. ADR-002 is not edited by this run; read it together with this reco
   nothing is stacked or baked in: a second filter replaces the first and a slider back at its middle
   gives the photo back exactly.
 - **A live preview while editing, one full render at Done.** While the person edits, the photo is
-  drawn by Compose (`LivePreviewImage` in `ui/tool/EditToolContent.kt`): a `Canvas` that crops,
+  drawn by Compose (`LivePreviewImage` in `ui/tool/components/photocard/LivePreviewImage.kt`): a `Canvas` that crops,
   turns and flips the original and colours it through `ColorFilter.colorMatrix` with the matrix of
   `EditColourMatrix`, the numbers the final render uses. A filter, which Compose cannot draw, is
   previewed by `FilterPreviewRenderer` on a copy of at most 640 px, one request at a time through a
@@ -99,7 +99,7 @@ their sheets. ADR-002 is not edited by this run; read it together with this reco
   so does the test file name `app/src/test/java/com/phongkaster/kanso/save/SaveButtonTest.kt`,
   which now tests Done.
 - Back on Edit first closes an open sheet, then, with changes made, asks before discarding them
-  (`ui/tool/DiscardChangesDialog.kt`).
+  (`ui/tool/components/DiscardChangesDialog.kt`).
 
 ## Open
 

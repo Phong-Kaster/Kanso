@@ -1,4 +1,4 @@
-# Settings: theme mode and theme colour
+# Settings: theme mode, theme colour and text size
 
 [Back to README](../../README.md)
 
@@ -9,7 +9,12 @@ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
 
 ## What it is
 
-Settings is the third tab. Its one section, **Appearance**, holds two choices:
+Settings is the third tab. It is a short menu: under the title and the **Appearance** header sit
+three rows, **Theme mode**, **Theme colour** and **Text size**. Each row shows what the setting
+is now (the mode's name; "Kanso blue", "From wallpaper" or the custom colour's hex code with a
+swatch; the percentage) and an arrow. Tapping a row opens that setting on a **screen of its own**,
+with a round Back button at the top left that returns to the menu (system Back does the same). The
+three screens are not tabs, so the tab bar is hidden on them. The choices they hold are:
 
 - **Theme mode**: **System default** (follows the phone's dark-theme switch), **Light** or
   **Dark**.
@@ -20,26 +25,49 @@ Settings is the third tab. Its one section, **Appearance**, holds two choices:
 A change re-colours the whole app at once, with no restart, and is kept across restarts. The
 launcher icon follows the theme colour too; see [Launcher icon](launcher-icon.md).
 
+**Text size.** Kanso ignores the phone's own font size setting (Settings > Display > Font size), so a
+large system text size cannot break its layout. Instead, Settings has a **Text size** slider from
+85% to 130% (default 100%), stored as `text_scale` in the settings file. The slider
+is continuous (no steps; the thumb stops anywhere) and looks like the classic Material 2 slider
+(thin track, round thumb; drawn by
+`ClassicSlider` through Material 3's `thumb` and `track` slots) and
+saves when you lift your finger; the sample sentence under it grows while you drag. The value is
+applied in `KansoTheme` by providing a `Density` whose `fontScale` is Kanso's own value, so every
+`sp` size in the app follows it at once. `dp` sizes do not change. Files:
+`data/settings/TextScale.kt`, `SettingsRepository.textScale`, `ui/settings/SettingsScreen.kt`
+(`TextSizeChoice`).
+
 Limits, from the code:
 
-- These are the only settings. There is nothing about editing, quality or storage here.
+- The only settings are theme mode, theme colour and text size. There is nothing about editing,
+  quality or storage here.
+- Text in system dialogs and the system share sheet still follows the phone's font size, because
+  Kanso does not draw them.
 - From wallpaper is not offered below Android 12; a wallpaper choice restored there reads as Kanso
   blue.
 - A custom colour is always opaque; the picker hides its transparency bar.
+- A custom colour is used **exactly** as `primary` (buttons, switches, the highlighted parts), in
+  light and in dark. Its text colour is white when white has a contrast ratio of at least 4 with
+  it, near-black otherwise. Containers, surfaces and the other roles are still generated from it,
+  so they are softer shades of the same hue (`seedColorScheme(..., exactPrimary = true)`). Kanso
+  blue keeps the generated primary.
 
 ## How to use it
 
 1. Tap **Settings** on the tab bar.
-2. Tap a theme mode row.
-3. Tap a theme colour row. With **Custom colour**, drag in the picker or type a six-digit hex code
-   (for example `2E7D32`); a partial code changes nothing. Each colour row shows a small circle of
-   its colour; the Custom row shows the last custom colour even while another is chosen.
+2. Tap **Theme mode** and tap a mode row; Back returns to the menu.
+3. Tap **Theme colour** and tap a colour row. With **Custom colour**, drag in the picker or type a
+   six-digit hex code (for example `2E7D32`); a partial code changes nothing. Touching the picker
+   while the hex box has the keyboard open closes the keyboard first, so dragging and typing do not
+   fight. The screen keeps clear of the keyboard and scrolls. Each colour row shows a small circle
+   of its colour; the Custom row shows the last custom colour even while another is chosen.
+4. Tap **Text size** and drag the slider.
 
 ## How it works
 
 ```mermaid
 flowchart TD
-    A["SettingsScreen rows / HSVColorPicker"] --> B["SettingsViewModel"]
+    A["Settings menu -> Theme mode / Theme colour / Text size screens, HSVColorPicker"] --> B["SettingsViewModel"]
     B -->|"mode, Kanso blue, wallpaper: write now"| R["SettingsRepository"]
     B -->|"custom colour: wait 300 ms of no change"| R
     R --> D["Preferences DataStore: files/datastore/settings.preferences_pb"]

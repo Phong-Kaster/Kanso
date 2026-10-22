@@ -69,11 +69,13 @@ class SettingsViewModel(
         repository.themeMode,
         repository.themeColour,
         repository.customSeedArgb,
-    ) { themeMode, themeColour, customSeedArgb ->
+        repository.textScale,
+    ) { themeMode, themeColour, customSeedArgb, textScale ->
         SettingsUiState(
             themeMode = themeMode,
             themeColour = themeColour,
             customSeedArgb = customSeedArgb,
+            textScale = textScale,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -85,6 +87,11 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         // launch starts the write in the background so the tap never blocks the screen.
         viewModelScope.launch { repository.setThemeMode(mode) }
+    }
+
+    /** Saves [scale] as the text size multiplier; the whole app is redrawn at that size at once. */
+    fun setTextScale(scale: Float) {
+        viewModelScope.launch { repository.setTextScale(scale) }
     }
 
     /**

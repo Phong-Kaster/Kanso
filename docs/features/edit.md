@@ -13,7 +13,10 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 
 Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
 **Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
-Lightroom (tapping it again closes it).
+Lightroom (tapping it again closes it). The tools are large (84 dp wide, 28 dp icons) and sit in a
+row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Compare** stays
+pinned at the right, behind a thin divider, and never scrolls away. **Undo** sits at the top right,
+next to **Done**, as on the other tools.
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
 rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
 used there is nothing to render, and the decoded original is handed over). No model and no
@@ -34,7 +37,7 @@ network are used. You can:
 - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
-- **Undo** and **Compare**, in a small pill at the photo's bottom right that stays in reach whatever
+- **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
   Done stays usable while comparing and renders the edit, not the original.
@@ -82,11 +85,11 @@ flowchart TD
 1. **The screen and its state.** The Edit screen is
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
-   [`ui/tool/EditToolContent.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolContent.kt)
+   [`ui/tool/components/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt)
    for its layout: `EditPhotoArea`, the photo with the
    [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
    filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
-   [`ui/tool/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditToolRow.kt)
+   [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
    height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
@@ -115,12 +118,12 @@ flowchart TD
    slider move pass a complete new `EditSettings`; a crop chip passes only a `CropRatio`, which
    `EditSession.cropRatioChosen` turns into the rectangle; the cropper passes a `CropRect`; and a
    slider release (`commitSettings`) passes nothing, it just closes the drag as one undo step:
-   - [`ui/tool/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt)
+   - [`ui/tool/components/toolpanel/editpanel/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt)
      draws the open sheet from the session's settings (it keeps no state of its own, so a slider
      reopens where it was left). A turn, a flip or a filter chip calls `changeSettings`; a crop
      shape calls `chooseCropRatio`; a slider calls `previewSettings` while it moves and
      `commitSettings` when let go.
-   - [`ui/tool/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditCropper.kt)
+   - [`ui/tool/components/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditCropper.kt)
      wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
      [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
      It always shows the original photo un-turned and un-flipped, because the crop is stored as
@@ -138,7 +141,7 @@ flowchart TD
      side when the photo has an odd number of quarter turns, so the turned picture comes out in the
      shape chosen; `undo` goes back to the last entry. There is no redo.
 4. **The live preview.** The photo card draws
-   `LivePreviewImage` (in `ui/tool/EditToolContent.kt`) whenever Compare is off and the Crop sheet
+   `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) whenever Compare is off and the Crop sheet
    is closed. It is a Compose `Canvas` that, every frame, takes only the crop rectangle from the
    bitmap (rounded exactly as the final render rounds it), turns it, mirrors it, fits it inside the
    card, and draws it through `ColorFilter.colorMatrix` with the four sliders' matrix from

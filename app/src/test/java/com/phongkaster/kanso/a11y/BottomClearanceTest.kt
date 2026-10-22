@@ -67,10 +67,12 @@ import com.phongkaster.kanso.ui.result.RESULT_SAVE_TAG
 import com.phongkaster.kanso.ui.result.RESULT_SHARE_TAG
 import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.CUSTOM_COLOUR_PICKER_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_MENU_THEME_COLOUR_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
+import com.phongkaster.kanso.ui.settings.THEME_COLOUR_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
@@ -234,8 +236,9 @@ class BottomClearanceTest {
     }
 
     /**
-     * Settings: the bar and Camera button clear the insets; with Custom chosen, the colour picker
-     * card scrolls above the bar.
+     * Settings: the bar and Camera button clear the insets on the menu; on the Theme colour screen
+     * (no bar), with Custom chosen, the colour picker card scrolls to rest above the navigation bar
+     * and the gesture area. Then Back returns to the menu, where the bar is.
      */
     private fun checkSettings(scenario: ActivityScenario<MainActivity>) {
         openTab(compose, KansoTab.SETTINGS)
@@ -243,11 +246,16 @@ class BottomClearanceTest {
         sendInsets(scenario, probeTag = KANSO_TAB_BAR_TAG)
         assertBarClearsInsets("Settings")
 
+        compose.onNodeWithTag(SETTINGS_MENU_THEME_COLOUR_TAG).tapAboveBar()
+        waitFor { count(THEME_COLOUR_SCREEN_TAG) > 0 }
         compose.onNodeWithTag(THEME_COLOUR_CUSTOM_TAG).tapAboveBar()
         waitFor { count(CUSTOM_COLOUR_PICKER_TAG) > 0 }
         compose.waitForIdle()
-        scrollToEnd("Settings", CUSTOM_COLOUR_PICKER_TAG)
-        assertAboveBar("Settings' colour picker card", CUSTOM_COLOUR_PICKER_TAG)
+        scrollToEnd("Theme colour screen", CUSTOM_COLOUR_PICKER_TAG)
+        assertClearsInsets("The Theme colour screen's colour picker card", CUSTOM_COLOUR_PICKER_TAG)
+
+        scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitFor { count(THEME_COLOUR_SCREEN_TAG) == 0 && count(SETTINGS_SCREEN_TAG) > 0 }
     }
 
     /** The live camera, opened with the Camera button: its shutter clears the insets. */

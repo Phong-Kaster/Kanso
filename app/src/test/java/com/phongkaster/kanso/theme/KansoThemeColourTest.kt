@@ -46,7 +46,7 @@ class KansoThemeColourTest {
     @Test
     fun custom_colour_gives_the_generated_light_scheme() {
         val primary = primaryFor(ThemeMode.Light, ThemeColour.Custom(GREEN_ARGB))
-        assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = false).primary, primary)
+        assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = false, exactPrimary = true).primary, primary)
         assertTrue(
             "Expected a primary other than the default Kanso blue",
             primary != seedColorScheme(KANSO_BLUE_SEED, dark = false).primary,
@@ -57,7 +57,7 @@ class KansoThemeColourTest {
     @Test
     fun custom_colour_gives_the_generated_dark_scheme() {
         val primary = primaryFor(ThemeMode.Dark, ThemeColour.Custom(GREEN_ARGB))
-        assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = true).primary, primary)
+        assertEquals(seedColorScheme(Color(GREEN_ARGB), dark = true, exactPrimary = true).primary, primary)
     }
 
     /** The Kanso blue choice gives the light scheme generated from Kanso blue's seed. */

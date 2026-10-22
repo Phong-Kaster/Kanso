@@ -61,7 +61,7 @@ flowchart TD
 ```
 
 1. **The panel.**
-   [`ui/tool/RetouchPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/RetouchPanel.kt)
+   [`ui/tool/components/toolpanel/RetouchPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/RetouchPanel.kt)
    keeps the slider value with `rememberSaveable` (it survives a rotation) and shows it as a
    percentage. **Smooth skin** calls `onApply(strength)`.
 2. **Handing over the strength.** `ToolScreen` turns that into

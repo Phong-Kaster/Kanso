@@ -62,7 +62,7 @@ flowchart TD
 ```
 
 1. **The button.**
-   [`ui/tool/CutoutPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/CutoutPanel.kt)
+   [`ui/tool/components/toolpanel/CutoutPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/CutoutPanel.kt)
    draws one button, disabled while an edit runs. Its tap calls `ToolViewModel.runRegistered()`.
 2. **Which processor.**
    [`di/AppModule.kt`](../../app/src/main/java/com/phongkaster/kanso/di/AppModule.kt) registers
@@ -105,7 +105,7 @@ flowchart TD
 7. **On screen.** `PhotoCard` in
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    sees the tool is Remove background and the shown bitmap has alpha, and draws a
-   [`Checkerboard`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/Checkerboard.kt) behind it
+   [`Checkerboard`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/Checkerboard.kt) behind it
    (12 dp squares in two theme colours) instead of the blurred backdrop.
 8. **Done, then Save or Share.** Done hands the cut-out (or, with no cut-out made or every one
    undone, the original photo) to the Result screen through `RenderedPhotoStore`; it writes

@@ -1,7 +1,10 @@
 package com.phongkaster.kanso.ui.home
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -167,6 +171,12 @@ private val CAROUSEL_PEEK = 48.dp
 /** The gap between two banners in the carousel. */
 private val CAROUSEL_ITEM_SPACING = 8.dp
 
+/** How long the carousel rests on a banner before it slides to the next one by itself. */
+private const val CAROUSEL_AUTO_SCROLL_PAUSE_MS = 3_500L
+
+/** How long the automatic slide to the next banner takes. Long on purpose, so it stays gentle. */
+private const val CAROUSEL_AUTO_SCROLL_DURATION_MS = 900
+
 /** The size of a tool's icon on its banner: drawn large, it is the banner's picture. */
 private val BANNER_ICON_SIZE = 88.dp
 
@@ -246,6 +256,8 @@ private const val RECENT_CARD_CONTENT_TYPE = "recent-photo"
  * the "Try now" button or the shortcut that was tapped; the caller opens that tool's photo
  * gallery, and the photo picked there opens in that tool. [onRecentClick] is called with the Uri
  * (as text) of the recent photo card that was tapped; the caller opens it in the Edit tool.
+ * [autoScroll] false stops the carousel sliding by itself (tests that swipe it use that, so a timer
+ * cannot move it between two swipes).
  * [onSeeAllEdits] is called by the round arrow beside "Recent edits"; the caller selects the My
  * edits tab.
  *
@@ -338,6 +350,7 @@ fun HomeContent(
     contentPadding: PaddingValues = PaddingValues(),
     onRecentClick: (String) -> Unit = {},
     onSeeAllEdits: () -> Unit = {},
+    autoScroll: Boolean = true,
     thumbnail: @Composable (photo: Photo, modifier: Modifier) -> Unit = { photo, cardModifier ->
         PhotoThumbnail(
             photo = photo,
@@ -392,6 +405,7 @@ fun HomeContent(
                 tools = state.carouselTools,
                 carouselState = carouselState,
                 onToolClick = onToolClick,
+                autoScroll = autoScroll,
             )
             Spacer(Modifier.height(ROW_GAP))
             CarouselDots(count = state.carouselTools.size, current = carouselState.currentItem)
@@ -461,7 +475,9 @@ private fun HomeGreeting(modifier: Modifier = Modifier) {
  * `flingBehavior` decides where a swipe comes to rest. The uncontained carousel's default lets a
  * swipe stop anywhere, even half-way between two banners; `CarouselDefaults.singleAdvanceFlingBehavior`
  * moves exactly one banner per swipe and settles it in front, so the page dots always point at a
- * whole banner. The carousel never moves on its own: there is no timer, only the person's swipes.
+ * whole banner. The carousel also moves on its own: every few seconds a `LaunchedEffect` slides it
+ * one banner forward with a linear tween (constant speed), and back to the first after the last.
+ * It skips a round while the person is swiping.
  *
  * `BoxWithConstraints` measures the width the column gives the carousel, so the banners are sized
  * from the real screen: about 280 dp on a 360 dp phone, wider on a bigger one.
@@ -472,10 +488,33 @@ private fun HeroCarousel(
     carouselState: CarouselState,
     onToolClick: (Tool) -> Unit,
     modifier: Modifier = Modifier,
+    autoScroll: Boolean = true,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         // Read in composition: the shape comes from the theme.
         val shape = MaterialTheme.shapes.extraLarge
+        // How far one banner moves the strip: a banner's width plus the gap after it, in pixels.
+        val stepPx = with(LocalDensity.current) { (maxWidth - CAROUSEL_PEEK + CAROUSEL_ITEM_SPACING).toPx() }
+        // Keyed on the banner count and step so it restarts if either changes. It loops for as
+        // long as the carousel is on screen; leaving the screen cancels it.
+        LaunchedEffect(carouselState, tools.size, stepPx, autoScroll) {
+            while (autoScroll && tools.size > 1) {
+                delay(CAROUSEL_AUTO_SCROLL_PAUSE_MS)
+                // The person is swiping or a fling is settling: leave it alone this round.
+                if (carouselState.isScrollInProgress) continue
+                if (carouselState.currentItem < tools.lastIndex) {
+                    // A linear tween moves at a constant speed, with no spring-like speed-up or
+                    // slow-down, so the slide reads as gentle and even.
+                    carouselState.animateScrollBy(
+                        value = stepPx,
+                        animationSpec = tween(CAROUSEL_AUTO_SCROLL_DURATION_MS, easing = LinearEasing),
+                    )
+                } else {
+                    // Past the last banner: glide back to the first one.
+                    carouselState.animateScrollToItem(0)
+                }
+            }
+        }
         HorizontalUncontainedCarousel(
             state = carouselState,
             itemWidth = maxWidth - CAROUSEL_PEEK,

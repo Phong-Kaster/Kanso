@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel.enhancepanel
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.components.toolpanel.ENHANCE_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.enhancepanel.enhancecompare.EnhanceCompare
 
 /** Test tag of the Enhance panel's button that runs Enhance on the photo. */
 const val ENHANCE_RUN_TAG = "enhance-run"

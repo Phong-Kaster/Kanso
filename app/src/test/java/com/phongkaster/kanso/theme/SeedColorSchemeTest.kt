@@ -32,6 +32,25 @@ class SeedColorSchemeTest {
         assertDistinctAccents(scheme)
     }
 
+    /** A picked colour is the primary exactly, in light and in dark, with white text on Coca-Cola red. */
+    @Test
+    fun exact_primary_is_the_picked_colour() {
+        val cocaColaRed = Color(0xFFF40009)
+        for (dark in listOf(false, true)) {
+            val scheme = seedColorScheme(cocaColaRed, dark = dark, exactPrimary = true)
+            assertEquals(cocaColaRed, scheme.primary)
+            assertEquals(Color.White, scheme.onPrimary)
+        }
+    }
+
+    /** A very light pick gets dark text, so the label on a button stays readable. */
+    @Test
+    fun exact_primary_gets_dark_text_on_a_light_colour() {
+        val scheme = seedColorScheme(Color(0xFFFFEB3B), dark = false, exactPrimary = true)
+        assertEquals(Color(0xFFFFEB3B), scheme.primary)
+        assertTrue(scheme.onPrimary.luminance() < 0.1f)
+    }
+
     /** The dark scheme sets every role, and its accents differ from each other. */
     @Test
     fun dark_scheme_sets_every_role_with_distinct_accents() {

@@ -24,11 +24,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.MainActivity
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeModeScreen
+import com.phongkaster.kanso.navigation.backToHomeFromSettings
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
+import com.phongkaster.kanso.ui.settings.THEME_MODE_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_DARK_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_LIGHT_TAG
 import com.phongkaster.kanso.ui.settings.THEME_MODE_SYSTEM_TAG
@@ -99,8 +102,7 @@ class ThemeModeSettingsTest {
         compose.onNodeWithTag(THEME_MODE_DARK_TAG).assertIsSelected()
         compose.onNodeWithTag(THEME_MODE_SYSTEM_TAG).assertIsNotSelected()
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertDrawnDark(sampleHome())
 
         openSettings()
@@ -109,8 +111,7 @@ class ThemeModeSettingsTest {
         assertDrawnLight(sampleSettings())
         compose.onNodeWithTag(THEME_MODE_LIGHT_TAG).assertIsSelected()
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertDrawnLight(sampleHome())
     }
 
@@ -131,8 +132,7 @@ class ThemeModeSettingsTest {
         waitUntilDark()
         assertDrawnDark(sampleSettings())
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertDrawnDark(sampleHome())
     }
 
@@ -152,8 +152,7 @@ class ThemeModeSettingsTest {
         waitUntilLight()
         assertDrawnLight(sampleSettings())
 
-        Espresso.pressBack()
-        waitForHomeOnly()
+        backToHomeFromSettings(compose)
         assertDrawnLight(sampleHome())
     }
 
@@ -233,7 +232,7 @@ class ThemeModeSettingsTest {
     /** Draws Settings and samples its background and the text of its "Dark" row. */
     private fun sampleSettings(): ScreenSample = sampleAround(
         hasText(context.getString(R.string.theme_mode_dark)) and
-            hasAnyAncestor(hasTestTag(SETTINGS_SCREEN_TAG)),
+            hasAnyAncestor(hasTestTag(THEME_MODE_SCREEN_TAG)),
     )
 
     /**
@@ -265,13 +264,9 @@ class ThemeModeSettingsTest {
         }
     }
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme mode screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onNodeWithText(context.getString(R.string.theme_mode)).assertIsDisplayed()
+        openThemeModeScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

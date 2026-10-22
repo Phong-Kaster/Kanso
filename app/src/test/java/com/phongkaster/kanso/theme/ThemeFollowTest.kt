@@ -75,7 +75,7 @@ import com.phongkaster.kanso.ui.result.RESULT_SCRIM_TAG
 import com.phongkaster.kanso.ui.result.ResultContent
 import com.phongkaster.kanso.ui.result.ResultPhoto
 import com.phongkaster.kanso.ui.result.ResultUiState
-import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_APPEARANCE_TAG
+import com.phongkaster.kanso.ui.settings.SETTINGS_GROUP_MENU_TAG
 import com.phongkaster.kanso.ui.settings.SettingsContent
 import com.phongkaster.kanso.ui.settings.SettingsUiState
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
@@ -544,14 +544,12 @@ class ThemeFollowTest {
             SettingsContent(
                 state = SettingsUiState(themeMode = mode, themeColour = ThemeColour.KansoBlue),
                 wallpaperColour = null,
-                onThemeModeSelected = {},
-                onKansoBlueChosen = {},
-                onWallpaperChosen = {},
-                onCustomChosen = {},
-                onCustomColourChosen = {},
+                onOpenThemeMode = {},
+                onOpenThemeColour = {},
+                onOpenTextSize = {},
             )
         }
-        val group = nodeRect(SETTINGS_GROUP_APPEARANCE_TAG)
+        val group = nodeRect(SETTINGS_GROUP_MENU_TAG)
         assertFollows(
             screen = "Settings",
             mode = mode,

@@ -27,11 +27,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
-import com.phongkaster.kanso.ui.tool.EDIT_INTENSITY_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EditPanelContent
-import com.phongkaster.kanso.ui.tool.editFilterTag
-import com.phongkaster.kanso.ui.tool.editSliderValueTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_INTENSITY_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editFilterTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editSliderValueTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

@@ -1,33 +1,22 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel
 
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
@@ -40,7 +29,9 @@ import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import kotlin.math.roundToInt
+import com.phongkaster.kanso.ui.tool.AdjustSlider
+import com.phongkaster.kanso.ui.tool.components.EditCropper
+import com.phongkaster.kanso.ui.tool.components.toolpanel.EDIT_PANEL_TAG
 
 /** Test tag of the Edit panel's brightness slider. */
 const val EDIT_BRIGHTNESS_TAG = "edit-brightness"
@@ -56,48 +47,6 @@ const val EDIT_WARMTH_TAG = "edit-warmth"
 
 /** Test tag of the Edit panel's filter intensity slider. */
 const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
-
-/** Test tag of the Edit panel's "Turn left" button (a quarter turn anticlockwise). */
-const val EDIT_ROTATE_LEFT_TAG = "edit-rotate-left"
-
-/** Test tag of the Edit panel's "Turn right" button (a quarter turn clockwise). */
-const val EDIT_ROTATE_RIGHT_TAG = "edit-rotate-right"
-
-/** Test tag of the Edit panel's button that mirrors the photo left to right. */
-const val EDIT_FLIP_HORIZONTAL_TAG = "edit-flip-horizontal"
-
-/** Test tag of the Edit panel's button that mirrors the photo top to bottom. */
-const val EDIT_FLIP_VERTICAL_TAG = "edit-flip-vertical"
-
-/**
- * The ending of the test tag of the number shown beside a slider's name: the brightness slider's
- * number is tagged `edit-brightness-value` (see [editSliderValueTag]).
- */
-const val EDIT_SLIDER_VALUE = "-value"
-
-/** The width of a slider's name, so the sliders line up one under another. */
-private val LABEL_WIDTH = 96.dp
-
-/** The width of the number beside a slider's name, room for "-100". */
-private val VALUE_WIDTH = 44.dp
-
-/** A slider value of 1 is shown as this number: the -1..1 settings are shown as -100..100. */
-private const val SHOWN_SCALE = 100f
-
-/** Returns the test tag of [ratio]'s crop chip, such as `edit-ratio-SQUARE`. */
-fun editRatioTag(ratio: CropRatio): String = "edit-ratio-${ratio.name}"
-
-/** Returns the test tag of [slider]'s chip in the Adjust panel, such as `edit-adjust-CONTRAST`. */
-fun editAdjustChipTag(slider: AdjustSlider): String = "edit-adjust-${slider.name}"
-
-/** Returns the test tag of [preset]'s filter chip, such as `edit-filter-KELVIN`. */
-fun editFilterTag(preset: FilterPreset): String = "edit-filter-${preset.name}"
-
-/**
- * Returns the test tag of the number beside the slider tagged [sliderTag], such as
- * `edit-brightness-value`.
- */
-fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALUE
 
 /**
  * The Edit tool's controls for one sheet of the Edit screen: the group of [openTool] only, which
@@ -302,265 +251,6 @@ private fun withAdjust(settings: EditSettings, slider: AdjustSlider, value: Floa
     AdjustSlider.CONTRAST -> settings.copy(contrast = value)
     AdjustSlider.SATURATION -> settings.copy(saturation = value)
     AdjustSlider.WARMTH -> settings.copy(warmth = value)
-}
-
-/**
- * One row of Adjust's sub-tool chips (Brightness, Contrast, Saturation, Warmth), scrolling
- * sideways if the screen is narrow. The [chosen] one is marked selected; a tap calls [onChoose]
- * with the chip's sub-tool, whose slider then takes the other's place under the row. Choosing a
- * chip changes nothing in the photo. While [enabled] is false every chip is disabled.
- */
-@Composable
-private fun AdjustChips(chosen: AdjustSlider, enabled: Boolean, onChoose: (AdjustSlider) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AdjustSlider.entries.forEach { slider ->
-            EditFeatureTile(
-                icon = adjustIcon(slider),
-                title = slider.labelRes,
-                onClick = { onChoose(slider) },
-                selected = slider == chosen,
-                enabled = enabled,
-                modifier = Modifier.testTag(editAdjustChipTag(slider)),
-            )
-        }
-    }
-}
-
-/**
- * One row of crop chips, scrolling sideways if the screen is narrow. Each is a filter chip marked
- * selected while it is the [chosen] shape: a fixed shape crops at once to the largest centred
- * rectangle of that shape and locks the cropper's rectangle to it; Free unlocks it, so its edges
- * move freely. A tap calls [onRatio] with the chip's shape; while [enabled] is false every chip is
- * disabled.
- */
-@Composable
-private fun CropChips(chosen: CropRatio?, cropIsFull: Boolean, enabled: Boolean, onRatio: (CropRatio) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CropRatio.entries.forEach { ratio ->
-            EditFeatureTile(
-                icon = ratioIcon(ratio),
-                title = ratioLabel(ratio),
-                onClick = { onRatio(ratio) },
-                // Original reads as chosen only while the whole photo is kept, not after the handles moved.
-                selected = ratio == chosen && (ratio != CropRatio.ORIGINAL || cropIsFull),
-                enabled = enabled,
-                modifier = Modifier.testTag(editRatioTag(ratio)),
-            )
-        }
-    }
-}
-
-/**
- * The turn and flip buttons in one row, scrolling sideways if the screen is narrow: "Turn left"
- * and "Turn right" call [onTurn] with -1 and +1 quarter turns, "Flip across" and "Flip upside
- * down" call [onFlip] (true for left to right, false for top to bottom; a second tap flips back).
- * While [enabled] is false all four are disabled.
- */
-@Composable
-private fun TurnButtons(enabled: Boolean, onTurn: (Int) -> Unit, onFlip: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        EditFeatureTile(
-            icon = R.drawable.ic_rotate_left,
-            title = R.string.edit_tool_rotate_left,
-            onClick = { onTurn(-1) },
-            enabled = enabled,
-            modifier = Modifier.testTag(EDIT_ROTATE_LEFT_TAG),
-        )
-        EditFeatureTile(
-            icon = R.drawable.ic_rotate_right,
-            title = R.string.edit_tool_rotate_right,
-            onClick = { onTurn(1) },
-            enabled = enabled,
-            modifier = Modifier.testTag(EDIT_ROTATE_RIGHT_TAG),
-        )
-        EditFeatureTile(
-            icon = R.drawable.ic_flip_horizontal,
-            title = R.string.edit_tool_flip_horizontal,
-            onClick = { onFlip(true) },
-            enabled = enabled,
-            modifier = Modifier.testTag(EDIT_FLIP_HORIZONTAL_TAG),
-        )
-        EditFeatureTile(
-            icon = R.drawable.ic_flip_vertical,
-            title = R.string.edit_tool_flip_vertical,
-            onClick = { onFlip(false) },
-            enabled = enabled,
-            modifier = Modifier.testTag(EDIT_FLIP_VERTICAL_TAG),
-        )
-    }
-}
-
-/**
- * One row of filter chips, scrolling sideways: None and then one chip per preset of
- * [FilterPreset], the [chosen] one marked selected, so only one is ever on. A tap calls [onFilter]
- * with the chip's filter; while [enabled] is false every chip is disabled.
- */
-@Composable
-private fun FilterChips(chosen: FilterPreset, enabled: Boolean, onFilter: (FilterPreset) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // NONE is the enum's first entry, so None leads the row.
-        FilterPreset.entries.forEach { preset ->
-            EditFeatureTile(
-                icon = if (preset == FilterPreset.NONE) R.drawable.ic_hide_image else R.drawable.ic_filter_vintage,
-                title = filterLabel(preset),
-                onClick = { onFilter(preset) },
-                selected = preset == chosen,
-                enabled = enabled,
-                modifier = Modifier.testTag(editFilterTag(preset)),
-            )
-        }
-    }
-}
-
-/**
- * A slider with its [label] and its number on the left, at least 48 dp tall: shows [value] within
- * [valueRange] (by default the colour sliders' -1..1, whose centre means no change), calls
- * [onValueChange] while it moves and [onValueChangeFinished] when the person lets go. The slider
- * only ever shows [value], which the caller takes from the session's settings, so it stays where
- * it was let go instead of springing back.
- *
- * The number is [value] times 100, rounded: -100..100 for a colour slider, 0..100 for the
- * intensity; it carries the test tag [editSliderValueTag] of [tag]. While [enabled] is false the
- * slider is disabled. The slider also carries the label as its description, so a screen reader
- * names it.
- */
-@Composable
-private fun LabelledSlider(
-    @StringRes label: Int,
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit,
-    tag: String,
-    enabled: Boolean,
-    valueRange: ClosedFloatingPointRange<Float> = EditSettings.MIN..EditSettings.MAX,
-) {
-    val text = stringResource(label)
-    val shown = stringResource(R.string.edit_session_slider_value, (value * SHOWN_SCALE).roundToInt())
-    LabelledRow(label = label, value = shown, valueTag = editSliderValueTag(tag)) {
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            onValueChangeFinished = onValueChangeFinished,
-            enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(tag)
-                .semantics { contentDescription = text },
-        )
-    }
-}
-
-/**
- * A row at least 48 dp tall with [label] in a fixed-width column on the left, then, when given,
- * [value] (a slider's number, tagged [valueTag]) right beside it, and [control] filling the rest,
- * so labelled controls line up one under another.
- */
-@Composable
-private fun LabelledRow(
-    @StringRes label: Int,
-    value: String? = null,
-    valueTag: String? = null,
-    control: @Composable () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(label),
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 1,
-            modifier = Modifier.width(LABEL_WIDTH),
-        )
-        if (value != null) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.End,
-                maxLines = 1,
-                modifier = Modifier
-                    .width(VALUE_WIDTH)
-                    .padding(end = 8.dp)
-                    .then(if (valueTag != null) Modifier.testTag(valueTag) else Modifier),
-            )
-        }
-        Box(modifier = Modifier.weight(1f)) {
-            control()
-        }
-    }
-}
-
-/** The icon drawn on [slider]'s tile in Adjust. */
-@DrawableRes
-private fun adjustIcon(slider: AdjustSlider): Int = when (slider) {
-    AdjustSlider.BRIGHTNESS -> R.drawable.ic_brightness
-    AdjustSlider.CONTRAST -> R.drawable.ic_contrast
-    AdjustSlider.SATURATION -> R.drawable.ic_saturation
-    AdjustSlider.WARMTH -> R.drawable.ic_warmth
-}
-
-/** The icon drawn on crop shape [ratio]'s tile: a rectangle of that shape ([CropRatio.FREE] shows the crop icon). */
-@DrawableRes
-private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
-    CropRatio.ORIGINAL -> R.drawable.ic_refresh
-    CropRatio.FREE -> R.drawable.ic_crop
-    CropRatio.SQUARE -> R.drawable.ic_ratio_square
-    CropRatio.FOUR_THREE -> R.drawable.ic_ratio_4_3
-    CropRatio.THREE_FOUR -> R.drawable.ic_ratio_3_4
-    CropRatio.SIXTEEN_NINE -> R.drawable.ic_ratio_16_9
-    CropRatio.NINE_SIXTEEN -> R.drawable.ic_ratio_9_16
-}
-
-/** The string resource naming crop shape [ratio] on its tile. */
-@StringRes
-private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
-    CropRatio.ORIGINAL -> R.string.edit_tool_ratio_original
-    CropRatio.FREE -> R.string.edit_tool_ratio_free
-    CropRatio.SQUARE -> R.string.edit_tool_ratio_square
-    CropRatio.FOUR_THREE -> R.string.edit_tool_ratio_4_3
-    CropRatio.THREE_FOUR -> R.string.edit_tool_ratio_3_4
-    CropRatio.SIXTEEN_NINE -> R.string.edit_tool_ratio_16_9
-    CropRatio.NINE_SIXTEEN -> R.string.edit_tool_ratio_9_16
-}
-
-/** The string resource naming filter [preset] on its tile. */
-@StringRes
-private fun filterLabel(preset: FilterPreset): Int = when (preset) {
-    FilterPreset.NONE -> R.string.edit_tool_filter_none
-    FilterPreset.LIGHT -> R.string.edit_tool_filter_light
-    FilterPreset.SEVENTY_SEVEN -> R.string.edit_tool_filter_1977
-    FilterPreset.KELVIN -> R.string.edit_tool_filter_kelvin
-    FilterPreset.NASHVILLE -> R.string.edit_tool_filter_nashville
-    FilterPreset.WALDEN -> R.string.edit_tool_filter_walden
-    FilterPreset.HUDSON -> R.string.edit_tool_filter_hudson
-    FilterPreset.AMARO -> R.string.edit_tool_filter_amaro
 }
 
 /**

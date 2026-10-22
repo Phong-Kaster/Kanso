@@ -18,6 +18,7 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.di.appModule
 import com.phongkaster.kanso.navigation.KansoTab
+import com.phongkaster.kanso.navigation.openThemeModeScreen
 import com.phongkaster.kanso.navigation.openTab
 import com.phongkaster.kanso.navigation.tapAboveBar
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
@@ -127,12 +128,9 @@ class ThemeModeRestartTest {
         return color
     }
 
-    /** Taps the Settings tab on the floating bar and waits until the Settings screen is shown. */
+    /** Opens the Settings tab, then the Theme mode screen from its menu, and waits until it is shown. */
     private fun openSettings() {
-        openTab(compose, KansoTab.SETTINGS)
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(SETTINGS_SCREEN_TAG).fetchSemanticsNodes().isNotEmpty()
-        }
+        openThemeModeScreen(compose)
     }
 
     /** Waits until Home is on screen, found by its own tag. */

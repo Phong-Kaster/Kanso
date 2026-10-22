@@ -50,14 +50,14 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.tool.ARTISTIC_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.CUTOUT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.ARTISTIC_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.CUTOUT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.EDIT_TOOL_ROW_TAG
-import com.phongkaster.kanso.ui.tool.ENHANCE_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.RETOUCH_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.ENHANCE_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.RETOUCH_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
@@ -71,7 +71,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
-import com.phongkaster.kanso.ui.tool.ToolPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -401,16 +401,11 @@ class ToolScreenTest {
                 "$tool: Done $done is not level with the title $title",
                 done.top <= title.center.y && done.bottom >= title.center.y,
             )
-            // Undo: just left of Done on the four other tools; on Edit, in the pill on the photo.
+            // Undo: just left of Done in the top bar, on every tool, Edit included.
             val undo = compose.onNodeWithTag(TOOL_UNDO_TAG).fetchSemanticsNode().boundsInRoot
-            if (tool == Tool.EDIT) {
-                compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
-                assertTrue("$tool: Undo $undo left the photo card", undo.top >= card.top - SLACK)
-            } else {
-                assertTrue("$tool: Undo $undo is not left of Done $done", undo.right <= done.left + SLACK)
-                assertTrue("$tool: Undo $undo is not in the top bar", undo.bottom <= card.top + SLACK)
-                assertTrue("$tool: Undo $undo is not in the right half", undo.left >= root.center.x - SLACK)
-            }
+            assertTrue("$tool: Undo $undo is not left of Done $done", undo.right <= done.left + SLACK)
+            assertTrue("$tool: Undo $undo is not in the top bar", undo.bottom <= card.top + SLACK)
+            assertTrue("$tool: Undo $undo is not in the right half", undo.left >= root.center.x - SLACK)
             // No Save bar (R5): no "Save" text on the screen, and nothing clickable outside the
             // tool's own options strip spans the screen below the card. The strip's own controls
             // (a tool's run button) are the tool's, not a bottom bar.
@@ -481,8 +476,8 @@ class ToolScreenTest {
      * Undo (`tool-undo`) is switched off while there is nothing to take back, and switched on,
      * calling onUndo once per tap, once there is.
      *
-     * Run 9: on the Edit screen Undo moved from the top bar into the pill on the photo, so the
-     * test also checks there is exactly one Undo and that it is the pill's.
+     * Undo sits beside Done in the top bar on every tool, Edit included, so the test also checks
+     * there is exactly one Undo and that it is not in the row of tools under the photo.
      */
     @Test
     fun undo_is_enabled_only_when_there_is_an_edit_to_take_back() {
@@ -496,7 +491,7 @@ class ToolScreenTest {
         }
         compose.waitForIdle()
         compose.onAllNodes(hasTestTag(TOOL_UNDO_TAG)).assertCountEquals(1)
-        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertExists()
+        compose.onNode(hasTestTag(TOOL_UNDO_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertDoesNotExist()
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed().assertIsNotEnabled()
 
         compose.runOnUiThread { state = state.copy(edited = ToolFixtures.gradient(300, 200), canUndo = true) }

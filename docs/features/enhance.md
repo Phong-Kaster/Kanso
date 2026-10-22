@@ -64,7 +64,7 @@ flowchart TD
 ```
 
 1. **The button.**
-   [`ui/tool/EnhancePanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EnhancePanel.kt)
+   [`ui/tool/components/toolpanel/enhancepanel/EnhancePanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/enhancepanel/EnhancePanel.kt)
    draws the button; its tap calls `ToolViewModel.runRegistered()`. The button itself is not
    disabled during a run, but the ViewModel ignores a tap while an edit runs.
 2. **Which processor.**
@@ -108,7 +108,7 @@ flowchart TD
    4. sends red, green and blue of every pixel through `255 * (v / 255)^g`, a curve that lifts
       shadows most, keeps black and white, and never makes a value darker. Alpha is kept.
 7. **The comparison.** Once there is a result,
-   [`ui/tool/EnhanceCompare.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EnhanceCompare.kt)
+   [`ui/tool/components/toolpanel/enhancepanel/enhancecompare/EnhanceCompare.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/enhancepanel/enhancecompare/EnhanceCompare.kt)
    shows it in a 120 dp strip above the button. Holding the control (`detectTapGestures` with
    `onPress`, `tryAwaitRelease`) shows the original instead; `AnimatedContent` fades between the two
    in 150 ms. The "original" is the photo as it was opened on this screen, not the photo just

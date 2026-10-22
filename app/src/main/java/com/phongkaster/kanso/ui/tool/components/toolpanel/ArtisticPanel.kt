@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components.toolpanel
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.artistic.ArtisticStyle
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.common.SliderWithValue
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import kotlin.math.roundToInt
 
 /** Test tag of the Artistic panel's strength slider. */
 const val ARTISTIC_STRENGTH_TAG = "artistic-strength"
@@ -95,13 +96,13 @@ fun ArtisticPanel(
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.fillMaxWidth(),
         )
-        Slider(
+        SliderWithValue(
             value = strength,
             onValueChange = onStrengthChange,
+            valueText = stringResource(R.string.retouch_strength_value, (strength * 100).roundToInt()),
             valueRange = 0f..1f,
             enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
+            sliderModifier = Modifier
                 .testTag(ARTISTIC_STRENGTH_TAG)
                 // A screen reader names the slider by this, as the label above it is a separate text.
                 .semantics { contentDescription = strengthLabel },

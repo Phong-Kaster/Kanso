@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool
+package com.phongkaster.kanso.ui.tool.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
