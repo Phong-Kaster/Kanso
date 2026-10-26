@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,8 +22,13 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.StickersPanel
+import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
+import com.phongkaster.kanso.ui.tool.editProcessorFor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
@@ -70,9 +76,10 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  *   the shape's rectangle in it.
  *
  * Each callback that changes the picture also carries a `processorFor` function, which builds the
- * [EditProcessor] that draws a set of settings. This composable builds it, because it owns the
- * filters' look-up images: [filterSource] finds them; when null, as in the app, they are read from
- * the app's assets (the engine's bundled images, see [FilterPreset]); a test passes its own. So
+ * [EditProcessor] that draws a set of settings. It comes from the app's one recipe,
+ * [editProcessorFor] (filter look-up images from the assets, see [FilterPreset], and the sticker
+ * pictures from the drawables), so every place that draws settings draws stickers too. When
+ * [filterSource] is not null (a test) it supplies the filters instead. So
  * the screen simply forwards each callback to the ViewModel.
  *
  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture)
@@ -81,6 +88,11 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  *
  * [adjustSlider] is Adjust's chosen sub-tool (kept in the screen's state) and [onAdjustSlider] a
  * sub-tool chip tapped.
+ *
+ * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
+ * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
+ * sheet's own Cancel and Confirm buttons; they are forwarded to the stateless content untouched,
+ * as stickers need no processor built here.
  *
  * The drawing itself is the stateless [EditPanelContent].
  */
@@ -97,17 +109,23 @@ fun EditPanel(
     filterSource: FilterLut.Source? = null,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
     onAdjustSlider: (AdjustSlider) -> Unit = {},
+    stickerCategory: StickerCategory = StickerCategory.FOOD,
+    onStickerCategoryChosen: (StickerCategory) -> Unit = {},
+    onStickerChosen: (CatalogSticker) -> Unit = {},
+    onStickersCancel: () -> Unit = {},
+    onStickersConfirm: () -> Unit = {},
 ) {
-    // The real look-up source reads the assets through the application's context, made once.
     val context = LocalContext.current
-    val assetFilters = remember(context) {
-        val appContext = context.applicationContext
-        FilterLut.fromAssets { path -> appContext.assets.open(path) }
-    }
-    val filters = filterSource ?: assetFilters
-    // One function, remembered per source, that turns any settings into the processor drawing them.
-    val processorFor: (EditSettings) -> ToolProcessor = remember(filters) {
-        { wanted: EditSettings -> EditProcessor(wanted, filters) }
+    // One function, remembered, that turns any settings into the processor drawing them. The app's
+    // one recipe ([editProcessorFor]) reads filters from assets and sticker pictures from drawables;
+    // a test that passes its own [filterSource] keeps the sticker pictures but swaps the filters.
+    val processorFor: (EditSettings) -> ToolProcessor = remember(context, filterSource) {
+        if (filterSource == null) {
+            editProcessorFor(context)
+        } else {
+            val stickers = DrawableStickerPictures(context.applicationContext)
+            ({ wanted: EditSettings -> EditProcessor(wanted, filterSource, stickers) })
+        }
     }
 
     EditPanelContent(
@@ -121,6 +139,11 @@ fun EditPanel(
         modifier = modifier,
         adjustSlider = adjustSlider,
         onAdjustSlider = onAdjustSlider,
+        stickerCategory = stickerCategory,
+        onStickerCategoryChosen = onStickerCategoryChosen,
+        onStickerChosen = onStickerChosen,
+        onStickersCancel = onStickersCancel,
+        onStickersConfirm = onStickersConfirm,
     )
 }
 
@@ -146,6 +169,9 @@ fun EditPanel(
  * [onChange]; a crop chip calls [onRatio]. Its height is given by the sheet around it; when the
  * group is taller than that, it scrolls. Chips, buttons and sliders keep Material's 48 dp minimum
  * touch target, and each is disabled while [enabled] is false.
+ *
+ * Stickers draws [StickersPanel]: category chips and a grid that scrolls on its own, so this
+ * composable does not scroll for that tool.
  */
 @Composable
 fun EditPanelContent(
@@ -159,16 +185,32 @@ fun EditPanelContent(
     modifier: Modifier = Modifier,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
     onAdjustSlider: (AdjustSlider) -> Unit = {},
+    stickerCategory: StickerCategory = StickerCategory.FOOD,
+    onStickerCategoryChosen: (StickerCategory) -> Unit = {},
+    onStickerChosen: (CatalogSticker) -> Unit = {},
+    onStickersCancel: () -> Unit = {},
+    onStickersConfirm: () -> Unit = {},
 ) {
+    // The other tools scroll when too tall for the sheet. Stickers does not: its grid is a lazy
+    // list that scrolls itself, and a lazy list inside a scrolling column has no height to fill.
+    val scrolling = if (openTool == EditTool.STICKERS) Modifier else Modifier.verticalScroll(rememberScrollState())
     Column(
         modifier = modifier
             .testTag(EDIT_PANEL_TAG)
             .fillMaxWidth()
             // The sheet around the panel sets its height; the scroll reaches whatever does not fit.
-            .verticalScroll(rememberScrollState()),
+            .then(scrolling),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         when (openTool) {
+            EditTool.STICKERS -> StickersPanel(
+                category = stickerCategory,
+                enabled = enabled,
+                onCategoryChosen = onStickerCategoryChosen,
+                onStickerChosen = onStickerChosen,
+                onCancel = onStickersCancel,
+                onConfirm = onStickersConfirm,
+            )
             EditTool.CROP -> {
                 CropChips(chosen = settings.cropRatio, cropIsFull = settings.crop == EditSettings.CropRect.FULL, enabled = enabled, onRatio = onRatio)
                 // The rectangle itself is moved on the photo (the cropper); this line says how.
@@ -343,6 +385,26 @@ private fun EditPanelFiltersPreview() {
         openTool = EditTool.FILTERS,
         settings = EditSettings(filter = FilterPreset.KELVIN, filterIntensity = 0.7f),
     )
+}
+
+/** The Stickers sheet in a sheet-sized surface, in light and in dark: Food chosen, its tiles in a grid. */
+@PreviewLightDark
+@Composable
+private fun EditPanelStickersPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Box(Modifier.fillMaxSize()) {
+            Surface(modifier = Modifier.fillMaxWidth().height(200.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                EditPanelContent(
+                    openTool = EditTool.STICKERS,
+                    settings = EditSettings(),
+                    onChange = {},
+                    onPreview = {},
+                    onCommit = {},
+                    onRatio = {},
+                )
+            }
+        }
+    }
 }
 
 /**

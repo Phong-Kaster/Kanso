@@ -18,3 +18,5 @@
   - Kanso blue's `surface` and `background` are one colour in each mode: `#F9F9FF` in light and `#111318` in dark, the window backgrounds of DoD 1 (d). So a test that compares with `background` also proves `surface`.
   - A PNG's pixels can be read with a small pure-Python decoder (zlib and struct, no PIL), run as `python -I <script file>`.
   - `:app:clean`, then the whole set, takes 3 min 30 s. Each Proof's own command takes: test 2 min 41 s; `verifyRoborazziDebug` 2 min 45 s; lint with forced analysis 23 s; `compileDebugKotlin --rerun-tasks` 19 s.
+
+- Run 10 Phase 2: `verifyRoborazziDebug` already failed 33 tests at HEAD `2de1592` (6 `ScreenshotTest`, 27 `ToolScreenshotTest`); pictures 4, 16 and others predate Runs 8-9. `SettingsUiStateTest.state_follows_the_theme_mode_set_through_the_view_model` flaked once. A subagent's Bash allows only the compile command; a `git stash push -u -- app README.md docs` round trip is a safe way to compare against HEAD.

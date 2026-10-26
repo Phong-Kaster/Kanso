@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spoken names of the four corner buttons of the selected sticker's frame (Edit screen). -->
+    <string name="sticker_frame_delete">Delete sticker</string>
+    <string name="sticker_frame_duplicate">Duplicate sticker</string>
+    <string name="sticker_frame_flip">Flip sticker</string>
+    <string name="sticker_frame_resize">Resize and turn sticker</string>
+</resources>

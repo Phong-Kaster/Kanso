@@ -9,14 +9,29 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).
 
-**EditTool** - One of the four groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
-opens one sheet; only one sheet is open at a time. Holds no strings or icons.
-`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all four live inside `Tool.EDIT`.
+**EditTool** - One of the five groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+`ADJUST`, `FILTERS`, `STICKERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
+opens one sheet; only one sheet is open at a time (the Stickers sheet takes the row's place while
+open). Holds no strings or icons.
+`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
+
+**Sticker** - One ready-made picture placed on the photo in Edit: an immutable value with a key,
+a picture id, a centre, a width (all fractions of the ORIGINAL photo), a turn in degrees and a
+mirrored flag. A photo holds at most 20 (`EditSettings.MAX_STICKERS`) in `EditSettings.stickers`.
+It is part of the photo: `EditProcessor` draws it first, so crop, turns, flips, filter and sliders
+act on it (see ADR-004). Which sticker is selected is screen state
+(`ToolUiState.selectedStickerKey`), not part of the sticker. `data/edit/edit/Sticker.kt`. *Not* an
+entry of the catalogue (a `CatalogSticker`), which is only a picture to choose.
+
+**Sticker catalogue (`StickerCatalog`)** - The 60 pictures the Stickers sheet offers, in four
+categories (Food 17, Mood 17, Quote 6, Emoji 20; `StickerCategory`), each a `CatalogSticker` with
+an explicit `R.drawable.img_sticker_*` reference. Choosing one adds a `Sticker` with that picture's
+id. `data/edit/edit/StickerCatalog.kt`. *Not* the stickers on the photo.
 
 **EditSettings** - Everything the Edit screen has done to the photo, as one immutable value: crop
 rectangle (fractions of the photo), crop ratio lock, quarter turns, two flips, brightness,
-contrast, saturation, warmth (each -1..1, 0 = unchanged), one filter and its intensity (0..1). It
+contrast, saturation, warmth (each -1..1, 0 = unchanged), one filter and its intensity (0..1), and
+the list of stickers. It
 is the whole state, never a step: it is always applied to the original photo, so a second filter
 replaces the first. The default value changes nothing (`isNeutral`).
 `data/edit/edit/EditSettings.kt`. *Not* app settings (`SettingsRepository`, theme).
@@ -42,16 +57,17 @@ render:
 - `EditColourMatrix` (`data/edit/edit/EditColourMatrix.kt`) is the one place the four sliders
   become a 20-number colour matrix; the live preview and `EditProcessor` both use it.
 - `FilterPreviewRenderer` (`data/edit/edit/FilterPreviewRenderer.kt`) handles the one part Compose
-  cannot draw: the filter. It runs the real `EditProcessor` with only the filter set, off the main
-  thread, on a copy of the original shrunk to at most `PREVIEW_EDGE` = 640 px on its longest edge.
-  `LivePreviewImage` then draws everything else on top of that small picture.
+  cannot draw: the filter. It runs the real `EditProcessor` with only the filter and the stickers
+  set (all but the one being touched), off the main thread, on a copy of the original shrunk to at
+  most `PREVIEW_EDGE` = 640 px on its longest edge. `LivePreviewImage` then draws everything else
+  on top of that small picture, including the sticker under the finger (sliders, no filter).
 
 *Not* a `@Preview` composable (the design-time previews CLAUDE.md requires), and not the camera's
 `LivePreview` (`ui/camera/CameraScreen.kt`).
 
 **EditProcessor** - The Edit tool's renderer used at Done: applies a whole `EditSettings` to the
-original photo on the CPU (`Dispatchers.Default`) in this order: crop, turns, flips, filter, then
-sliders. Inputs above `WorkingSize.EDIT` (2000 px longest edge) are scaled down first. The output
+original photo on the CPU (`Dispatchers.Default`) in this order: stickers, crop, turns, flips,
+filter, then sliders. Inputs above `WorkingSize.EDIT` (2000 px longest edge) are scaled down first. The output
 is opaque (`setHasAlpha(false)`). Out of memory gives `EditFailure.OutOfMemory`; any other error
 gives `EditFailure.Other`. `data/edit/edit/EditProcessor.kt`, one implementation of `ToolProcessor`
 (`data/edit/ToolProcessor.kt`, the seam every tool runs through).

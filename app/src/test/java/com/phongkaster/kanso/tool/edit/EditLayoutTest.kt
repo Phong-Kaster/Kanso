@@ -10,9 +10,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -34,6 +38,12 @@ import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.R
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +113,8 @@ class EditLayoutTest {
         val cards = statesToVisit().map { open ->
             moveTo(viewModel, open)
             val card = bounds(TOOL_CARD_TAG)
-            val row = bounds(EDIT_TOOL_ROW_TAG)
+            // With Stickers open its sheet takes the row's place as the lowest thing on screen.
+            val row = if (open == EditTool.STICKERS) bounds(EDIT_SHEET_TAG) else bounds(EDIT_TOOL_ROW_TAG)
             val back = bounds(TOOL_BACK_TAG)
 
             // The row is the bottom bar: near the window's bottom edge, under everything else.
@@ -146,11 +157,19 @@ class EditLayoutTest {
         EditTool.entries.forEach { tool ->
             moveTo(viewModel, tool)
             val card = bounds(TOOL_CARD_TAG)
-            val row = bounds(EDIT_TOOL_ROW_TAG)
             val sheet = bounds(EDIT_SHEET_TAG)
 
-            assertTrue("panel of $tool below the row's top", sheet.bottom <= row.top + 0.5f)
-            assertTrue("panel of $tool far above the row", row.top - sheet.bottom <= dp(12f))
+            if (tool == EditTool.STICKERS) {
+                // The Stickers sheet replaces the row, so there is no row to sit above; it is the
+                // bottom bar itself, near the window's bottom edge.
+                compose.onAllNodesWithTag(EDIT_TOOL_ROW_TAG).assertCountEquals(0)
+                val rootHeight = compose.onRoot().fetchSemanticsNode().size.height.toFloat()
+                assertTrue("Stickers sheet far above the bottom", rootHeight - sheet.bottom <= dp(24f))
+            } else {
+                val row = bounds(EDIT_TOOL_ROW_TAG)
+                assertTrue("panel of $tool below the row's top", sheet.bottom <= row.top + 0.5f)
+                assertTrue("panel of $tool far above the row", row.top - sheet.bottom <= dp(12f))
+            }
             assertEquals("panel left edge, $tool", card.left, sheet.left, onePx)
             assertEquals("panel right edge, $tool", card.right, sheet.right, onePx)
             assertTrue("panel of $tool only ${sheet.height} px tall", sheet.height >= dp(48f))
@@ -158,6 +177,50 @@ class EditLayoutTest {
             compose.onAllNodes(hasTestTag(EDIT_PANEL_TAG) and hasAnyAncestor(hasTestTag(EDIT_SHEET_TAG)))
                 .assertCountEquals(1)
         }
+    }
+
+    /**
+     * DoD 41: tapping the Stickers entry opens a sheet that replaces the row of tools and leaves
+     * the photo area exactly as it was (same bounds before and after). While it is open none of
+     * the five tool entries is on screen; the cross and the tick are displayed in the sheet's top
+     * row, the cross left of the tick, each a 48 x 48 dp target with a content description.
+     */
+    @Test
+    fun the_stickers_sheet_replaces_the_row_and_leaves_the_photo_alone() {
+        val viewModel = showEdit()
+        moveTo(viewModel, null)
+        val before = bounds(TOOL_CARD_TAG)
+        EditTool.entries.forEach { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() }
+
+        compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
+        compose.waitForIdle()
+        assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)
+
+        val after = bounds(TOOL_CARD_TAG)
+        assertEquals("photo left", before.left, after.left, 0.5f)
+        assertEquals("photo top", before.top, after.top, 0.5f)
+        assertEquals("photo width", before.width, after.width, 0.5f)
+        assertEquals("photo height", before.height, after.height, 0.5f)
+
+        EditTool.entries.forEach { compose.onAllNodesWithTag(editToolTag(it)).assertCountEquals(0) }
+        compose.onAllNodesWithTag(EDIT_TOOL_ROW_TAG).assertCountEquals(0)
+        compose.onNodeWithTag(STICKERS_PANEL_TAG).assertIsDisplayed()
+
+        compose.onNodeWithTag(STICKERS_CANCEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).assertIsDisplayed()
+        val sheet = bounds(EDIT_SHEET_TAG)
+        val cancel = bounds(STICKERS_CANCEL_TAG)
+        val confirm = bounds(STICKERS_CONFIRM_TAG)
+        assertTrue("cross $cancel is not left of tick $confirm", cancel.right <= confirm.left + 0.5f)
+        assertEquals("cross and tick are not on one row", cancel.top, confirm.top, 0.5f)
+        listOf(cancel, confirm).forEach { target ->
+            assertTrue("$target is not inside the sheet $sheet", target.left >= sheet.left - 0.5f && target.right <= sheet.right + 0.5f)
+            assertTrue("$target is not in the sheet's top row", target.top >= sheet.top - 0.5f && target.top - sheet.top <= dp(24f))
+            assertEquals("touch target width", dp(48f), target.width, 1f)
+            assertEquals("touch target height", dp(48f), target.height, 1f)
+        }
+        compose.onNodeWithTag(STICKERS_CANCEL_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_cancel)))
+        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_confirm)))
     }
 
     /**
@@ -226,13 +289,27 @@ class EditLayoutTest {
                     onOpenTool = viewModel::openTool,
                     onCompare = viewModel::setComparing,
                     editSheet = { tool ->
-                        ToolPanel(
-                            tool = Tool.EDIT,
-                            state = state,
-                            openTool = tool,
-                            enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
-                            // Run 9: Edit's controls no longer take onApply (settings session instead).
-                        )
+                        if (tool == EditTool.STICKERS) {
+                            // The Stickers sheet is drawn by the Edit panel with its own callbacks.
+                            EditPanel(
+                                openTool = tool,
+                                settings = state.settings,
+                                onChange = { _, _ -> },
+                                onPreview = { _, _ -> },
+                                onCommit = {},
+                                onRatio = { _, _ -> },
+                                onStickersCancel = viewModel::cancelStickers,
+                                onStickersConfirm = viewModel::confirmStickers,
+                            )
+                        } else {
+                            ToolPanel(
+                                tool = Tool.EDIT,
+                                state = state,
+                                openTool = tool,
+                                enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
+                                // Run 9: Edit's controls no longer take onApply (settings session instead).
+                            )
+                        }
                     },
                 )
             }

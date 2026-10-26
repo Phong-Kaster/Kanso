@@ -10,8 +10,11 @@ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
 ## What it is
 
 Kanso's home-screen icon, an "enso lens" mark, changes its background colour to match the theme
-colour chosen in [Settings](settings-and-theme.md). It ships on **nine** backgrounds: Kanso blue,
-teal, green, amber, orange, red, pink, purple, and a near-black "ink" for greys, black and white.
+colour chosen in [Settings](settings-and-theme.md). It ships in **nine** versions. The default,
+Kanso blue, is the mark in Google's four colours (blue, green, yellow, red) with a dark lens, on
+white. The other eight are the same mark in white on teal, green, amber, orange, red, pink, purple,
+and a near-black "ink" for greys, black and white. The design, with the two concepts not chosen, is
+in [`docs/design/launcher-icon-concepts.html`](../design/launcher-icon-concepts.html).
 
 Limits, from the code:
 

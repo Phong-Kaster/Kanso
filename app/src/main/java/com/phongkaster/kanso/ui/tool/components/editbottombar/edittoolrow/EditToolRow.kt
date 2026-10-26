@@ -27,10 +27,11 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.data.edit.edit.Sticker
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
-/** Test tag of the Edit screen's row under the photo: four tools and Compare. */
+/** Test tag of the Edit screen's row under the photo: five tools and Compare. */
 const val EDIT_TOOL_ROW_TAG = "edit-tool-row"
 
 /** Test tag of the row's Compare switch, which shows the original photo while it is on. */
@@ -46,14 +47,14 @@ fun editToolTag(tool: EditTool): String = "edit-tool-${tool.name}"
 fun editToolDotTag(tool: EditTool): String = "edit-tool-dot-${tool.name}"
 
 /** The width of a tool's entry in the scrolling row. */
-private val TOOL_ENTRY_WIDTH = 84.dp
+private val TOOL_ENTRY_WIDTH = 60.dp
 
 /** The width of the pinned Compare entry. */
 private val ACTION_ENTRY_WIDTH = 68.dp
 
 /**
- * The Edit screen's one row under the photo: the four tools (Crop, Rotate, Adjust, Filters), then
- * Compare, each an icon over its name, . Tapping a tool calls
+ * The Edit screen's one row under the photo: the five tools (Crop, Rotate, Adjust, Filters,
+ * Stickers), then Compare, each an icon over its name. Tapping a tool calls
  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
  * colour Material uses for "this one is chosen".
@@ -67,10 +68,11 @@ private val ACTION_ENTRY_WIDTH = 68.dp
  * glance which tools hold an edit.
  *
  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture) the
- * four tools are drawn faint and ignore taps.
+ * five tools are drawn faint and ignore taps.
  *
- * The four tools sit in a row that scrolls sideways, each [TOOL_ENTRY_WIDTH] wide, so they stay
- * large and a tool past the edge is reached by swiping. Compare stays pinned at the right,
+ * The tools sit in a row that can scroll sideways, each [TOOL_ENTRY_WIDTH] (60 dp) wide: five of
+ * them fit a 411 dp phone beside Compare, so on it nothing scrolls, and a narrower screen or more
+ * tools later are reached by swiping. Compare stays pinned at the right,
  * [ACTION_ENTRY_WIDTH] wide, behind a thin divider, so they are always in reach. A name too
  * long for its entry is cut short with an ellipsis.
  */
@@ -149,6 +151,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
     EditTool.ROTATE -> R.drawable.ic_rotate_right
     EditTool.ADJUST -> R.drawable.ic_tune
     EditTool.FILTERS -> R.drawable.ic_filter_vintage
+    EditTool.STICKERS -> R.drawable.ic_stickers
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -158,6 +161,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
     EditTool.ROTATE -> R.string.edit_layout_rotate
     EditTool.ADJUST -> R.string.edit_layout_adjust
     EditTool.FILTERS -> R.string.edit_layout_filters
+    EditTool.STICKERS -> R.string.stickers_tool_label
 }
 
 /**
@@ -175,7 +179,11 @@ private fun EditToolRowPreview() {
                 openTool = EditTool.ADJUST,
                 enabled = true,
                 onOpen = {},
-                settings = EditSettings(brightness = 0.4f, filter = FilterPreset.KELVIN),
+                settings = EditSettings(
+                    brightness = 0.4f,
+                    filter = FilterPreset.KELVIN,
+                    stickers = listOf(Sticker(key = 1L, pictureId = "apple", centreX = 0.5f, centreY = 0.5f, width = 0.3f, degrees = 0f, mirrored = false)),
+                ),
             )
         }
     }

@@ -24,7 +24,8 @@ import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EditTo
 /**
  * The Edit screen's photo area, stateless: the photo (or, while Crop is open, the cropper) filling
  * all the space between the top bar and the bottom bar. It draws [state] and reports nothing: Undo
- * and Compare live in the bottom bar's row ([EditToolRow]).
+ * sits in the top bar beside Done, and Compare is pinned at the right of the tool row
+ * ([EditToolRow]) in the bottom bar (the Stickers sheet replaces that row while it is open).
  *
  * **Why the photo never changes size.** The row of tools and the open tool's panel live in the
  * screen's bottom bar ([EditBottomBar]). `Scaffold` measures that bar first and hands this area

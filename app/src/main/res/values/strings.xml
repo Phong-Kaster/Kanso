@@ -36,9 +36,7 @@
     <string name="gallery_open_settings">Open settings</string>
     <string name="gallery_partial_notice">You have shared only some of your photos with Kanso.</string>
     <string name="gallery_share_more">Share more photos</string>
-    <string name="gallery_body_placeholder">Your photos will appear here.</string>
     <string name="gallery_all_photos">All photos</string>
-    <string name="gallery_album_label">Album: %1$s</string>
     <string name="gallery_empty">No photos to show yet. Take one with the camera or add some to your phone.</string>
     <string name="gallery_photo_description">Photo %1$s</string>
 

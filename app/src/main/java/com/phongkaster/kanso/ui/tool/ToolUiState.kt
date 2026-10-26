@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.navigation.Tool
 
 /**
@@ -103,6 +104,26 @@ data class ToolUiState(
      * made; it goes false again with Discard or Keep editing.
      */
     val discardPrompt: Boolean = false,
+    /** The Stickers sheet's chosen category chip (Food first); it survives closing the sheet. */
+    val stickerCategory: StickerCategory = StickerCategory.FOOD,
+    /**
+     * The key of the sticker just added and still selected on the photo, or null when none is.
+     * It is cleared when the Stickers sheet closes.
+     */
+    val selectedStickerKey: Long? = null,
+    /**
+     * The key of the sticker a finger is moving, pinching, turning or resizing right now, or null
+     * when no gesture is under way. It is set when the gesture's first change arrives and cleared
+     * when the last finger lifts. While it is set the live picture draws that one sticker itself,
+     * following the finger every frame, and the small filtered copy is rendered without it; when
+     * the finger lifts the sticker joins the filtered copy.
+     */
+    val touchedStickerKey: Long? = null,
+    /**
+     * True for a moment after the person tried to add a sticker beyond the limit: the screen shows
+     * the "20 stickers at most" message, then calls the ViewModel to clear this flag.
+     */
+    val stickerLimitShown: Boolean = false,
 ) {
 
     /**

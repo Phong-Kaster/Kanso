@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust and filters
+# Edit: crop, rotate, adjust, filters and stickers
 
 [Back to README](../../README.md)
 
@@ -11,10 +11,12 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 
 ## What it is
 
-Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
-**Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
-Lightroom (tapping it again closes it). The tools are large (84 dp wide, 28 dp icons) and sit in a
-row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Compare** stays
+Edit is Kanso's general editor. At the bottom of the screen sits a row of five tools, **Crop**,
+**Rotate**, **Adjust**, **Filters** and **Stickers**; tapping one opens its sheet just above the row, as in Adobe
+Lightroom (tapping it again closes it). The Stickers sheet is the exception: it takes the row's place
+(see below). Each tool is 60 dp wide with a 28 dp icon, so all five fit beside Compare on a
+411 dp wide phone without scrolling; the row scrolls sideways only on a narrower screen, where a
+tool past the edge is reached with a swipe. **Compare** stays
 pinned at the right, behind a thin divider, and never scrolls away. **Undo** sits at the top right,
 next to **Done**, as on the other tools.
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
@@ -24,8 +26,8 @@ network are used. You can:
 
 - **Crop**: choose Free, 1:1, 4:3, 3:4, 16:9 or 9:16. While the Crop sheet is open the photo becomes
   a cropper (from the `core/imagecrop` module): drag a handle to move an edge or a corner, drag inside
-  the rectangle to move it, pinch to zoom. The cropper shows the plain decoded photo, without the
-  turns, flips, filter or slider colours. A fixed shape sets the largest centred rectangle of that
+  the rectangle to move it, pinch to zoom. The cropper shows the decoded photo with the stickers
+  drawn in, without the turns, flips, filter or slider colours. A fixed shape sets the largest centred rectangle of that
   shape and locks the handles to it; Free unlocks them and keeps the rectangle as it is.
 - **Rotate**: Turn left or Turn right a quarter turn, Flip across (left to right) or Flip upside
   down (a second tap flips back).
@@ -37,8 +39,25 @@ network are used. You can:
 - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
-- **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
-  sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
+- **Stickers** (decision record: [ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md)): a sheet that replaces the row of tools, with a cross at the left of a
+  tick in its top row, four category tabs (Food 17, Mood 17, Quote 6, Emoji 20 bundled pictures)
+  and a grid of three columns that scrolls. A tap on a picture adds that sticker at the middle of
+  the picture you see (after the crop, turns and flips), a third of its width, selected; each tap
+  is one Undo step and a photo holds at most 20 ("A photo can hold 20 stickers at most" appears when you try a 21st).
+  The tick keeps the changes; the cross, and the system **Back**, throw away everything done since
+  the sheet opened, Undo steps included. The stickers are drawn on the photo on screen. While the
+  sheet is open a finger put down on one selects it (a touch on empty photo selects none): a frame with four corner
+  buttons, top-left delete, top-right duplicate (a copy 4 percent of the shown width right and
+  down), bottom-left mirror, bottom-right a handle that resizes and turns it together. One finger
+  drags, two fingers pinch and twist; a newer sticker lies on top. Each add, delete, duplicate,
+  mirror and each whole drag, pinch or handle pull is one Undo step; selecting is not. Closing the
+  sheet by tick or cross selects none. Done draws them into the saved picture. The live preview
+  shows them with the filter and colour sliders (the one you are moving follows your finger with
+  the sliders but no filter, and joins the filtered picture when you let go), the cropper shows
+  them, and Compare shows the photo without them.
+- **Undo** (top right, next to Done, in reach whatever sheet is open) and **Compare** (pinned at the
+  right of the tool row; the Stickers sheet replaces the row while it is open, so Compare is out of
+  reach until the sheet closes). Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
   Done stays usable while comparing and renders the edit, not the original.
 - **Done** at the top right renders the picture (with no control used, it hands over the decoded
@@ -77,8 +96,8 @@ flowchart TD
     P --> U
     C --> U
     U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders"]
-    U -->|filter or intensity changed| Q["conflated Channel of filter requests"]
-    Q --> R["FilterPreviewRenderer: 640 px copy of the original, filter only, Dispatchers.Default"]
+    U -->|filter, intensity or sticker changed| Q["conflated Channel of preview requests"]
+    Q --> R["FilterPreviewRenderer: 640 px copy of the original, stickers (not the touched one) then filter, Dispatchers.Default"]
     R -->|ToolUiState.filterPreview| L
 ```
 
@@ -86,9 +105,11 @@ flowchart TD
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
    [`ui/tool/components/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt)
-   for its layout: `EditPhotoArea`, the photo with the
-   [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
-   filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
+   for its layout: `EditPhotoArea`
+   ([`ui/tool/components/EditPhotoArea.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditPhotoArea.kt)),
+   which draws the photo card
+   ([`ui/tool/components/photocard/PhotoCard.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/PhotoCard.kt))
+   or the cropper, filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
    [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
    height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
@@ -98,7 +119,7 @@ flowchart TD
    very large text scrolls inside it. It is an ordinary `Surface` cross-faded with
    `AnimatedContent`, not a
    Material `ModalBottomSheet`, because a modal sheet dims the photo and swallows touches, and the
-   pill must stay usable. Its ViewModel is
+   row of tools must stay usable. Its ViewModel is
    [`ui/tool/ToolViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt),
    which exposes one `StateFlow<ToolUiState>`
    ([`ui/tool/ToolUiState.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt)).
@@ -110,7 +131,8 @@ flowchart TD
 3. **One settings value for the whole visit.** Everything the person has done is one immutable
    [`data/edit/edit/EditSettings.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt):
    the crop rectangle (fractions of the original), the locked crop shape, quarter turns, the two
-   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1). It is
+   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1), and the
+   stickers. It is
    held, with its undo stack, by
    [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
    No control ever asks for a change on top of the last result: each re-renders from the original
@@ -126,7 +148,9 @@ flowchart TD
    - [`ui/tool/components/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditCropper.kt)
      wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
      [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
-     It always shows the original photo un-turned and un-flipped, because the crop is stored as
+     It shows the decoded photo with the stickers drawn into a copy of it (on the main
+     thread, inside composition; if copying the photo runs out of memory it shows the photo without
+     stickers), un-turned, un-flipped and unfiltered, because the crop is stored as
      fractions of the original and the render crops before it turns. When the last finger lifts,
      the rectangle becomes fractions and, if it differs from the session's crop by more than a tenth
      of a percent, goes to `commitCrop` once. A session crop or shape that changes (a chip, Undo)
@@ -134,7 +158,7 @@ flowchart TD
      switched off while the rectangle is moved so the new shape is not bent back to the old one).
      While Compare is on the cropper is not drawn at all (the plain photo shows); while Done is
      rendering, a layer on top of the cropper takes every touch, so it ignores them. The cropper, the sheets and the row all run on the main thread, as Compose draws;
-     none of them touches pixels.
+     the only pixels among them are the cropper's sticker bake (above).
    - `EditSession.change` pushes the old settings on the undo stack (an unchanged value adds
      nothing); `preview` follows the finger without an entry and `commit` turns the whole drag into
      one entry; `cropRatioChosen` sets the largest centred rectangle of the shape, fitted on its
@@ -153,11 +177,94 @@ flowchart TD
    go into a `Channel(Channel.CONFLATED)`: one collector coroutine renders one request at a time,
    and a newer request replaces one still waiting, so a fast intensity drag never queues up work.
    [`data/edit/edit/FilterPreviewRenderer.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/FilterPreviewRenderer.kt)
-   runs the real `EditProcessor` with only the filter set, on `Dispatchers.Default`, on a copy of
-   the original shrunk once to at most 640 px (`PREVIEW_EDGE`). The result becomes
+   runs the real `EditProcessor` with the filter, its intensity and every sticker except the one
+   being touched, on `Dispatchers.Default`, on a copy of
+   the original shrunk once to at most 640 px (`PREVIEW_EDGE`). It also renders when there is no
+   filter but there are stickers. `requestPreview` is called, among other places, from `addSticker`,
+   `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`, `confirmStickers` and
+   `cancelStickers` (also `changeSettings`, `previewSettings`, `chooseCropRatio`, `undo`, `load`,
+   `openTool` and `setComparing`).
+   The result becomes
    `ToolUiState.filterPreview`, and `LivePreviewImage` draws that bitmap instead of the original,
    cropping, turning and colouring it as above. A crop, turn or slider change keeps the same filter
-   preview. A preview that fails shows the plain photo, with no message.
+   preview. A preview that fails leaves `filterPreview` empty, so the card draws the plain photo (no resting stickers either), with no message.
+
+### The Stickers sheet
+
+Tapping Stickers calls `ToolViewModel.openTool(EditTool.STICKERS)`. Opening it keeps a snapshot
+of the whole `EditSession` (settings and Undo steps; it is immutable, so keeping it costs nothing).
+`EditBottomBar` then draws the sheet in place of the row, as tall as the row plus the fixed
+sheet area, so the photo's bounds do not change. `ToolScreen` fills it with `EditPanel`, which
+shows `StickersPanel`: `StickersSheetTopBar` (cross left, tick right, 48 dp targets),
+`StickerCategoryChips` (a `LazyRow` of `FilterChip`s, the chosen one `selected`) and a
+`LazyVerticalGrid` of `StickerTile`s, three columns, from `StickerCatalog.inCategory`. All on the
+main thread; no pixel is computed.
+
+Adding a sticker:
+
+```mermaid
+flowchart TD
+    T["Tile tapped (StickerTile)"] --> A["ToolViewModel.addSticker"]
+    A --> G{"Compare on, Done running,<br/>photo not decoded yet,<br/>or 20 stickers already?"}
+    G -->|"Compare, Done or no photo yet"| X["ignored"]
+    G -->|"20 stickers"| L["stickerLimitShown = true: StickerLimitMessage for about 2.5 s"]
+    G -->|no| M["StickerMapping: middle of the picture you see -> fractions of the original photo"]
+    M --> S["EditSession.addSticker: one Undo entry, newest on top"]
+    S --> P["publishSession: only prunes the selection; addSticker then sets selectedStickerKey = the new sticker"]
+    P --> R["preview copy re-rendered with the new sticker (FilterPreviewRenderer)"]
+```
+
+One gesture, one Undo entry:
+
+```mermaid
+flowchart TD
+    D["Touch on the photo while the sheet is open: StickerGestures finds the topmost sticker under the finger"] --> SEL["Finger down on a sticker: selectSticker (no Undo entry), so a drag selects too"]
+    D --> MV["Finger or fingers move: previewStickers (no Undo entry)"]
+    MV -->|"first change"| TK["touchedStickerKey set: this sticker drawn by LivePreviewImage, sliders but no filter"]
+    MV --> MV
+    MV -->|"last finger up"| C["commitSettings: the whole gesture is ONE Undo entry"]
+    C --> CL["touchedStickerKey cleared: sticker joins the filtered preview copy"]
+    CL --> U["Undo takes the whole gesture back in one step"]
+```
+
+- **Add.** `addSticker` asks `StickerMapping` for the sticker at the shown picture's centre (the
+  mapping inverts what Done does: crop, then turn, then flip), adds it with `EditSession.addSticker`
+  (one Undo step) and selects it (`selectedStickerKey`). The processor recipe passed in is the one
+  from `editProcessorFor(context)` and becomes the recipe Done renders with. At 20 stickers the
+  settings are untouched and `stickerLimitShown` shows `StickerLimitMessage`
+  (`ui/tool/components/StickerLimitMessage.kt`) on the photo's top edge with the text "A photo can
+  hold 20 stickers at most" (`stickers_limit_message`, `res/values/strings_stickers.xml`) for
+  about 2.5 s, then `onStickerLimitMessageShown` clears it.
+- **Tick** (`confirmStickers`): forgets the snapshot, closes the sheet, clears the selection.
+- **Cross and system Back** (`cancelStickers`; `onBackPressed` calls it first when the sheet is open):
+  publishes the snapshot again, so settings and Undo steps are exactly as at opening, closes the
+  sheet and clears the selection. Back does not ask "Discard your changes?" here.
+- **While Compare is on or Done renders** (`comparing`, `finishing`) the tick, the cross and Back
+  do nothing: Back is consumed (the screen stays) but cancels nothing, so Done draws the stickers
+  as they were when it was tapped.
+- **Undo** clears `selectedStickerKey` when the undone step removed the selected sticker.
+- **On the photo.** `PhotoCard` draws a `StickerOverlay` over the live picture (not while Compare
+  is on). Touches work only while the sheet is open, Compare is off and Done is not running
+  (`stickerEditingOpen`). `StickerGestures` picks the topmost sticker under the finger and calls
+  `selectSticker`; a drag, pinch or handle pull calls `previewStickers` (no Undo entry) and its last
+  finger up calls `commitSettings` (one Undo entry). `StickerFrame` and `StickerCornerButton` call
+  `deleteSticker`, `duplicateSticker` (offset 4 percent of the shown width, via `StickerMapping`)
+  and `flipSticker`; the handle resizes and turns about the centre. `selectedStickerKey` lives in
+  `ToolUiState`, and `publishSession` clears it when its sticker is gone.
+- **Drawing.** Done draws the saved picture's stickers (`EditProcessor`, `DrawableStickerPictures`),
+  see below. On screen, `StickerOverlay` draws no pictures (frame, buttons, touches only).
+  `FilterPreviewRenderer.render(requested)` is called after `ToolViewModel.requestPreview` leaves
+  the touched sticker out of the settings; it draws every other sticker into
+  the small preview copy before the filter (so filter and Intensity act on them; it renders with
+  no filter when stickers exist, null when nothing to draw). The request key is filter, intensity
+  and untouched stickers. The first `previewStickers` that changes a sticker sets
+  `ToolUiState.touchedStickerKey`; `LivePreviewImage` draws that sticker in the same crop, turn
+  and flip, clipped to the photo, with the slider colour matrix and no filter, so it follows the
+  finger. `commitSettings`, the tick or cross, `openTool` and `setComparing` clear the key
+  (`publishSession` clears it only when that sticker is gone) and it joins the
+  filtered copy (one small re-render at gesture start, one at finger up, none during the drag).
+  `EditCropper` (`withStickersDrawn`) bakes stickers into a copy of the original, same mirror,
+  turn and scale as `EditProcessor`, so they show while cropping. Compare shows none.
 
 ### Done, the full render and the Result screen
 
@@ -167,7 +274,7 @@ flowchart TD
     N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
     N -->|yes| F["finishing = true: spinner in Done"]
     F --> W["WorkingSize.fit(original, 2000 px) on Dispatchers.Default"]
-    W --> E["EditProcessor: crop, turn, flip, filter, colour matrix, opaque"]
+    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix, opaque"]
     E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
     E -->|Failed| X["failure message on the photo card; stay on Edit"]
     H0 --> R["doneEvents: navigate to Result"]
@@ -195,6 +302,13 @@ flowchart TD
    [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
    all on `Dispatchers.Default`. The processor always works from the original with the whole
    settings, so nothing is stacked. On the pixels as one `IntArray`, in this order:
+   0. **Stickers** (new in Run 10; the Stickers sheet adds them, see "The Stickers sheet" above,
+      and [ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md) for why they go first): the settings hold up to 20
+      (`EditSettings.stickers`, `MAX_STICKERS`), placed as fractions of the original photo. They
+      are drawn first, right after the kept rectangle is read out, so the crop cuts them and the
+      turns, flips, filter and sliders act on them with the photo (order: stickers, crop, turns,
+      flips, filter, sliders). Each add, delete, duplicate, flip or whole drag is one Undo step
+      (`EditSession`); a 21st add or duplicate changes nothing.
    1. **Crop**: copies only the kept rectangle (fractions turned into pixels, rounded, edges put in
       order, at least 1 x 1). A fixed shape is no special case: choosing it already set the
       rectangle. Progress 0.25.
@@ -268,8 +382,9 @@ flowchart TD
   the Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
   place of the cropper). In every case the person stays on Edit with every setting and Undo step
   kept, and nothing is handed over.
-- A filter preview that fails shows the photo without the filter, silently; Done reports a real
-  failure.
+- A filter preview that fails leaves `filterPreview` empty, silently: the card draws the original
+  photo, with no filter and no resting stickers on screen; the saved result is unaffected and Done
+  reports a real failure.
 - A photo that cannot be decoded shows "This photo cannot be opened. Go back and pick another one."
 - A failed Save shows "The photo could not be saved. Try again."; a refused storage permission
   shows that nothing was saved.
@@ -290,10 +405,18 @@ flowchart TD
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
-- **Crop.** The cropper always shows the photo un-turned and un-flipped. A turn after a crop turns
+- **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the
+  photo runs out of memory), un-turned, un-flipped and unfiltered. A turn after a crop turns
   the cropped picture with it (a 16:9 crop turned once comes out 9:16).
+- **Stickers.** At most **20** (`EditSettings.MAX_STICKERS`); a 21st add or duplicate changes
+  nothing and shows a message for about 2.5 seconds. During a gesture or handle pull a sticker's
+  width is kept between 5 and 100 percent of the shown width; a later tighter crop can push it past 100. While a sticker is being moved it shows no filter in the preview
+  (it does in the saved picture). A sticker wholly outside the crop draws nothing in the saved
+  picture. A picture that cannot be decoded is skipped in Done. The sheet's cross and system Back
+  throw away what was done since it opened, Undo steps included.
 - **Undo** takes back one action at a time (a chip, a turn, a flip, a crop ratio, one finished crop
-  gesture, or one whole slider drag), whichever sheet it came from. There is no redo.
+  gesture, one whole slider drag, or one sticker added, deleted, duplicated, mirrored or whole
+  gesture), whichever sheet it came from. There is no redo.
 - **Back with changes** asks before discarding; the check is on the current settings, so undoing
   every change leaves without asking.
 - **No session across restarts.** Settings and Undo steps are not saved; they live as long as the
@@ -318,8 +441,21 @@ The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
 [`FiltersSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FiltersSheetTest.kt),
 [`EditToolRowTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolRowTest.kt),
 [`EditLayoutTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditLayoutTest.kt),
+[`StickersPanelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/StickersPanelTest.kt)
+(chips, three-column grid, 17/17/6/20 tiles),
+[`StickerAddTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/StickerAddTest.kt)
+(add at the shown centre, the limit, tick, cross and Back, the shared recipe),
+and the other sticker tests in the same folder: `StickerCatalogTest.kt`, `StickerSessionTest.kt`,
+`StickerMappingTest.kt`, `StickerGeometryTest.kt`, `StickerSelectionTest.kt`,
+`StickerGestureTest.kt`, `StickerFrameTest.kt`, `StickerOverlayTest.kt`,
+`StickerLivePreviewTest.kt`, `StickerPreviewRendererTest.kt`, `StickerCropperTest.kt`,
+`StickerCompareTest.kt` and `EditProcessorStickerTest.kt` (the order and the blend in Done). The
+Stickers screenshots (pictures 69 to 82 in `app/src/test/screenshots/`) are recorded only by
+[`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt).
+The Edit tests also include
 [`DiscardDialogTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/DiscardDialogTest.kt)
-and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt).
+and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt),
+which capture no picture.
 Done and the Result screen are covered by
 [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt),
 [`result/ResultViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultViewModelTest.kt)

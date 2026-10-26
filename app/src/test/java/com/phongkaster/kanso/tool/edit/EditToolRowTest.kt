@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
@@ -32,6 +33,8 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.data.edit.edit.StickerCatalog
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
@@ -44,7 +47,15 @@ import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editFilterTag
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerTileTag
+import com.phongkaster.kanso.ui.tool.editProcessorFor
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolDotTag
 import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editRatioTag
 import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
 import kotlinx.coroutines.Dispatchers
@@ -65,11 +76,11 @@ import kotlin.math.abs
 /**
  * Checks on Android 15 the Edit screen's row of tools under the photo (DoD 2):
  *
- * - it holds exactly four entries, Crop, Rotate, Adjust and Filters, left to right, each an icon
+ * - it holds exactly five entries, Crop, Rotate, Adjust, Filters and Stickers, left to right, each an icon
  *   drawn above its name;
  * - none is open at first and no sheet is shown;
  * - tapping an entry opens that tool's sheet (the Edit panel inside the sheet area, with the
- *   tool's own controls), marks the entry selected and highlights it; tapping it again closes the
+ *   tool's own controls; for Stickers the sheet takes the row's place), marks the entry selected and highlights it; tapping it again closes the
  *   sheet; tapping another entry switches to that tool's sheet.
  *
  * The test draws the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] on a
@@ -100,7 +111,7 @@ class EditToolRowTest {
     }
 
     /**
-     * The row holds four entries, Crop, Rotate, Adjust and Filters, in that order from left to
+     * The row holds five entries, Crop, Rotate, Adjust, Filters and Stickers, in that order from left to
      * right, each named by its text and with its icon drawn above the name: the name starts at
      * least an icon's height (24 dp) below the entry's top, and the band above the name holds
      * drawn ink.
@@ -109,7 +120,10 @@ class EditToolRowTest {
     fun the_row_shows_four_tools_in_order_each_an_icon_over_its_name() {
         showEdit()
         compose.onAllNodes(isRowEntry()).assertCountEquals(EditTool.entries.size)
-        assertEquals(listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS), EditTool.entries)
+        assertEquals(
+            listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS, EditTool.STICKERS),
+            EditTool.entries,
+        )
 
         val lefts = EditTool.entries.map { tool ->
             val name = context.getString(nameOf(tool))
@@ -165,6 +179,17 @@ class EditToolRowTest {
                 .assertCountEquals(1)
             compose.onAllNodes(hasTestTag(controlTagOf(tool)) and hasAnyAncestor(hasTestTag(EDIT_SHEET_TAG)))
                 .assertCountEquals(1)
+            if (tool == EditTool.STICKERS) {
+                // The Stickers sheet takes the place of the row, so no entry is on screen to be
+                // selected or highlighted; the sheet's own cross closes it again.
+                EditTool.entries.forEach { compose.onAllNodesWithTag(editToolTag(it)).assertCountEquals(0) }
+                compose.onNodeWithTag(STICKERS_CANCEL_TAG).performClick()
+                compose.waitForIdle()
+                assertNull(viewModel.state.value.openTool)
+                compose.onAllNodesWithTag(EDIT_PANEL_TAG).assertCountEquals(0)
+                compose.onNodeWithTag(editToolTag(tool)).assertIsNotSelected()
+                return@forEach
+            }
             EditTool.entries.forEach { other ->
                 val node = compose.onNodeWithTag(editToolTag(other))
                 if (other == tool) node.assertIsSelected() else node.assertIsNotSelected()
@@ -201,6 +226,100 @@ class EditToolRowTest {
         compose.onAllNodesWithTag(EDIT_PANEL_TAG).assertCountEquals(1)
     }
 
+    /**
+     * DoD 1: with a photo loaded and no change made, the row holds five entries tagged for
+     * Crop, Rotate, Adjust, Filters and Stickers, and they stand in that order from left to right
+     * by their `positionInRoot`.
+     */
+    @Test
+    fun the_row_lists_five_tools_in_order_left_to_right() {
+        showEdit()
+        assertEquals(
+            listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS, EditTool.STICKERS),
+            EditTool.entries,
+        )
+        compose.onAllNodes(isRowEntry()).assertCountEquals(5)
+        val lefts = EditTool.entries.map { tool ->
+            compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode().positionInRoot.x
+        }
+        lefts.zipWithNext().forEachIndexed { index, (a, b) ->
+            assertTrue("entry ${index + 1} ($b) is not right of entry $index ($a)", b > a)
+        }
+    }
+
+    /**
+     * DoD 2: on the 411 x 891 dp screen every one of the five entries lies inside the row's bounds
+     * (and left of the pinned Compare entry), and the row's horizontal scroll position is 0, so
+     * nothing needs a swipe to be reached. Bounds come from `positionInRoot` and the size, never
+     * from `boundsInRoot`, which clips a scrolled node.
+     */
+    @Test
+    fun all_five_entries_fit_inside_the_row_without_scrolling() {
+        showEdit()
+        val row = bounds(compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).fetchSemanticsNode())
+        val compare = bounds(compose.onNodeWithTag(EDIT_COMPARE_TAG).fetchSemanticsNode())
+        EditTool.entries.forEach { tool ->
+            val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
+            assertTrue(
+                "$tool $entry is not inside the row $row",
+                entry.left >= row.left - 0.5f && entry.right <= row.right + 0.5f &&
+                    entry.top >= row.top - 0.5f && entry.bottom <= row.bottom + 0.5f,
+            )
+            assertTrue("$tool $entry reaches under Compare $compare", entry.right <= compare.left + 0.5f)
+        }
+        val scroller = compose.onNode(
+            SemanticsMatcher.keyIsDefined(SemanticsProperties.HorizontalScrollAxisRange) and
+                hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG)),
+            useUnmergedTree = true,
+        ).fetchSemanticsNode()
+        val range = scroller.config[SemanticsProperties.HorizontalScrollAxisRange]
+        assertEquals("the row is scrolled", 0f, range.value(), 0.001f)
+    }
+
+    /**
+     * DoD 1: tapping the Stickers entry opens the Stickers sheet in place of the row: the sheet's
+     * panel is displayed, the state's open tool is Stickers, and neither an entry nor the row is on
+     * screen while it is open (the entry cannot show as selected when it is not displayed).
+     */
+    @Test
+    fun tapping_stickers_opens_the_sheet_in_place_of_the_row() {
+        val viewModel = showEdit()
+        compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).assertIsNotSelected()
+        compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
+        compose.waitForIdle()
+        assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)
+        compose.onNodeWithTag(STICKERS_PANEL_TAG).assertIsDisplayed()
+        compose.onAllNodesWithTag(EDIT_TOOL_ROW_TAG).assertCountEquals(0)
+        EditTool.entries.forEach { compose.onAllNodesWithTag(editToolTag(it)).assertCountEquals(0) }
+    }
+
+    /**
+     * DoD 1: the Stickers entry's dot is absent before the first sticker, present once one is
+     * added (tile tapped, sheet confirmed) and absent again after Undo.
+     */
+    @Test
+    fun the_stickers_dot_is_absent_then_present_after_one_sticker_then_absent_after_undo() {
+        val viewModel = showEdit()
+        compose.onNodeWithTag(editToolDotTag(EditTool.STICKERS), useUnmergedTree = true).assertDoesNotExist()
+
+        compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
+        compose.waitForIdle()
+        val first = StickerCatalog.inCategory(StickerCategory.FOOD).first()
+        compose.onNodeWithTag(stickerTileTag(first.pictureId)).performClick()
+        compose.waitForIdle()
+        assertEquals(1, viewModel.state.value.settings.stickers.size)
+        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).performClick()
+        compose.waitForIdle()
+        assertNull(viewModel.state.value.openTool)
+        compose.onNodeWithTag(editToolDotTag(EditTool.STICKERS), useUnmergedTree = true).assertExists()
+
+        compose.runOnIdle { viewModel.undo() }
+        shadowOf(Looper.getMainLooper()).idle()
+        compose.waitForIdle()
+        assertEquals(0, viewModel.state.value.settings.stickers.size)
+        compose.onNodeWithTag(editToolDotTag(EditTool.STICKERS), useUnmergedTree = true).assertDoesNotExist()
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -209,6 +328,8 @@ class EditToolRowTest {
      * ViewModel; no sheet is open yet.
      */
     private fun showEdit(): ToolViewModel {
+        // One recipe for the whole test, as the screen keeps one (with the sticker pictures in it).
+        val processorFor = editProcessorFor(context)
         val viewModel = ToolViewModel(
             Tool.EDIT,
             PHOTO_URI,
@@ -232,13 +353,31 @@ class EditToolRowTest {
                     onOpenTool = viewModel::openTool,
                     onCompare = viewModel::setComparing,
                     editSheet = { tool ->
-                        ToolPanel(
-                            tool = Tool.EDIT,
-                            state = state,
-                            openTool = tool,
-                            enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
-                            // Run 9: Edit's controls no longer take onApply (settings session instead).
-                        )
+                        if (tool == EditTool.STICKERS) {
+                            // Wired as ToolScreen wires the Stickers sheet (its own callbacks).
+                            EditPanel(
+                                openTool = tool,
+                                settings = state.settings,
+                                onChange = { _, _ -> },
+                                onPreview = { _, _ -> },
+                                onCommit = {},
+                                onRatio = { _, _ -> },
+                                enabled = !state.comparing && !state.finishing,
+                                stickerCategory = state.stickerCategory,
+                                onStickerCategoryChosen = viewModel::chooseStickerCategory,
+                                onStickerChosen = { viewModel.addSticker(it, processorFor) },
+                                onStickersCancel = viewModel::cancelStickers,
+                                onStickersConfirm = viewModel::confirmStickers,
+                            )
+                        } else {
+                            ToolPanel(
+                                tool = Tool.EDIT,
+                                state = state,
+                                openTool = tool,
+                                enabled = !state.comparing && state.processing is ToolUiState.Processing.Idle,
+                                // Run 9: Edit's controls no longer take onApply (settings session instead).
+                            )
+                        }
                     },
                 )
             }
@@ -259,6 +398,7 @@ class EditToolRowTest {
         EditTool.ROTATE -> R.string.edit_layout_rotate
         EditTool.ADJUST -> R.string.edit_layout_adjust
         EditTool.FILTERS -> R.string.edit_layout_filters
+        EditTool.STICKERS -> R.string.stickers_tool_label
     }
 
     /** The test tag of one control only [tool]'s sheet shows. */
@@ -267,6 +407,7 @@ class EditToolRowTest {
         EditTool.ROTATE -> EDIT_ROTATE_LEFT_TAG
         EditTool.ADJUST -> EDIT_BRIGHTNESS_TAG
         EditTool.FILTERS -> editFilterTag(FilterPreset.KELVIN)
+        EditTool.STICKERS -> STICKERS_PANEL_TAG
     }
 
     /** The bounds of [node] in the root's pixels, from its `positionInRoot` and its size. */

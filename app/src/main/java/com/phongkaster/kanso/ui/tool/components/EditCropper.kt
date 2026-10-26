@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -31,7 +32,10 @@ import com.mr0xf00.easycrop.images.ImageBitmapSrc
 import com.mr0xf00.easycrop.ui.CropperPreview
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.StickerPictures
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.abs
@@ -71,6 +75,10 @@ private const val SAME_CROP_TOLERANCE = 0.001f
  *
  * While [enabled] is false (Compare is on, or Done is rendering the final picture) the cropper ignores every touch.
  *
+ * **Stickers.** The [stickers] of the session are painted on the photo the cropper shows (pictures
+ * from [stickerPictures], by default the app's own sticker files), so the person sees what the crop
+ * will cut. They take no touch: the handles still drag the crop.
+ *
  * The drawing itself is the stateless [EditCropperContent].
  */
 @Composable
@@ -80,11 +88,28 @@ fun EditCropper(
     enabled: Boolean,
     onCropFinished: (EditSettings.CropRect) -> Unit,
     modifier: Modifier = Modifier,
+    stickers: List<Sticker> = emptyList(),
+    stickerPictures: StickerPictures? = null,
 ) {
+    // The stickers are painted into a copy of the photo, in the photo's own (original) pixels, so
+    // they ride the very same zoom and move as the photo the cropper draws and the person sees what
+    // the crop will cut. The copy is made again only when the photo or the stickers change.
+    val context = LocalContext.current
+    val shown = remember(bitmap, stickers, stickerPictures, context) {
+        if (stickers.isEmpty()) {
+            bitmap
+        } else {
+            withStickersDrawn(
+                bitmap,
+                stickers,
+                stickerPictures ?: DrawableStickerPictures(context.applicationContext),
+            )
+        }
+    }
     // One crop state per photo: a new photo starts a new cropper. It starts already showing the
     // session's crop, so the first frame does not jump from the whole photo to the crop.
-    val cropState = remember(bitmap) {
-        CropState(ImageBitmapSrc(bitmap.asImageBitmap())).also { state ->
+    val cropState = remember(shown) {
+        CropState(ImageBitmapSrc(shown.asImageBitmap())).also { state ->
             showCrop(state, settings, bitmap.width, bitmap.height)
         }
     }
@@ -177,6 +202,49 @@ fun EditCropperContent(
             )
         }
     }
+}
+
+/**
+ * A copy of [photo] with every sticker of [stickers] painted on it, oldest first. A sticker's place
+ * is a fraction of the photo, its width a fraction of the photo's width, and its height follows its
+ * picture; it is mirrored, then turned clockwise about its centre, the way the final render does
+ * it. A sticker whose picture is missing or whose numbers are not finite is skipped.
+ */
+private fun withStickersDrawn(
+    photo: Bitmap,
+    stickers: List<Sticker>,
+    pictures: StickerPictures,
+): Bitmap {
+    // Copying a whole photo can run out of memory: show the photo without its stickers then (the
+    // final render still draws them). Only the new copy is ever drawn on; the shared photo is not.
+    val copy = try {
+        photo.copy(Bitmap.Config.ARGB_8888, true)
+    } catch (_: OutOfMemoryError) {
+        null
+    } ?: return photo
+    val canvas = android.graphics.Canvas(copy)
+    val paint = Paint().apply { isFilterBitmap = true; isAntiAlias = true }
+    for (sticker in stickers) {
+        if (!sticker.width.isFinite() || !sticker.centreX.isFinite() ||
+            !sticker.centreY.isFinite() || !sticker.degrees.isFinite()
+        ) {
+            continue
+        }
+        val targetWidth = sticker.width * copy.width
+        if (!targetWidth.isFinite() || targetWidth < 1f) continue
+        val decodeWidth = minOf(targetWidth, maxOf(copy.width, copy.height).toFloat())
+            .toInt().coerceAtLeast(1)
+        val picture = pictures.picture(sticker.pictureId, decodeWidth) ?: continue
+        if (picture.width <= 0 || picture.height <= 0) continue
+        val scale = targetWidth / picture.width
+        val matrix = android.graphics.Matrix()
+        matrix.postTranslate(-picture.width / 2f, -picture.height / 2f)
+        matrix.postScale(if (sticker.mirrored) -scale else scale, scale)
+        matrix.postRotate(sticker.degrees)
+        matrix.postTranslate(sticker.centreX * copy.width, sticker.centreY * copy.height)
+        canvas.drawBitmap(picture, matrix, paint)
+    }
+    return copy
 }
 
 /**

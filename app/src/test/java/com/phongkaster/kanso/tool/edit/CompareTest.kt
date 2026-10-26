@@ -236,7 +236,8 @@ class CompareTest {
     @Test
     fun compare_sits_in_the_tool_row_and_undo_beside_done() {
         val viewModel = showEdit(null)
-        (listOf<EditTool?>(null) + EditTool.entries).forEach { open ->
+        // Stickers is left out: its sheet replaces the whole row (Compare included) while open.
+        (listOf<EditTool?>(null) + EditTool.entries.filter { it != EditTool.STICKERS }).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
             compose.waitForIdle()
             assertEquals(open, viewModel.state.value.openTool)
