@@ -78,6 +78,7 @@ from the control to the saved file; none of them has yet been checked on the own
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
 | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
+| Edit: Stickers | Partial | The fifth tool. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. Done already draws the stickers into the saved photo (first step of `EditProcessor`). Not done yet: nothing is drawn on the photo on screen while editing, there is no selection frame and no move, resize, turn, flip or delete gesture, so a sticker is visible only after Done. |
 | Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
@@ -136,7 +137,7 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    `data/edit/WorkingSize.kt`), with `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, on
    the pixels as one `IntArray`: stickers (drawn first, cut by the crop, then turned, flipped,
    filtered and coloured with the photo; the settings hold up to 20, each add, delete, duplicate,
-   flip or whole drag is one Undo step; not wired to any screen yet, no sticker UI exists),
+   flip or whole drag is one Undo step; the Stickers sheet adds them, see "Stickers" below),
    crop, quarter turns, flips, the filter (look-ups from
    `data/edit/edit/FilterLut.kt` and `data/edit/edit/FilterPreset.kt`, images bundled in
    `libs/imageprocessor.aar` and `libs/editimage.aar`, read from the app's assets with no
@@ -174,6 +175,48 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    back and pick another one." A failed Save says "The photo could not be saved. Try again."; a
    refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
    to show" and Edit reopens on the photo with no changes (the session lived only in memory).
+
+### Edit: Stickers
+
+1. **Screen.** The row has five tools (Crop, Rotate, Adjust, Filters, Stickers). Tapping Stickers
+   (`ToolViewModel.openTool`) opens a sheet that takes the row's place in `EditBottomBar`
+   (`ui/tool/components/editbottombar/EditBottomBar.kt`), as tall as the row plus the fixed sheet
+   area, so the photo keeps its size; none of the five entries is on screen while it is open.
+   `ui/tool/ToolScreen.kt` fills the sheet with `EditPanel`
+   (`ui/tool/components/toolpanel/editpanel/EditPanel.kt`), which draws `StickersPanel`
+   (`ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt`): a top bar with a cross
+   and a tick (`StickersSheetTopBar.kt`), a `LazyRow` of category chips (`StickerCategoryChips.kt`)
+   and a three-column `LazyVerticalGrid` of tiles (`StickerTile.kt`). Opening it takes a snapshot of
+   the whole session (settings and Undo steps) in `ToolViewModel`.
+2. **The list.** `data/edit/edit/StickerCatalog.kt` lists 60 bundled pictures, each an explicit
+   `R.drawable.img_sticker_*` webp in `app/src/main/res/drawable/`: Food 17, Mood 17, Quote 6,
+   Emoji 20 (`StickerCategory.kt`, `CatalogSticker.kt`). Nothing is downloaded.
+3. **Adding.** A tile tap calls `ToolViewModel.addSticker`, on the main thread. It uses
+   `data/edit/edit/StickerMapping.kt` to turn the middle of the picture you SEE (after the crop,
+   quarter turns and flips) into fractions of the original photo, and `EditSession.addSticker`
+   puts a `Sticker` there (a third of the shown width, upright, key from a counter) on top of the
+   others: one Undo step, and the new sticker is `selectedStickerKey`. At 20 stickers nothing
+   changes and `stickerLimitShown` makes `StickerLimitMessage`
+   (`ui/tool/components/StickerLimitMessage.kt`) show "A photo can hold 20 stickers at most"
+   (`stickers_limit_message` in `res/values/strings_stickers.xml`) for about 2.5 seconds. Taps are
+   ignored while Compare is on or Done renders.
+4. **Keep or throw away.** The tick (`confirmStickers`) keeps everything and closes the sheet; so
+   does any other way of closing it (`closeTool`). The cross and the system Back (`cancelStickers`,
+   reached by `onBackPressed`) put the session back to the snapshot, settings and Undo steps, so
+   Undo is as it was, and clear the selection. While Compare is on or Done renders, the tick, the
+   cross and Back do nothing (Back is consumed, so the screen stays): Done draws the stickers as
+   they were when it was tapped. Undoing the step that added the selected sticker clears the
+   selection.
+5. **Drawing.** Only Done draws the stickers: `data/edit/edit/EditProcessor.kt` (first step,
+   `Dispatchers.Default`) decodes each picture with `data/edit/edit/DrawableStickerPictures.kt`
+   (`BitmapFactory`, `inSampleSize`, nothing cached) and blends it into the cropped pixels, so the
+   saved JPEG (quality 95, `Pictures/Kanso`) holds them. The one recipe from settings to processor,
+   `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the cropper, the
+   sheets, the sticker taps and Done, so a sticker never disappears in one of them.
+6. **Not done yet.** The photo on screen does not show the stickers while you edit, there is no
+   selection frame, and a sticker cannot be moved, resized, turned, flipped or deleted by a gesture
+   (the model supports it: `EditSession`). On failure of a picture to decode, that sticker is
+   skipped in Done.
 
 ### Remove background, Enhance, Retouch and Artistic
 

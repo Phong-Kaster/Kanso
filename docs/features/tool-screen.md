@@ -27,10 +27,14 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of four tools is its
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of five tools is its
 `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
 photo never changes size, the photo has no Replace chip, and Undo moves into a pill on the
-photo next to a Compare switch, so its top bar holds Done alone.
+photo next to a Compare switch, so its top bar holds Done alone. The fifth tool, **Stickers**, opens
+a sheet that replaces the row (the five entries are hidden while it is open); its cross, or the
+system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
+"20 stickers at most" message is drawn on the photo's top edge by `ToolContent`
+(`StickerLimitMessage`) and hides itself after about 2.5 seconds.
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and

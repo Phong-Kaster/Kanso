@@ -1,0 +1,1823 @@
+diff --git a/README.md b/README.md
+index 6be9547..87e02ca 100644
+--- a/README.md
++++ b/README.md
+@@ -78,6 +78,7 @@ from the control to the saved file; none of them has yet been checked on the own
+ | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
+ | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
+ | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
++| Edit: Stickers | Partial | The fifth tool. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. Done already draws the stickers into the saved photo (first step of `EditProcessor`). Not done yet: nothing is drawn on the photo on screen while editing, there is no selection frame and no move, resize, turn, flip or delete gesture, so a sticker is visible only after Done. |
+ | Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
+ | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
+ | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
+@@ -136,7 +137,7 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
+    `data/edit/WorkingSize.kt`), with `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, on
+    the pixels as one `IntArray`: stickers (drawn first, cut by the crop, then turned, flipped,
+    filtered and coloured with the photo; the settings hold up to 20, each add, delete, duplicate,
+-   flip or whole drag is one Undo step; not wired to any screen yet, no sticker UI exists),
++   flip or whole drag is one Undo step; the Stickers sheet adds them, see "Stickers" below),
+    crop, quarter turns, flips, the filter (look-ups from
+    `data/edit/edit/FilterLut.kt` and `data/edit/edit/FilterPreset.kt`, images bundled in
+    `libs/imageprocessor.aar` and `libs/editimage.aar`, read from the app's assets with no
+@@ -175,6 +176,43 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
+    refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
+    to show" and Edit reopens on the photo with no changes (the session lived only in memory).
+ 
++### Edit: Stickers
++
++1. **Screen.** The row has five tools (Crop, Rotate, Adjust, Filters, Stickers). Tapping Stickers
++   (`ToolViewModel.openTool`) opens a sheet that takes the row's place in `EditBottomBar`
++   (`ui/tool/components/editbottombar/EditBottomBar.kt`), as tall as the row plus the fixed sheet
++   area, so the photo keeps its size; none of the five entries is on screen while it is open.
++   `ui/tool/ToolScreen.kt` fills the sheet with `EditPanel`
++   (`ui/tool/components/toolpanel/editpanel/EditPanel.kt`), which draws `StickersPanel`
++   (`ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt`): a top bar with a cross
++   and a tick (`StickersSheetTopBar.kt`), a `LazyRow` of category chips (`StickerCategoryChips.kt`)
++   and a three-column `LazyVerticalGrid` of tiles (`StickerTile.kt`). Opening it takes a snapshot of
++   the whole session (settings and Undo steps) in `ToolViewModel`.
++2. **The list.** `data/edit/edit/StickerCatalog.kt` lists 60 bundled pictures, each an explicit
++   `R.drawable.img_sticker_*` webp in `app/src/main/res/drawable/`: Food 17, Mood 17, Quote 6,
++   Emoji 20 (`StickerCategory.kt`, `CatalogSticker.kt`). Nothing is downloaded.
++3. **Adding.** A tile tap calls `ToolViewModel.addSticker`, on the main thread. It uses
++   `data/edit/edit/StickerMapping.kt` to turn the middle of the picture you SEE (after the crop,
++   quarter turns and flips) into fractions of the original photo, and `EditSession.addSticker`
++   puts a `Sticker` there (a third of the shown width, upright, key from a counter) on top of the
++   others: one Undo step, and the new sticker is `selectedStickerKey`. At 20 stickers nothing
++   changes and `stickerLimitShown` makes `StickerLimitMessage` show "20 stickers at most" for about
++   2.5 seconds. Taps are ignored while Compare is on or Done renders.
++4. **Keep or throw away.** The tick (`confirmStickers`) keeps everything and closes the sheet; so
++   does any other way of closing it (`closeTool`). The cross and the system Back (`cancelStickers`,
++   reached by `onBackPressed`) put the session back to the snapshot, settings and Undo steps, so
++   Undo is as it was, and clear the selection.
++5. **Drawing.** Only Done draws the stickers: `data/edit/edit/EditProcessor.kt` (first step,
++   `Dispatchers.Default`) decodes each picture with `data/edit/edit/DrawableStickerPictures.kt`
++   (`BitmapFactory`, `inSampleSize`, nothing cached) and blends it into the cropped pixels, so the
++   saved JPEG (quality 95, `Pictures/Kanso`) holds them. The one recipe from settings to processor,
++   `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the cropper, the
++   sheets, the sticker taps and Done, so a sticker never disappears in one of them.
++6. **Not done yet.** The photo on screen does not show the stickers while you edit, there is no
++   selection frame, and a sticker cannot be moved, resized, turned, flipped or deleted by a gesture
++   (the model supports it: `EditSession`). On failure of a picture to decode, that sticker is
++   skipped in Done.
++
+ ### Remove background, Enhance, Retouch and Artistic
+ 
+ These four share one path in `ui/tool/ToolViewModel.kt`: `apply` shrinks the photo to the tool's
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/CatalogSticker.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/CatalogSticker.kt
+new file mode 100644
+index 0000000..e065e8c
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/CatalogSticker.kt
+@@ -0,0 +1,20 @@
++package com.phongkaster.kanso.data.edit.edit
++
++import androidx.annotation.DrawableRes
++
++/**
++ * One ready-made sticker in [StickerCatalog]: what the Stickers sheet shows and what the
++ * processor later draws.
++ *
++ * It is not the same as a [Sticker]: this is the picture on offer (one of 60, fixed in the app),
++ * while a [Sticker] is one copy of it placed on the photo with its own position, size and turn.
++ * The two are linked by [pictureId].
++ */
++data class CatalogSticker(
++    /** The drawable's own name, for example `img_sticker_mood_3`; stored in [Sticker.pictureId]. */
++    val pictureId: String,
++    /** The drawable resource of the picture, used to show it in the sheet and to decode it. */
++    @DrawableRes val res: Int,
++    /** The tab of the Stickers sheet this sticker is listed under. */
++    val category: StickerCategory,
++)
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/DrawableStickerPictures.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/DrawableStickerPictures.kt
+new file mode 100644
+index 0000000..134d1a7
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/DrawableStickerPictures.kt
+@@ -0,0 +1,45 @@
++package com.phongkaster.kanso.data.edit.edit
++
++import android.content.Context
++import android.graphics.Bitmap
++import android.graphics.BitmapFactory
++
++/**
++ * The app's [StickerPictures]: finds a sticker in [StickerCatalog] and decodes its drawable file.
++ *
++ * Decoding with `inSampleSize` makes the bitmap smaller while it is read (the size is divided by
++ * a power of two), which is much cheaper than decoding it whole and scaling it down; the
++ * processor then scales to the exact size. Nothing is cached, so every call returns a fresh
++ * bitmap that nobody else holds, which satisfies [StickerPictures]'s ownership rule.
++ */
++class DrawableStickerPictures(private val context: Context) : StickerPictures {
++
++    /**
++     * Returns the sticker [pictureId] decoded at [widthPx] wide or a little wider (never narrower
++     * unless the file itself is narrower), as ARGB_8888 so transparent edges stay transparent.
++     * Returns null for an id the catalog does not know or a file that cannot be decoded.
++     */
++    override fun picture(pictureId: String, widthPx: Int): Bitmap? {
++        val sticker = StickerCatalog.byId(pictureId) ?: return null
++        val resources = context.resources
++
++        // First pass: read only the picture's size, no pixels.
++        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
++        BitmapFactory.decodeResource(resources, sticker.res, bounds)
++        if (bounds.outWidth <= 0) return null
++
++        // The largest power of two that still leaves the decoded width at or above widthPx.
++        var sample = 1
++        while (bounds.outWidth / (sample * 2) >= widthPx) sample *= 2
++
++        val options = BitmapFactory.Options().apply {
++            inSampleSize = sample
++            inPreferredConfig = Bitmap.Config.ARGB_8888
++        }
++        return try {
++            BitmapFactory.decodeResource(resources, sticker.res, options)
++        } catch (e: OutOfMemoryError) {
++            null
++        }
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt
+index 770bbad..85120da 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt
+@@ -78,7 +78,7 @@ data class EditSettings(
+      * tool row. The screen uses it to know whether there is anything to save or to lose.
+      */
+     val isNeutral: Boolean
+-        get() = EditTool.entries.all { isNeutral(it) } && stickers.isEmpty()
++        get() = EditTool.entries.all { isNeutral(it) }
+ 
+     /**
+      * True when the controls of [tool]'s sheet change nothing right now, so the tool row can mark
+@@ -87,13 +87,15 @@ data class EditSettings(
+      * - [EditTool.CROP]: the crop keeps the whole photo;
+      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
+      * - [EditTool.ADJUST]: all four sliders sit at their middle;
+-     * - [EditTool.FILTERS]: no filter, or one at intensity 0.
++     * - [EditTool.FILTERS]: no filter, or one at intensity 0;
++     * - [EditTool.STICKERS]: no sticker is on the photo.
+      */
+     fun isNeutral(tool: EditTool): Boolean = when (tool) {
+         EditTool.CROP -> crop == CropRect.FULL
+         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
+         EditTool.ADJUST -> !hasColourChange
+         EditTool.FILTERS -> !hasFilter
++        EditTool.STICKERS -> stickers.isEmpty()
+     }
+ 
+     /**
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditTool.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditTool.kt
+index 8e6820b..87ad825 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditTool.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditTool.kt
+@@ -1,7 +1,7 @@
+ package com.phongkaster.kanso.data.edit.edit
+ 
+ /**
+- * The four groups of controls the Edit screen offers, one per entry in the row of tools under the
++ * The five groups of controls the Edit screen offers, one per entry in the row of tools under the
+  * photo. Tapping an entry opens a sheet below the photo holding that group's controls; only one
+  * sheet is open at a time.
+  *
+@@ -22,4 +22,7 @@ enum class EditTool {
+ 
+     /** The ready-made looks (filters) and how strongly the chosen one is applied. */
+     FILTERS,
++
++    /** Ready-made pictures (stickers) placed on the photo, then moved, resized and turned. */
++    STICKERS,
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCatalog.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCatalog.kt
+new file mode 100644
+index 0000000..4621662
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCatalog.kt
+@@ -0,0 +1,99 @@
++package com.phongkaster.kanso.data.edit.edit
++
++import com.phongkaster.kanso.R
++
++/**
++ * The list of every ready-made sticker the Edit screen offers: 60 pictures in four categories
++ * (17 food, 17 mood, 6 quote, 20 emoji), in the order the Stickers sheet shows them.
++ *
++ * Each entry names its drawable with an explicit `R.drawable.…` reference, never a lookup by
++ * name at run time: the build then checks every picture exists, and the resource shrinker keeps
++ * them. An entry's `pictureId` is the drawable's own name, which is also the text stored in a
++ * [Sticker], so a saved photo's sticker can always be found again with [byId].
++ *
++ * Only picture stickers are listed; the text, clock, date, location and weather stickers of the
++ * app this was ported from are not part of Kanso.
++ */
++object StickerCatalog {
++
++    /** Builds one entry, taking the id from the drawable's name so the two can never disagree. */
++    private fun entry(name: String, res: Int, category: StickerCategory) =
++        CatalogSticker(pictureId = name, res = res, category = category)
++
++    /** All 60 stickers, in display order: food, then mood, then quote, then emoji. */
++    val all: List<CatalogSticker> = listOf(
++        entry("img_sticker_avocado", R.drawable.img_sticker_avocado, StickerCategory.FOOD),
++        entry("img_sticker_banana", R.drawable.img_sticker_banana, StickerCategory.FOOD),
++        entry("img_sticker_strawberry", R.drawable.img_sticker_strawberry, StickerCategory.FOOD),
++        entry("img_sticker_watermelon", R.drawable.img_sticker_watermelon, StickerCategory.FOOD),
++        entry("img_sticker_milktea", R.drawable.img_sticker_milktea, StickerCategory.FOOD),
++        entry("img_sticker_omelet", R.drawable.img_sticker_omelet, StickerCategory.FOOD),
++        entry("img_sticker_bread", R.drawable.img_sticker_bread, StickerCategory.FOOD),
++        entry("img_sticker_pear", R.drawable.img_sticker_pear, StickerCategory.FOOD),
++        entry("img_sticker_smoothie", R.drawable.img_sticker_smoothie, StickerCategory.FOOD),
++        entry("img_sticker_cake", R.drawable.img_sticker_cake, StickerCategory.FOOD),
++        entry("img_sticker_cake_1", R.drawable.img_sticker_cake_1, StickerCategory.FOOD),
++        entry("img_sticker_coffee", R.drawable.img_sticker_coffee, StickerCategory.FOOD),
++        entry("img_sticker_buddha", R.drawable.img_sticker_buddha, StickerCategory.FOOD),
++        entry("img_sticker_apple", R.drawable.img_sticker_apple, StickerCategory.FOOD),
++        entry("img_sticker_cake_2", R.drawable.img_sticker_cake_2, StickerCategory.FOOD),
++        entry("img_sticker_chestnut", R.drawable.img_sticker_chestnut, StickerCategory.FOOD),
++        entry("img_sticker_strawberry_1", R.drawable.img_sticker_strawberry_1, StickerCategory.FOOD),
++
++        entry("img_sticker_mood_1", R.drawable.img_sticker_mood_1, StickerCategory.MOOD),
++        entry("img_sticker_mood_2", R.drawable.img_sticker_mood_2, StickerCategory.MOOD),
++        entry("img_sticker_mood_3", R.drawable.img_sticker_mood_3, StickerCategory.MOOD),
++        entry("img_sticker_mood_4", R.drawable.img_sticker_mood_4, StickerCategory.MOOD),
++        entry("img_sticker_mood_5", R.drawable.img_sticker_mood_5, StickerCategory.MOOD),
++        entry("img_sticker_mood_6", R.drawable.img_sticker_mood_6, StickerCategory.MOOD),
++        entry("img_sticker_mood_7", R.drawable.img_sticker_mood_7, StickerCategory.MOOD),
++        entry("img_sticker_mood_8", R.drawable.img_sticker_mood_8, StickerCategory.MOOD),
++        entry("img_sticker_mood_9", R.drawable.img_sticker_mood_9, StickerCategory.MOOD),
++        entry("img_sticker_mood_10", R.drawable.img_sticker_mood_10, StickerCategory.MOOD),
++        entry("img_sticker_mood_11", R.drawable.img_sticker_mood_11, StickerCategory.MOOD),
++        entry("img_sticker_mood_12", R.drawable.img_sticker_mood_12, StickerCategory.MOOD),
++        entry("img_sticker_mood_13", R.drawable.img_sticker_mood_13, StickerCategory.MOOD),
++        entry("img_sticker_mood_14", R.drawable.img_sticker_mood_14, StickerCategory.MOOD),
++        entry("img_sticker_mood_15", R.drawable.img_sticker_mood_15, StickerCategory.MOOD),
++        entry("img_sticker_mood_16", R.drawable.img_sticker_mood_16, StickerCategory.MOOD),
++        entry("img_sticker_mood_17", R.drawable.img_sticker_mood_17, StickerCategory.MOOD),
++
++        entry("img_sticker_quote_1", R.drawable.img_sticker_quote_1, StickerCategory.QUOTE),
++        entry("img_sticker_quote_2", R.drawable.img_sticker_quote_2, StickerCategory.QUOTE),
++        entry("img_sticker_quote_3", R.drawable.img_sticker_quote_3, StickerCategory.QUOTE),
++        entry("img_sticker_quote_4", R.drawable.img_sticker_quote_4, StickerCategory.QUOTE),
++        entry("img_sticker_quote_5", R.drawable.img_sticker_quote_5, StickerCategory.QUOTE),
++        entry("img_sticker_quote_6", R.drawable.img_sticker_quote_6, StickerCategory.QUOTE),
++
++        entry("img_sticker_emoji_1", R.drawable.img_sticker_emoji_1, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_2", R.drawable.img_sticker_emoji_2, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_3", R.drawable.img_sticker_emoji_3, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_4", R.drawable.img_sticker_emoji_4, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_5", R.drawable.img_sticker_emoji_5, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_6", R.drawable.img_sticker_emoji_6, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_7", R.drawable.img_sticker_emoji_7, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_8", R.drawable.img_sticker_emoji_8, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_9", R.drawable.img_sticker_emoji_9, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_10", R.drawable.img_sticker_emoji_10, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_11", R.drawable.img_sticker_emoji_11, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_12", R.drawable.img_sticker_emoji_12, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_13", R.drawable.img_sticker_emoji_13, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_14", R.drawable.img_sticker_emoji_14, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_15", R.drawable.img_sticker_emoji_15, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_16", R.drawable.img_sticker_emoji_16, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_17", R.drawable.img_sticker_emoji_17, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_18", R.drawable.img_sticker_emoji_18, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_19", R.drawable.img_sticker_emoji_19, StickerCategory.EMOJI),
++        entry("img_sticker_emoji_20", R.drawable.img_sticker_emoji_20, StickerCategory.EMOJI),
++    )
++
++    /** Every sticker by its picture id, built once so [byId] is a single lookup. */
++    private val byPictureId: Map<String, CatalogSticker> = all.associateBy { it.pictureId }
++
++    /** The stickers of one [category], in display order. */
++    fun inCategory(category: StickerCategory): List<CatalogSticker> =
++        all.filter { it.category == category }
++
++    /** The sticker whose picture id is [pictureId], or null when the catalog has no such picture. */
++    fun byId(pictureId: String): CatalogSticker? = byPictureId[pictureId]
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCategory.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCategory.kt
+new file mode 100644
+index 0000000..63ea1fa
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerCategory.kt
+@@ -0,0 +1,29 @@
++package com.phongkaster.kanso.data.edit.edit
++
++import androidx.annotation.StringRes
++import com.phongkaster.kanso.R
++
++/**
++ * The four tabs of the Stickers sheet, in the order they are shown. Each sticker in
++ * [StickerCatalog] belongs to exactly one.
++ *
++ * Each case carries the string resource of its tab's name, so the sheet can write the name with
++ * `stringResource(category.label)` and the words stay translatable in `strings_stickers.xml`.
++ */
++enum class StickerCategory(
++    /** The string resource holding the tab's visible name. */
++    @StringRes val label: Int,
++) {
++
++    /** Fruit, drinks, cakes and other things to eat. */
++    FOOD(R.string.stickers_tab_food),
++
++    /** Faces and small drawings that say how you feel. */
++    MOOD(R.string.stickers_tab_mood),
++
++    /** Short sayings drawn as pictures. */
++    QUOTE(R.string.stickers_tab_quote),
++
++    /** Round emoji faces. */
++    EMOJI(R.string.stickers_tab_emoji),
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerMapping.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerMapping.kt
+new file mode 100644
+index 0000000..acb316a
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/StickerMapping.kt
+@@ -0,0 +1,170 @@
++package com.phongkaster.kanso.data.edit.edit
++
++import kotlin.math.atan2
++import kotlin.math.cos
++import kotlin.math.roundToInt
++import kotlin.math.sin
++
++/**
++ * The one translation between what the user SEES while placing stickers and where a sticker
++ * really lives.
++ *
++ * The user sees the photo after the crop, the quarter turns and the flips (the "shown picture").
++ * A [Sticker] is stored as fractions of the ORIGINAL photo, so a later crop, turn or flip carries
++ * it along. Done ([EditProcessor]) applies the steps in this order: crop, then turn, then flip,
++ * and draws each sticker before them. This class is exactly the inverse of that, so a sticker put
++ * at a spot of the shown picture is drawn by Done at that same spot.
++ *
++ * Positions are [Point]s from 0 to 1 across the picture, y growing downward. Turning and flipping
++ * the whole picture also turns the sticker's look, so the angle and the mirror flag are mapped
++ * too. A flip is a mirror: it reverses the sense of every angle and toggles [Sticker.mirrored].
++ *
++ * It is plain Kotlin with no Android types, so it can be tested on the JVM.
++ *
++ * @param originalWidth the original photo's width in pixels (pixels, so aspect ratios are right).
++ * @param originalHeight the original photo's height in pixels.
++ * @param settings the edit whose crop, quarter turns and flips define the shown picture.
++ */
++class StickerMapping(
++    originalWidth: Int,
++    originalHeight: Int,
++    settings: EditSettings,
++) {
++    /** A position as fractions of a picture: x from 0 (left) to 1 (right), y from 0 (top) to 1 (bottom). */
++    data class Point(val x: Float, val y: Float)
++
++    private val photoWidth = originalWidth.toFloat()
++    private val photoHeight = originalHeight.toFloat()
++
++    // Clockwise quarter turns reduced to 0..3 (-1 is the same as 3), as Done does.
++    private val turns = ((settings.quarterTurns % 4) + 4) % 4
++    private val flipH = settings.flipHorizontal
++    private val flipV = settings.flipVertical
++
++    // The kept rectangle in original pixels, rounded and clamped the way Done does it.
++    private val cropLeft: Int
++    private val cropTop: Int
++    private val cropWidth: Int
++    private val cropHeight: Int
++
++    init {
++        val rect = settings.crop
++        val w = originalWidth
++        val h = originalHeight
++        val left = (minOf(rect.left, rect.right).coerceIn(0f, 1f) * w).roundToInt().coerceIn(0, w - 1)
++        val top = (minOf(rect.top, rect.bottom).coerceIn(0f, 1f) * h).roundToInt().coerceIn(0, h - 1)
++        val right = (maxOf(rect.left, rect.right).coerceIn(0f, 1f) * w).roundToInt().coerceIn(left + 1, w)
++        val bottom = (maxOf(rect.top, rect.bottom).coerceIn(0f, 1f) * h).roundToInt().coerceIn(top + 1, h)
++        cropLeft = left
++        cropTop = top
++        cropWidth = right - left
++        cropHeight = bottom - top
++    }
++
++    // The shown picture's size in pixels: an odd number of quarter turns swaps width and height.
++    private val shownWidthPx = if (turns % 2 == 1) cropHeight.toFloat() else cropWidth.toFloat()
++    private val shownHeightPx = if (turns % 2 == 1) cropWidth.toFloat() else cropHeight.toFloat()
++
++    /** The shown picture's width divided by its height, in pixels. */
++    val shownAspect: Float = shownWidthPx / shownHeightPx
++
++    // Whether the whole picture is mirrored (one flip, not two): the turn is then reversed.
++    private val reversing = flipH != flipV
++
++    /**
++     * The angle in degrees (clockwise, y down) of the picture's left-to-right direction after the
++     * turns and flips: where the original's "right" ends up. Used to carry a sticker's angle.
++     */
++    private val axisDegrees: Float
++
++    init {
++        // The direction (1, 0) turned clockwise by [turns] quarters, then flipped.
++        val radians = Math.toRadians(90.0 * turns)
++        var x = cos(radians)
++        var y = sin(radians)
++        if (flipH) x = -x
++        if (flipV) y = -y
++        axisDegrees = Math.toDegrees(atan2(y, x)).toFloat()
++    }
++
++    /** Turns a shown-picture position into the original photo's fractions (undoing flips, then turns, then the crop). */
++    fun shownToOriginal(p: Point): Point {
++        // Undo the flips (they were done last).
++        val u = if (flipH) 1f - p.x else p.x
++        val v = if (flipV) 1f - p.y else p.y
++        // Undo the turns: (a, b) is the position inside the cropped picture.
++        val a: Float
++        val b: Float
++        when (turns) {
++            1 -> { a = v; b = 1f - u }
++            2 -> { a = 1f - u; b = 1f - v }
++            3 -> { a = 1f - v; b = u }
++            else -> { a = u; b = v }
++        }
++        // Undo the crop: the cropped picture sits inside the original at the rounded rectangle.
++        return Point((cropLeft + a * cropWidth) / photoWidth, (cropTop + b * cropHeight) / photoHeight)
++    }
++
++    /** Turns an original-photo position into the shown picture's fractions (the crop, then the turns, then the flips). */
++    fun originalToShown(p: Point): Point {
++        // The position inside the cropped picture.
++        val a = (p.x * photoWidth - cropLeft) / cropWidth
++        val b = (p.y * photoHeight - cropTop) / cropHeight
++        // Turn clockwise by quarters, as Done's turn step moves each pixel.
++        var u: Float
++        var v: Float
++        when (turns) {
++            1 -> { u = 1f - b; v = a }
++            2 -> { u = 1f - a; v = 1f - b }
++            3 -> { u = b; v = 1f - a }
++            else -> { u = a; v = b }
++        }
++        if (flipH) u = 1f - u
++        if (flipV) v = 1f - v
++        return Point(u, v)
++    }
++
++    /** Maps a sticker angle seen on the shown picture to the angle stored on the original. */
++    fun shownAngleToOriginal(degrees: Float): Float =
++        // Without a mirror the angle just loses the turn; with one it is reflected about the axis.
++        normalise(if (reversing) axisDegrees + 180f - degrees else degrees - axisDegrees)
++
++    /** Maps a sticker angle stored on the original to the angle seen on the shown picture. */
++    fun originalAngleToShown(degrees: Float): Float =
++        normalise(if (reversing) axisDegrees + 180f - degrees else degrees + axisDegrees)
++
++    /** A mirrored picture shows a sticker with its mirror flag the other way round. */
++    fun shownMirrorToOriginal(mirrored: Boolean): Boolean = if (reversing) !mirrored else mirrored
++
++    /** The inverse of [shownMirrorToOriginal] (the same toggle, since a mirror undoes itself). */
++    fun originalMirrorToShown(mirrored: Boolean): Boolean = if (reversing) !mirrored else mirrored
++
++    /** A width as a fraction of the shown picture's width, as a fraction of the original's width. */
++    fun shownWidthToOriginal(width: Float): Float = width * shownWidthPx / photoWidth
++
++    /** A width as a fraction of the original's width, as a fraction of the shown picture's width. */
++    fun originalWidthToShown(width: Float): Float = width * photoWidth / shownWidthPx
++
++    /**
++     * A new sticker of [pictureId] with identity [key], at the shown picture's centre, a third of
++     * its width, upright and not mirrored, already converted to the original's fractions.
++     */
++    fun centredSticker(key: Long, pictureId: String): Sticker {
++        val centre = shownToOriginal(Point(0.5f, 0.5f))
++        return Sticker(
++            key = key,
++            pictureId = pictureId,
++            centreX = centre.x,
++            centreY = centre.y,
++            width = shownWidthToOriginal(1f / 3f),
++            degrees = shownAngleToOriginal(0f),
++            mirrored = shownMirrorToOriginal(false),
++        )
++    }
++
++    /** Brings [degrees] into the range 0 (included) to 360 (excluded). */
++    private fun normalise(degrees: Float): Float {
++        val r = degrees % 360f
++        return if (r < 0f) r + 360f else r
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/EditProcessorFactory.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/EditProcessorFactory.kt
+new file mode 100644
+index 0000000..bbbf034
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/EditProcessorFactory.kt
+@@ -0,0 +1,26 @@
++package com.phongkaster.kanso.ui.tool
++
++import android.content.Context
++import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
++import com.phongkaster.kanso.data.edit.edit.EditProcessor
++import com.phongkaster.kanso.data.edit.edit.EditSettings
++import com.phongkaster.kanso.data.edit.edit.FilterLut
++
++/**
++ * Builds THE recipe that turns Edit settings into the processor that draws them.
++ *
++ * Several places need to draw the same settings: the cropper, the live filter preview and Done's
++ * final render. If each built its processor differently (one without the sticker pictures, say),
++ * a sticker added in one place would silently vanish in another. So there is exactly one recipe,
++ * here: the filter look-up tables are read from the app's assets and the sticker pictures from
++ * its drawables, both through the application context so no screen is held on to.
++ *
++ * Call it once (remember the result in the screen function) and hand the same function to every
++ * user, because the ViewModel recognises a recipe by identity and reuses its caches for it.
++ */
++fun editProcessorFor(context: Context): (EditSettings) -> EditProcessor {
++    val appContext = context.applicationContext
++    val filters = FilterLut.fromAssets { path -> appContext.assets.open(path) }
++    val stickers = DrawableStickerPictures(appContext)
++    return { wanted -> EditProcessor(wanted, filters, stickers) }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+index 1e1cb35..9044804 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt
+@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.remember
+ import androidx.compose.runtime.rememberUpdatedState
++import androidx.compose.ui.Alignment
+ import androidx.compose.ui.ExperimentalComposeUiApi
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.platform.LocalConfiguration
+@@ -44,10 +45,8 @@ import androidx.compose.ui.unit.dp
+ import com.phongkaster.kanso.data.edit.EditFailure
+ import com.phongkaster.kanso.data.edit.ToolProcessor
+ import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
+-import com.phongkaster.kanso.data.edit.edit.EditProcessor
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
+-import com.phongkaster.kanso.data.edit.edit.FilterLut
+ import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
+ import com.phongkaster.kanso.data.photo.displayMaxEdgePx
+ import com.phongkaster.kanso.data.settings.ThemeMode
+@@ -58,7 +57,9 @@ import com.phongkaster.kanso.ui.tool.components.EditCropper
+ import com.phongkaster.kanso.ui.tool.components.EditPhotoArea
+ import com.phongkaster.kanso.ui.tool.components.editbottombar.EditBottomBar
+ import com.phongkaster.kanso.ui.tool.components.photocard.PhotoCard
++import com.phongkaster.kanso.ui.tool.components.photocard.StickerLimitMessage
+ import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
++import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
+ import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
+ import com.phongkaster.kanso.ui.tool.components.topbar.ToolTopBar
+ 
+@@ -215,6 +216,12 @@ fun ToolScreen(
+     // screen is drawn again with it.
+     val state by viewModel.state.collectAsState()
+ 
++    // THE recipe that turns settings into the processor drawing them (filters AND sticker
++    // pictures), made once. The cropper, the sheets' changes, the sticker taps and so Done's final
++    // render all use this one function, so a sticker never disappears in one of them.
++    val context = LocalContext.current
++    val processorFor: (EditSettings) -> ToolProcessor = remember(context) { editProcessorFor(context) }
++
+     // Each finished Done reaches the caller exactly once (the ViewModel sends it through a
+     // Channel). rememberUpdatedState lets the long-running collector always call the latest
+     // onDone without restarting when the caller passes a new lambda.
+@@ -264,13 +271,6 @@ fun ToolScreen(
+         // loading indicator or the unreadable message stays on screen.
+         editCropper = (state.photo as? ToolUiState.PhotoState.Ready)?.let { ready ->
+             {
+-                val context = LocalContext.current
+-                val processorFor: (EditSettings) -> ToolProcessor = remember(context) {
+-                    val appContext = context.applicationContext
+-                    val filters = FilterLut.fromAssets { path -> appContext.assets.open(path) }
+-                    val build: (EditSettings) -> ToolProcessor = { wanted -> EditProcessor(wanted, filters) }
+-                    build
+-                }
+                 EditCropper(
+                     bitmap = ready.bitmap,
+                     settings = state.settings,
+@@ -285,18 +285,38 @@ fun ToolScreen(
+         // not disable them. Every change goes to the ViewModel's one settings session, which
+         // re-renders from the original photo.
+         editSheet = { tool ->
+-            ToolPanel(
+-                tool = Tool.EDIT,
+-                state = state,
+-                openTool = tool,
+-                enabled = !state.comparing && !state.finishing,
+-                onEditChange = viewModel::changeSettings,
+-                onEditPreview = viewModel::previewSettings,
+-                onEditCommit = viewModel::commitSettings,
+-                onEditRatio = viewModel::chooseCropRatio,
+-                onEditAdjustSlider = viewModel::chooseAdjustSlider,
+-            )
++            // Whatever recipe a panel offers, the screen's own (with sticker pictures) is the one
++            // the ViewModel keeps, so Done always draws the stickers.
++            if (tool == EditTool.STICKERS) {
++                EditPanel(
++                    openTool = tool,
++                    settings = state.settings,
++                    onChange = { changed, _ -> viewModel.changeSettings(changed, processorFor) },
++                    onPreview = { changed, _ -> viewModel.previewSettings(changed, processorFor) },
++                    onCommit = viewModel::commitSettings,
++                    onRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
++                    enabled = !state.comparing && !state.finishing,
++                    stickerCategory = state.stickerCategory,
++                    onStickerCategoryChosen = viewModel::chooseStickerCategory,
++                    onStickerChosen = { viewModel.addSticker(it, processorFor) },
++                    onStickersCancel = viewModel::cancelStickers,
++                    onStickersConfirm = viewModel::confirmStickers,
++                )
++            } else {
++                ToolPanel(
++                    tool = Tool.EDIT,
++                    state = state,
++                    openTool = tool,
++                    enabled = !state.comparing && !state.finishing,
++                    onEditChange = { changed, _ -> viewModel.changeSettings(changed, processorFor) },
++                    onEditPreview = { changed, _ -> viewModel.previewSettings(changed, processorFor) },
++                    onEditCommit = viewModel::commitSettings,
++                    onEditRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
++                    onEditAdjustSlider = viewModel::chooseAdjustSlider,
++                )
++            }
+         },
++        onStickerLimitShown = viewModel::onStickerLimitMessageShown,
+     )
+ 
+     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
+@@ -372,6 +392,7 @@ fun ToolContent(
+     onCompare: (Boolean) -> Unit = {},
+     editSheet: @Composable (EditTool) -> Unit = {},
+     editCropper: (@Composable () -> Unit)? = null,
++    onStickerLimitShown: () -> Unit = {},
+ ) {
+     val isEdit = state.tool == Tool.EDIT
+     Scaffold(
+@@ -431,13 +452,21 @@ fun ToolContent(
+             EditPhotoArea(
+                 state = state,
+                 photo = {
+-                    PhotoCard(
+-                        state = state,
+-                        onReplace = onReplace,
+-                        onDismissFailure = onDismissFailure,
+-                        showReplace = false,
+-                        modifier = Modifier.fillMaxSize(),
+-                    )
++                    Box(Modifier.fillMaxSize()) {
++                        PhotoCard(
++                            state = state,
++                            onReplace = onReplace,
++                            onDismissFailure = onDismissFailure,
++                            showReplace = false,
++                            modifier = Modifier.fillMaxSize(),
++                        )
++                        // The "20 stickers at most" card, a moment on the photo's top edge.
++                        StickerLimitMessage(
++                            visible = state.stickerLimitShown,
++                            onShown = onStickerLimitShown,
++                            modifier = Modifier.align(Alignment.TopCenter),
++                        )
++                    }
+                 },
+                 cropper = editCropper,
+                 modifier = insetModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+index 67e568f..b473db8 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt
+@@ -4,6 +4,7 @@ import android.graphics.Bitmap
+ import com.phongkaster.kanso.data.edit.EditFailure
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
+ import com.phongkaster.kanso.navigation.Tool
+ 
+ /**
+@@ -103,6 +104,18 @@ data class ToolUiState(
+      * made; it goes false again with Discard or Keep editing.
+      */
+     val discardPrompt: Boolean = false,
++    /** The Stickers sheet's chosen category chip (Food first); it survives closing the sheet. */
++    val stickerCategory: StickerCategory = StickerCategory.FOOD,
++    /**
++     * The key of the sticker just added and still selected on the photo, or null when none is.
++     * It is cleared when the Stickers sheet closes.
++     */
++    val selectedStickerKey: Long? = null,
++    /**
++     * True for a moment after the person tried to add a sticker beyond the limit: the screen shows
++     * the "20 stickers at most" message, then calls the ViewModel to clear this flag.
++     */
++    val stickerLimitShown: Boolean = false,
+ ) {
+ 
+     /**
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+index 9d9cf48..100ffd1 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt
+@@ -8,7 +8,10 @@ import com.phongkaster.kanso.data.edit.EditResult
+ import com.phongkaster.kanso.data.edit.ProcessorRegistry
+ import com.phongkaster.kanso.data.edit.ToolProcessor
+ import com.phongkaster.kanso.data.edit.WorkingSize
++import com.phongkaster.kanso.data.edit.edit.CatalogSticker
+ import com.phongkaster.kanso.data.edit.edit.CropRatio
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
++import com.phongkaster.kanso.data.edit.edit.StickerMapping
+ import com.phongkaster.kanso.data.edit.edit.EditSession
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
+@@ -300,7 +303,23 @@ class ToolViewModel(
+      * again, so the row's entries work as toggles.
+      */
+     fun openTool(tool: EditTool) {
+-        mutableState.update { it.copy(openTool = if (it.openTool == tool) null else tool) }
++        val current = mutableState.value
++        val closing = current.openTool == tool
++        if (current.openTool == EditTool.STICKERS) {
++            // Leaving the Stickers sheet by another door (its own tool tapped again, or another
++            // tool chosen) keeps what was done, like its Confirm button.
++            stickersSnapshot = null
++        } else if (tool == EditTool.STICKERS) {
++            // Opening Stickers: remember the whole session (settings AND undo steps) so Cancel
++            // can put everything back exactly as it is now.
++            stickersSnapshot = session.commit()
++        }
++        mutableState.update {
++            it.copy(
++                openTool = if (closing) null else tool,
++                selectedStickerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedStickerKey,
++            )
++        }
+     }
+ 
+     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
+@@ -308,11 +327,89 @@ class ToolViewModel(
+         mutableState.update { it.copy(adjustSlider = slider) }
+     }
+ 
+-    /** Closes the open tool sheet, if any, leaving the photo and the row of tools. */
++    /**
++     * Closes the open tool sheet, if any, leaving the photo and the row of tools. Closing the
++     * Stickers sheet this way keeps its changes, exactly like its Confirm button.
++     */
+     fun closeTool() {
++        if (mutableState.value.openTool == EditTool.STICKERS) {
++            confirmStickers()
++            return
++        }
+         mutableState.update { it.copy(openTool = null) }
+     }
+ 
++    // --- The Stickers sheet --------------------------------------------------------------------------
++
++    /**
++     * The session as it was when the Stickers sheet opened, or null while that sheet is closed.
++     * [cancelStickers] puts it back, so a Cancel throws away every sticker added, moved, flipped
++     * or deleted since, along with the undo steps they made.
++     */
++    private var stickersSnapshot: EditSession? = null
++
++    /** The key the next added sticker gets; it only grows, so a key is never used twice. */
++    private var nextStickerKey = 1L
++
++    /** The person tapped the category chip [category]: its stickers fill the sheet's grid. */
++    fun chooseStickerCategory(category: StickerCategory) {
++        mutableState.update { it.copy(stickerCategory = category) }
++    }
++
++    /**
++     * The person tapped [sticker] in the grid: it lands at the middle of the picture they SEE
++     * (after the crop, turns and flips), as one action (one Undo step), and is selected.
++     *
++     * [processorFor] is the recipe that draws settings, with the sticker pictures in it (see
++     * [editProcessorFor]); it also becomes the recipe Done renders with. At the limit nothing
++     * changes (no settings, no undo step) and [ToolUiState.stickerLimitShown] asks the screen for
++     * its message. Nothing happens before the photo is decoded, or while comparing.
++     */
++    fun addSticker(sticker: CatalogSticker, processorFor: (EditSettings) -> ToolProcessor) {
++        val current = mutableState.value
++        if (current.comparing || current.finishing) return
++        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
++        if (!session.settings.canAddSticker) {
++            mutableState.update { it.copy(stickerLimitShown = true) }
++            return
++        }
++        // The mapping turns "the middle of what is shown" into fractions of the original photo,
++        // which is what a Sticker stores.
++        val mapping = StickerMapping(original.width, original.height, session.settings)
++        val key = nextStickerKey++
++        this.processorFor = processorFor
++        publishSession(session.addSticker(mapping.centredSticker(key, sticker.pictureId)))
++        mutableState.update { it.copy(selectedStickerKey = key) }
++        requestPreview()
++    }
++
++    /** The limit message has been shown long enough: hides it again. */
++    fun onStickerLimitMessageShown() {
++        mutableState.update { it.copy(stickerLimitShown = false) }
++    }
++
++    /** The sheet's tick: keeps every change, closes the sheet and forgets the snapshot. */
++    fun confirmStickers() {
++        stickersSnapshot = null
++        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
++    }
++
++    /**
++     * The sheet's cross, and the system Back while the sheet is open: puts the session back to the
++     * snapshot taken at opening (settings and undo steps, so Undo is exactly as it was), closes the
++     * sheet and clears the selection. The photo is drawn from the settings, so it follows at once
++     * (the Edit screen's `edited` stays null; only a filter preview is asked for again).
++     */
++    fun cancelStickers() {
++        val snapshot = stickersSnapshot
++        stickersSnapshot = null
++        if (snapshot != null) {
++            publishSession(snapshot)
++            requestPreview()
++        }
++        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
++    }
++
+     // --- The Edit screen's session ---------------------------------------------------------------
+ 
+     /**
+@@ -405,6 +502,11 @@ class ToolViewModel(
+      */
+     fun onBackPressed(): Boolean {
+         val current = mutableState.value
++        if (current.openTool == EditTool.STICKERS) {
++            // Back from the Stickers sheet is its Cancel: the sticker changes are thrown away.
++            cancelStickers()
++            return true
++        }
+         if (current.openTool != null) {
+             closeTool()
+             return true
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt
+index 4262221..db1e9bf 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt
+@@ -13,9 +13,22 @@ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.systemGestures
+ import androidx.compose.foundation.layout.union
+ import androidx.compose.foundation.layout.windowInsetsPadding
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Scaffold
++import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.layout.onSizeChanged
++import androidx.compose.ui.platform.LocalDensity
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
++import com.phongkaster.kanso.R
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+@@ -27,6 +40,12 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
+ import com.phongkaster.kanso.ui.tool.ToolUiState
+ import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EditToolRow
+ 
++/** The height of the panel area above the row of tools (the same 136 dp as the fixed sheet in EditSheet). */
++private val SHEET_AREA_HEIGHT = 136.dp
++
++/** The row of tools' height when it has not been measured yet: a 64 dp entry plus 4 dp above and below. */
++private val DEFAULT_ROW_HEIGHT = 72.dp
++
+ /**
+  * The Edit screen's bottom bar, the lowest thing on screen: one row of Crop, Rotate, Adjust,
+  * Filters and Compare, and just above it the fixed-height panel area, which holds the open tool's
+@@ -45,6 +64,11 @@ import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EditTo
+  * [onOpenTool] is a tool entry tapped (the ViewModel opens that tool, or closes it if it was
+  * open). While Compare is on, or Done is rendering, the row is disabled; the screen also passes
+  * that flag to the panel's controls, which disable themselves.
++ *
++ * **Stickers replaces the row.** While Stickers is open its sheet (which has its own Cancel and
++ * Confirm) is shown instead of the row of tools, and is as tall as the panel area and the row
++ * together, so the bar's total height, and the photo's, stay the same. The row's height is
++ * measured with `onSizeChanged` while the row is on screen and remembered for that moment.
+  */
+ @Composable
+ fun EditBottomBar(
+@@ -54,6 +78,8 @@ fun EditBottomBar(
+     modifier: Modifier = Modifier,
+     onCompare: (Boolean) -> Unit = {},
+ ) {
++    // The row's last measured height in pixels (0 until it was drawn once).
++    var rowHeightPx by remember { mutableIntStateOf(0) }
+     Column(
+         modifier = modifier
+             .fillMaxWidth()
+@@ -62,22 +88,50 @@ fun EditBottomBar(
+             )
+             .padding(bottom = 8.dp),
+     ) {
+-        EditSheet(
+-            openTool = state.openTool,
+-            sheet = sheet,
+-            modifier = Modifier.padding(horizontal = 16.dp),
+-        )
+-        // The session's settings tell the row which tools hold a change (their dot).
+-        EditToolRow(
+-            openTool = state.openTool,
+-            enabled = !state.comparing && !state.finishing,
+-            onOpen = onOpenTool,
+-            settings = state.settings,
+-            comparing = state.comparing,
+-            // Compare is the way back from comparing, so only Done's render switches it off.
+-            compareEnabled = !state.finishing,
+-            onCompare = onCompare,
+-        )
++        if (state.openTool == EditTool.STICKERS) {
++            // The Stickers sheet takes the place of the row of tools. It is as tall as the fixed
++            // sheet area plus the row, so the bar, and with it the photo, keeps its size.
++            val sheetText = stringResource(R.string.edit_layout_sheet)
++            val density = LocalDensity.current
++            val rowHeight = if (rowHeightPx > 0) with(density) { rowHeightPx.toDp() } else DEFAULT_ROW_HEIGHT
++            Box(
++                modifier = Modifier
++                    .padding(horizontal = 16.dp)
++                    .fillMaxWidth()
++                    .height(SHEET_AREA_HEIGHT + rowHeight)
++                    .padding(bottom = 8.dp),
++            ) {
++                Surface(
++                    modifier = Modifier
++                        .fillMaxSize()
++                        .testTag(EDIT_SHEET_TAG)
++                        .semantics { contentDescription = sheetText },
++                    shape = MaterialTheme.shapes.extraLarge,
++                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
++                ) {
++                    sheet(EditTool.STICKERS)
++                }
++            }
++        } else {
++            EditSheet(
++                openTool = state.openTool,
++                sheet = sheet,
++                modifier = Modifier.padding(horizontal = 16.dp),
++            )
++            // The session's settings tell the row which tools hold a change (their dot).
++            EditToolRow(
++                openTool = state.openTool,
++                enabled = !state.comparing && !state.finishing,
++                onOpen = onOpenTool,
++                settings = state.settings,
++                comparing = state.comparing,
++                // Compare is the way back from comparing, so only Done's render switches it off.
++                compareEnabled = !state.finishing,
++                onCompare = onCompare,
++                // Remember how tall the row is, to give the Stickers sheet the same height.
++                modifier = Modifier.onSizeChanged { rowHeightPx = it.height },
++            )
++        }
+     }
+ }
+ 
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolEntry.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolEntry.kt
+index aa555b7..a17cd0a 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolEntry.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolEntry.kt
+@@ -79,7 +79,8 @@ internal fun EditToolEntry(
+             .background(background)
+             .then(tap())
+             .alpha(if (enabled) 1f else DISABLED_ALPHA)
+-            .padding(horizontal = 4.dp, vertical = 8.dp),
++            // Narrow side padding: five entries must fit a 411 dp phone beside Compare.
++            .padding(horizontal = 2.dp, vertical = 8.dp),
+         horizontalAlignment = Alignment.CenterHorizontally,
+         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+     ) {
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt
+index ea03441..9230f4c 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt
+@@ -27,10 +27,11 @@ import com.phongkaster.kanso.R
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
+ import com.phongkaster.kanso.data.edit.edit.FilterPreset
++import com.phongkaster.kanso.data.edit.edit.Sticker
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.ui.theme.KansoTheme
+ 
+-/** Test tag of the Edit screen's row under the photo: four tools and Compare. */
++/** Test tag of the Edit screen's row under the photo: five tools and Compare. */
+ const val EDIT_TOOL_ROW_TAG = "edit-tool-row"
+ 
+ /** Test tag of the row's Compare switch, which shows the original photo while it is on. */
+@@ -46,14 +47,14 @@ fun editToolTag(tool: EditTool): String = "edit-tool-${tool.name}"
+ fun editToolDotTag(tool: EditTool): String = "edit-tool-dot-${tool.name}"
+ 
+ /** The width of a tool's entry in the scrolling row. */
+-private val TOOL_ENTRY_WIDTH = 84.dp
++private val TOOL_ENTRY_WIDTH = 60.dp
+ 
+ /** The width of the pinned Compare entry. */
+ private val ACTION_ENTRY_WIDTH = 68.dp
+ 
+ /**
+- * The Edit screen's one row under the photo: the four tools (Crop, Rotate, Adjust, Filters), then
+- * Compare, each an icon over its name, . Tapping a tool calls
++ * The Edit screen's one row under the photo: the five tools (Crop, Rotate, Adjust, Filters,
++ * Stickers), then Compare, each an icon over its name. Tapping a tool calls
+  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
+  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
+  * colour Material uses for "this one is chosen".
+@@ -69,8 +70,9 @@ private val ACTION_ENTRY_WIDTH = 68.dp
+  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture) the
+  * four tools are drawn faint and ignore taps.
+  *
+- * The four tools sit in a row that scrolls sideways, each [TOOL_ENTRY_WIDTH] wide, so they stay
+- * large and a tool past the edge is reached by swiping. Compare stays pinned at the right,
++ * The tools sit in a row that can scroll sideways, each [TOOL_ENTRY_WIDTH] (60 dp) wide: five of
++ * them fit a 411 dp phone beside Compare, so on it nothing scrolls, and a narrower screen or more
++ * tools later are reached by swiping. Compare stays pinned at the right,
+  * [ACTION_ENTRY_WIDTH] wide, behind a thin divider, so they are always in reach. A name too
+  * long for its entry is cut short with an ellipsis.
+  */
+@@ -149,6 +151,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
+     EditTool.ROTATE -> R.drawable.ic_rotate_right
+     EditTool.ADJUST -> R.drawable.ic_tune
+     EditTool.FILTERS -> R.drawable.ic_filter_vintage
++    EditTool.STICKERS -> R.drawable.ic_stickers
+ }
+ 
+ /** The string resource naming [tool] under its icon. */
+@@ -158,6 +161,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
+     EditTool.ROTATE -> R.string.edit_layout_rotate
+     EditTool.ADJUST -> R.string.edit_layout_adjust
+     EditTool.FILTERS -> R.string.edit_layout_filters
++    EditTool.STICKERS -> R.string.stickers_tool_label
+ }
+ 
+ /**
+@@ -175,7 +179,11 @@ private fun EditToolRowPreview() {
+                 openTool = EditTool.ADJUST,
+                 enabled = true,
+                 onOpen = {},
+-                settings = EditSettings(brightness = 0.4f, filter = FilterPreset.KELVIN),
++                settings = EditSettings(
++                    brightness = 0.4f,
++                    filter = FilterPreset.KELVIN,
++                    stickers = listOf(Sticker(key = 1L, pictureId = "apple", centreX = 0.5f, centreY = 0.5f, width = 0.3f, degrees = 0f, mirrored = false)),
++                ),
+             )
+         }
+     }
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/StickerLimitMessage.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/StickerLimitMessage.kt
+new file mode 100644
+index 0000000..40d0c17
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/StickerLimitMessage.kt
+@@ -0,0 +1,78 @@
++package com.phongkaster.kanso.ui.tool.components.photocard
++
++import androidx.compose.foundation.layout.padding
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.rememberUpdatedState
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.LiveRegionMode
++import androidx.compose.ui.semantics.liveRegion
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.R
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import kotlinx.coroutines.delay
++
++/** The test tag on the "20 stickers at most" message shown on the photo. */
++const val STICKER_LIMIT_MESSAGE_TAG = "sticker-limit-message"
++
++/** How long the limit message stays on the photo before it asks to be hidden, in milliseconds. */
++internal const val STICKER_LIMIT_MESSAGE_MILLIS = 2500L
++
++/**
++ * A short-lived card on the photo saying a photo holds at most 20 stickers.
++ *
++ * While [visible] is true it shows the message in the theme's error-container colours, like
++ * [FailureMessage], and after [STICKER_LIMIT_MESSAGE_MILLIS] calls [onShown] so the owner of the
++ * state can set [visible] back to false. `LaunchedEffect(visible)` is Compose's way to run a
++ * suspending block (here, a delay) when a value changes: it starts when [visible] turns true and is
++ * cancelled if the card leaves the screen first. Screen readers announce the message when it appears.
++ */
++@Composable
++internal fun StickerLimitMessage(
++    visible: Boolean,
++    onShown: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    // The latest callback, so a new lambda passed while waiting does not restart the timer.
++    val currentOnShown by rememberUpdatedState(onShown)
++    LaunchedEffect(visible) {
++        if (visible) {
++            delay(STICKER_LIMIT_MESSAGE_MILLIS)
++            currentOnShown()
++        }
++    }
++    if (!visible) return
++    Surface(
++        color = MaterialTheme.colorScheme.errorContainer,
++        contentColor = MaterialTheme.colorScheme.onErrorContainer,
++        shape = MaterialTheme.shapes.medium,
++        modifier = modifier
++            .padding(16.dp)
++            .testTag(STICKER_LIMIT_MESSAGE_TAG)
++            .semantics { liveRegion = LiveRegionMode.Polite },
++    ) {
++        Text(
++            text = stringResource(R.string.stickers_limit_message),
++            style = MaterialTheme.typography.bodyMedium,
++            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
++        )
++    }
++}
++
++/** The limit message in light and dark. */
++@PreviewLightDark
++@Composable
++private fun StickerLimitMessagePreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        StickerLimitMessage(visible = true, onShown = {})
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt
+index 3484c1f..421cb92 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt
+@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
+@@ -21,8 +22,13 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+ import com.phongkaster.kanso.R
+ import com.phongkaster.kanso.data.edit.ToolProcessor
++import com.phongkaster.kanso.data.edit.edit.CatalogSticker
+ import com.phongkaster.kanso.data.edit.edit.CropRatio
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
++import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.StickersPanel
++import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
+ import com.phongkaster.kanso.data.edit.edit.EditProcessor
++import com.phongkaster.kanso.ui.tool.editProcessorFor
+ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.EditTool
+ import com.phongkaster.kanso.data.edit.edit.FilterLut
+@@ -70,9 +76,10 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
+  *   the shape's rectangle in it.
+  *
+  * Each callback that changes the picture also carries a `processorFor` function, which builds the
+- * [EditProcessor] that draws a set of settings. This composable builds it, because it owns the
+- * filters' look-up images: [filterSource] finds them; when null, as in the app, they are read from
+- * the app's assets (the engine's bundled images, see [FilterPreset]); a test passes its own. So
++ * [EditProcessor] that draws a set of settings. It comes from the app's one recipe,
++ * [editProcessorFor] (filter look-up images from the assets, see [FilterPreset], and the sticker
++ * pictures from the drawables), so every place that draws settings draws stickers too. When
++ * [filterSource] is not null (a test) it supplies the filters instead. So
+  * the screen simply forwards each callback to the ViewModel.
+  *
+  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture)
+@@ -82,6 +89,11 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
+  * [adjustSlider] is Adjust's chosen sub-tool (kept in the screen's state) and [onAdjustSlider] a
+  * sub-tool chip tapped.
+  *
++ * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
++ * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
++ * sheet's own Cancel and Confirm buttons; they are forwarded to the stateless content untouched,
++ * as stickers need no processor built here.
++ *
+  * The drawing itself is the stateless [EditPanelContent].
+  */
+ @Composable
+@@ -97,17 +109,23 @@ fun EditPanel(
+     filterSource: FilterLut.Source? = null,
+     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+     onAdjustSlider: (AdjustSlider) -> Unit = {},
++    stickerCategory: StickerCategory = StickerCategory.FOOD,
++    onStickerCategoryChosen: (StickerCategory) -> Unit = {},
++    onStickerChosen: (CatalogSticker) -> Unit = {},
++    onStickersCancel: () -> Unit = {},
++    onStickersConfirm: () -> Unit = {},
+ ) {
+-    // The real look-up source reads the assets through the application's context, made once.
+     val context = LocalContext.current
+-    val assetFilters = remember(context) {
+-        val appContext = context.applicationContext
+-        FilterLut.fromAssets { path -> appContext.assets.open(path) }
+-    }
+-    val filters = filterSource ?: assetFilters
+-    // One function, remembered per source, that turns any settings into the processor drawing them.
+-    val processorFor: (EditSettings) -> ToolProcessor = remember(filters) {
+-        { wanted: EditSettings -> EditProcessor(wanted, filters) }
++    // One function, remembered, that turns any settings into the processor drawing them. The app's
++    // one recipe ([editProcessorFor]) reads filters from assets and sticker pictures from drawables;
++    // a test that passes its own [filterSource] keeps the sticker pictures but swaps the filters.
++    val processorFor: (EditSettings) -> ToolProcessor = remember(context, filterSource) {
++        if (filterSource == null) {
++            editProcessorFor(context)
++        } else {
++            val stickers = DrawableStickerPictures(context.applicationContext)
++            ({ wanted: EditSettings -> EditProcessor(wanted, filterSource, stickers) })
++        }
+     }
+ 
+     EditPanelContent(
+@@ -121,6 +139,11 @@ fun EditPanel(
+         modifier = modifier,
+         adjustSlider = adjustSlider,
+         onAdjustSlider = onAdjustSlider,
++        stickerCategory = stickerCategory,
++        onStickerCategoryChosen = onStickerCategoryChosen,
++        onStickerChosen = onStickerChosen,
++        onStickersCancel = onStickersCancel,
++        onStickersConfirm = onStickersConfirm,
+     )
+ }
+ 
+@@ -146,6 +169,9 @@ fun EditPanel(
+  * [onChange]; a crop chip calls [onRatio]. Its height is given by the sheet around it; when the
+  * group is taller than that, it scrolls. Chips, buttons and sliders keep Material's 48 dp minimum
+  * touch target, and each is disabled while [enabled] is false.
++ *
++ * Stickers draws [StickersPanel]: category chips and a grid that scrolls on its own, so this
++ * composable does not scroll for that tool.
+  */
+ @Composable
+ fun EditPanelContent(
+@@ -159,16 +185,32 @@ fun EditPanelContent(
+     modifier: Modifier = Modifier,
+     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+     onAdjustSlider: (AdjustSlider) -> Unit = {},
++    stickerCategory: StickerCategory = StickerCategory.FOOD,
++    onStickerCategoryChosen: (StickerCategory) -> Unit = {},
++    onStickerChosen: (CatalogSticker) -> Unit = {},
++    onStickersCancel: () -> Unit = {},
++    onStickersConfirm: () -> Unit = {},
+ ) {
++    // The other tools scroll when too tall for the sheet. Stickers does not: its grid is a lazy
++    // list that scrolls itself, and a lazy list inside a scrolling column has no height to fill.
++    val scrolling = if (openTool == EditTool.STICKERS) Modifier else Modifier.verticalScroll(rememberScrollState())
+     Column(
+         modifier = modifier
+             .testTag(EDIT_PANEL_TAG)
+             .fillMaxWidth()
+             // The sheet around the panel sets its height; the scroll reaches whatever does not fit.
+-            .verticalScroll(rememberScrollState()),
++            .then(scrolling),
+         verticalArrangement = Arrangement.spacedBy(4.dp),
+     ) {
+         when (openTool) {
++            EditTool.STICKERS -> StickersPanel(
++                category = stickerCategory,
++                enabled = enabled,
++                onCategoryChosen = onStickerCategoryChosen,
++                onStickerChosen = onStickerChosen,
++                onCancel = onStickersCancel,
++                onConfirm = onStickersConfirm,
++            )
+             EditTool.CROP -> {
+                 CropChips(chosen = settings.cropRatio, cropIsFull = settings.crop == EditSettings.CropRect.FULL, enabled = enabled, onRatio = onRatio)
+                 // The rectangle itself is moved on the photo (the cropper); this line says how.
+@@ -345,6 +387,26 @@ private fun EditPanelFiltersPreview() {
+     )
+ }
+ 
++/** The Stickers sheet in a sheet-sized surface, in light and in dark: Food chosen, its tiles in a grid. */
++@PreviewLightDark
++@Composable
++private fun EditPanelStickersPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        Box(Modifier.fillMaxSize()) {
++            Surface(modifier = Modifier.fillMaxWidth().height(200.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
++                EditPanelContent(
++                    openTool = EditTool.STICKERS,
++                    settings = EditSettings(),
++                    onChange = {},
++                    onPreview = {},
++                    onCommit = {},
++                    onRatio = {},
++                )
++            }
++        }
++    }
++}
++
+ /**
+  * The Crop sheet while Compare is on, in light and in dark: every chip is disabled and faint.
+  */
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerCategoryChips.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerCategoryChips.kt
+new file mode 100644
+index 0000000..ea44829
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerCategoryChips.kt
+@@ -0,0 +1,69 @@
++package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.lazy.LazyRow
++import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.material3.FilterChip
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++
++/** Test tag of the row of sticker category chips. */
++const val STICKER_CHIPS_TAG = "sticker-chips"
++
++/** Returns the test tag of [category]'s chip, such as `sticker-chip-FOOD`. */
++fun stickerChipTag(category: StickerCategory): String = "sticker-chip-${category.name}"
++
++/**
++ * The row of category chips above the sticker grid: one pill per [StickerCategory], in the
++ * enum's order, scrolling sideways when they do not fit.
++ *
++ * Like Pinity's catalogue the chips are fully rounded pills with a thin outline, and the chosen one
++ * is filled. The colours come from the theme's colour roles (the default [FilterChip] colours),
++ * so light, dark and the user's theme colour all work. [FilterChip] also reports its `selected`
++ * state to accessibility services and tests.
++ *
++ * @param selected the category whose stickers are shown.
++ * @param onSelect called with the category the user taps.
++ */
++@Composable
++internal fun StickerCategoryChips(
++    selected: StickerCategory,
++    onSelect: (StickerCategory) -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    // LazyRow draws only the chips on screen and scrolls sideways on its own.
++    LazyRow(
++        modifier = modifier.testTag(STICKER_CHIPS_TAG),
++        contentPadding = PaddingValues(horizontal = 8.dp),
++        horizontalArrangement = Arrangement.spacedBy(4.dp),
++    ) {
++        items(StickerCategory.entries, key = { it.name }) { category ->
++            FilterChip(
++                selected = category == selected,
++                onClick = { onSelect(category) },
++                label = { Text(stringResource(category.label)) },
++                shape = CircleShape,
++                modifier = Modifier.testTag(stickerChipTag(category)),
++            )
++        }
++    }
++}
++
++/** The category chips with the first category chosen, in light and in dark. */
++@PreviewLightDark
++@Composable
++private fun StickerCategoryChipsPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        StickerCategoryChips(selected = StickerCategory.entries.first(), onSelect = {})
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerTile.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerTile.kt
+new file mode 100644
+index 0000000..0a7896b
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickerTile.kt
+@@ -0,0 +1,87 @@
++package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel
++
++import androidx.compose.foundation.Image
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.sizeIn
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.alpha
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.R
++import com.phongkaster.kanso.data.edit.edit.CatalogSticker
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++
++/** Returns the test tag of the grid tile showing the sticker with [pictureId], such as `sticker-tile-apple`. */
++fun stickerTileTag(pictureId: String): String = "sticker-tile-$pictureId"
++
++/** How faint a disabled tile is drawn: Material's usual opacity for disabled content. */
++private const val TILE_DISABLED_ALPHA = 0.38f
++
++/**
++ * One tile of the sticker grid: the picture of [sticker], in a clickable square at least 48 dp
++ * on each side so a finger can hit it. A tap calls [onClick]; the screen then adds that sticker
++ * to the photo. While [enabled] is false (Compare is on, or Done is rendering) the tile is drawn
++ * faint and ignores taps.
++ *
++ * The picture is a bundled bitmap (a webp drawable), so `painterResource` reads it directly. Its
++ * content description is a short generic phrase, because the pictures have no individual names.
++ */
++@Composable
++internal fun StickerTile(
++    sticker: CatalogSticker,
++    enabled: Boolean,
++    onClick: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    Box(
++        modifier = modifier
++            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
++            .testTag(stickerTileTag(sticker.pictureId))
++            .alpha(if (enabled) 1f else TILE_DISABLED_ALPHA)
++            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
++            .padding(4.dp),
++        contentAlignment = Alignment.Center,
++    ) {
++        Image(
++            painter = painterResource(sticker.res),
++            contentDescription = stringResource(R.string.stickers_sticker_description),
++            contentScale = ContentScale.Fit,
++            modifier = Modifier.fillMaxSize(),
++        )
++    }
++}
++
++/** Two sample tiles, one enabled and one disabled, in light and in dark. */
++@PreviewLightDark
++@Composable
++private fun StickerTilePreview() {
++    val sample = CatalogSticker(
++        pictureId = "apple",
++        res = R.drawable.img_sticker_apple,
++        category = StickerCategory.FOOD,
++    )
++    KansoTheme(themeMode = ThemeMode.System) {
++        Box(Modifier.fillMaxSize()) {
++            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
++                androidx.compose.foundation.layout.Row {
++                    StickerTile(sticker = sample, enabled = true, onClick = {}, modifier = Modifier.sizeIn(minWidth = 64.dp, minHeight = 64.dp))
++                    StickerTile(sticker = sample, enabled = false, onClick = {}, modifier = Modifier.sizeIn(minWidth = 64.dp, minHeight = 64.dp))
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt
+new file mode 100644
+index 0000000..52751c6
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt
+@@ -0,0 +1,97 @@
++package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.lazy.grid.GridCells
++import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
++import androidx.compose.foundation.lazy.grid.items
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.data.edit.edit.CatalogSticker
++import com.phongkaster.kanso.data.edit.edit.StickerCatalog
++import com.phongkaster.kanso.data.edit.edit.StickerCategory
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++
++/** Test tag of the whole Stickers panel (top bar, category chips and grid). */
++const val STICKERS_PANEL_TAG = "stickers-panel"
++
++/** Test tag of the grid of sticker tiles. */
++const val STICKERS_GRID_TAG = "stickers-grid"
++
++/** How many tiles sit side by side in the grid. */
++private const val GRID_COLUMNS = 3
++
++/**
++ * The Stickers sheet's contents: a top bar with Cancel and Confirm, a row of category chips, and
++ * a grid of the stickers of [category], three to a row, scrolling vertically.
++ *
++ * It has no state of its own: [category] is the chosen chip, a chip tap calls [onCategoryChosen],
++ * a tile tap calls [onStickerChosen] with that [CatalogSticker], and the top bar buttons call
++ * [onCancel] and [onConfirm]. While [enabled] is false every tile ignores taps.
++ *
++ * The panel fills the height its sheet gives it and never grows it: the grid takes what the top
++ * bar and chips leave and scrolls the rest. `LazyVerticalGrid` composes only the tiles on screen
++ * plus a few more as it scrolls, so a long category costs little.
++ */
++@Composable
++internal fun StickersPanel(
++    category: StickerCategory,
++    enabled: Boolean,
++    onCategoryChosen: (StickerCategory) -> Unit,
++    onStickerChosen: (CatalogSticker) -> Unit,
++    onCancel: () -> Unit,
++    onConfirm: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    Column(modifier = modifier.fillMaxSize().testTag(STICKERS_PANEL_TAG)) {
++        StickersSheetTopBar(onCancel = onCancel, onConfirm = onConfirm)
++        StickerCategoryChips(selected = category, onSelect = onCategoryChosen)
++        LazyVerticalGrid(
++            columns = GridCells.Fixed(GRID_COLUMNS),
++            modifier = Modifier.fillMaxWidth().weight(1f).testTag(STICKERS_GRID_TAG),
++            horizontalArrangement = Arrangement.Center,
++        ) {
++            items(items = StickerCatalog.inCategory(category), key = { it.pictureId }) { sticker ->
++                StickerTile(
++                    sticker = sticker,
++                    enabled = enabled,
++                    onClick = { onStickerChosen(sticker) },
++                    modifier = Modifier.height(56.dp),
++                )
++            }
++        }
++    }
++}
++
++/** The panel in a sheet-sized box, in light and in dark, showing the Food category. */
++@PreviewLightDark
++@Composable
++private fun StickersPanelPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        Box(Modifier.fillMaxSize()) {
++            Surface(
++                modifier = Modifier.fillMaxWidth().height(200.dp),
++                color = MaterialTheme.colorScheme.surfaceContainerHigh,
++            ) {
++                StickersPanel(
++                    category = StickerCategory.FOOD,
++                    enabled = true,
++                    onCategoryChosen = {},
++                    onStickerChosen = {},
++                    onCancel = {},
++                    onConfirm = {},
++                )
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersSheetTopBar.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersSheetTopBar.kt
+new file mode 100644
+index 0000000..af4ef90
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/stickerspanel/StickersSheetTopBar.kt
+@@ -0,0 +1,69 @@
++package com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel
++
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.R
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++
++/** Test tag of the Stickers sheet's cancel (X) button. */
++const val STICKERS_CANCEL_TAG = "stickers-cancel"
++
++/** Test tag of the Stickers sheet's confirm (check) button. */
++const val STICKERS_CONFIRM_TAG = "stickers-confirm"
++
++/**
++ * The top row of the Stickers sheet: a cross at the start that throws the sticker changes away
++ * ([onCancel]) and a check at the end that keeps them ([onConfirm]).
++ *
++ * Each button is an [IconButton], whose 48 dp square is the minimum comfortable touch target. The
++ * icons are Material Symbols drawables drawn with [Icon], which tints them with the content
++ * colour (the files paint white, so they must not be drawn as a plain image).
++ */
++@Composable
++internal fun StickersSheetTopBar(
++    onCancel: () -> Unit,
++    onConfirm: () -> Unit,
++    modifier: Modifier = Modifier,
++) {
++    Row(
++        modifier = modifier.fillMaxWidth(),
++        // Space between pushes the cross to the start and the check to the end.
++        horizontalArrangement = Arrangement.SpaceBetween,
++        verticalAlignment = Alignment.CenterVertically,
++    ) {
++        IconButton(onClick = onCancel, modifier = Modifier.size(48.dp).testTag(STICKERS_CANCEL_TAG)) {
++            Icon(
++                painter = painterResource(R.drawable.ic_close),
++                contentDescription = stringResource(R.string.stickers_sheet_cancel),
++            )
++        }
++        IconButton(onClick = onConfirm, modifier = Modifier.size(48.dp).testTag(STICKERS_CONFIRM_TAG)) {
++            Icon(
++                painter = painterResource(R.drawable.ic_check),
++                contentDescription = stringResource(R.string.stickers_sheet_confirm),
++            )
++        }
++    }
++}
++
++/** The Stickers sheet's top bar, in light and in dark. */
++@PreviewLightDark
++@Composable
++private fun StickersSheetTopBarPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        StickersSheetTopBar(onCancel = {}, onConfirm = {})
++    }
++}
+diff --git a/app/src/main/res/drawable/ic_stickers.xml b/app/src/main/res/drawable/ic_stickers.xml
+new file mode 100644
+index 0000000..398086a
+--- /dev/null
++++ b/app/src/main/res/drawable/ic_stickers.xml
+@@ -0,0 +1,9 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="24dp"
++    android:height="24dp"
++    android:viewportWidth="960"
++    android:viewportHeight="960">
++  <path
++      android:fillColor="@android:color/white"
++      android:pathData="M80,520A360,360 0 1,1 800,520A360,360 0 1,1 80,520ZM160,520A280,280 0 1,0 720,520A280,280 0 1,0 160,520ZM300,440A40,40 0 1,1 380,440A40,40 0 1,1 300,440ZM500,440A40,40 0 1,1 580,440A40,40 0 1,1 500,440ZM290,580L350,580A100,100 0 0,0 530,580L590,580A170,170 0 0,1 290,580ZM760,80L840,80L840,140L900,140L900,220L840,220L840,280L760,280L760,220L700,220L700,140L760,140Z"/>
++</vector>
+diff --git a/app/src/main/res/values/strings_stickers.xml b/app/src/main/res/values/strings_stickers.xml
+new file mode 100644
+index 0000000..325ff4c
+--- /dev/null
++++ b/app/src/main/res/values/strings_stickers.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="stickers_tool_label">Stickers</string>
++    <string name="stickers_tab_food">Food</string>
++    <string name="stickers_tab_mood">Mood</string>
++    <string name="stickers_tab_quote">Quote</string>
++    <string name="stickers_tab_emoji">Emoji</string>
++    <string name="stickers_sheet_cancel">Cancel and close Stickers</string>
++    <string name="stickers_sheet_confirm">Keep stickers and close</string>
++    <string name="stickers_limit_message">A photo can hold 20 stickers at most</string>
++    <string name="stickers_sticker_description">Sticker</string>
++</resources>
+diff --git a/docs/features/edit.md b/docs/features/edit.md
+index d5de849..57f03b4 100644
+--- a/docs/features/edit.md
++++ b/docs/features/edit.md
+@@ -11,9 +11,10 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
+ 
+ ## What it is
+ 
+-Edit is Kanso's general editor. At the bottom of the screen sits a row of four tools, **Crop**,
+-**Rotate**, **Adjust** and **Filters**; tapping one opens its sheet just above the row, as in Adobe
+-Lightroom (tapping it again closes it). The tools are large (84 dp wide, 28 dp icons) and sit in a
++Edit is Kanso's general editor. At the bottom of the screen sits a row of five tools, **Crop**,
++**Rotate**, **Adjust**, **Filters** and **Stickers**; tapping one opens its sheet just above the row, as in Adobe
++Lightroom (tapping it again closes it). The Stickers sheet is the exception: it takes the row's place
++(see below). The tools are large (84 dp wide, 28 dp icons) and sit in a
+ row that scrolls sideways, so a tool past the screen edge is reached with a swipe; **Compare** stays
+ pinned at the right, behind a thin divider, and never scrolls away. **Undo** sits at the top right,
+ next to **Done**, as on the other tools.
+@@ -37,6 +38,15 @@ network are used. You can:
+ - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
+   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
+   **replaces** the one before; filters never pile up.
++- **Stickers** (partial): a sheet that replaces the row of tools, with a cross at the left of a
++  tick in its top row, four category tabs (Food 17, Mood 17, Quote 6, Emoji 20 bundled pictures)
++  and a grid of three columns that scrolls. A tap on a picture adds that sticker at the middle of
++  the picture you see (after the crop, turns and flips), a third of its width, selected; each tap
++  is one Undo step and a photo holds at most 20 ("20 stickers at most" appears when you try a 21st).
++  The tick keeps the changes; the cross, and the system **Back**, throw away everything done since
++  the sheet opened, Undo steps included. Not done yet: the stickers are not drawn on the photo on
++  screen while you edit, there is no selection frame and no move, resize, turn, flip or delete
++  gesture. Done does draw them into the saved picture.
+ - **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
+   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
+   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
+@@ -159,6 +169,29 @@ flowchart TD
+    cropping, turning and colouring it as above. A crop, turn or slider change keeps the same filter
+    preview. A preview that fails shows the plain photo, with no message.
+ 
++### The Stickers sheet
++
++Tapping Stickers calls `ToolViewModel.openTool(EditTool.STICKERS)`. Opening it keeps a snapshot
++of the whole `EditSession` (settings and Undo steps; it is immutable, so keeping it costs nothing).
++`EditBottomBar` then draws the sheet in place of the row, as tall as the row plus the fixed
++sheet area, so the photo's bounds do not change. `ToolScreen` fills it with `EditPanel`, which
++shows `StickersPanel`: `StickersSheetTopBar` (cross left, tick right, 48 dp targets),
++`StickerCategoryChips` (a `LazyRow` of `FilterChip`s, the chosen one `selected`) and a
++`LazyVerticalGrid` of `StickerTile`s, three columns, from `StickerCatalog.inCategory`. All on the
++main thread; no pixel is computed.
++
++- **Add.** `addSticker` asks `StickerMapping` for the sticker at the shown picture's centre (the
++  mapping inverts what Done does: crop, then turn, then flip), adds it with `EditSession.addSticker`
++  (one Undo step) and selects it (`selectedStickerKey`). The processor recipe passed in is the one
++  from `editProcessorFor(context)` and becomes the recipe Done renders with. At 20 stickers the
++  settings are untouched and `stickerLimitShown` shows `StickerLimitMessage` on the photo's top edge
++  for about 2.5 s, then `onStickerLimitMessageShown` clears it.
++- **Tick** (`confirmStickers`): forgets the snapshot, closes the sheet, clears the selection.
++- **Cross and system Back** (`cancelStickers`; `onBackPressed` calls it first when the sheet is open):
++  publishes the snapshot again, so settings and Undo steps are exactly as at opening, closes the
++  sheet and clears the selection. Back does not ask "Discard your changes?" here.
++- **Drawing.** Only Done draws stickers (`EditProcessor`, `DrawableStickerPictures`), see below.
++
+ ### Done, the full render and the Result screen
+ 
+ ```mermaid
+@@ -195,12 +228,13 @@ flowchart TD
+    [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
+    all on `Dispatchers.Default`. The processor always works from the original with the whole
+    settings, so nothing is stacked. On the pixels as one `IntArray`, in this order:
+-   0. **Stickers** (new in Run 10, not wired to any screen yet): the settings hold up to 20
++   0. **Stickers** (new in Run 10; the Stickers sheet adds them, see "The Stickers sheet" below): the settings hold up to 20
+       (`EditSettings.stickers`, `MAX_STICKERS`), placed as fractions of the original photo. They
+       are drawn first, right after the kept rectangle is read out, so the crop cuts them and the
+       turns, flips, filter and sliders act on them with the photo (order: stickers, crop, turns,
+       flips, filter, sliders). Each add, delete, duplicate, flip or whole drag is one Undo step
+-      (`EditSession`); a 21st add or duplicate changes nothing. No screen shows or adds them yet.
++      (`EditSession`); a 21st add or duplicate changes nothing. The sheet adds them; no screen draws
++      them while editing yet.
+    1. **Crop**: copies only the kept rectangle (fractions turned into pixels, rounded, edges put in
+       order, at least 1 x 1). A fixed shape is no special case: choosing it already set the
+       rectangle. Progress 0.25.
+@@ -324,6 +358,10 @@ The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
+ [`FiltersSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FiltersSheetTest.kt),
+ [`EditToolRowTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolRowTest.kt),
+ [`EditLayoutTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditLayoutTest.kt),
++[`StickersPanelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/StickersPanelTest.kt)
++(chips, three-column grid, 17/17/6/20 tiles),
++[`StickerAddTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/StickerAddTest.kt)
++(add at the shown centre, the limit, tick, cross and Back, the shared recipe),
+ [`DiscardDialogTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/DiscardDialogTest.kt)
+ and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt).
+ Done and the Result screen are covered by
+diff --git a/docs/features/tool-screen.md b/docs/features/tool-screen.md
+index fc52586..56c938a 100644
+--- a/docs/features/tool-screen.md
++++ b/docs/features/tool-screen.md
+@@ -27,10 +27,14 @@ A tool screen shows, from top to bottom:
+ There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
+ never writes a file; saving and sharing happen on the Result screen.
+ 
+-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of four tools is its
++The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of five tools is its
+ `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
+ photo never changes size, the photo has no Replace chip, and Undo moves into a pill on the
+-photo next to a Compare switch, so its top bar holds Done alone.
++photo next to a Compare switch, so its top bar holds Done alone. The fifth tool, **Stickers**, opens
++a sheet that replaces the row (the five entries are hidden while it is open); its cross, or the
++system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
++"20 stickers at most" message is drawn on the photo's top edge by `ToolContent`
++(`StickerLimitMessage`) and hides itself after about 2.5 seconds.
+ 
+ While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
+ Replace are switched off. When an edit fails, a short message at the top of the card says why, and

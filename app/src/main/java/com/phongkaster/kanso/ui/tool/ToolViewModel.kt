@@ -8,7 +8,10 @@ import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
+import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -271,7 +274,8 @@ class ToolViewModel(
      * or when there is nothing to take back.
      *
      * On the Edit screen this goes back one action of the session (a slider release, a chip, a
-     * crop, a turn), whichever sheet it came from: the screen draws the earlier settings at once,
+     * crop, a turn, a sticker change), whichever sheet it came from, and a selected sticker that
+     * the undo removed is no longer selected: the screen draws the earlier settings at once,
      * and if they hold a filter its preview is computed again from the original (the newest
      * request always wins). On the other tools' screens the photo shown before the last edit is shown
      * again (undoing every edit returns to the original), and nothing happens while an edit runs.
@@ -282,6 +286,12 @@ class ToolViewModel(
             // A drag still under way counts as an action of its own, so it is settled first.
             if (!session.commit().canUndo) return
             publishSession(session.undo())
+            // Undoing an "add sticker" removes that sticker: a selection pointing at it would
+            // name a sticker that no longer exists, so it is cleared.
+            val selected = mutableState.value.selectedStickerKey
+            if (selected != null && session.settings.stickers.none { it.key == selected }) {
+                mutableState.update { it.copy(selectedStickerKey = null) }
+            }
             requestPreview()
             return
         }
@@ -300,7 +310,23 @@ class ToolViewModel(
      * again, so the row's entries work as toggles.
      */
     fun openTool(tool: EditTool) {
-        mutableState.update { it.copy(openTool = if (it.openTool == tool) null else tool) }
+        val current = mutableState.value
+        val closing = current.openTool == tool
+        if (current.openTool == EditTool.STICKERS) {
+            // Leaving the Stickers sheet by another door (its own tool tapped again, or another
+            // tool chosen) keeps what was done, like its Confirm button.
+            stickersSnapshot = null
+        } else if (tool == EditTool.STICKERS) {
+            // Opening Stickers: remember the whole session (settings AND undo steps) so Cancel
+            // can put everything back exactly as it is now.
+            stickersSnapshot = session.commit()
+        }
+        mutableState.update {
+            it.copy(
+                openTool = if (closing) null else tool,
+                selectedStickerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedStickerKey,
+            )
+        }
     }
 
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
@@ -308,9 +334,93 @@ class ToolViewModel(
         mutableState.update { it.copy(adjustSlider = slider) }
     }
 
-    /** Closes the open tool sheet, if any, leaving the photo and the row of tools. */
+    /**
+     * Closes the open tool sheet, if any, leaving the photo and the row of tools. Closing the
+     * Stickers sheet this way keeps its changes, exactly like its Confirm button.
+     */
     fun closeTool() {
+        if (mutableState.value.openTool == EditTool.STICKERS) {
+            confirmStickers()
+            return
+        }
         mutableState.update { it.copy(openTool = null) }
+    }
+
+    // --- The Stickers sheet --------------------------------------------------------------------------
+
+    /**
+     * The session as it was when the Stickers sheet opened, or null while that sheet is closed.
+     * [cancelStickers] puts it back, so a Cancel throws away every sticker added, moved, flipped
+     * or deleted since, along with the undo steps they made.
+     */
+    private var stickersSnapshot: EditSession? = null
+
+    /** The key the next added sticker gets; it only grows, so a key is never used twice. */
+    private var nextStickerKey = 1L
+
+    /** The person tapped the category chip [category]: its stickers fill the sheet's grid. */
+    fun chooseStickerCategory(category: StickerCategory) {
+        mutableState.update { it.copy(stickerCategory = category) }
+    }
+
+    /**
+     * The person tapped [sticker] in the grid: it lands at the middle of the picture they SEE
+     * (after the crop, turns and flips), as one action (one Undo step), and is selected.
+     *
+     * [processorFor] is the recipe that draws settings, with the sticker pictures in it (see
+     * [editProcessorFor]); it also becomes the recipe Done renders with. At the limit nothing
+     * changes (no settings, no undo step) and [ToolUiState.stickerLimitShown] asks the screen for
+     * its message. Nothing happens before the photo is decoded, or while comparing.
+     */
+    fun addSticker(sticker: CatalogSticker, processorFor: (EditSettings) -> ToolProcessor) {
+        val current = mutableState.value
+        if (current.comparing || current.finishing) return
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        if (!session.settings.canAddSticker) {
+            mutableState.update { it.copy(stickerLimitShown = true) }
+            return
+        }
+        // The mapping turns "the middle of what is shown" into fractions of the original photo,
+        // which is what a Sticker stores.
+        val mapping = StickerMapping(original.width, original.height, session.settings)
+        val key = nextStickerKey++
+        this.processorFor = processorFor
+        publishSession(session.addSticker(mapping.centredSticker(key, sticker.pictureId)))
+        mutableState.update { it.copy(selectedStickerKey = key) }
+        requestPreview()
+    }
+
+    /** The limit message has been shown long enough: hides it again. */
+    fun onStickerLimitMessageShown() {
+        mutableState.update { it.copy(stickerLimitShown = false) }
+    }
+
+    /**
+     * The sheet's tick: keeps every change, closes the sheet and forgets the snapshot. Nothing
+     * happens while Done renders or while comparing, when the sheet's controls are inert.
+     */
+    fun confirmStickers() {
+        if (mutableState.value.comparing || mutableState.value.finishing) return
+        stickersSnapshot = null
+        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
+    }
+
+    /**
+     * The sheet's cross, and the system Back while the sheet is open: puts the session back to the
+     * snapshot taken at opening (settings and undo steps, so Undo is exactly as it was), closes the
+     * sheet and clears the selection. The photo is drawn from the settings, so it follows at once
+     * (the Edit screen's `edited` stays null; only a filter preview is asked for again).
+     * Nothing happens while Done renders (it is drawing the current stickers) or while comparing.
+     */
+    fun cancelStickers() {
+        if (mutableState.value.comparing || mutableState.value.finishing) return
+        val snapshot = stickersSnapshot
+        stickersSnapshot = null
+        if (snapshot != null) {
+            publishSession(snapshot)
+            requestPreview()
+        }
+        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
     }
 
     // --- The Edit screen's session ---------------------------------------------------------------
@@ -405,6 +515,13 @@ class ToolViewModel(
      */
     fun onBackPressed(): Boolean {
         val current = mutableState.value
+        if (current.openTool == EditTool.STICKERS) {
+            // Back from the Stickers sheet is its Cancel: the sticker changes are thrown away.
+            // While Done renders or while comparing the sheet is inert, so Back is consumed
+            // (the screen stays) but cancels nothing.
+            if (!current.comparing && !current.finishing) cancelStickers()
+            return true
+        }
         if (current.openTool != null) {
             closeTool()
             return true

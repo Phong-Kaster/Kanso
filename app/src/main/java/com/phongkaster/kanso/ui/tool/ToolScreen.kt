@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,10 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
-import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -58,7 +57,9 @@ import com.phongkaster.kanso.ui.tool.components.EditCropper
 import com.phongkaster.kanso.ui.tool.components.EditPhotoArea
 import com.phongkaster.kanso.ui.tool.components.editbottombar.EditBottomBar
 import com.phongkaster.kanso.ui.tool.components.photocard.PhotoCard
+import com.phongkaster.kanso.ui.tool.components.StickerLimitMessage
 import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
 import com.phongkaster.kanso.ui.tool.components.topbar.ToolTopBar
 
@@ -215,6 +216,12 @@ fun ToolScreen(
     // screen is drawn again with it.
     val state by viewModel.state.collectAsState()
 
+    // THE recipe that turns settings into the processor drawing them (filters AND sticker
+    // pictures), made once. The cropper, the sheets' changes, the sticker taps and so Done's final
+    // render all use this one function, so a sticker never disappears in one of them.
+    val context = LocalContext.current
+    val processorFor: (EditSettings) -> ToolProcessor = remember(context) { editProcessorFor(context) }
+
     // Each finished Done reaches the caller exactly once (the ViewModel sends it through a
     // Channel). rememberUpdatedState lets the long-running collector always call the latest
     // onDone without restarting when the caller passes a new lambda.
@@ -264,13 +271,6 @@ fun ToolScreen(
         // loading indicator or the unreadable message stays on screen.
         editCropper = (state.photo as? ToolUiState.PhotoState.Ready)?.let { ready ->
             {
-                val context = LocalContext.current
-                val processorFor: (EditSettings) -> ToolProcessor = remember(context) {
-                    val appContext = context.applicationContext
-                    val filters = FilterLut.fromAssets { path -> appContext.assets.open(path) }
-                    val build: (EditSettings) -> ToolProcessor = { wanted -> EditProcessor(wanted, filters) }
-                    build
-                }
                 EditCropper(
                     bitmap = ready.bitmap,
                     settings = state.settings,
@@ -285,18 +285,38 @@ fun ToolScreen(
         // not disable them. Every change goes to the ViewModel's one settings session, which
         // re-renders from the original photo.
         editSheet = { tool ->
-            ToolPanel(
-                tool = Tool.EDIT,
-                state = state,
-                openTool = tool,
-                enabled = !state.comparing && !state.finishing,
-                onEditChange = viewModel::changeSettings,
-                onEditPreview = viewModel::previewSettings,
-                onEditCommit = viewModel::commitSettings,
-                onEditRatio = viewModel::chooseCropRatio,
-                onEditAdjustSlider = viewModel::chooseAdjustSlider,
-            )
+            // Whatever recipe a panel offers, the screen's own (with sticker pictures) is the one
+            // the ViewModel keeps, so Done always draws the stickers.
+            if (tool == EditTool.STICKERS) {
+                EditPanel(
+                    openTool = tool,
+                    settings = state.settings,
+                    onChange = { changed, _ -> viewModel.changeSettings(changed, processorFor) },
+                    onPreview = { changed, _ -> viewModel.previewSettings(changed, processorFor) },
+                    onCommit = viewModel::commitSettings,
+                    onRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
+                    enabled = !state.comparing && !state.finishing,
+                    stickerCategory = state.stickerCategory,
+                    onStickerCategoryChosen = viewModel::chooseStickerCategory,
+                    onStickerChosen = { viewModel.addSticker(it, processorFor) },
+                    onStickersCancel = viewModel::cancelStickers,
+                    onStickersConfirm = viewModel::confirmStickers,
+                )
+            } else {
+                ToolPanel(
+                    tool = Tool.EDIT,
+                    state = state,
+                    openTool = tool,
+                    enabled = !state.comparing && !state.finishing,
+                    onEditChange = { changed, _ -> viewModel.changeSettings(changed, processorFor) },
+                    onEditPreview = { changed, _ -> viewModel.previewSettings(changed, processorFor) },
+                    onEditCommit = viewModel::commitSettings,
+                    onEditRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
+                    onEditAdjustSlider = viewModel::chooseAdjustSlider,
+                )
+            }
         },
+        onStickerLimitShown = viewModel::onStickerLimitMessageShown,
     )
 
     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
@@ -372,6 +392,7 @@ fun ToolContent(
     onCompare: (Boolean) -> Unit = {},
     editSheet: @Composable (EditTool) -> Unit = {},
     editCropper: (@Composable () -> Unit)? = null,
+    onStickerLimitShown: () -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
     Scaffold(
@@ -431,13 +452,21 @@ fun ToolContent(
             EditPhotoArea(
                 state = state,
                 photo = {
-                    PhotoCard(
-                        state = state,
-                        onReplace = onReplace,
-                        onDismissFailure = onDismissFailure,
-                        showReplace = false,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Box(Modifier.fillMaxSize()) {
+                        PhotoCard(
+                            state = state,
+                            onReplace = onReplace,
+                            onDismissFailure = onDismissFailure,
+                            showReplace = false,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        // The "20 stickers at most" card, a moment on the photo's top edge.
+                        StickerLimitMessage(
+                            visible = state.stickerLimitShown,
+                            onShown = onStickerLimitShown,
+                            modifier = Modifier.align(Alignment.TopCenter),
+                        )
+                    }
                 },
                 cropper = editCropper,
                 modifier = insetModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),

@@ -78,7 +78,7 @@ data class EditSettings(
      * tool row. The screen uses it to know whether there is anything to save or to lose.
      */
     val isNeutral: Boolean
-        get() = EditTool.entries.all { isNeutral(it) } && stickers.isEmpty()
+        get() = EditTool.entries.all { isNeutral(it) }
 
     /**
      * True when the controls of [tool]'s sheet change nothing right now, so the tool row can mark
@@ -87,13 +87,15 @@ data class EditSettings(
      * - [EditTool.CROP]: the crop keeps the whole photo;
      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
-     * - [EditTool.FILTERS]: no filter, or one at intensity 0.
+     * - [EditTool.FILTERS]: no filter, or one at intensity 0;
+     * - [EditTool.STICKERS]: no sticker is on the photo.
      */
     fun isNeutral(tool: EditTool): Boolean = when (tool) {
         EditTool.CROP -> crop == CropRect.FULL
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
         EditTool.ADJUST -> !hasColourChange
         EditTool.FILTERS -> !hasFilter
+        EditTool.STICKERS -> stickers.isEmpty()
     }
 
     /**

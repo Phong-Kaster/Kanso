@@ -10,3 +10,6 @@
   41, 42, 43. T-002 gains: category chips (LazyRow) + 3-column LazyVerticalGrid, X at top-left / check at top-right, the sheet
   replaces the tool row, the ViewModel snapshots settings + undo history on open and restores them on X / Back, drops
   selection on close. T-003 selection/gestures act only while the sheet is open. T-001 is unchanged.
+
+## Iteration 4 (Phase 2) - Tier 1
+- T-002 slice 2 split into 2 and 2b (6-file cap): top bar and chips became their own files (one composable per file, CLAUDE.md hierarchy rule) and `EditBottomBar.kt` joined the scope because the sheet replaces the tool row there. PRD, DoD and architecture unchanged.

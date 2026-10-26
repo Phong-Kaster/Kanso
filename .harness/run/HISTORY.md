@@ -30,3 +30,7 @@
   test-edits.md (written), over-sized-sticker decode (capped), weak tests (strengthened); one fix pass. Reviewer's
   "launcher-icon files in the diff" was `git add -N` line-ending noise (git status shows them unmodified). Rejected:
   removing `StickerPictures` default (T-002's factory wires it).
+
+### Iteration 4 - 2026-10-26
+- Phase 2 (T-002): copied the 60 sticker pictures (byte-identical to reference), wrote `strings_stickers.xml`; Wiring Worker wrote `ic_stickers.xml` (a lookalike, not the official path); 6 sequential Worker slices (data, mapping/top bar/chips, row/panel/bar, screen state, EditPanel factory, tests, tests+docs); tests all green, lint and assemble green. 16 row baselines re-recorded (D-001). Found: the screenshot verify fails 33 tests at HEAD already (stale baselines older than Run 10; same count with and without this Phase), and `SettingsUiStateTest.state_follows_the_theme_mode_set_through_the_view_model` failed once and passed on rerun (flaky).
+- Reviewer found previews inside `KansoTheme` unwrapped, a missing test-edits.md, a misplaced file, cancel allowed while Done renders, stale docs; fixed in one pass.

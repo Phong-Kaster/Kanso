@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** Phase 1 complete; Phase 2 next
+- **Stage:** Phase 2 complete; Phase 3 next
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** Phase 2 - T-002
+- **Next Phase:** Phase 3 - T-003
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -16,7 +16,7 @@
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
 | T-001 | complete | `data/edit/edit/` Sticker, StickerPictures, EditSettings, EditSession, EditProcessor; 3 tests; README, edit.md | test-phase1.log |
-| T-002 | pending | EditTool, catalogue, StickerMapping, row, Stickers panel, screen state, limit message; tests; docs | - |
+| T-002 | complete | EditTool, catalogue, StickerMapping, row, Stickers panel, screen state, limit message; tests; docs | test-phase2d.log |
 | T-003 | pending | `photocard/stickeroverlay/`, PhotoCard, ToolUiState/ViewModel/Screen; tests; docs | - |
 | T-004 | pending | FilterPreviewRenderer, LivePreviewImage, EditCropper, ViewModel; tests; docs | - |
 | T-005 | pending | `screenshots/StickerScreenshotTest.kt` | - |

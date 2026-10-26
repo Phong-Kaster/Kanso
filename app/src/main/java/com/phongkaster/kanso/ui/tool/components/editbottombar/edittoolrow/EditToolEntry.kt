@@ -79,7 +79,8 @@ internal fun EditToolEntry(
             .background(background)
             .then(tap())
             .alpha(if (enabled) 1f else DISABLED_ALPHA)
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            // Narrow side padding: five entries must fit a 411 dp phone beside Compare.
+            .padding(horizontal = 2.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
     ) {
