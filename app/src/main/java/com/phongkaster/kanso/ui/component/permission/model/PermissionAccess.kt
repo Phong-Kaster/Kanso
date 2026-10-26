@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.permission
+package com.phongkaster.kanso.ui.component.permission.model
 
 /** How much a set of runtime permissions currently lets the app do. */
 enum class PermissionAccess {

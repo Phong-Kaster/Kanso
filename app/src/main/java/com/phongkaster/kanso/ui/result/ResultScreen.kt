@@ -89,8 +89,8 @@ import androidx.graphics.shapes.Morph
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
-import com.phongkaster.kanso.ui.common.BlurredBackdrop
-import com.phongkaster.kanso.ui.common.RoundIconButton
+import com.phongkaster.kanso.ui.component.BlurredBackdrop
+import com.phongkaster.kanso.ui.component.RoundIconButton
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.launch
 

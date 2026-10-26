@@ -54,7 +54,7 @@ internal fun DoneButton(
     ) {
         // AnimatedVisibility grows the spinner in when the render starts and out when it ends.
         // Inside the button's row this is the RowScope version, which grows it sideways.
-        AnimatedVisibility(visible = finishing) {
+        AnimatedVisibility(visible = finishing, content = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(
                     modifier = Modifier
@@ -65,7 +65,7 @@ internal fun DoneButton(
                 )
                 Spacer(Modifier.width(8.dp))
             }
-        }
+        })
         Text(stringResource(R.string.tool_done))
     }
 }

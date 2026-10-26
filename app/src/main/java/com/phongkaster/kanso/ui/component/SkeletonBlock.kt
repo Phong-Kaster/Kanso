@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.common
+package com.phongkaster.kanso.ui.component
 
 import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing

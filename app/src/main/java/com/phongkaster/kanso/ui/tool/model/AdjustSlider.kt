@@ -2,7 +2,6 @@ package com.phongkaster.kanso.ui.tool.model
 
 import androidx.annotation.StringRes
 import com.phongkaster.kanso.R
-import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_CONTRAST_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_SATURATION_TAG

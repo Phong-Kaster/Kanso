@@ -26,7 +26,7 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.gallery.GALLERY_BACK_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryContent
 import com.phongkaster.kanso.ui.gallery.GalleryUiState
-import com.phongkaster.kanso.ui.permission.PermissionAccess
+import com.phongkaster.kanso.ui.component.permission.model.PermissionAccess
 import kotlin.math.abs
 import kotlin.math.ceil
 import org.junit.After

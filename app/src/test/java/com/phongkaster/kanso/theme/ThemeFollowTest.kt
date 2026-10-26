@@ -68,7 +68,7 @@ import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
 import com.phongkaster.kanso.ui.myedits.MyEditsContent
 import com.phongkaster.kanso.ui.myedits.MyEditsUiState
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
-import com.phongkaster.kanso.ui.permission.PermissionAccess
+import com.phongkaster.kanso.ui.component.permission.model.PermissionAccess
 import com.phongkaster.kanso.ui.result.RESULT_MARK_TAG
 import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
 import com.phongkaster.kanso.ui.result.RESULT_SCRIM_TAG

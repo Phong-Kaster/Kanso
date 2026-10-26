@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.permission
+package com.phongkaster.kanso.ui.component.permission.model
 
 import android.Manifest
 import android.annotation.SuppressLint

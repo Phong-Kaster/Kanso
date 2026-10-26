@@ -5,7 +5,6 @@ import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.FilterLut
-import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
 /**
  * Builds THE recipe that turns Edit settings into the processor that draws them.

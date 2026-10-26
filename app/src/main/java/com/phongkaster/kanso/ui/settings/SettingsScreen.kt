@@ -79,8 +79,8 @@ import com.phongkaster.kanso.data.settings.TextScale
 import com.phongkaster.kanso.data.settings.ThemeColour
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.data.settings.isWallpaperColourAvailable
-import com.phongkaster.kanso.ui.common.ClassicSlider
-import com.phongkaster.kanso.ui.common.RoundBackButton
+import com.phongkaster.kanso.ui.component.ClassicSlider
+import com.phongkaster.kanso.ui.component.RoundBackButton
 import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.theme.seedColorScheme

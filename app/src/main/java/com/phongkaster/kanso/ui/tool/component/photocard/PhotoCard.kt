@@ -41,7 +41,7 @@ import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.StickerOverlay
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.common.BlurredBackdrop
+import com.phongkaster.kanso.ui.component.BlurredBackdrop
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.RETOUCH_NO_FACE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
@@ -52,7 +52,6 @@ import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.Checkerboard
-import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewImage
 
 /**
  * The large rounded card holding the photo for [state], full width, with the "Replace" chip

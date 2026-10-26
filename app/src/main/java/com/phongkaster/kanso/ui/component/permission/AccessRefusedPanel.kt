@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.permission
+package com.phongkaster.kanso.ui.component.permission
 
 import android.content.Context
 import android.content.Intent

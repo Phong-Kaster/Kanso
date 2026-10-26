@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.common
+package com.phongkaster.kanso.ui.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

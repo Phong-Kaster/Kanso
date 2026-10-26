@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.common
+package com.phongkaster.kanso.ui.component
 
 import android.graphics.Bitmap
 import android.graphics.Canvas

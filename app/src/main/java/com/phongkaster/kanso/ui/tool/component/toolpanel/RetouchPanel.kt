@@ -26,7 +26,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
-import com.phongkaster.kanso.ui.common.SliderWithValue
+import com.phongkaster.kanso.ui.component.SliderWithValue
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.roundToInt
 

@@ -31,7 +31,7 @@ import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.gallery.GALLERY_CAMERA_TAG
 import com.phongkaster.kanso.ui.gallery.GALLERY_SCREEN_TAG
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import com.phongkaster.kanso.ui.result.RESULT_HOME_TAG
 import com.phongkaster.kanso.ui.result.RESULT_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG

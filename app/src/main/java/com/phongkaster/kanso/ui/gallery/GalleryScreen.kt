@@ -71,16 +71,16 @@ import com.phongkaster.kanso.data.media.Album
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.common.RoundBackButton
-import com.phongkaster.kanso.ui.common.RoundIconButton
-import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
-import com.phongkaster.kanso.ui.permission.PermissionAccess
-import com.phongkaster.kanso.ui.permission.PermissionGate
-import com.phongkaster.kanso.ui.permission.PermissionGateContent
-import com.phongkaster.kanso.ui.permission.fullPhotoPermissionFor
-import com.phongkaster.kanso.ui.permission.openAppDetailsSettings
-import com.phongkaster.kanso.ui.permission.partialPhotoPermissionsFor
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.RoundBackButton
+import com.phongkaster.kanso.ui.component.RoundIconButton
+import com.phongkaster.kanso.ui.component.permission.AccessRefusedPanel
+import com.phongkaster.kanso.ui.component.permission.model.PermissionAccess
+import com.phongkaster.kanso.ui.component.permission.PermissionGate
+import com.phongkaster.kanso.ui.component.permission.PermissionGateContent
+import com.phongkaster.kanso.ui.component.permission.model.fullPhotoPermissionFor
+import com.phongkaster.kanso.ui.component.permission.openAppDetailsSettings
+import com.phongkaster.kanso.ui.component.permission.model.partialPhotoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.max
 

@@ -26,7 +26,7 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.gallery.GALLERY_GRID_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.Dispatchers
 import org.junit.After

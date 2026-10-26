@@ -79,7 +79,7 @@ import com.phongkaster.kanso.ui.home.homeCarouselDotTag
 import com.phongkaster.kanso.ui.home.homeTryTag
 import com.phongkaster.kanso.ui.myedits.MyEditsContent
 import com.phongkaster.kanso.ui.myedits.MyEditsUiState
-import com.phongkaster.kanso.ui.permission.PermissionAccess
+import com.phongkaster.kanso.ui.component.permission.model.PermissionAccess
 import com.phongkaster.kanso.ui.result.ResultContent
 import com.phongkaster.kanso.ui.result.ResultPhoto
 import com.phongkaster.kanso.ui.result.ResultUiState

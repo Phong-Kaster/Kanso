@@ -17,7 +17,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.common.RoundBackButton
+import com.phongkaster.kanso.ui.component.RoundBackButton
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 

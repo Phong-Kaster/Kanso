@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.permission
+package com.phongkaster.kanso.ui.component.permission
 
 import android.content.Context
 import android.content.pm.PackageManager
@@ -34,6 +34,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.component.permission.model.PermissionAccess
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /**
