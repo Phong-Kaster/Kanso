@@ -62,3 +62,6 @@
 
 ### Iteration 13 - 2026-10-26 (Verifier)
 - Fresh assemble, test, lint exit 0; verifyRoborazziDebug fails only A-001's 15 pictures plus the known `SettingsUiStateTest` flake (green in the first run). Static criteria 29, 30, 32, 33, 35, 37 hold; a fresh Capable reader confirmed 38 and 39. 40: two false sentences (cropper "computes no pixels") and six over-claims. Filed T-009 and fixed it in this Iteration with one Fast Worker (scope check green, docs only); PARTIAL-candidate kept so the next fresh Verifier re-reads. Device criteria not driven while the gap was open. Evidence: evidence/v3-verifier-2026-10-26.md.
+
+### Iteration 14 - 2026-10-26 (Verifier)
+- Fresh assemble, test, lint exit 0; verifyRoborazziDebug fails only A-001's 15 pictures (941 tests, 0 skipped). Criteria 1-22, 26, 29, 30, 32, 33, 35-39, 41-43 hold. 40: a fresh Capable reader found no false sentence (7 imprecise ones logged to ISSUES.md, not filed: they are not untrue). 23 not driven: the only device was the owner's A13, in use; no emulator. Moved the Runs 2-9 sections of ISSUES.md to `.harness/archive/ISSUES-run-2-to-9.md`, carrying all 61 unsigned items word for word; added Run 10's "Awaiting a person" checklist. Run ends DONE_PARTIAL (A-001; criteria 23, 24, 25, 28, 31, 40 unsigned). Evidence: evidence/v4-verifier-2026-10-26.md.

@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Verifier (Iteration 13) found a docs gap in DoD 40, filed and fixed it as T-009; all tasks complete, PARTIAL-candidate recorded
+- **Stage:** Ended DONE_PARTIAL (Verifier, Iteration 14): no gap this run can close
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** none; the next invocation is the Verifier
+- **Next Phase:** none
 - **DONE-candidate:** no (cleared by the Verifier, Iteration 9)
-- **PARTIAL-candidate:** yes (A-001: criteria 27 and 34 assumed; criterion 40 awaits a signature)
+- **PARTIAL-candidate:** yes (A-001: criteria 27 and 34 assumed; criteria 23, 24, 25, 28, 31 and 40 await a signature)
 
 ## Progress
 
