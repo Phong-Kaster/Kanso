@@ -96,6 +96,7 @@ Material Symbols "content_copy", viewport 960. The disc is the themed `Surface`,
 - T-005 - The approved pictures 69-82 (depends on: T-004) - 2 files - tier: Fast
 - T-006 - The written record describes Stickers (depends on: T-004) - 4 files - tier: Fast
 - T-007 - The docs say only what the Stickers code does (depends on: T-006; filed by the Verifier, Iteration 9) - 5 files - tier: Fast
+- T-008 - The Edit docs' last two false sentences about Stickers (depends on: T-007; filed by the Verifier, Iteration 11) - 2 files - tier: Fast
 
 ## Phase Grouping
 
@@ -107,6 +108,7 @@ Material Symbols "content_copy", viewport 960. The disc is the themed `Surface`,
 | 4 | T-004 | Iteration: `test-edits.md` |
 | 5 | T-005, T-006 | Wiring Worker: `docs/adr/ADR-004-sticker-is-part-of-the-photo.md`; Iteration: records pictures 69-82 with `foreman-record-baselines.ps1`, judges each, `test-edits.md` |
 | 7 | T-007 | none (docs and two KDoc comments) |
+| 8 | T-008 | none (docs only) |
 
 `PreviewsRenderTest.requiredPreviewNames`, `PreviewCoverageTest.EXEMPT`, `ScreenStateTest`, `AccessibilityWalkTest`
 and `ThemeFollowTest` need no edit if the plan is followed (new state is `val`; every composable has a preview);

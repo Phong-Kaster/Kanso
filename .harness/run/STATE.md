@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** T-007 complete (Iteration 10); PARTIAL-candidate recorded
+- **Stage:** Verifier (Iteration 11) found a docs gap; T-008 filed
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** none (Verifier next)
+- **Next Phase:** 8 - T-008
 - **DONE-candidate:** no (cleared by the Verifier, Iteration 9)
-- **PARTIAL-candidate:** yes - A-001 (Tier 3) assumes criteria 27 and 34; criterion 40 awaits a signature
+- **PARTIAL-candidate:** no (cleared by the Verifier, Iteration 11: DoD 40's pre-check found two false sentences)
 
 ## Progress
 
@@ -22,6 +22,7 @@
 | T-005 | complete | `screenshots/StickerScreenshotTest.kt`; baselines 69-82 | verify-phase5.log |
 | T-006 | complete | README, edit.md, tool-screen.md, CONTEXT.md, ADR-004 | diff-phase6.patch |
 | T-007 | complete | README, edit.md, tool-screen.md, EditPhotoArea.kt + ToolTopBar.kt (KDoc) | compile + scope check, Iteration 10 |
+| T-008 | pending | README, edit.md | - |
 
 ## Signed-off human criteria
 

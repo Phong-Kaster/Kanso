@@ -53,3 +53,6 @@
 
 ### Iteration 10 - 2026-10-26
 - Phase 7 (T-007): one Fast Worker fixed the 9 doc and KDoc items (Undo in the top bar, Compare in the tool row, no pill, EditPill link, renderer call, touched-key clearing, touch-down selects). Scope check and app compile green; no code behaviour changed. All tasks complete; PARTIAL-candidate recorded (A-001).
+
+### Iteration 11 - 2026-10-26 (Verifier)
+- Fresh run (cleanTestDebugUnitTest, assemble, test, lint, verifyRoborazzi): assemble and lint pass, 941 tests with only A-001's 15 stale pictures failing. Criteria 26, 29, 30, 32, 33, 35, 37 hold; 38's structure holds. 40: a fresh Capable reader found two false sentences in `docs/features/edit.md` (preview mermaid "filter only"; pictures 69-82 credited to DiscardDialogTest and EditToolTest) and three over-claims (EditSettings list omits stickers; cropper "always" shows stickers despite the OOM fallback; requestPreview caller list). Filed T-008; PARTIAL-candidate cleared. Device criteria not driven while a gap is open. Evidence: evidence/v2-verifier-2026-10-26.md.
