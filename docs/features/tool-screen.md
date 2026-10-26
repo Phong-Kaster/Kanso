@@ -29,9 +29,9 @@ never writes a file; saving and sharing happen on the Result screen.
 
 The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of five tools is its
 `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
-photo never changes size, the photo has no Replace chip, and Undo moves into a pill on the
-photo next to a Compare switch, so its top bar holds Done alone. The fifth tool, **Stickers**, opens
-a sheet that replaces the row (the five entries are hidden while it is open); its cross, or the
+photo never changes size, the photo has no Replace chip, Undo stays in the top bar beside Done, and
+a Compare switch is pinned at the right of the row. The fifth tool, **Stickers**, opens
+a sheet that replaces the row (the five entries and Compare are hidden while it is open); its cross, or the
 system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
 "20 stickers at most" message is drawn on the photo's top edge by `ToolContent`
 (`StickerLimitMessage`) and hides itself after about 2.5 seconds. `ToolContent` also passes the sticker overlay's events (select,

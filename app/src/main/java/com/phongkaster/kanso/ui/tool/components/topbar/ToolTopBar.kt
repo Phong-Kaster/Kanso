@@ -25,9 +25,9 @@ import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
  * The tool screen's top bar: the round Back button at the left (calls [onBack]), [tool]'s name
  * centred across the screen, and at the right the Undo control (calls [onUndo]; it does nothing
  * while [undoEnabled] is false) followed by the Done button (calls [onDone]; it does nothing while
- * [doneEnabled] is false, and shows a small spinner while [finishing]). With [showUndo] false (the
- * Edit screen, whose Undo sits in the row under the photo) Done stands alone at the right end, so
- * the screen never has two Undo controls.
+ * [doneEnabled] is false, and shows a small spinner while [finishing]). With [showUndo] false Done
+ * stands alone at the right end. Every screen now passes true (Edit included: its Undo sits here
+ * beside Done, and its Compare is in the tool row under the photo).
  *
  * `CenterAlignedTopAppBar` is Material 3's top bar whose title sits in the middle of the screen
  * rather than beside the Back button; it also keeps clear of the status bar at the top. The

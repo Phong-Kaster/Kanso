@@ -30,14 +30,14 @@ step by step with file paths, which tests cover it, and what is still open.
 
 ### Editing tools
 
-Every tool opens on its own screen with the same frame: Back, the tool's name, Undo (Edit keeps it in its bottom row), Done at the top right, the photo in
+Every tool opens on its own screen with the same frame: Back, the tool's name, Undo and Done at the top right, the photo in
 a card with a Replace chip (not on Edit), and the tool's controls. There is no Save bar: Done renders and opens Result.
 [The tool screen](docs/features/tool-screen.md) explains that shared part: decoding, the working
 size, progress, Undo, failures and Done.
 
 | Feature | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters, Stickers, Undo and Compare, and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity; up to 20 of 60 bundled stickers placed, moved, pinched, turned, mirrored, duplicated and deleted on the photo. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare are the last two entries of the bottom row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
+| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters and Stickers with Compare pinned at its right (Undo is in the top bar), and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity; up to 20 of 60 bundled stickers placed, moved, pinched, turned, mirrored, duplicated and deleted on the photo. The photo is a live preview; Done renders it once in plain Kotlin. Undo is in the top bar beside Done; Compare is pinned at the right of the tool row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
 | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
@@ -78,8 +78,8 @@ from the control to the saved file; none of them has yet been checked on the own
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
 | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
-| Edit: Stickers | Works | The fifth tool (decision record: [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md)); none of it has been checked on the owner's Galaxy A13. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by a tap (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`), so the crop, turns, flips, filter and sliders apply to them. The live preview shows them with the filter and the sliders, except the sticker under your finger, which shows the sliders but no filter until you let go; the cropper shows them; Compare shows the photo without them. |
-| Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
+| Edit: Stickers | Works | The fifth tool (decision record: [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md)); none of it has been checked on the owner's Galaxy A13. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by putting a finger on one (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`), so the crop, turns, flips, filter and sliders apply to them. The live preview shows them with the filter and the sliders, except the sticker under your finger, which shows the sliders but no filter until you let go; the cropper shows them; Compare shows the photo without them. |
+| Edit: Undo and Compare | Works | Undo is an icon over its title in the top bar beside Done; Compare is pinned at the right of the tool row, behind a divider. Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). While the Stickers sheet is open it takes the place of the row, Compare included, so Compare is out of reach until the sheet closes; Undo stays in the top bar. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
 | Retouch | Works | Face landmarks plus OpenCV bilateral smoothing, with a strength slider. |
@@ -108,8 +108,9 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    with no tool open it shows "Pick a tool to start editing". Every tool fits it: Adjust shows four
    sub-tool chips and one slider (`ui/tool/AdjustSlider.kt`); very large text scrolls inside it.
    The sheet is a plain `Surface` cross-faded with `AnimatedContent`, not a `ModalBottomSheet`,
-   so Undo and Compare, the last two entries of the row
-   (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`), stay usable. The sheets' controls are
+   so the row of tools, with Compare pinned at its right
+   (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`), stays usable (the Stickers
+   sheet replaces the row while it is open; Undo stays in the top bar). The sheets' controls are
    `ui/tool/components/toolpanel/editpanel/EditPanel.kt`.
 2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
    (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the
@@ -225,8 +226,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    lies on top of an older one. Touches work only while the Stickers sheet is open, Compare is off
    and Done is not running (`ToolViewModel.stickerEditingOpen`); otherwise the stickers are only
    drawn. One handler (`StickerGestures.kt`, raw pointer input on the main thread) finds the
-   topmost sticker under the finger on its turned rectangle: a tap on it calls `selectSticker`, a
-   tap on empty photo selects none. One finger drags the sticker by the finger's move; two fingers
+   topmost sticker under the finger on its turned rectangle: a finger put down on it calls
+   `selectSticker` (so a drag selects too), a touch on empty photo selects none. One finger drags the sticker by the finger's move; two fingers
    scale it by the ratio of their distance and turn it by the change of their angle, with no
    damping (width kept between 5 and 100 percent of the shown width, `StickerGeometry.kt`). Each
    move calls `previewStickers`, which shows the new list at once and makes no Undo entry; the
@@ -243,8 +244,9 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    by the tick or the cross selects none.
 9. **Filter and sliders on stickers, live.** The overlay no longer draws sticker pictures (it keeps
    the frame, corner buttons and touch areas). Instead the small preview copy carries them:
-   `FilterPreviewRenderer.render(settings, touchedStickerKey)`
-   (`data/edit/edit/FilterPreviewRenderer.kt`) draws every sticker except the touched one into the
+   `FilterPreviewRenderer.render(requested)`
+   (`data/edit/edit/FilterPreviewRenderer.kt`); `ToolViewModel.requestPreview` first leaves the
+   touched sticker out of the settings it passes, so the renderer draws every other sticker into the
    small copy before the filter, so the filter and Intensity act on them; it renders even with no
    filter when stickers exist, and gives nothing when there is no filter and nothing to draw.
    `ToolViewModel` keys the preview request on filter, intensity and the untouched stickers.
@@ -252,7 +254,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    sticker is left out of the small copy and `LivePreviewImage`
    (`ui/tool/components/photocard/LivePreviewImage.kt`) draws it inside the same crop, turn and
    flip, clipped to the photo, with the colour sliders' matrix but no filter, so it follows the
-   finger. `commitSettings` (finger up), `publishSession` and the tick or cross clear the key and
+   finger. `commitSettings` (finger up), the tick or cross, `openTool` and `setComparing` clear the key
+   (`publishSession` clears it only when that sticker is gone) and
    the sticker joins the filtered copy: one small re-render at the start of a gesture and one at
    its end, none during the drag. The cropper (`ui/tool/components/EditCropper.kt`,
    `withStickersDrawn`) bakes the stickers into a copy of the original photo with the same

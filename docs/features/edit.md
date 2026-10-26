@@ -46,7 +46,7 @@ network are used. You can:
   is one Undo step and a photo holds at most 20 ("A photo can hold 20 stickers at most" appears when you try a 21st).
   The tick keeps the changes; the cross, and the system **Back**, throw away everything done since
   the sheet opened, Undo steps included. The stickers are drawn on the photo on screen. While the
-  sheet is open a tap selects one (a tap on empty photo selects none): a frame with four corner
+  sheet is open a finger put down on one selects it (a touch on empty photo selects none): a frame with four corner
   buttons, top-left delete, top-right duplicate (a copy 4 percent of the shown width right and
   down), bottom-left mirror, bottom-right a handle that resizes and turns it together. One finger
   drags, two fingers pinch and twist; a newer sticker lies on top. Each add, delete, duplicate,
@@ -55,8 +55,9 @@ network are used. You can:
   shows them with the filter and colour sliders (the one you are moving follows your finger with
   the sliders but no filter, and joins the filtered picture when you let go), the cropper shows
   them, and Compare shows the photo without them.
-- **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
-  sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
+- **Undo** (top right, next to Done, in reach whatever sheet is open) and **Compare** (pinned at the
+  right of the tool row; the Stickers sheet replaces the row while it is open, so Compare is out of
+  reach until the sheet closes). Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
   Done stays usable while comparing and renders the edit, not the original.
 - **Done** at the top right renders the picture (with no control used, it hands over the decoded
@@ -104,9 +105,11 @@ flowchart TD
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
    [`ui/tool/components/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt)
-   for its layout: `EditPhotoArea`, the photo with the
-   [`ui/tool/EditPill.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/EditPill.kt) on it,
-   filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
+   for its layout: `EditPhotoArea`
+   ([`ui/tool/components/EditPhotoArea.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditPhotoArea.kt)),
+   which draws the photo card
+   ([`ui/tool/components/photocard/PhotoCard.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/PhotoCard.kt))
+   or the cropper, filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
    [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
    height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
@@ -116,7 +119,7 @@ flowchart TD
    very large text scrolls inside it. It is an ordinary `Surface` cross-faded with
    `AnimatedContent`, not a
    Material `ModalBottomSheet`, because a modal sheet dims the photo and swallows touches, and the
-   pill must stay usable. Its ViewModel is
+   row of tools must stay usable. Its ViewModel is
    [`ui/tool/ToolViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolViewModel.kt),
    which exposes one `StateFlow<ToolUiState>`
    ([`ui/tool/ToolUiState.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt)).
@@ -211,7 +214,7 @@ One gesture, one Undo entry:
 
 ```mermaid
 flowchart TD
-    D["Touch on the photo while the sheet is open: StickerGestures finds the topmost sticker under the finger"] --> SEL["A tap: selectSticker (no Undo entry)"]
+    D["Touch on the photo while the sheet is open: StickerGestures finds the topmost sticker under the finger"] --> SEL["Finger down on a sticker: selectSticker (no Undo entry), so a drag selects too"]
     D --> MV["Finger or fingers move: previewStickers (no Undo entry)"]
     MV -->|"first change"| TK["touchedStickerKey set: this sticker drawn by LivePreviewImage, sliders but no filter"]
     MV --> MV
@@ -246,13 +249,15 @@ flowchart TD
   `ToolUiState`, and `publishSession` clears it when its sticker is gone.
 - **Drawing.** Done draws the saved picture's stickers (`EditProcessor`, `DrawableStickerPictures`),
   see below. On screen, `StickerOverlay` draws no pictures (frame, buttons, touches only).
-  `FilterPreviewRenderer.render(settings, touchedStickerKey)` draws every untouched sticker into
+  `FilterPreviewRenderer.render(requested)` is called after `ToolViewModel.requestPreview` leaves
+  the touched sticker out of the settings; it draws every other sticker into
   the small preview copy before the filter (so filter and Intensity act on them; it renders with
   no filter when stickers exist, null when nothing to draw). The request key is filter, intensity
   and untouched stickers. The first `previewStickers` that changes a sticker sets
   `ToolUiState.touchedStickerKey`; `LivePreviewImage` draws that sticker in the same crop, turn
   and flip, clipped to the photo, with the slider colour matrix and no filter, so it follows the
-  finger. `commitSettings`, `publishSession` and the tick or cross clear the key and it joins the
+  finger. `commitSettings`, the tick or cross, `openTool` and `setComparing` clear the key
+  (`publishSession` clears it only when that sticker is gone) and it joins the
   filtered copy (one small re-render at gesture start, one at finger up, none during the drag).
   `EditCropper` (`withStickersDrawn`) bakes stickers into a copy of the original, same mirror,
   turn and scale as `EditProcessor`, so they show while cropping. Compare shows none.

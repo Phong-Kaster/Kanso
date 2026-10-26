@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Verifier (Iteration 9) found doc gaps; T-007 filed
+- **Stage:** T-007 complete (Iteration 10); PARTIAL-candidate recorded
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** 7 (T-007)
+- **Next Phase:** none (Verifier next)
 - **DONE-candidate:** no (cleared by the Verifier, Iteration 9)
-- **PARTIAL-candidate:** no
+- **PARTIAL-candidate:** yes - A-001 (Tier 3) assumes criteria 27 and 34; criterion 40 awaits a signature
 
 ## Progress
 
@@ -21,7 +21,7 @@
 | T-004 | complete | FilterPreviewRenderer, LivePreviewImage, EditCropper, ViewModel, StickerPlace; 4 new tests; docs | test-phase4c.log |
 | T-005 | complete | `screenshots/StickerScreenshotTest.kt`; baselines 69-82 | verify-phase5.log |
 | T-006 | complete | README, edit.md, tool-screen.md, CONTEXT.md, ADR-004 | diff-phase6.patch |
-| T-007 | pending | README, edit.md, tool-screen.md, EditPhotoArea.kt + ToolTopBar.kt (KDoc) | |
+| T-007 | complete | README, edit.md, tool-screen.md, EditPhotoArea.kt + ToolTopBar.kt (KDoc) | compile + scope check, Iteration 10 |
 
 ## Signed-off human criteria
 
