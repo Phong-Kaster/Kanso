@@ -1,114 +1,132 @@
-# Kanso — Run 9: the Edit screen becomes a real editor
+# Kanso — Run 10: stickers on the Edit screen
 
-Today the Edit screen shows every control at once. Crop chips, the free crop's two range sliders,
-four turn and flip buttons, four colour sliders and seven filter chips all live in one 260 dp strip
-under the photo (`app/src/main/java/com/phongkaster/kanso/ui/tool/EditPanel.kt`). It is crowded, and
-worse, nothing can be seen while it is being done: there is no live preview, a slider springs back to
-the middle the moment I let go, changes stack on top of each other, and the photo itself resizes
-whenever the panel grows.
+The Edit screen can crop, turn, flip, adjust colour and apply a filter, but it cannot put anything on
+the photo. Pinity, another app of mine, has a sticker feature: a catalogue of 60 picture stickers
+that can be dragged, pinched, turned and resized over the photo. **This run brings those stickers to
+Kanso's Edit screen** (decided by me, 2026-10-26).
 
-**This run turns Edit into an editor I can actually see** (decided by me, 2026-10-15): a row of four
-tools under a photo that never moves, each opening a bottom sheet, with the photo changing under my
-thumb as I drag.
+Pinity's code and pictures are copied, read-only, into `reference/pinity-stickers/` (from Pinity at
+commit `58d4e27`). Treat that folder as `reference/retica-app/` is treated: never edit it, build it
+or import from it. Port from it into Kanso's own packages.
+
+## The decisions (mine, 2026-10-26)
+
+1. **A sticker is part of the photo, not a layer above it.** It behaves like my phone's gallery
+   editor: put a sticker on, then crop, and the crop can cut the sticker off; turn the photo and the
+   sticker turns with it.
+2. **Filters and the colour sliders colour the stickers too**, as they colour every other pixel.
+3. **The 60 Pinity sticker pictures may be used in Kanso.** Only the four picture categories come
+   across: Food (17), Mood (17), Quote (6), Emoji (20). Pinity's text, clock, date, time, location
+   and weather decals do **not**.
+4. **Stickers can be touched only while the Stickers panel is open.** With any other tool open, or
+   none, the stickers are just part of the photo and a touch on one does nothing.
+5. **At most 20 stickers on one photo.** Adding a 21st adds nothing and shows a short message.
 
 ## What this run delivers
 
-1. **A fixed preview and a row of four tools.** The photo takes 60% of the screen below the top bar
-   and **never changes size**, whatever is open. Under it, a horizontal lazy row of four entries,
-   each an icon over its name: **Crop**, **Rotate**, **Adjust**, **Filters**. Tapping one opens a
-   bottom sheet that fills the remaining 40%, with no scrim, so the photo above stays bright.
-2. **Live preview.** Drag Brightness and the photo brightens as I drag. Every tool previews: the
-   four colour sliders, the filter and its intensity, the crop rectangle, the turns and flips.
-3. **The screen remembers what I set.** One set of settings for the whole session: brightness 70
-   stays 70, and it is still 70 when I open the Adjust sheet again. No slider springs back to the
-   middle. The preview is always the original photo with all the current settings applied, so
-   nothing stacks and nothing is baked in as I go.
-4. **Undo is a stack of my actions.** A slider release, a filter chip, a crop, a quarter turn — each
-   is one action. Undo pops the top one and the photo goes back to how it was before it. It works
-   across sheets. Done empties the stack and ends the session.
-5. **A compare switch.** Next to Undo. Switched on, I see the untouched original and every editing
-   control is disabled at once. Switched off, I see my edit again and the controls come back.
-6. **Undo and compare float on the photo**, in one small pill at the **bottom right** of the preview,
-   so they are reachable while a sheet fills the band below.
-7. **Done renders, Result saves.** The top right of the Edit screen is **Done**, not Save: it renders
-   the settings at full size and writes nothing. It opens the **Result** screen, which carries
-   **Share**, **Save** and **Go home**; Save is the only thing that writes to the device. Back from
-   Result returns to my session with everything intact.
-8. **Back asks.** Leaving Edit with changes shows "Discard your changes?" — Discard or Keep editing.
+1. **A fifth tool, Stickers**, after Filters in the row of tools: `EditTool.STICKERS`, with its own
+   icon and name, highlighted while open and carrying the "changed" dot when the photo has a sticker.
+2. **The Stickers panel**: tabs **Food / Mood / Quote / Emoji** over a grid of that category's
+   stickers. Tapping one adds it to the photo, at the centre of the picture as shown, about a third
+   of the shown picture's width, and selects it.
+3. **The selected sticker carries a frame** with one round button on each corner:
+   - **top left — delete:** removes the sticker;
+   - **top right — duplicate:** adds a copy slightly down and to the right of it, and selects the copy;
+   - **bottom left — flip:** mirrors the sticker left to right (tap again to mirror it back);
+   - **bottom right — resize and turn, one handle:** dragging it scales the sticker by the finger's
+     distance from the sticker's centre and turns it by the finger's angle around that centre, the
+     sticker keeping its shape.
+4. **Moving a sticker:** drag it with one finger; two fingers pinch to resize and twist to turn.
+   Tapping another sticker selects that one; tapping the photo outside every sticker selects none.
+   A newer sticker lies on top of an older one.
+5. **Undo takes back sticker actions like any other action**, in the same stack: an add, a delete,
+   a duplicate, a flip, and one whole gesture (a drag, a pinch, a pull on the corner handle) from
+   finger down to finger up are each one action. Selecting a sticker is not an action.
+6. **Compare** shows the untouched original, with no stickers on it.
+7. **Done renders the stickers at full size** into the result, sharp, at the photo's own resolution.
 
-## The four sheets
+## What to port, and what to rewrite
 
-- **Crop** — the photo card becomes a real cropper, with handles on the rectangle, drag to move and
-  pinch to zoom, driven by `core/imagecrop` (the easycrop source already in this repository, used by
-  nothing yet). The ratio chips sit in the sheet and lock the rectangle's shape.
-- **Rotate** — turn left, turn right, flip across, flip upside down.
-- **Adjust** — Brightness, Contrast, Saturation, Warmth. Each runs **−100 … 0 … +100** with the
-  number shown beside its name and 0 at the centre.
-- **Filters** — **None** and the seven presets, **one at a time**: tapping 1977 replaces Kelvin.
-  Intensity runs 0 … 100 and is live, so dragging it changes the photo under my thumb.
+From `reference/pinity-stickers/`:
+
+- **Port:** the sticker pictures (`res/drawable/img_sticker_*.webp`, 60 files), the handle icons
+  `ic_close_circle`, `ic_flip` and `ic_resize_circle`, the category list (`Decal.kt`,
+  `DecalCategory.kt`, picture entries only), the drawing of a sticker and its frame
+  (`DecalOverlayPreview.kt`), and the one-finger drag and two-finger pinch/twist of
+  `DecalOverlayPointer.kt` with its geometry helpers (`Offset.kt`, `KotlinUtil.kt`).
+- **Draw new:** the **duplicate** icon, matching Kanso's own icons (Material Symbols, 960 viewport,
+  as `res/drawable/ic_close.xml`), and the four corner buttons restyled to Kanso's theme colours, so
+  they read as Kanso, not as Pinity.
+- **Rewrite, do not port:**
+  - Pinity's corners (top right deletes, bottom left turns, bottom right resizes) become the layout
+    above; the bottom-right handle now does resize and turn together.
+  - Pinity keeps each sticker as a changeable object in the ViewModel, placed in screen pixels.
+    Kanso's edit state is one immutable `EditSettings` in an `EditSession`, and that is how Undo
+    works. Stickers become a list in `EditSettings`, each one a value: which sticker, its centre
+    as fractions of the **original** photo, its size as a fraction of the original photo's width, its
+    turn in degrees and whether it is mirrored.
+  - Pinity saves by screenshotting the view and stretching it to the photo's size
+    (`EditPhotoFragment.kt` lines 660–755 in Pinity), which makes stickers blurry. Kanso renders
+    them in `EditProcessor`, below.
+  - Pinity's tap on an active sticker that swaps it for the next sticker in the catalogue is dropped.
 
 ## How to build it
 
-- **The colour sliders must be instant on my phone.** Brightness, Contrast, Saturation and Warmth
-  are drawn with Compose's `ColorFilter.colorMatrix`, so the GPU does them every frame with no bitmap
-  work. Crop, the turns and the flips are geometry, also free. Only the filter and its intensity need
-  a real pass: re-render a small preview bitmap (480–720 px) off the main thread, dropping frames
-  that a faster drag has already overtaken.
-- **What I see must be what I get.** A test runs the preview's colour matrix and `EditProcessor`'s
-  matrix over the same picture and proves they agree, so the preview never lies about what Done will
-  render.
-- **One settings object.** `EditSettings` stops meaning "one change" and means "the session's state";
-  `EditProcessor` already takes a whole `EditSettings`, so it runs against the **original**, not
-  against the photo as shown. The old "apply one change at a time onto the shown bitmap" workaround
-  goes, and with it the known defect where a slider released during a run is silently dropped.
-- **The row entries are `EditTool`** (`CROP`, `ROTATE`, `ADJUST`, `FILTERS`), a new enum in
-  `data/edit/edit/`. `Tool` keeps meaning the five tools, one screen each. A row entry is highlighted
-  while its sheet is open, and carries a small dot whenever its settings are not neutral.
-- **The other four tools keep their screens** (Remove background, Enhance, Retouch, Artistic): no row,
-  no sheets. They change only at the two ends — their bottom Save becomes **Done**, and they go to the
-  **Result** screen, which is `Saved` renamed and no longer means "already written".
-- **The Galaxy A13 on 32-bit Android decides.** A preview that stutters there is a failure, not a
-  compromise to be made quietly: if the conflated filter preview cannot keep up, say so and we change
-  the DoD.
-- Every standing rule in `CLAUDE.md` holds — a preview for every composable, one class per file, a
-  ViewModel and a UiState per screen, the code teaches, no new animation library without my approval.
+- **Stickers first, then everything else.** `EditProcessor` draws the stickers onto the original
+  photo before anything else, so the order becomes: **stickers, crop, quarter turns, flips, filter,
+  colour sliders.** That one ordering is what makes decisions 1 and 2 true. Drawing them after the
+  crop rectangle is cut out, shifted by its offset, gives the same pixels without a second
+  full-size copy of the photo, which matters on the Galaxy A13.
+- **One mapping between the screen and the photo.** A touch lands on the picture as shown, which is
+  cropped, turned and flipped; the sticker is stored on the original. Put the mapping both ways
+  (shown picture ↔ original) in one place, pure Kotlin, and test it on the JVM for every quarter
+  turn, both flips and a crop: a point mapped there and back comes back to itself.
+- **The live preview.** Kanso's preview draws crop, turns, flips and the sliders live in
+  `LivePreviewImage`; only the filter is computed, by `FilterPreviewRenderer` on a small copy of
+  the original. So: the stickers that are not being touched go into that small copy before the
+  filter, as Done does. The sticker under the finger is drawn live by `LivePreviewImage`, inside
+  the same crop, turn and flip and with the same colour matrix, and joins the small copy when the
+  finger lifts. While a finger is on a sticker, that sticker shows the sliders but not the filter;
+  that is accepted.
+- **Selection is screen state, not edit state.** Which sticker is selected lives in `ToolUiState`,
+  never in `EditSettings`, so selecting creates no undo entry and Done ignores it. Closing the
+  Stickers panel selects none.
+- **The Galaxy A13 on 32-bit Android decides.** A drag that stutters there with 20 stickers on the
+  photo is a failure: say so rather than ship it.
+- Every standing rule in `CLAUDE.md` holds: a light and dark preview for every new composable, one
+  class per file, the screen-package folder layout, the code teaches.
 
-## What this run removes, on purpose
+## Tests and pictures
 
-Filter stacking (one filter at a time now); sliders that spring back to the middle; the two range
-sliders as the only way to crop; the **Replace** chip on the Edit screen; the full-width Save bar at
-the bottom of all five tool screens; `Saved` as a name. Each is recorded as a deliberate removal, not
-left to look like a regression.
-
-## README.md and the written record are part of the work (decided by me, 2026-10-15)
-
-- `README.md`, `docs/features/edit.md`, `docs/features/tool-screen.md` and
-  `docs/features/saving-and-share.md` are rewritten in the same change, down to the mermaid flows and
-  the limits. A claim the code does not back fails the run.
-- **A new ADR** records what this reverses in `ADR-002`: Save leaves the bottom bar for a top-right
-  Done on all five screens, `Saved` becomes `Result` and stops meaning "already written", and Edit
-  gives up the all-at-once options strip.
-- **A new `CONTEXT.md`** at the root writes down the words: `Tool` (the five), `EditTool` (the four),
-  `EditSettings` (its new meaning), session, preview.
-
-## Pictures and tests
-
-- **I approve the re-recording** of `tool_edit_free_crop_light` and `tool_edit_free_crop_dark`, and
-  the recording of the new pictures: the tool row, each of the four sheets, the compare switch on, and
-  the Result screen's Save — in light and in dark, about 14 images. Keep each beside its old version
-  in `.harness/run/evidence/baseline-diffs/` while the run lasts.
-- The tests that assumed stacking, springing-back sliders, an intensity that only affects the next tap,
-  or a Save that writes a file are rewritten with their reason given.
-- The device checks may use the Galaxy A13 or the emulator, whichever is free. Before driving either,
+- JVM tests: each sticker action through `EditSession` (add, delete, duplicate, flip, one gesture as
+  one undo entry, the 20-sticker limit); the screen ↔ photo mapping round trip; `EditProcessor`'s
+  order: a sticker cut off by a crop is cut off in the output, and a sticker under a filter comes out
+  filtered.
+- **I approve recording the new pictures**: the row with five tools, the Stickers panel on each of
+  the four tabs, a selected sticker with its four corner buttons, and a photo with stickers after a
+  crop and a filter, in light and in dark. Existing pictures that change because the row now has five
+  entries may be re-recorded; keep each beside its old version in
+  `.harness/run/evidence/baseline-diffs/` while the run lasts.
+- Device checks may use the Galaxy A13 or the emulator, whichever is free. Before driving either,
   check nobody else's run or person is using it.
+
+## README.md and the written record are part of the work
+
+- `README.md`, `docs/features/edit.md` and `docs/features/tool-screen.md` describe the Stickers
+  tool, in the same change, mermaid flows included. `README.md`'s table of folders gains
+  `reference/pinity-stickers/`, read-only.
+- **A new ADR, `ADR-004`**, records that a sticker is part of the photo: drawn first, so crop, turns,
+  flips, filter and sliders all apply to it, and what that cost (the filter missing from the sticker
+  under the finger in the preview).
+- `CONTEXT.md` gains **Sticker** (one placed on the photo) and **sticker catalogue** (the 60 to
+  choose from), and `EditTool` now means five tools.
 
 ## How it is built
 
-`main`, no branch and no worktree (decided by me, 2026-10-15), one commit per phase:
+One commit per phase:
 
-1. the layout — fixed photo, the row, the sheets, the floating pill;
-2. the settings model and the undo stack;
-3. live preview;
-4. the cropper;
-5. Done and Result, across all five tools;
-6. the docs, the ADR, `CONTEXT.md` and the pictures.
+1. the sticker model in `EditSettings`, the undo actions, and `EditProcessor`'s new first step;
+2. the pictures, the catalogue and the Stickers panel with its tabs;
+3. the sticker on the photo: drawing, the frame and its four buttons, the gestures, the mapping;
+4. the live preview with stickers;
+5. the docs, the ADR, `CONTEXT.md` and the pictures.
