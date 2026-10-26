@@ -41,3 +41,6 @@
 
 ### Iteration 6 - 2026-10-26
 - Phase 4 (T-004): 3 sequential Worker slices (renderer/ViewModel/live preview/overlay; cropper + 4 new tests; docs), then a fix for `StickerOverlayTest` (its pixel reads raced the async preview; now poll) and one review-fix pass (stuck touched key on tick/cross/Compare/tool change, dead `StickerImage`, `StickerPlace` own file, cropper OOM catch). All unit tests, lint, assemble green. Recorded not fixed: ghost/blink at drag start and lift, main-thread decode. Amendments AM-T004-1/2 logged.
+
+### Iteration 7 - 2026-10-26
+- Phase 5 (T-005): Worker wrote StickerScreenshotTest (14 pictures); recorded and opened each. 69/70 first duplicated 71/72, so a second pass made them the tool row after a sticker was added (dot on Stickers). verifyRoborazziDebug for the class and OneTypePerFile/KdocCoverage green. No Reviewer (test-only).
