@@ -19,3 +19,6 @@ Since slice 1 sticker pixels arrive via the asynchronously rendered filtered cop
 
 ## Iteration 5 - Tier 1: review-fix files join T-004
 Reviewer found dead `StickerImage` and a second composable `StickerPlace` in `StickerOverlay.kt`; both files join slice 3's scope (StickerPlace.kt new). PRD, DoD, architecture unchanged.
+
+## Iteration 8 - Tier 1: ADR-004 joins T-006
+The planned Wiring Worker never wrote `docs/adr/ADR-004-sticker-is-part-of-the-photo.md`; it joins T-006's scope. PRD, DoD, architecture unchanged.

@@ -2,7 +2,7 @@
 
 ## Run 10 (stickers on the Edit screen), loop/kanso-stickers: in progress
 
-- D-001 answered 2026-10-26 (DoD approved with the owner's sheet edits). Phases 1 to 4 (T-001 to T-004) complete; nothing abandoned, no decision queued.
+- D-001 answered 2026-10-26 (DoD approved with the owner's sheet edits). Phases 1 to 6 (T-001 to T-006) complete; the Verifier is next. `.harness/PRD.md:85` still says "only the filter is computed" (PRD is immutable); nothing abandoned, no decision queued.
 - `res/drawable/ic_stickers.xml` is a hand-drawn lookalike of Material Symbols `add_reaction`, not the official path (the Worker could not reproduce it and nothing can fetch it): replace the `pathData` when convenient; a person should look at the Stickers tool icon (pictures 55 and 56).
 - `verifyRoborazziDebug` fails 33 tests at HEAD before this Phase (stale baselines such as `4_settings_light.png`, `16_tool_photo_light.png`, from Runs 6 to 9; not re-recorded because D-001 approved only 51, 52, 55-68). Run 10's DoD 27/35 style verify claims about other pictures need a human decision.
 - Review notes not fixed (Phase 2): DoD 1 (Stickers entry highlighted while open) conflicts with DoD 41 (the row is replaced while the sheet is open); the sheet's height falls back to 72 dp if the screen is recreated with Stickers open; `StickerMappingTest` checks round trips but no render-level agreement with `EditProcessor` for turn plus flip; DoD 18's cropper clause is tested only at the processor level; repeated refused taps do not restart the limit message timer; `EditPanel` builds an unused second processor factory on the app path.

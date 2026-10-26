@@ -5,10 +5,10 @@
 
 ## Current
 
-- **Stage:** Phase 5 complete; Phase 6 (T-006) next
+- **Stage:** all tasks complete; DONE-candidate recorded
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** Phase 6 - T-006
-- **DONE-candidate:** no
+- **Next Phase:** none (Verifier next)
+- **DONE-candidate:** yes
 - **PARTIAL-candidate:** no
 
 ## Progress
@@ -20,7 +20,7 @@
 | T-003 | complete | `photocard/stickeroverlay/`, PhotoCard, ToolUiState/ViewModel/Screen; tests; docs | phase3-final.txt |
 | T-004 | complete | FilterPreviewRenderer, LivePreviewImage, EditCropper, ViewModel, StickerPlace; 4 new tests; docs | test-phase4c.log |
 | T-005 | complete | `screenshots/StickerScreenshotTest.kt`; baselines 69-82 | verify-phase5.log |
-| T-006 | pending | README, edit.md, tool-screen.md, CONTEXT.md | - |
+| T-006 | complete | README, edit.md, tool-screen.md, CONTEXT.md, ADR-004 | diff-phase6.patch |
 
 ## Signed-off human criteria
 

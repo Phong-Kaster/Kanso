@@ -1,0 +1,304 @@
+diff --git a/.harness/TELEMETRY.tsv b/.harness/TELEMETRY.tsv
+index 11cdbe9..612c63a 100644
+--- a/.harness/TELEMETRY.tsv
++++ b/.harness/TELEMETRY.tsv
+@@ -93,3 +93,4 @@ when	iteration	status	seconds	tier	model	turns	cache_read_tokens	cost_usd
+ 2026-10-26T12:58:49.6260520+07:00	4	CONTINUE	3246	fast	sonnet	57	5329316	7.6398
+ 2026-10-26T13:32:02.4867826+07:00	5	CONTINUE	1989	fast	sonnet	33	2169381	5.0310
+ 2026-10-26T14:02:34.0314279+07:00	6	CONTINUE	1829	fast	sonnet	22	1149210	3.7156
++2026-10-26T14:10:32.0187564+07:00	7	CONTINUE	475	fast	sonnet	23	646216	0.8431
+diff --git a/CONTEXT.md b/CONTEXT.md
+index 0efb0c4..a19591f 100644
+--- a/CONTEXT.md
++++ b/CONTEXT.md
+@@ -9,14 +9,29 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
+ `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
+ its own `Camera` key).
+ 
+-**EditTool** - One of the four groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+-`ADJUST`, `FILTERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
+-opens one sheet; only one sheet is open at a time. Holds no strings or icons.
+-`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all four live inside `Tool.EDIT`.
++**EditTool** - One of the five groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
++`ADJUST`, `FILTERS`, `STICKERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
++opens one sheet; only one sheet is open at a time (the Stickers sheet takes the row's place while
++open). Holds no strings or icons.
++`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
++
++**Sticker** - One ready-made picture placed on the photo in Edit: an immutable value with a key,
++a picture id, a centre, a width (all fractions of the ORIGINAL photo), a turn in degrees and a
++mirrored flag. A photo holds at most 20 (`EditSettings.MAX_STICKERS`) in `EditSettings.stickers`.
++It is part of the photo: `EditProcessor` draws it first, so crop, turns, flips, filter and sliders
++act on it (see ADR-004). Which sticker is selected is screen state
++(`ToolUiState.selectedStickerKey`), not part of the sticker. `data/edit/edit/Sticker.kt`. *Not* an
++entry of the catalogue (a `CatalogSticker`), which is only a picture to choose.
++
++**Sticker catalogue (`StickerCatalog`)** - The 60 pictures the Stickers sheet offers, in four
++categories (Food 17, Mood 17, Quote 6, Emoji 20; `StickerCategory`), each a `CatalogSticker` with
++an explicit `R.drawable.img_sticker_*` reference. Choosing one adds a `Sticker` with that picture's
++id. `data/edit/edit/StickerCatalog.kt`. *Not* the stickers on the photo.
+ 
+ **EditSettings** - Everything the Edit screen has done to the photo, as one immutable value: crop
+ rectangle (fractions of the photo), crop ratio lock, quarter turns, two flips, brightness,
+-contrast, saturation, warmth (each -1..1, 0 = unchanged), one filter and its intensity (0..1). It
++contrast, saturation, warmth (each -1..1, 0 = unchanged), one filter and its intensity (0..1), and
++the list of stickers. It
+ is the whole state, never a step: it is always applied to the original photo, so a second filter
+ replaces the first. The default value changes nothing (`isNeutral`).
+ `data/edit/edit/EditSettings.kt`. *Not* app settings (`SettingsRepository`, theme).
+@@ -42,16 +57,17 @@ render:
+ - `EditColourMatrix` (`data/edit/edit/EditColourMatrix.kt`) is the one place the four sliders
+   become a 20-number colour matrix; the live preview and `EditProcessor` both use it.
+ - `FilterPreviewRenderer` (`data/edit/edit/FilterPreviewRenderer.kt`) handles the one part Compose
+-  cannot draw: the filter. It runs the real `EditProcessor` with only the filter set, off the main
+-  thread, on a copy of the original shrunk to at most `PREVIEW_EDGE` = 640 px on its longest edge.
+-  `LivePreviewImage` then draws everything else on top of that small picture.
++  cannot draw: the filter. It runs the real `EditProcessor` with only the filter and the stickers
++  set (all but the one being touched), off the main thread, on a copy of the original shrunk to at
++  most `PREVIEW_EDGE` = 640 px on its longest edge. `LivePreviewImage` then draws everything else
++  on top of that small picture, including the sticker under the finger (sliders, no filter).
+ 
+ *Not* a `@Preview` composable (the design-time previews CLAUDE.md requires), and not the camera's
+ `LivePreview` (`ui/camera/CameraScreen.kt`).
+ 
+ **EditProcessor** - The Edit tool's renderer used at Done: applies a whole `EditSettings` to the
+-original photo on the CPU (`Dispatchers.Default`) in this order: crop, turns, flips, filter, then
+-sliders. Inputs above `WorkingSize.EDIT` (2000 px longest edge) are scaled down first. The output
++original photo on the CPU (`Dispatchers.Default`) in this order: stickers, crop, turns, flips,
++filter, then sliders. Inputs above `WorkingSize.EDIT` (2000 px longest edge) are scaled down first. The output
+ is opaque (`setHasAlpha(false)`). Out of memory gives `EditFailure.OutOfMemory`; any other error
+ gives `EditFailure.Other`. `data/edit/edit/EditProcessor.kt`, one implementation of `ToolProcessor`
+ (`data/edit/ToolProcessor.kt`, the seam every tool runs through).
+diff --git a/README.md b/README.md
+index 65f7a0a..ce2367b 100644
+--- a/README.md
++++ b/README.md
+@@ -8,7 +8,7 @@ libraries would otherwise merge in (`app/src/main/AndroidManifest.xml`). Every m
+ inside the app; nothing is downloaded. A photo only leaves the phone when you send it to another
+ app with Share.
+ 
+-This README describes **what the code on branch `loop/kanso-real-editor` actually does**. It is
++This README describes **what the code on branch `loop/kanso-stickers` actually does**. It is
+ not a roadmap. It is the index: each feature below links to its own page in
+ [`docs/features/`](docs/features/), which explains what the feature is, how to use it, how it works
+ step by step with file paths, which tests cover it, and what is still open.
+@@ -37,7 +37,7 @@ size, progress, Undo, failures and Done.
+ 
+ | Feature | What it does | Saved as |
+ |---|---|---|
+-| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters, Undo and Compare, and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare are the last two entries of the bottom row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
++| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters, Stickers, Undo and Compare, and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity; up to 20 of 60 bundled stickers placed, moved, pinched, turned, mirrored, duplicated and deleted on the photo. The photo is a live preview; Done renders it once in plain Kotlin. Undo and Compare are the last two entries of the bottom row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
+ | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
+ | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
+ | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
+@@ -78,7 +78,7 @@ from the control to the saved file; none of them has yet been checked on the own
+ | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
+ | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
+ | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
+-| Edit: Stickers | Partial | The fifth tool. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by a tap (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`). Not done yet: the on-screen stickers are drawn as they are, without the filter and the colour sliders (Done applies those), and the cropper does not show them. |
++| Edit: Stickers | Works | The fifth tool (decision record: [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md)); none of it has been checked on the owner's Galaxy A13. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by a tap (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`), so the crop, turns, flips, filter and sliders apply to them. The live preview shows them with the filter and the sliders, except the sticker under your finger, which shows the sliders but no filter until you let go; the cropper shows them; Compare shows the photo without them. |
+ | Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
+ | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
+ | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
+@@ -252,8 +252,24 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
+    its end, none during the drag. The cropper (`ui/tool/components/EditCropper.kt`,
+    `withStickersDrawn`) bakes the stickers into a copy of the original photo with the same
+    mirror, turn and scale as `EditProcessor`, so they show while you crop. Compare shows the
+-   untouched photo with no stickers. On failure of a picture to decode, that sticker is skipped
+-   in Done, which renders at 2000 px at most on `Dispatchers.Default`.
++   untouched photo with no stickers.
++10. **Order, cost, input, output, failure.** Why stickers go first is in
++    [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md). The accepted cost: while a
++    finger moves a sticker, that one sticker shows no filter, because a filter is computed on a
++    640 px copy and cannot follow a finger; it joins the filtered copy on finger up. Done and
++    the preview can also differ slightly in detail (640 px against up to 2000 px). Input: the
++    original photo, shrunk to at most 2000 px, and the settings' `Sticker` list (picture id,
++    centre, width, turn and mirror, as fractions of the original photo). Output: one opaque
++    `ARGB_8888` bitmap, saved by Result as a JPEG at quality 95 in `Pictures/Kanso`. Threading:
++    Done's render on `Dispatchers.Default` (each picture decoded at no more than the photo's
++    longest edge, blended in through one bitmap of the visible part of the sticker, so an
++    over-sized sticker cannot run the phone out of memory), the small preview copy on
++    `Dispatchers.Default`, everything else (panel, gestures, selection) on the main thread. A
++    picture that cannot be decoded, or a sticker with a non-finite number, is skipped in Done
++    without an error; running out of memory gives the usual "too large to edit" message and
++    keeps every sticker and Undo step. The 20-sticker limit is `EditSettings.MAX_STICKERS`.
++    The pictures are copies of the ones in `reference/pinity-stickers/res/drawable/`; none is
++    downloaded.
+ 
+ ### Remove background, Enhance, Retouch and Artistic
+ 
+@@ -353,8 +369,10 @@ All of them together:
+ ./gradlew cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue
+ ```
+ 
+-The tests live in `app/src/test/` (about 690 tests in about 90 test classes, plus 51 recorded
+-pictures in `app/src/test/screenshots/`). They cover the screens, navigation, every tool's
++The tests live in `app/src/test/` (more than 100 test classes, plus 79 recorded
++pictures in `app/src/test/screenshots/`, numbered 1 to 82 with 7, 8 and 9 unused; pictures 69
++to 82 are the Stickers sheet, a selected sticker, and stickers under a crop and a filter, in
++light and dark, from `StickerScreenshotTest.kt`). They cover the screens, navigation, every tool's
+ processor with fakes, saving, Share, the camera (through a fake `CameraController`), settings,
+ previews and screenshots. They need no device. The `Engine*.kt` wrappers are native code and are
+ only exercised on a device or emulator. Each feature page lists its own tests.
+@@ -370,7 +388,8 @@ only exercised on a device or emulator. Each feature page lists its own tests.
+ | `libs/` | Those prebuilt libraries (AARs), plus two TensorFlow Lite AARs. `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. No build file references `tensorflow-lite.aar`. |
+ | `opencv/` | The OpenCV Android SDK module the engine depends on. |
+ | `reference/retica-app/` | Retica's original app code, **read-only**: how the engine's use cases are called. It is not built, and nothing in Kanso imports it. |
++| `reference/pinity-stickers/` | Pinity's sticker code (`java/`) and its 60 sticker pictures (`res/drawable/`), **read-only**: what the Stickers tool was ported from. It is not built, and nothing in Kanso imports it; the app's pictures are copies in `app/src/main/res/drawable/`. |
+ | `docs/features/` | One page per feature (linked above). |
+-| `docs/adr/` | The architecture decisions behind Kanso. |
++| `docs/adr/` | The architecture decisions behind Kanso: [ADR-001](docs/adr/ADR-001-kanso-is-a-material-3-expressive-app-blue-by-default-with-one-editor.md), [ADR-002](docs/adr/ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md), [ADR-003](docs/adr/ADR-003-edit-has-one-session-and-done-opens-a-result-screen.md), [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md). |
+ 
+ The app itself is written by [Foreman](https://github.com/Phong-Kaster/Foreman), one goal at a time.
+diff --git a/docs/features/edit.md b/docs/features/edit.md
+index 46d8373..109dd06 100644
+--- a/docs/features/edit.md
++++ b/docs/features/edit.md
+@@ -1,4 +1,4 @@
+-# Edit: crop, rotate, adjust and filters
++# Edit: crop, rotate, adjust, filters and stickers
+ 
+ [Back to README](../../README.md)
+ 
+@@ -39,7 +39,7 @@ network are used. You can:
+ - **Filters**: None or one of seven looks, Light, 1977, Kelvin, Nashville, Walden, Hudson and Amaro,
+   with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
+   **replaces** the one before; filters never pile up.
+-- **Stickers** (partial): a sheet that replaces the row of tools, with a cross at the left of a
++- **Stickers** (decision record: [ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md)): a sheet that replaces the row of tools, with a cross at the left of a
+   tick in its top row, four category tabs (Food 17, Mood 17, Quote 6, Emoji 20 bundled pictures)
+   and a grid of three columns that scrolls. A tap on a picture adds that sticker at the middle of
+   the picture you see (after the crop, turns and flips), a third of its width, selected; each tap
+@@ -188,6 +188,33 @@ shows `StickersPanel`: `StickersSheetTopBar` (cross left, tick right, 48 dp targ
+ `LazyVerticalGrid` of `StickerTile`s, three columns, from `StickerCatalog.inCategory`. All on the
+ main thread; no pixel is computed.
+ 
++Adding a sticker:
++
++```mermaid
++flowchart TD
++    T["Tile tapped (StickerTile)"] --> A["ToolViewModel.addSticker"]
++    A --> G{"Compare on, Done running,\nor 20 stickers already?"}
++    G -->|"Compare or Done"| X["ignored"]
++    G -->|"20 stickers"| L["stickerLimitShown = true: StickerLimitMessage for about 2.5 s"]
++    G -->|no| M["StickerMapping: middle of the picture you see -> fractions of the original photo"]
++    M --> S["EditSession.addSticker: one Undo entry, newest on top"]
++    S --> P["publishSession: selectedStickerKey = the new sticker"]
++    P --> R["preview copy re-rendered with the new sticker (FilterPreviewRenderer)"]
++```
++
++One gesture, one Undo entry:
++
++```mermaid
++flowchart TD
++    D["Touch on the photo while the sheet is open: StickerGestures finds the topmost sticker under the finger"] --> SEL["A tap: selectSticker (no Undo entry)"]
++    D --> MV["Finger or fingers move: previewStickers (no Undo entry)"]
++    MV -->|"first change"| TK["touchedStickerKey set: this sticker drawn by LivePreviewImage, sliders but no filter"]
++    MV --> MV
++    MV -->|"last finger up"| C["commitSettings: the whole gesture is ONE Undo entry"]
++    C --> CL["touchedStickerKey cleared: sticker joins the filtered preview copy"]
++    CL --> U["Undo takes the whole gesture back in one step"]
++```
++
+ - **Add.** `addSticker` asks `StickerMapping` for the sticker at the shown picture's centre (the
+   mapping inverts what Done does: crop, then turn, then flip), adds it with `EditSession.addSticker`
+   (one Undo step) and selects it (`selectedStickerKey`). The processor recipe passed in is the one
+@@ -233,7 +260,7 @@ flowchart TD
+     N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
+     N -->|yes| F["finishing = true: spinner in Done"]
+     F --> W["WorkingSize.fit(original, 2000 px) on Dispatchers.Default"]
+-    W --> E["EditProcessor: crop, turn, flip, filter, colour matrix, opaque"]
++    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix, opaque"]
+     E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
+     E -->|Failed| X["failure message on the photo card; stay on Edit"]
+     H0 --> R["doneEvents: navigate to Result"]
+@@ -261,13 +288,13 @@ flowchart TD
+    [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
+    all on `Dispatchers.Default`. The processor always works from the original with the whole
+    settings, so nothing is stacked. On the pixels as one `IntArray`, in this order:
+-   0. **Stickers** (new in Run 10; the Stickers sheet adds them, see "The Stickers sheet" below): the settings hold up to 20
++   0. **Stickers** (new in Run 10; the Stickers sheet adds them, see "The Stickers sheet" above,
++      and [ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md) for why they go first): the settings hold up to 20
+       (`EditSettings.stickers`, `MAX_STICKERS`), placed as fractions of the original photo. They
+       are drawn first, right after the kept rectangle is read out, so the crop cuts them and the
+       turns, flips, filter and sliders act on them with the photo (order: stickers, crop, turns,
+       flips, filter, sliders). Each add, delete, duplicate, flip or whole drag is one Undo step
+-      (`EditSession`); a 21st add or duplicate changes nothing. The sheet adds them; no screen draws
+-      them while editing yet.
++      (`EditSession`); a 21st add or duplicate changes nothing.
+    1. **Crop**: copies only the kept rectangle (fractions turned into pixels, rounded, edges put in
+       order, at least 1 x 1). A fixed shape is no special case: choosing it already set the
+       rectangle. Progress 0.25.
+@@ -365,8 +392,15 @@ flowchart TD
+   another keeps the intensity; coming from None it starts at 100; None resets it.
+ - **Crop.** The cropper always shows the photo un-turned and un-flipped. A turn after a crop turns
+   the cropped picture with it (a 16:9 crop turned once comes out 9:16).
++- **Stickers.** At most **20** (`EditSettings.MAX_STICKERS`); a 21st add or duplicate changes
++  nothing and shows a message for about 2.5 seconds. A sticker's width stays between 5 and 100
++  percent of the shown width. While a sticker is being moved it shows no filter in the preview
++  (it does in the saved picture). A sticker wholly outside the crop draws nothing in the saved
++  picture. A picture that cannot be decoded is skipped in Done. The sheet's cross and system Back
++  throw away what was done since it opened, Undo steps included.
+ - **Undo** takes back one action at a time (a chip, a turn, a flip, a crop ratio, one finished crop
+-  gesture, or one whole slider drag), whichever sheet it came from. There is no redo.
++  gesture, one whole slider drag, or one sticker added, deleted, duplicated, mirrored or whole
++  gesture), whichever sheet it came from. There is no redo.
+ - **Back with changes** asks before discarding; the check is on the current settings, so undoing
+   every change leaves without asking.
+ - **No session across restarts.** Settings and Undo steps are not saved; they live as long as the
+@@ -395,6 +429,13 @@ The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
+ (chips, three-column grid, 17/17/6/20 tiles),
+ [`StickerAddTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/StickerAddTest.kt)
+ (add at the shown centre, the limit, tick, cross and Back, the shared recipe),
++and the other sticker tests in the same folder: `StickerCatalogTest.kt`, `StickerSessionTest.kt`,
++`StickerMappingTest.kt`, `StickerGeometryTest.kt`, `StickerSelectionTest.kt`,
++`StickerGestureTest.kt`, `StickerFrameTest.kt`, `StickerOverlayTest.kt`,
++`StickerLivePreviewTest.kt`, `StickerPreviewRendererTest.kt`, `StickerCropperTest.kt`,
++`StickerCompareTest.kt` and `EditProcessorStickerTest.kt` (the order and the blend in Done). The
++Stickers screenshots (pictures 69 to 82 in `app/src/test/screenshots/`) are recorded by
++[`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt),
+ [`DiscardDialogTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/DiscardDialogTest.kt)
+ and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt).
+ Done and the Result screen are covered by
+diff --git a/docs/features/tool-screen.md b/docs/features/tool-screen.md
+index 9ed0652..7752580 100644
+--- a/docs/features/tool-screen.md
++++ b/docs/features/tool-screen.md
+@@ -37,6 +37,26 @@ system Back, restores the settings and Undo steps from when it opened, and its t
+ (`StickerLimitMessage`) and hides itself after about 2.5 seconds. `ToolContent` also passes the sticker overlay's events (select,
+ a gesture's new list, its end, delete, duplicate, mirror) from `PhotoCard` to the ViewModel; the
+ stickers are touchable only while the Stickers sheet is open, Compare is off and Done is idle.
++Why stickers are part of the photo is in
++[ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md); the details are on [Edit](edit.md).
++
++How the Stickers sheet and the photo share the screen:
++
++```mermaid
++flowchart TD
++    TS["ToolScreen (ToolContent)"] --> EB["EditBottomBar: the Stickers sheet replaces the row of tools"]
++    TS --> PC["PhotoCard: LivePreviewImage + StickerOverlay (frame, corner buttons, touches)"]
++    TS --> LM["StickerLimitMessage on the photo's top edge, about 2.5 s"]
++    EB -->|"tile tap"| ADD["ToolViewModel.addSticker: one Undo entry, or the limit message at 20"]
++    PC -->|"drag, pinch, twist, handle"| PRE["previewStickers while moving (no Undo entry)"]
++    PRE -->|"last finger up"| COM["commitSettings: the whole gesture is one Undo entry"]
++    PC -->|"delete, duplicate, mirror"| ONE["one Undo entry each"]
++    EB -->|"tick"| KEEP["confirmStickers: keep everything, close the sheet"]
++    EB -->|"cross or system Back"| CANCEL["cancelStickers: settings and Undo steps back to when it opened"]
++    KEEP --> DONE["Done: EditProcessor draws the stickers first"]
++    ADD --> DONE
++    COM --> DONE
++```
+ 
+ While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
+ Replace are switched off. When an edit fails, a short message at the top of the card says why, and
+@@ -255,6 +275,10 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
+   Back from Result returns to the tool screen; Go home leaves only Home.
+ - [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
+   recorded pictures of the tool screens in light and dark (`verifyRoborazziDebug`).
++- [`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt):
++  the Stickers sheet in each category, a selected sticker, and a sticker under a crop and a
++  filter, in light and dark (pictures 69 to 82). The sticker tests themselves are listed on
++  [Edit](edit.md).
+ 
+ ## Known limits and open items
+ 

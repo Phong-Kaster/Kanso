@@ -37,6 +37,26 @@ system Back, restores the settings and Undo steps from when it opened, and its t
 (`StickerLimitMessage`) and hides itself after about 2.5 seconds. `ToolContent` also passes the sticker overlay's events (select,
 a gesture's new list, its end, delete, duplicate, mirror) from `PhotoCard` to the ViewModel; the
 stickers are touchable only while the Stickers sheet is open, Compare is off and Done is idle.
+Why stickers are part of the photo is in
+[ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md); the details are on [Edit](edit.md).
+
+How the Stickers sheet and the photo share the screen:
+
+```mermaid
+flowchart TD
+    TS["ToolScreen (ToolContent)"] --> EB["EditBottomBar: the Stickers sheet replaces the row of tools"]
+    TS --> PC["PhotoCard: LivePreviewImage + StickerOverlay (frame, corner buttons, touches)"]
+    TS --> LM["StickerLimitMessage on the photo's top edge, about 2.5 s"]
+    EB -->|"tile tap"| ADD["ToolViewModel.addSticker: one Undo entry, or the limit message at 20"]
+    PC -->|"drag, pinch, twist, handle"| PRE["previewStickers while moving (no Undo entry)"]
+    PRE -->|"last finger up"| COM["commitSettings: the whole gesture is one Undo entry"]
+    PC -->|"delete, duplicate, mirror"| ONE["one Undo entry each"]
+    EB -->|"tick"| KEEP["confirmStickers: keep everything, close the sheet"]
+    EB -->|"cross or system Back"| CANCEL["cancelStickers: settings and Undo steps back to when it opened"]
+    KEEP --> DONE["Done: EditProcessor draws the stickers first"]
+    ADD --> DONE
+    COM --> DONE
+```
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and
@@ -255,6 +275,11 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
   Back from Result returns to the tool screen; Go home leaves only Home.
 - [`screenshots/ToolScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/ToolScreenshotTest.kt):
   recorded pictures of the tool screens in light and dark (`verifyRoborazziDebug`).
+- [`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt):
+  the tool row with Stickers (69, 70), the Stickers sheet's Food, Mood, Quote and Emoji tabs
+  (71 to 78), a selected sticker (79, 80), and stickers under a crop and a filter (81, 82), in
+  light and dark. The sticker tests themselves are listed on
+  [Edit](edit.md).
 
 ## Known limits and open items
 

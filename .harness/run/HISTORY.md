@@ -44,3 +44,6 @@
 
 ### Iteration 7 - 2026-10-26
 - Phase 5 (T-005): Worker wrote StickerScreenshotTest (14 pictures); recorded and opened each. 69/70 first duplicated 71/72, so a second pass made them the tool row after a sticker was added (dot on Stickers). verifyRoborazziDebug for the class and OneTypePerFile/KdocCoverage green. No Reviewer (test-only).
+
+### Iteration 8 - 2026-10-26
+- Phase 6 (T-006): Worker wrote docs and the missing ADR-004; Reviewer found 3 false sentences (cropper shows stickers, preview renders stickers too, picture decode size) and 6 minor; one fix pass. Scope check green. All tasks complete: DONE-candidate recorded.
