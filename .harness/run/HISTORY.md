@@ -47,3 +47,6 @@
 
 ### Iteration 8 - 2026-10-26
 - Phase 6 (T-006): Worker wrote docs and the missing ADR-004; Reviewer found 3 false sentences (cropper shows stickers, preview renders stickers too, picture decode size) and 6 minor; one fix pass. Scope check green. All tasks complete: DONE-candidate recorded.
+
+### Iteration 9 - 2026-10-26 (Verifier)
+- Fresh assemble, test and lint: exit 0. verifyRoborazziDebug: 15 failures, all older pictures outside D-001's list (A-001, Tier 3; criteria 27 and 34 assumed). Static criteria 26, 29, 30, 32, 33, 35, 37 and 39 hold. 38 and 40: a fresh reader found a dead `EditPill.kt` path, 8 false or imprecise doc sentences and 2 stale KDocs. Filed as T-007, DONE-candidate cleared. Evidence: evidence/v-verifier-2026-10-26.md. Created ASSUMPTIONS.md and RECOVERY.md, which were missing since the switch to Autonomous at D-001.

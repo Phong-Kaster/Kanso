@@ -22,3 +22,6 @@ Reviewer found dead `StickerImage` and a second composable `StickerPlace` in `St
 
 ## Iteration 8 - Tier 1: ADR-004 joins T-006
 The planned Wiring Worker never wrote `docs/adr/ADR-004-sticker-is-part-of-the-photo.md`; it joins T-006's scope. PRD, DoD, architecture unchanged.
+
+## Iteration 9 (Verifier) - Tier 1: T-007 added
+The Verifier's docs check (DoD 38 and 40's pre-check) found a dead `EditPill.kt` path and 8 false or imprecise sentences, plus 2 stale KDocs. They are filed as T-007, and the DONE-candidate is cleared. PRD, DoD and architecture are unchanged. Also A-001 (Tier 3, see ASSUMPTIONS.md): the 15 stale screenshot references are not re-recorded, so criteria 27 and 34 are assumed, not met.
