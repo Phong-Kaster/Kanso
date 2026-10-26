@@ -10,6 +10,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.Sticker
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.edit.edit.EditSession
@@ -358,6 +359,9 @@ class ToolViewModel(
     /** The key the next added sticker gets; it only grows, so a key is never used twice. */
     private var nextStickerKey = 1L
 
+    /** How far a duplicated sticker sits from the first, as a fraction of the shown picture's width. */
+    private val DUPLICATE_OFFSET = 0.04f
+
     /** The person tapped the category chip [category]: its stickers fill the sheet's grid. */
     fun chooseStickerCategory(category: StickerCategory) {
         mutableState.update { it.copy(stickerCategory = category) }
@@ -388,6 +392,90 @@ class ToolViewModel(
         publishSession(session.addSticker(mapping.centredSticker(key, sticker.pictureId)))
         mutableState.update { it.copy(selectedStickerKey = key) }
         requestPreview()
+    }
+
+    /** True while the Stickers sheet is open and nothing (Compare, Done) has made it inert. */
+    private fun stickerEditingOpen(): Boolean {
+        val current = mutableState.value
+        return tool == Tool.EDIT && current.openTool == EditTool.STICKERS &&
+            !current.comparing && !current.finishing
+    }
+
+    /**
+     * Selects the sticker with [key], or none for null (a touch on empty photo). Selecting is not
+     * an action: the settings and the undo history stay as they are. A key that names no sticker
+     * selects none. Ignored unless the Stickers sheet is open and not inert.
+     */
+    fun selectSticker(key: Long?) {
+        if (!stickerEditingOpen()) return
+        val known = key != null && session.settings.stickers.any { it.key == key }
+        mutableState.update { it.copy(selectedStickerKey = if (known) key else null) }
+    }
+
+    /**
+     * Copies the sticker [key] as one action (one Undo step): same picture, width, turn and
+     * mirror, moved 4 percent of the SHOWN picture's width right and down, then selected. The
+     * offset is worked out on the shown picture and carried back through [StickerMapping], so a
+     * turned or flipped photo still moves the copy right and down as the person sees it. At the
+     * limit nothing changes and the limit message is asked for, as in [addSticker].
+     */
+    fun duplicateSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!stickerEditingOpen()) return
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val source = session.settings.stickers.firstOrNull { it.key == key } ?: return
+        if (!session.settings.canAddSticker) {
+            mutableState.update { it.copy(stickerLimitShown = true) }
+            return
+        }
+        val settings = session.settings
+        val mapping = StickerMapping(original.width, original.height, settings)
+        // The shown picture's size in pixels: the crop, with width and height swapped by a quarter turn.
+        val cropW = (settings.crop.right - settings.crop.left).coerceAtLeast(0.01f) * original.width
+        val cropH = (settings.crop.bottom - settings.crop.top).coerceAtLeast(0.01f) * original.height
+        val turned = settings.quarterTurns % 2 != 0
+        val shownW = if (turned) cropH else cropW
+        val shownH = if (turned) cropW else cropH
+        val shownCentre = mapping.originalToShown(StickerMapping.Point(source.centreX, source.centreY))
+        val moved = mapping.shownToOriginal(
+            StickerMapping.Point(
+                shownCentre.x + DUPLICATE_OFFSET,
+                // The same distance in pixels as sideways, as a fraction of the height.
+                shownCentre.y + DUPLICATE_OFFSET * shownW / shownH,
+            ),
+        )
+        val newKey = nextStickerKey++
+        this.processorFor = processorFor
+        publishSession(
+            session.duplicateSticker(key, newKey, moved.x - source.centreX, moved.y - source.centreY),
+        )
+        mutableState.update { it.copy(selectedStickerKey = newKey) }
+        requestPreview()
+    }
+
+    /** Takes the sticker [key] off the photo as one action; nothing is selected afterwards. */
+    fun deleteSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+        this.processorFor = processorFor
+        publishSession(session.deleteSticker(key))
+        mutableState.update { it.copy(selectedStickerKey = null) }
+        requestPreview()
+    }
+
+    /** Mirrors the sticker [key] as one action; flipping twice returns the original settings. */
+    fun flipSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+        this.processorFor = processorFor
+        publishSession(session.flipSticker(key))
+        requestPreview()
+    }
+
+    /**
+     * A move, pinch, turn or resize is under way and the stickers now are [list]: the photo shows
+     * it at once, but no undo entry is made until [commitSettings] (the last finger up).
+     */
+    fun previewStickers(list: List<Sticker>, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!stickerEditingOpen()) return
+        previewSettings(session.settings.copy(stickers = list), processorFor)
     }
 
     /** The limit message has been shown long enough: hides it again. */
@@ -546,10 +634,22 @@ class ToolViewModel(
         mutableState.update { it.copy(discardPrompt = false) }
     }
 
-    /** Makes [new] the current session and shows its settings and whether Undo can be used. */
+    /**
+     * Makes [new] the current session and shows its settings and whether Undo can be used. The
+     * selection is pruned here, on every settings change: a selected key that is no longer one of
+     * the stickers (the add was undone, the sticker deleted) becomes none.
+     */
     private fun publishSession(new: EditSession) {
         session = new
-        mutableState.update { it.copy(settings = new.settings, canUndo = new.canUndo) }
+        mutableState.update { state ->
+            val selected = state.selectedStickerKey
+            val stillThere = selected != null && new.settings.stickers.any { it.key == selected }
+            state.copy(
+                settings = new.settings,
+                canUndo = new.canUndo,
+                selectedStickerKey = if (stillThere) selected else null,
+            )
+        }
     }
 
     // --- The Edit screen's live filter preview -----------------------------------------------------

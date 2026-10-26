@@ -34,7 +34,9 @@ photo next to a Compare switch, so its top bar holds Done alone. The fifth tool,
 a sheet that replaces the row (the five entries are hidden while it is open); its cross, or the
 system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
 "20 stickers at most" message is drawn on the photo's top edge by `ToolContent`
-(`StickerLimitMessage`) and hides itself after about 2.5 seconds.
+(`StickerLimitMessage`) and hides itself after about 2.5 seconds. `ToolContent` also passes the sticker overlay's events (select,
+a gesture's new list, its end, delete, duplicate, mirror) from `PhotoCard` to the ViewModel; the
+stickers are touchable only while the Stickers sheet is open, Compare is off and Done is idle.
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and

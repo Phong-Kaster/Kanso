@@ -58,6 +58,7 @@ import com.phongkaster.kanso.ui.tool.components.EditPhotoArea
 import com.phongkaster.kanso.ui.tool.components.editbottombar.EditBottomBar
 import com.phongkaster.kanso.ui.tool.components.photocard.PhotoCard
 import com.phongkaster.kanso.ui.tool.components.StickerLimitMessage
+import com.phongkaster.kanso.data.edit.edit.Sticker
 import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
@@ -317,6 +318,12 @@ fun ToolScreen(
             }
         },
         onStickerLimitShown = viewModel::onStickerLimitMessageShown,
+        onStickerSelect = viewModel::selectSticker,
+        onStickerPreview = { list -> viewModel.previewStickers(list, processorFor) },
+        onStickerCommit = viewModel::commitSettings,
+        onStickerDelete = { viewModel.deleteSticker(it, processorFor) },
+        onStickerDuplicate = { viewModel.duplicateSticker(it, processorFor) },
+        onStickerFlip = { viewModel.flipSticker(it, processorFor) },
     )
 
     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
@@ -376,6 +383,9 @@ fun ToolScreen(
  * moves from the top bar into the row; [onCompare] is called with the Compare switch's new value,
  * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
  * row tapped. The other four tools never call these three.
+ *
+ * The `onSticker...` callbacks are the sticker overlay's events (select, a gesture's new list, the
+ * gesture's end, delete, duplicate, flip), handed on to the photo card; only Edit uses them.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -393,6 +403,12 @@ fun ToolContent(
     editSheet: @Composable (EditTool) -> Unit = {},
     editCropper: (@Composable () -> Unit)? = null,
     onStickerLimitShown: () -> Unit = {},
+    onStickerSelect: (Long?) -> Unit = {},
+    onStickerPreview: (List<Sticker>) -> Unit = {},
+    onStickerCommit: () -> Unit = {},
+    onStickerDelete: (Long) -> Unit = {},
+    onStickerDuplicate: (Long) -> Unit = {},
+    onStickerFlip: (Long) -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
     Scaffold(
@@ -458,6 +474,12 @@ fun ToolContent(
                             onReplace = onReplace,
                             onDismissFailure = onDismissFailure,
                             showReplace = false,
+                            onStickerSelect = onStickerSelect,
+                            onStickerPreview = onStickerPreview,
+                            onStickerCommit = onStickerCommit,
+                            onStickerDelete = onStickerDelete,
+                            onStickerDuplicate = onStickerDuplicate,
+                            onStickerFlip = onStickerFlip,
                             modifier = Modifier.fillMaxSize(),
                         )
                         // The "20 stickers at most" card, a moment on the photo's top edge.

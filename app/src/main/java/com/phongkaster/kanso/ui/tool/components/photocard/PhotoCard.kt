@@ -31,6 +31,12 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.StickerCatalog
+import com.phongkaster.kanso.data.edit.edit.StickerMapping
+import com.phongkaster.kanso.ui.tool.components.photocard.stickeroverlay.StickerOverlay
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.common.BlurredBackdrop
@@ -69,6 +75,12 @@ import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewImage
  * Replace is switched off while an edit runs, so the screen cannot be left under work that has
  * not finished. With [showReplace] false (the Edit screen) no Replace chip is drawn at
  * all, so nothing sits at the photo's bottom right.
+ *
+ * **Stickers (Edit screen only).** The live picture carries a [StickerOverlay] with the stickers of
+ * `state.settings`. It is touchable only while the Stickers sheet is open and Done is not running;
+ * with Compare on the live picture is not drawn at all, so the original shows with no stickers.
+ * The `onSticker...` callbacks pass the overlay's events up (select, a gesture's new list, the
+ * gesture's end, and the three frame buttons); they default to doing nothing.
  */
 @Composable
 internal fun PhotoCard(
@@ -77,6 +89,12 @@ internal fun PhotoCard(
     onDismissFailure: () -> Unit,
     modifier: Modifier = Modifier,
     showReplace: Boolean = true,
+    onStickerSelect: (Long?) -> Unit = {},
+    onStickerPreview: (List<Sticker>) -> Unit = {},
+    onStickerCommit: () -> Unit = {},
+    onStickerDelete: (Long) -> Unit = {},
+    onStickerDuplicate: (Long) -> Unit = {},
+    onStickerFlip: (Long) -> Unit = {},
 ) {
     val running = state.processing as? ToolUiState.Processing.Running
     Card(
@@ -131,6 +149,27 @@ internal fun PhotoCard(
                                 bitmap = state.filterPreview ?: current.bitmap,
                                 settings = state.settings,
                             )
+                            // The stickers sit on top of the live picture, inside the same box, so
+                            // the overlay's coordinates are the shown picture's. They are drawn with
+                            // any tool open (they are part of the photo); only the Stickers sheet,
+                            // with Compare off and Done idle, gives them touches, a frame and buttons.
+                            if (state.settings.stickers.isNotEmpty()) {
+                                val mapping = remember(current.bitmap, state.settings) {
+                                    StickerMapping(current.bitmap.width, current.bitmap.height, state.settings)
+                                }
+                                StickerOverlay(
+                                    stickers = state.settings.stickers,
+                                    selectedKey = state.selectedStickerKey,
+                                    mapping = mapping,
+                                    enabled = state.openTool == EditTool.STICKERS && !state.finishing,
+                                    onSelect = onStickerSelect,
+                                    onPreview = onStickerPreview,
+                                    onCommit = onStickerCommit,
+                                    onDelete = onStickerDelete,
+                                    onDuplicate = onStickerDuplicate,
+                                    onFlip = onStickerFlip,
+                                )
+                            }
                         }
                     } else {
                         PhotoView(image = image, photoUri = state.photoUri)
@@ -222,6 +261,40 @@ private fun PhotoCardPreview() {
             ),
             onReplace = {},
             onDismissFailure = {},
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+/** The Edit screen's photo with one sticker selected and the Stickers sheet open, light and dark. */
+@PreviewLightDark
+@Composable
+private fun PhotoCardStickersPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        PhotoCard(
+            state = ToolUiState(
+                tool = Tool.EDIT,
+                photoUri = SAMPLE_PHOTO_URI,
+                photo = ToolUiState.PhotoState.Ready(samplePhoto()),
+                settings = EditSettings(
+                    stickers = listOf(
+                        Sticker(
+                            key = 1,
+                            pictureId = StickerCatalog.all[0].pictureId,
+                            centreX = 0.5f,
+                            centreY = 0.5f,
+                            width = 0.3f,
+                            degrees = 10f,
+                            mirrored = false,
+                        ),
+                    ),
+                ),
+                openTool = EditTool.STICKERS,
+                selectedStickerKey = 1L,
+            ),
+            onReplace = {},
+            onDismissFailure = {},
+            showReplace = false,
             modifier = Modifier.fillMaxSize(),
         )
     }

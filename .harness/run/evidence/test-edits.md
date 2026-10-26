@@ -17,3 +17,7 @@ Existing tests changed or removed, each with its reason (DoD 35). New test files
 - New: `StickerMappingTest`, `StickerCatalogTest`, `StickersPanelTest`, `StickerAddTest`; new tests in `EditToolRowTest` (`the_row_lists_five_tools_in_order_left_to_right`, `all_five_entries_fit_inside_the_row_without_scrolling`, `tapping_stickers_opens_the_sheet_in_place_of_the_row`, `the_stickers_dot_is_absent_then_present_after_one_sticker_then_absent_after_undo`) and `EditLayoutTest` (`the_stickers_sheet_replaces_the_row_and_leaves_the_photo_alone`).
 - Baselines re-recorded (D-001): 51, 52, 55-68 (old copies in `evidence/baseline-diffs/`). Their reference pictures were already stale before this Phase (HEAD `verifyRoborazziDebug` fails 33 tests, identical count); non-listed stale pictures were left untouched.
 - `StickerAddTest.kt` (new this Phase): import of `STICKER_LIMIT_MESSAGE_TAG` follows `StickerLimitMessage` to `ui.tool.components` (review B4).
+
+## Phase 3 (T-003)
+- No existing test file edited, moved or removed.
+- New: `tool/edit/StickerGeometryTest.kt` (handle, hit-test and pinch maths; DoD 8), `StickerFrameTest.kt` (corner buttons delete, duplicate, flip, resize handle, content descriptions, 48 dp; DoD 5, 6, 7, 8, 22), `StickerGestureTest.kt` (swipe, pinch, twist on a turned and flipped photo, edge clamp, flip mid-drag; DoD 9), `StickerSelectionTest.kt` (select, overlap, closed-sheet inertness, undo order, pruning; DoD 10, 11, 12, 21), `StickerOverlayTest.kt` (Compare shows the original; DoD 14).

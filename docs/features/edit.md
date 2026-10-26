@@ -45,9 +45,15 @@ network are used. You can:
   the picture you see (after the crop, turns and flips), a third of its width, selected; each tap
   is one Undo step and a photo holds at most 20 ("A photo can hold 20 stickers at most" appears when you try a 21st).
   The tick keeps the changes; the cross, and the system **Back**, throw away everything done since
-  the sheet opened, Undo steps included. Not done yet: the stickers are not drawn on the photo on
-  screen while you edit, there is no selection frame and no move, resize, turn, flip or delete
-  gesture. Done does draw them into the saved picture.
+  the sheet opened, Undo steps included. The stickers are drawn on the photo on screen. While the
+  sheet is open a tap selects one (a tap on empty photo selects none): a frame with four corner
+  buttons, top-left delete, top-right duplicate (a copy 4 percent of the shown width right and
+  down), bottom-left mirror, bottom-right a handle that resizes and turns it together. One finger
+  drags, two fingers pinch and twist; a newer sticker lies on top. Each add, delete, duplicate,
+  mirror and each whole drag, pinch or handle pull is one Undo step; selecting is not. Closing the
+  sheet by tick or cross selects none. Done draws them into the saved picture. Not done yet: the
+  on-screen stickers do not get the filter and colour sliders (Done applies them), and the
+  cropper does not show them.
 - **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
@@ -197,7 +203,16 @@ main thread; no pixel is computed.
   do nothing: Back is consumed (the screen stays) but cancels nothing, so Done draws the stickers
   as they were when it was tapped.
 - **Undo** clears `selectedStickerKey` when the undone step removed the selected sticker.
-- **Drawing.** Only Done draws stickers (`EditProcessor`, `DrawableStickerPictures`), see below.
+- **On the photo.** `PhotoCard` draws a `StickerOverlay` over the live picture (not while Compare
+  is on). Touches work only while the sheet is open, Compare is off and Done is not running
+  (`stickerEditingOpen`). `StickerGestures` picks the topmost sticker under the finger and calls
+  `selectSticker`; a drag, pinch or handle pull calls `previewStickers` (no Undo entry) and its last
+  finger up calls `commitSettings` (one Undo entry). `StickerFrame` and `StickerCornerButton` call
+  `deleteSticker`, `duplicateSticker` (offset 4 percent of the shown width, via `StickerMapping`)
+  and `flipSticker`; the handle resizes and turns about the centre. `selectedStickerKey` lives in
+  `ToolUiState`, and `publishSession` clears it when its sticker is gone.
+- **Drawing.** Done draws the saved picture's stickers (`EditProcessor`, `DrawableStickerPictures`),
+  see below; the overlay draws the on-screen ones without filter or colour sliders.
 
 ### Done, the full render and the Result screen
 

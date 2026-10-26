@@ -78,7 +78,7 @@ from the control to the saved file; none of them has yet been checked on the own
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
 | Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
-| Edit: Stickers | Partial | The fifth tool. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. Done already draws the stickers into the saved photo (first step of `EditProcessor`). Not done yet: nothing is drawn on the photo on screen while editing, there is no selection frame and no move, resize, turn, flip or delete gesture, so a sticker is visible only after Done. |
+| Edit: Stickers | Partial | The fifth tool. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by a tap (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`). Not done yet: the on-screen stickers are drawn as they are, without the filter and the colour sliders (Done applies those), and the cropper does not show them. |
 | Edit: Undo and Compare | Works | The last two entries of the bottom row, each an icon over its title; Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
@@ -207,16 +207,38 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    cross and Back do nothing (Back is consumed, so the screen stays): Done draws the stickers as
    they were when it was tapped. Undoing the step that added the selected sticker clears the
    selection.
-5. **Drawing.** Only Done draws the stickers: `data/edit/edit/EditProcessor.kt` (first step,
+5. **Drawing.** Done draws the saved photo's stickers: `data/edit/edit/EditProcessor.kt` (first step,
    `Dispatchers.Default`) decodes each picture with `data/edit/edit/DrawableStickerPictures.kt`
    (`BitmapFactory`, `inSampleSize`, nothing cached) and blends it into the cropped pixels, so the
    saved JPEG (quality 95, `Pictures/Kanso`) holds them. The one recipe from settings to processor,
    `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the cropper, the
    sheets, the sticker taps and Done, so a sticker never disappears in one of them.
-6. **Not done yet.** The photo on screen does not show the stickers while you edit, there is no
-   selection frame, and a sticker cannot be moved, resized, turned, flipped or deleted by a gesture
-   (the model supports it: `EditSession`). On failure of a picture to decode, that sticker is
-   skipped in Done.
+6. **On the photo.** `PhotoCard.kt` puts a `StickerOverlay`
+   (`ui/tool/components/photocard/stickeroverlay/StickerOverlay.kt`) over the live picture, inside
+   the same box, so it is drawn with any tool open, but not while Compare is on. A newer sticker
+   lies on top of an older one. Touches work only while the Stickers sheet is open, Compare is off
+   and Done is not running (`ToolViewModel.stickerEditingOpen`); otherwise the stickers are only
+   drawn. One handler (`StickerGestures.kt`, raw pointer input on the main thread) finds the
+   topmost sticker under the finger on its turned rectangle: a tap on it calls `selectSticker`, a
+   tap on empty photo selects none. One finger drags the sticker by the finger's move; two fingers
+   scale it by the ratio of their distance and turn it by the change of their angle, with no
+   damping (width kept between 5 and 100 percent of the shown width, `StickerGeometry.kt`). Each
+   move calls `previewStickers`, which shows the new list at once and makes no Undo entry; the
+   last finger up calls `commitSettings`, so a whole drag or pinch is one Undo step.
+7. **The frame.** The selected sticker gets `StickerFrame.kt`: an outline that turns with it and
+   four corner buttons (`StickerCornerButton.kt`): top-left deletes (`deleteSticker`, nothing
+   selected afterwards), top-right duplicates (`duplicateSticker`: the copy sits 4 percent of the
+   shown width to the right and down as the person sees it, and is selected; at 20 the limit
+   message shows), bottom-left mirrors (`flipSticker`), bottom-right is a handle that resizes and
+   turns the sticker about its centre together, keeping its shape; a whole handle pull is one
+   Undo step. Delete, duplicate and mirror are one Undo step each; selecting is not.
+8. **Selection.** It lives in `ToolUiState.selectedStickerKey`, not in the edit settings. It is
+   pruned in `publishSession` whenever its sticker is gone (Undo, delete), and closing the sheet
+   by the tick or the cross selects none.
+9. **Not done yet.** The overlay draws each picture as it is: the live filter preview and the
+   colour sliders do not act on the stickers while you edit (Done applies them), and the cropper
+   does not draw them. On failure of a picture to decode, that sticker is skipped in Done, which
+   renders at 2000 px at most on `Dispatchers.Default`.
 
 ### Remove background, Enhance, Retouch and Artistic
 
