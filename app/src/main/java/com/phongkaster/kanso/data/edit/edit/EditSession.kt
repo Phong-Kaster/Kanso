@@ -80,6 +80,45 @@ data class EditSession(
     }
 
     /**
+     * Puts [sticker] on top of the others, as one action. When the photo already holds
+     * [EditSettings.MAX_STICKERS] stickers nothing is added and the session is returned as it is
+     * (no undo entry).
+     */
+    fun addSticker(sticker: Sticker): EditSession {
+        if (!settings.canAddSticker) return this
+        return change(settings.copy(stickers = settings.stickers + sticker))
+    }
+
+    /** Takes the sticker with [key] off the photo, as one action; an unknown key changes nothing. */
+    fun deleteSticker(key: Long): EditSession =
+        change(settings.copy(stickers = settings.stickers.filter { it.key != key }))
+
+    /**
+     * Copies the sticker with [key] as one action: the copy has the key [newKey] (chosen by the
+     * caller, since this class never makes keys), sits [offsetX] and [offsetY] away (fractions of
+     * the original photo, so the copy does not hide the first) and goes on top. With no such
+     * sticker, or a full photo, nothing happens and the session is returned as it is.
+     */
+    fun duplicateSticker(key: Long, newKey: Long, offsetX: Float, offsetY: Float): EditSession {
+        if (!settings.canAddSticker) return this
+        val original = settings.stickers.firstOrNull { it.key == key } ?: return this
+        val copy = original.copy(
+            key = newKey,
+            centreX = original.centreX + offsetX,
+            centreY = original.centreY + offsetY,
+        )
+        return change(settings.copy(stickers = settings.stickers + copy))
+    }
+
+    /** Mirrors the sticker with [key] left to right (or back), as one action. */
+    fun flipSticker(key: Long): EditSession =
+        change(
+            settings.copy(
+                stickers = settings.stickers.map { if (it.key == key) it.copy(mirrored = !it.mirrored) else it },
+            ),
+        )
+
+    /**
      * The person chose the crop shape [ratio], as one action.
      *
      * A fixed ratio locks the handles to it ([EditSettings.cropRatio]) and sets the crop to the

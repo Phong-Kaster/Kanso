@@ -134,7 +134,10 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    cropper, and renders the whole current settings once from the decoded original (at most twice
    the screen's longest edge), shrunk to at most 2000 px (`WorkingSize.EDIT` in
    `data/edit/WorkingSize.kt`), with `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, on
-   the pixels as one `IntArray`: crop, quarter turns, flips, the filter (look-ups from
+   the pixels as one `IntArray`: stickers (drawn first, cut by the crop, then turned, flipped,
+   filtered and coloured with the photo; the settings hold up to 20, each add, delete, duplicate,
+   flip or whole drag is one Undo step; not wired to any screen yet, no sticker UI exists),
+   crop, quarter turns, flips, the filter (look-ups from
    `data/edit/edit/FilterLut.kt` and `data/edit/edit/FilterPreset.kt`, images bundled in
    `libs/imageprocessor.aar` and `libs/editimage.aar`, read from the app's assets with no
    download), the colour matrix, then every pixel made opaque, giving a new `ARGB_8888` bitmap

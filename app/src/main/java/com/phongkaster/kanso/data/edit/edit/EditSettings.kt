@@ -53,8 +53,16 @@ data class EditSettings(
      * In between, each pixel is mixed from the unfiltered and the fully filtered colour.
      */
     val filterIntensity: Float = 1f,
+    /**
+     * The stickers on the photo, oldest first: a later one is drawn on top of an earlier one. At
+     * most [MAX_STICKERS]. Which one is selected is not kept here (see [Sticker]).
+     */
+    val stickers: List<Sticker> = emptyList(),
 ) {
 
+    /** True while the photo holds fewer than [MAX_STICKERS] stickers, so another may be added. */
+    val canAddSticker: Boolean
+        get() = stickers.size < MAX_STICKERS
     /** True when at least one of the four colour sliders is away from its middle. */
     val hasColourChange: Boolean
         get() = brightness != MIDDLE || contrast != MIDDLE || saturation != MIDDLE || warmth != MIDDLE
@@ -70,7 +78,7 @@ data class EditSettings(
      * tool row. The screen uses it to know whether there is anything to save or to lose.
      */
     val isNeutral: Boolean
-        get() = EditTool.entries.all { isNeutral(it) }
+        get() = EditTool.entries.all { isNeutral(it) } && stickers.isEmpty()
 
     /**
      * True when the controls of [tool]'s sheet change nothing right now, so the tool row can mark
@@ -112,5 +120,8 @@ data class EditSettings(
 
         /** The highest value of a colour slider. */
         const val MAX = 1f
+
+        /** The most stickers one photo may hold. */
+        const val MAX_STICKERS = 20
     }
 }

@@ -5,7 +5,7 @@
 
 ## Status
 
-- [ ] APPROVED — approve via the pending `.harness/run/ESCALATION.md` (D-001); edit criteria freely before approving.
+- [x] APPROVED — D-001, 2026-10-26 (with the owner's edits to criteria 3, 11, 12, 27, 28 and 41-43).
       Approval covers the Verification Class of each criterion, not only its wording.
 
 ## Acceptance Criteria
@@ -13,6 +13,11 @@
 The base for every "since the base" check is `fadd7c4` (the commit this run started from; `reference/pinity-stickers/`
 arrived in `8114d3d`). Picture numbers 69 to 82 are new; light pictures have odd numbers, dark ones even.
 Criteria 2, 18 and 20 answer questions the PRD leaves open (see Questions under Removals): edit them if you meant otherwise.
+
+**Edited by the owner at approval (2026-10-26, D-001).** The PRD's "panel with tabs over a grid" became a
+Stickers **sheet** that is confirmed or cancelled: criteria 3, 11 and 12 were rewritten, 27 and 28 now say
+"category chip" for "tab", and criteria 41, 42 and 43 were added (after 22, so no other number moved). Where the
+PRD and this DoD differ on the sheet, this DoD is the owner's later word.
 
 ### Behaviour
 
@@ -22,8 +27,8 @@ Criteria 2, 18 and 20 answer questions the PRD leaves open (see Questions under 
 2. [machine] On a phone 411 dp wide, all five tools are fully on screen beside Compare, without scrolling the row.
    Proof: the same test at qualifiers `w411dp-h891dp-xxhdpi`: each of the five entries' bounds (`positionInRoot` and size) lies inside the row's visible bounds, and the row's horizontal scroll position is 0.
 
-3. [machine] The Stickers panel has four tabs, Food, Mood, Quote and Emoji, and each tab shows that category's stickers: 17, 17, 6 and 20.
-   Proof: a JVM test of the sticker catalogue: four categories in that order with 17/17/6/20 entries (60 in all), each entry pointing at an `img_sticker_*` drawable that decodes. A Robolectric Compose test, driven from the Stickers panel just opened (Food chosen), taps each tab in turn and counts that category's stickers in the grid by tag, scrolling through the whole grid.
+3. [machine] The Stickers sheet has two rows: on top, a horizontally scrolling row of category chips, Food, Mood, Quote and Emoji, in Pinity's chip style; under it, a vertically scrolling grid three stickers wide showing the chosen category's stickers: 17, 17, 6 and 20.
+   Proof: a JVM test of the sticker catalogue: four categories in that order with 17/17/6/20 entries (60 in all), each entry pointing at an `img_sticker_*` drawable that decodes. A Robolectric Compose test, driven from the Stickers sheet just opened (Food chosen): the chip row is a `LazyRow` and the sticker grid a `LazyVerticalGrid` with exactly 3 columns (three items share one `positionInRoot` y, the fourth starts a new row); tapping each chip in turn marks it chosen and, scrolling through the whole grid, counts that category's stickers by tag.
 
 4. [machine] Tapping a sticker in the panel puts it in the middle of the picture as shown, about a third of the shown picture's width, and selects it.
    Proof: a ViewModel or Compose test driven from a photo cropped off-centre and turned one quarter turn: one tap on a grid item gives one sticker; mapped to the shown picture its centre is (0.5, 0.5) ± 0.01 and its width is between 0.30 and 0.37 of the shown picture's width; the screen state's selected sticker is that sticker.
@@ -46,11 +51,11 @@ Criteria 2, 18 and 20 answer questions the PRD leaves open (see Questions under 
 10. [machine] Tapping another sticker selects that one, tapping the photo away from every sticker selects none, and a newer sticker lies on top of an older one.
     Proof: driven from two overlapping stickers, the older selected: a tap where only the newer lies selects it; a tap on the overlap selects the newer; the sticker nodes' semantics order (and draw order) is oldest first; a tap on empty photo selects none; a tap on the selected sticker leaves its picture unchanged (Pinity's swap is dropped); no tap changes the edit settings.
 
-11. [machine] Stickers can be touched only while the Stickers panel is open; with any other tool open, or none, a touch on a sticker does nothing, and closing the Stickers panel selects none.
-    Proof: driven from one sticker placed and the Stickers panel then closed: with Filters open, and again with no tool open, a tap and a swipe on the sticker's shown position leave the settings and the undo history unchanged, select nothing, and draw no sticker frame. Driven from the panel open with a sticker selected, closing the panel leaves none selected.
+11. [machine] Stickers can be touched only while the Stickers sheet is open; with any other tool open, or none, a touch on a sticker does nothing, and closing the Stickers sheet (by ✓ or by ✕) selects none.
+    Proof: driven from one sticker placed and the Stickers sheet then closed with ✓: with Filters open, and again with no tool open, a tap and a swipe on the sticker's shown position leave the settings and the undo history unchanged, select nothing, and draw no sticker frame. Driven from the sheet open with a sticker selected, closing it with ✓, and again with ✕, leaves none selected.
 
-12. [machine] Undo takes back sticker actions one at a time, in the same history as the other edits: an add, a delete, a duplicate, a flip, and one whole drag, pinch or handle pull each count as one action; selecting a sticker is not an action.
-    Proof: `EditSession` JVM tests (model `tool/edit/EditSessionTest.kt`): add, delete, duplicate and flip each push exactly one entry; a gesture of 50 moves between finger-down and finger-up pushes exactly one, and its undo restores the settings from before the gesture; a mixed sequence (crop, add, filter, drag) undoes in reverse order. A ViewModel test: selecting and deselecting change neither the undo history nor `canUndo`.
+12. [machine] Undo takes back sticker actions one at a time, in the same history as the other edits, both while the Stickers sheet is open and after ✓: an add, a delete, a duplicate, a flip, and one whole drag, pinch or handle pull each count as one action; selecting a sticker is not an action. For example, add a sticker, turn it, flip it, resize it: four taps of Undo take back the resize, then the flip, then the turn, then the sticker disappears.
+    Proof: `EditSession` JVM tests (model `tool/edit/EditSessionTest.kt`): add, delete, duplicate and flip each push exactly one entry; a gesture of 50 moves between finger-down and finger-up pushes exactly one, and its undo restores the settings from before the gesture; a mixed sequence (crop, add, filter, drag) undoes in reverse order; the owner's sequence add → turn (handle) → flip → resize (handle) undoes in exactly four steps, each giving the settings from before that action, the fourth leaving no sticker. A Compose test drives the same sequence with the sheet open and taps the screen's Undo four times, then repeats it after ✓ with the sheet closed. A ViewModel test: selecting and deselecting change neither the undo history nor `canUndo`.
 
 13. [machine] A photo holds at most 20 stickers: adding a 21st, from the panel or by duplicating, adds nothing and shows a short message.
     Proof: an `EditSession` test driven from 20 stickers: an add and a duplicate each leave settings and undo history unchanged. A Compose test driven from 20 stickers taps a grid item and finds the limit message (from the run's new `strings_stickers.xml`) displayed, with the count still 20.
@@ -82,6 +87,15 @@ Criteria 2, 18 and 20 answer questions the PRD leaves open (see Questions under 
 22. [machine] Each corner button can be found by a screen reader and is big enough to tap.
     Proof: a Compose test driven from one selected sticker: each of the four corner buttons has a content description from the run's strings and a touch target of at least 48 × 48 dp (model `test/a11y/TouchTargetCheck.kt`).
 
+41. [machine] Tapping Stickers opens the Stickers sheet in place of the row of tools, with a ✕ button at its top left and a ✓ button at its top right; the photo keeps its size while the sheet is open.
+    Proof: a Robolectric Compose test driven from a photo loaded in Edit: before, the five `editToolTag(...)` nodes are displayed; after tapping Stickers, none of them is displayed, the sheet's ✕ and ✓ nodes are, ✕ left of ✓ and both in the sheet's top row by `positionInRoot`, each with a content description from the run's strings and a 48 × 48 dp touch target; the photo area's bounds are equal before and after opening the sheet (as `EditLayoutTest.kt` checks for the other tools).
+
+42. [machine] ✓ keeps every sticker change made since the sheet opened, closes the sheet and shows the row of tools again.
+    Proof: driven from a photo with one earlier sticker, the sheet then opened: add a sticker and move the earlier one, tap ✓: the settings hold both changes, the undo history keeps each action as its own entry (criterion 12), the sheet's nodes are gone and the five tool entries are displayed again.
+
+43. [machine] ✕, and the system Back while the sheet is open, put the photo and the Undo history back exactly as they were when the sheet opened, close the sheet and show the row of tools again; stickers confirmed in an earlier sheet stay.
+    Proof: an `EditSession`/ViewModel JVM test driven from a photo with one sticker confirmed earlier and a crop: open the sheet, add two stickers, flip and drag the earlier one, then cancel: the settings and the undo history equal the ones from the moment the sheet opened (the earlier sticker unflipped and in its old place, the crop kept), and `canUndo` is what it was. A Compose test does the same through the ✕ node, and again through `Espresso.pressBack()`, and finds the sheet closed and the five tool entries displayed.
+
 23. [machine-then-human] On a phone, a person can add, drag, pinch, twist, delete, duplicate, flip and resize stickers, and with another tool open the stickers do not respond.
     Proof: pre-check on the emulator, or the A13 if nobody is using it, through `foreman-device.ps1`, driven from a fresh debug install with photo access granted and a photo already in the device's gallery, opened in Edit: open Stickers, tap a sticker, drag it, and the screen dump shows its frame — written as "did not fail when driven". Then a person: open Edit on a photo, open Stickers, add three stickers from different tabs, try each corner button, a one-finger drag, a two-finger pinch and twist, tap another sticker, tap empty photo; add stickers until a 21st is refused and read the message; open Filters and try to drag a sticker. Expect each to behave as criteria 4 to 13 say, the message to be readable, and nothing to move while Filters is open.
 
@@ -98,11 +112,11 @@ Criteria 2, 18 and 20 answer questions the PRD leaves open (see Questions under 
 
 ### Appearance and reachability
 
-27. [machine] The new pictures the owner approved are recorded and checked on every run: the row with Stickers open, the Stickers panel on each tab, a selected sticker with its four corner buttons, and a photo with stickers after a crop and a filter, each in light and in dark.
+27. [machine] The new pictures the owner approved are recorded and checked on every run: the row with Stickers open, the Stickers sheet on each category, a selected sticker with its four corner buttons, and a photo with stickers after a crop and a filter, each in light and in dark.
     Proof: these files exist in `app/src/test/screenshots/`, added through `bin/foreman-record-baselines.ps1`, and the engine opened each once before committing it: `69/70_edit_stickers_row`, `71/72_edit_stickers_food`, `73/74_edit_stickers_mood`, `75/76_edit_stickers_quote`, `77/78_edit_stickers_emoji`, `79/80_edit_sticker_selected`, `81/82_edit_stickers_crop_filter` (each `_light.png` / `_dark.png`). `./gradlew :app:verifyRoborazziDebug` exits 0.
 
 28. [machine-then-human] A person has looked at the new pictures and the Stickers tool reads as part of Kanso in both themes.
-    Proof: pre-check is criterion 27. A person opens pictures 69 to 82 and expects: five tools under the photo, each an icon over its name, none cut off; each tab's name readable and the chosen tab obvious; each grid showing that category's stickers; the selected sticker with a visible frame and four round buttons (delete top left, duplicate top right, flip bottom left, resize-and-turn bottom right) in Kanso's colours, easy to see on the photo in light and in dark; in 81 and 82 a sticker visibly cut by the crop and tinted by the filter.
+    Proof: pre-check is criterion 27. A person opens pictures 69 to 82 and expects: five tools under the photo, each an icon over its name, none cut off; the sheet's ✕ and ✓ easy to see; each category chip readable and the chosen chip obvious; each grid three stickers wide, showing that category's stickers; the selected sticker with a visible frame and four round buttons (delete top left, duplicate top right, flip bottom left, resize-and-turn bottom right) in Kanso's colours, easy to see on the photo in light and in dark; in 81 and 82 a sticker visibly cut by the crop and tinted by the filter.
 
 29. [machine] The corner buttons use the app's theme colours, and the new duplicate icon is drawn in the same style as Kanso's other icons.
     Proof: the corner-button composables take every colour from `MaterialTheme.colorScheme`; `grep -nE 'Color\(0x|Color\.(White|Black)'` over them finds nothing outside previews and samples. `res/drawable/ic_duplicate.xml` has viewport 960 × 960 like `res/drawable/ic_close.xml` and no `android:tint`. All four corner icons are drawn with `Icon(painterResource(...))`.
@@ -175,7 +189,7 @@ Questions (the PRD leaves these open; each is answered by a criterion above that
 
 | Criterion | Class | Evidence / what to look at | Signed off |
 |---|---|---|---|
-| 1–22 | machine | `./gradlew :app:testDebugUnitTest` (the tests named in each Proof) | n/a |
+| 1–22, 41–43 | machine | `./gradlew :app:testDebugUnitTest` (the tests named in each Proof) | n/a |
 | 23 | machine-then-human | device pre-check summary; a person tries every gesture, button and the limit message | ☐ |
 | 24 | human-only | A13, 12 MP photo, 20 stickers: drag, pinch, handle are smooth | ☐ |
 | 25 | machine-then-human | Done → Save → saved photo zoomed: sharp, cut, tinted | ☐ |

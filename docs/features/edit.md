@@ -195,6 +195,12 @@ flowchart TD
    [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
    all on `Dispatchers.Default`. The processor always works from the original with the whole
    settings, so nothing is stacked. On the pixels as one `IntArray`, in this order:
+   0. **Stickers** (new in Run 10, not wired to any screen yet): the settings hold up to 20
+      (`EditSettings.stickers`, `MAX_STICKERS`), placed as fractions of the original photo. They
+      are drawn first, right after the kept rectangle is read out, so the crop cuts them and the
+      turns, flips, filter and sliders act on them with the photo (order: stickers, crop, turns,
+      flips, filter, sliders). Each add, delete, duplicate, flip or whole drag is one Undo step
+      (`EditSession`); a 21st add or duplicate changes nothing. No screen shows or adds them yet.
    1. **Crop**: copies only the kept rectangle (fractions turned into pixels, rounded, edges put in
       order, at least 1 x 1). A fixed shape is no special case: choosing it already set the
       rectangle. Progress 0.25.

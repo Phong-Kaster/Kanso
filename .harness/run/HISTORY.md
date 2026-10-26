@@ -23,3 +23,10 @@
   uncommitted and untouched.
 
 ## Archived Decisions
+
+### Iteration 2 - 2026-10-26
+- Consumed D-001 (approved, owner DoD edits kept; see AMENDMENTS.md). Unblocked T-001..T-006. Phase 1 dispatched.
+- Phase 1 (T-001): two Workers (model+session+processor; tests+docs), tests 10+17 green, lint green, reviewer found a missing
+  test-edits.md (written), over-sized-sticker decode (capped), weak tests (strengthened); one fix pass. Reviewer's
+  "launcher-icon files in the diff" was `git add -N` line-ending noise (git status shows them unmodified). Rejected:
+  removing `StickerPictures` default (T-002's factory wires it).

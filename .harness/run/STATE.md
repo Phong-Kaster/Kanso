@@ -5,9 +5,9 @@
 
 ## Current
 
-- **Stage:** escalated (bootstrap; waiting on D-001, the DoD approval)
+- **Stage:** Phase 1 complete; Phase 2 next
 - **Loop Branch:** loop/kanso-stickers
-- **Next Phase:** Phase 1 - T-001 (after D-001)
+- **Next Phase:** Phase 2 - T-002
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -15,12 +15,12 @@
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | blocked (D-001) | `data/edit/edit/` Sticker, StickerPictures, EditSettings, EditSession, EditProcessor; 3 tests; README, edit.md | - |
-| T-002 | blocked (D-001) | EditTool, catalogue, StickerMapping, row, Stickers panel, screen state, limit message; tests; docs | - |
-| T-003 | blocked (D-001) | `photocard/stickeroverlay/`, PhotoCard, ToolUiState/ViewModel/Screen; tests; docs | - |
-| T-004 | blocked (D-001) | FilterPreviewRenderer, LivePreviewImage, EditCropper, ViewModel; tests; docs | - |
-| T-005 | blocked (D-001) | `screenshots/StickerScreenshotTest.kt` | - |
-| T-006 | blocked (D-001) | README, edit.md, tool-screen.md, CONTEXT.md | - |
+| T-001 | complete | `data/edit/edit/` Sticker, StickerPictures, EditSettings, EditSession, EditProcessor; 3 tests; README, edit.md | test-phase1.log |
+| T-002 | pending | EditTool, catalogue, StickerMapping, row, Stickers panel, screen state, limit message; tests; docs | - |
+| T-003 | pending | `photocard/stickeroverlay/`, PhotoCard, ToolUiState/ViewModel/Screen; tests; docs | - |
+| T-004 | pending | FilterPreviewRenderer, LivePreviewImage, EditCropper, ViewModel; tests; docs | - |
+| T-005 | pending | `screenshots/StickerScreenshotTest.kt` | - |
+| T-006 | pending | README, edit.md, tool-screen.md, CONTEXT.md | - |
 
 ## Signed-off human criteria
 

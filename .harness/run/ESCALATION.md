@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 10 (stickers), the picture re-recordings and the toolchain
 
-- **Status:** pending
+- **Status:** answered (2026-10-26, approved with the owner's DoD edits)
 - **Type:** DoD approval
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-10-26

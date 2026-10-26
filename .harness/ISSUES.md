@@ -1,13 +1,9 @@
 # ISSUES
 
-## Run 10 (stickers on the Edit screen), loop/kanso-stickers: bootstrap, waiting on D-001
+## Run 10 (stickers on the Edit screen), loop/kanso-stickers: in progress
 
-- **Queued decision D-001 (blocks every task):** approve the Definition of Done (40 criteria). It includes four
-  open readings of the PRD, Q1-Q4: Pinity's rotate icon stays out; stickers stay visible while cropping
-  (criterion 20); all five tools fit a 411 dp row (criterion 2); stickers are drawn at the resolution Done
-  already saves at (criterion 18). It also asks for the `## Baselines` list approving re-recording of pictures 51,
-  52 and 55-68, and the toolchain capabilities.
-- No task has run yet; nothing is abandoned.
+- D-001 answered 2026-10-26 (DoD approved with the owner's sheet edits). Phase 1 (T-001) complete; nothing abandoned, no decision queued.
+- No unsigned criteria yet (the human criteria 23, 24, 26, 28 are driven at the Verifier gate).
 
 ## Run 9 (the Edit screen becomes a real editor), loop/kanso-real-editor: DONE, signed by the owner 2026-10-19
 
