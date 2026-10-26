@@ -6,6 +6,7 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 
 /**
  * Everything the tool screen shows at one moment, as one snapshot. What a UiState is, and why

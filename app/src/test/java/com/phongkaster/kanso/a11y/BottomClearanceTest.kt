@@ -72,7 +72,7 @@ import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_SCREEN_TAG
 import com.phongkaster.kanso.ui.settings.THEME_COLOUR_CUSTOM_TAG
 import com.phongkaster.kanso.ui.tool.EDITOR_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG

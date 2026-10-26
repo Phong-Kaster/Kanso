@@ -30,11 +30,11 @@ import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_GRID_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKER_CHIPS_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerChipTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerTileTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_GRID_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKER_CHIPS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerChipTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals

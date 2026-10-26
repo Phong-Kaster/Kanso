@@ -22,6 +22,8 @@ import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

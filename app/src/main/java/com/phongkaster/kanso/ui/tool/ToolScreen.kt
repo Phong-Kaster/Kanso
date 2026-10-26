@@ -52,17 +52,18 @@ import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import com.phongkaster.kanso.ui.tool.components.DiscardChangesDialog
-import com.phongkaster.kanso.ui.tool.components.EditCropper
-import com.phongkaster.kanso.ui.tool.components.EditPhotoArea
-import com.phongkaster.kanso.ui.tool.components.editbottombar.EditBottomBar
-import com.phongkaster.kanso.ui.tool.components.photocard.PhotoCard
-import com.phongkaster.kanso.ui.tool.components.StickerLimitMessage
+import com.phongkaster.kanso.ui.tool.component.DiscardChangesDialog
+import com.phongkaster.kanso.ui.tool.component.EditCropper
+import com.phongkaster.kanso.ui.tool.component.EditPhotoArea
+import com.phongkaster.kanso.ui.tool.component.editbottombar.EditBottomBar
+import com.phongkaster.kanso.ui.tool.component.photocard.PhotoCard
+import com.phongkaster.kanso.ui.tool.component.StickerLimitMessage
 import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
-import com.phongkaster.kanso.ui.tool.components.topbar.ToolTopBar
+import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.component.topbar.ToolTopBar
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
 /** The test tag on the root of the tool screen. */
 const val TOOL_SCREEN_TAG = "tool-screen"

@@ -27,10 +27,10 @@ import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
-import com.phongkaster.kanso.ui.tool.components.photocard.LIVE_PREVIEW_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewGeometry
-import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewImage
-import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewMatrix
+import com.phongkaster.kanso.ui.tool.component.photocard.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewGeometry
+import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewImage
+import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewMatrix
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import java.util.concurrent.CopyOnWriteArrayList

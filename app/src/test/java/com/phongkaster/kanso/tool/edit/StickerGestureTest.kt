@@ -24,10 +24,10 @@ import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.components.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.stickeroverlay.angleChange
-import com.phongkaster.kanso.ui.tool.editProcessorFor
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleChange
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.Dispatchers

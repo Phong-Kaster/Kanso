@@ -32,9 +32,9 @@ import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.EDIT_CROPPER_TAG
-import com.phongkaster.kanso.ui.tool.components.EditCropper
-import com.phongkaster.kanso.ui.tool.editProcessorFor
+import com.phongkaster.kanso.ui.tool.component.EDIT_CROPPER_TAG
+import com.phongkaster.kanso.ui.tool.component.EditCropper
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
