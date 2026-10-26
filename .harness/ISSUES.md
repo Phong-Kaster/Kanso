@@ -1,5 +1,14 @@
 # ISSUES
 
+## Run 10 (stickers on the Edit screen), loop/kanso-stickers: bootstrap, waiting on D-001
+
+- **Queued decision D-001 (blocks every task):** approve the Definition of Done (40 criteria). It includes four
+  open readings of the PRD, Q1-Q4: Pinity's rotate icon stays out; stickers stay visible while cropping
+  (criterion 20); all five tools fit a 411 dp row (criterion 2); stickers are drawn at the resolution Done
+  already saves at (criterion 18). It also asks for the `## Baselines` list approving re-recording of pictures 51,
+  52 and 55-68, and the toolchain capabilities.
+- No task has run yet; nothing is abandoned.
+
 ## Run 9 (the Edit screen becomes a real editor), loop/kanso-real-editor: DONE, signed by the owner 2026-10-19
 
 - **Fourth Verifier, 2026-10-19: no gap against any criterion.** Whole set green on `2a272fe` (812 tests, 0 failed, 0 skipped; lint; `assembleDebug`; `verifyRoborazziDebug`; `.harness/run/evidence/v4-verifier-2026-10-19.md`). Every Removal grep is empty. A fresh Capable reader found no false sentence in README's "Editing features" and "How each editing feature works" or in `docs/features/edit.md`, and confirmed all six T-013 fixes. The run is `DONE_PARTIAL`, not `DONE`, for two reasons: the Tier-3 assumptions A-001, A-003 and A-009, and the items under "Awaiting a person, Run 9". `.harness/run/` stays on the branch (no Cleanup Commit).
