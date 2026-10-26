@@ -1,16 +1,20 @@
 package com.phongkaster.kanso.launcher
 
 /**
- * The launcher icons Kanso ships: the same "enso lens" mark on nine background colours.
+ * The launcher icons Kanso ships: the same "enso lens" mark, in Google's four colours on white for
+ * [KansoBlue] and in white on eight background colours for the others.
  *
  * Android cannot repaint an app's launcher icon at run time, so each colour is a separate
  * launcher entry (an `activity-alias` in AndroidManifest.xml, named [aliasClassName]) with its own
- * icon, and [LauncherIconSwitcher] keeps exactly one of them enabled. [argb] is the background
- * colour of that icon, the same value as its `ic_launcher_*` colour resource; [closestTo] uses it
+ * icon, and [LauncherIconSwitcher] keeps exactly one of them enabled. [argb] is the theme colour
+ * that icon stands for, the same value as its `ic_launcher_*` colour resource; [closestTo] uses it
  * to pick the icon for any theme colour.
  */
 enum class LauncherIcon(val aliasClassName: String, val argb: Int) {
-    /** Kanso blue, the default theme colour; the icon a fresh install shows. */
+    /**
+     * Kanso blue, the default theme colour; the icon a fresh install shows. Its icon is the
+     * four-colour mark on white, so [argb] is the theme colour it matches, not its background.
+     */
     KansoBlue("com.phongkaster.kanso.LauncherKansoBlue", 0xFF1A73E8.toInt()),
 
     /** A deep teal, for blue-green theme colours. */

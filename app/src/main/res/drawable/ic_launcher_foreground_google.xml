@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher mark in Google's four colours, for the default Kanso blue entry on white: an enso
+     ring opened at the top right, split clockwise blue, green, yellow, red (the order Google's G
+     runs), around a dark lens. Each arc ends flat where the next colour starts; the two open ends
+     are round. The 108dp canvas keeps the mark inside the 66dp safe zone that every icon shape shows.
+     Design and the two other concepts: docs/design/launcher-icon-concepts.html. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="@color/ic_launcher_google_blue"
+        android:strokeWidth="11"
+        android:pathData="M73.94,44.7 A22,22 0 0,1 66.82,71.88" />
+    <path
+        android:strokeColor="@color/ic_launcher_google_green"
+        android:strokeWidth="11"
+        android:pathData="M67.01,71.74 A22,22 0 0,1 38.97,70.06" />
+    <path
+        android:strokeColor="@color/ic_launcher_google_yellow"
+        android:strokeWidth="11"
+        android:pathData="M39.14,70.22 A22,22 0 0,1 35.31,42.39" />
+    <path
+        android:strokeColor="@color/ic_launcher_google_red"
+        android:strokeWidth="11"
+        android:pathData="M35.19,42.59 A22,22 0 0,1 61.52,33.33" />
+    <path
+        android:fillColor="@color/ic_launcher_google_blue"
+        android:pathData="M68.44,44.7 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_google_red"
+        android:pathData="M56.02,33.33 a5.5,5.5 0 1,0 11,0 a5.5,5.5 0 1,0 -11,0 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_lens"
+        android:pathData="M46.5,54 a7.5,7.5 0 1,0 15,0 a7.5,7.5 0 1,0 -15,0 Z" />
+</vector>

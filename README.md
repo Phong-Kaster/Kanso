@@ -63,7 +63,7 @@ size, progress, Undo, failures and Done.
 |---|---|
 | [Home](docs/features/home.md) | The carousel of the four AI tools, five round tool shortcuts, the Recent edits strip, and the floating tab bar with its Camera button. |
 | [Settings: theme mode, theme colour and text size](docs/features/settings-and-theme.md) | A menu of three settings, each on its own screen: light, dark or system; Kanso blue, wallpaper colours (Android 12+) or an exact custom colour; Kanso's own text size (the phone's font size is ignored). Applied at once and kept across restarts. |
-| [Launcher icon](docs/features/launcher-icon.md) | The home-screen icon switches to the closest of nine background colours to match the theme colour. |
+| [Launcher icon](docs/features/launcher-icon.md) | An enso ring around a lens: in Google's four colours on white for Kanso blue, in white on the closest of eight other background colours for any other theme colour. |
 
 ---
 
