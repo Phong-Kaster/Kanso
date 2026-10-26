@@ -1,7 +1,18 @@
 # WORKER BRIEF - T-00x
 
 > The complete context handed to one Worker. Deliberately minimal: status of other work, never its
-> content or its reasoning. A Worker holds no git, build, or test capability.
+> content or its reasoning. A Worker holds no git and no test capability, and one compile check.
+
+## Compile check
+
+When you have written your files, run the command below exactly as written (Bash timeout 600000), fix
+every error in your own files, and run it again until it passes. An error in a file outside your scope is
+another Worker's: leave it and say so. It is the only command you may run, and nothing may be chained to it.
+
+`powershell -NoProfile -File <repository root, absolute, forward slashes>/.harness/loop/bin/foreman-compile.ps1 -Module <module>`
+<!-- The absolute path, always: a Worker's shell can start outside the repository root, and a relative
+     path then fails with exit 127 (Kanso A/B, arm D, 2026-10-21). The module is the Gradle module this
+     task's files live in, e.g. app. -->
 
 ## Your task
 
@@ -49,6 +60,13 @@ deliberately excluded. A Wiring Worker writes those, never alongside you. Do not
 |---|---|
 | T-00y | complete |
 | T-00z | in progress (another Worker, right now - you cannot see its work and must not need to) |
+
+## Follow these files
+
+<!-- The task file's Follow list, copied. Before you write a test, open the test named here and use
+     its imports, helpers and measuring code; before you write production code, match the file named
+     here. Guessing an import or a unit is what failed the Fast attempts this section exists for. -->
+- `path/to/ExistingTest.kt` - imports, the test rule, how a node's size is read in dp
 
 ## Pointers
 

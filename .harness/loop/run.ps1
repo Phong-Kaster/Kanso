@@ -361,6 +361,13 @@ function Compile-PermissionSettings {
     # Workers, Reviewers, analysts and any generic agent the engine might dispatch instead. Forward
     # slashes, like every rule above.
     $guard = (Join-Path $LoopDir "bin\foreman-read-guard.ps1") -replace '\\', '/'
+    # Every subagent runs in the foreground, so its manifest comes back as the Agent call's result
+    # instead of an "Async agent launched" the Iteration then polls for (Kanso Run 9; Kanso A/B,
+    # 2026-10-20: 32 of 127 Iteration calls were waits).
+    $foreground = (Join-Path $LoopDir "bin\foreman-foreground-agents.ps1") -replace '\\', '/'
+    # A subagent's Bash may run the compile check and nothing else (ADR-044): the Worker has the Bash
+    # tool for that one command, and its permission rules alone would let it run more.
+    $subagentShell = (Join-Path $LoopDir "bin\foreman-subagent-shell.ps1") -replace '\\', '/'
     $settings = @{
         permissions = @{
             allow = $allowRules
@@ -371,6 +378,14 @@ function Compile-PermissionSettings {
                 @{
                     matcher = "Read|Grep|Glob"
                     hooks   = @(@{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$guard`"" })
+                },
+                @{
+                    matcher = "Agent|Task"
+                    hooks   = @(@{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$foreground`"" })
+                },
+                @{
+                    matcher = "Bash"
+                    hooks   = @(@{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$subagentShell`"" })
                 }
             )
         }
@@ -445,6 +460,11 @@ function Test-DoneCandidate {
             # Runs 1, 2 and 4 at the Fast tier (TELEMETRY.tsv: fast, sonnet), against POLICIES.md's
             # "Always Capable, no exception".
             if ($line -match '(?i)(DONE|PARTIAL)-candidate[\s:*]*yes') { return $true }
+            # The engine also writes it inside the DONE-candidate line with its reasons and no "yes":
+            # "**DONE-candidate:** no (PARTIAL-candidate: criterion 14 red ...)" ran the Kanso A/B
+            # Verifier at the Fast tier (2026-10-20). A PARTIAL-candidate followed by anything but "no"
+            # is recorded.
+            if ($line -match '(?i)PARTIAL-candidate\**\s*:\s*\**\s*(?!no\b)[^\s*)]') { return $true }
         }
     } catch { }
     return $false
@@ -1722,6 +1742,13 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
     # person's connected claude.ai Google Drive. Autonomous mode allows every tool not on the Deny
     # List, so each one was reachable. Nothing Foreman does needs MCP (library docs: ctx7, ADR-032).
     $claudeArgs += "--strict-mcp-config"
+    # Nor every built-in tool. Each tool's schema rides in every call's context: the first call of an
+    # Iteration carried 38,383 tokens before reading anything (Kanso A/B, 2026-10-20). Across seven saved
+    # runs the engine used twelve tools, and the others it used only to wait: Monitor 286 times (sleep,
+    # tick, count Worker files), ToolSearch only to load Monitor, ScheduleWakeup once. Subagents run in
+    # the foreground now, so nothing is left to wait for. TaskStop stops a background shell; Skill keeps
+    # a consumer's installed packs reachable.
+    $claudeArgs += @("--tools", "Bash,Read,Edit,Write,Glob,Grep,Agent,TaskStop,Skill")
     # Nor does the rest of the operator's own configuration. Measured 2026-10-08 on Claude Code 2.1.292:
     # by default the engine loaded the person's six plugins, 92 skills, 127 slash commands and their
     # SessionStart hook, which injects a personal formatting ruleset into every invocation. Without the
@@ -1734,10 +1761,14 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
     # The Iteration is the Orchestrator, and at ENGINE.md 11 it is the Verifier. Pick its tier here:
     # one --model is fixed for the whole invocation, so this is the last moment a choice exists.
     # An explicit -Model still wins - a human overriding the map is not the map being ignored.
+    # Bootstrap writes the plan, so it runs Capable too (decided by the human, 2026-10-20). Bootstrap is
+    # known by the one thing it alone lacks - .harness/run/ - never by STATE.md's Stage, which still read
+    # "bootstrap (DoD approval pending)" on the first execution Iteration of the Kanso A/B routing arm.
+    $capableIteration = (-not (Test-Path $RunDir)) -or (Test-DoneCandidate)
     $iterModel = $Model
     $iterTier  = "override"
     if ($iterModel -eq "") {
-        $iterTier  = if (Test-DoneCandidate) { "capable" } else { "fast" }
+        $iterTier  = if ($capableIteration) { "capable" } else { "fast" }
         $iterModel = Resolve-TierModel $iterTier
         if ($iterModel -eq "") { $iterTier = "cli-default" }
     }
@@ -1746,7 +1777,7 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
         Write-RunLog "iteration tier: $iterTier -> $iterModel"
     }
     # The effort level used to come from the operator's settings; it is the tier's now (models.json).
-    $iterEffort = Resolve-TierEffort $(if (Test-DoneCandidate) { "capable" } else { "fast" })
+    $iterEffort = Resolve-TierEffort $(if ($capableIteration) { "capable" } else { "fast" })
     if ($iterEffort -ne "") { $claudeArgs += @("--effort", $iterEffort) }
     # Worker/Reviewer definitions come from .harness/loop/, which is deny-listed against the engine's own
     # edits: a Worker's tool restriction must be enforced by the harness, not by instruction the

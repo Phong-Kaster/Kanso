@@ -43,19 +43,21 @@ Two tiers exist: **Fast** and **Capable**, mapped to concrete model identifiers 
 
 **Always Capable, no exception:** the Reviewer, the Verifier, and every bootstrap fan-out analysis role (ADR-009). These are the roles that decide whether work is *correct*, and none of them may run below Capable.
 
-**The Orchestrator runs at Fast in its ordinary capacity, and at Capable whenever it is the Verifier (§11).** The Runtime chooses this before the invocation starts and passes `--model` itself, because one model is fixed for a whole invocation and the Iteration cannot switch its own mid-session. `STATE.md`'s DONE-candidate is the signal, the same one §6.3 branches on.
+**The Orchestrator runs at Fast in its ordinary capacity, and at Capable whenever it is the Bootstrap (§5) or the Verifier (§11).** The Runtime chooses this before the invocation starts and passes `--model` itself, because one model is fixed for a whole invocation and the Iteration cannot switch its own mid-session. The signals are the absence of `.harness/run/` (Bootstrap) and `STATE.md`'s DONE- or PARTIAL-candidate (Verifier), the same ones §6.3 branches on. Bootstrap was added by the human on 2026-10-20: it is the Iteration that alone writes `DoD.md` and `PLAN.md` from the analysts' proposals, and a Fast Worker can only be as good as the plan it follows.
 
 This line was earned, not reasoned: the Calendar-Note alarms run passed `--model` **never**, so the top-level session inherited the CLI default for the entire run. 979 of 1,215 Orchestrator messages ran below Capable, and the Verifier — this table's one "no exception" — re-proved all 36 DoD criteria on the cheaper model. Meanwhile the Workers, the only role tiering was supposed to touch, ran at Capable throughout. The tier system was not merely unenforced, it was inverted.
 
-**A Worker's task may be classified Fast only if all of the following hold**, assessed by the arm's-length planning roles at bootstrap or Phase re-grouping — never by the Worker itself, and never by the role that proposed the task:
+**A Worker's task is Fast by default.** The plan decides how the work is done; a Worker carries out a bounded part of an approved plan, and the Capable roles above judge whether it was done right. A task is classified **Capable** only if one of the following holds, assessed by the arm's-length planning roles at bootstrap or Phase re-grouping — never by the Worker itself, and never by the role that proposed the task:
 
-- its Declared File Scope is bounded and contains no shared/integration file (those already belong to no Worker, per ADR-008);
-- its acceptance criteria are exactly checkable — a literal output string, an exit code, an existing pattern to extend — not an open-ended judgment call ("well-structured", "handles edge cases" without enumerating them);
-- it embeds no architecture decision, no new external dependency, no new cross-module contract.
+- it embeds an architecture decision, a new external dependency, or a new cross-module contract the plan has not already fixed;
+- its acceptance criteria cannot be enumerated — the task is itself a judgment call ("find why X is slow"), not a checkable outcome;
+- it diagnoses a failure no single Worker's scope explains (`ENGINE.md` §6.7) — a difficult diagnosis is not routine execution.
 
-Everything else defaults to **Capable**. When genuinely uncertain, classify Capable — the cost of a wrong Fast classification is a wasted attempt at the wrong tier; the cost of a wrong Capable classification is a few cents.
+A planning role that is uncertain names which of these three it suspects, in the task file; if it can name none, the task is Fast.
 
-**If nothing is ever classified Fast, the tier is misconfigured, not the criteria.** Measured on the Calendar-Note alarms run: 7 of 7 tasks Capable, and the Fast model consumed 6,363 input tokens and one cent across the whole run. The criteria above are correctly cautious; a planning role that will not stake a Kotlin/Compose task on the Fast tier is behaving well. The fix belongs in `models.json` — raise what Fast maps to until a cautious planner can choose it — never in loosening these three conditions.
+This replaced the opposite default ("everything else defaults to Capable; a wrong Capable classification costs a few cents"), because a measurement contradicted it. On the Kanso A/B run of 2026-10-20 (`loop/kanso-redo-vignette`), 4 of 5 tasks were classified Capable and the Capable tier cost $9.11 of the run's $11.99 — 76%, almost all of it Workers. The only Fast Worker finished its task.
+
+**Decided by the human, 2026-10-20:** Workers default to Fast from now on; the Capable tier is for planning, review, verification and difficult diagnosis. **What would change this:** a run in which Fast Workers need more attempts, or the Reviewer files more blocking findings, than the Capable Workers of a comparable run did — measured, not expected.
 
 **A failed Fast-tier attempt escalates the task to Capable for its remaining attempts** (`ENGINE.md` §8) — mechanical, not re-judged, and free: it does not consume an extra attempt beyond the normal three.
 
@@ -230,12 +232,13 @@ failure.
 
 ## Worker Standards
 
-- A Worker implements exactly one task, writes only files inside its Declared File Scope, and holds **no git, build, or test capability**.
+- A Worker implements exactly one task, writes only files inside its Declared File Scope, and holds **no git and no test capability**. It holds one compile check (`bin/foreman-compile.ps1`) and compiles until clean before it reports; a Runtime hook refuses a subagent every other command (ADR-044).
 - A Worker's Brief carries the *status* of other tasks, never their content or implementation reasoning, plus pointers to interfaces earlier Phases created. It reads the repository itself when it needs an interface.
 - A Worker's report is a **manifest, not a payload**: files written, behavior now working, what it could not do, what it learned. The Iteration reads the diff from git, never from the report.
 - Scope is verified, not trusted: reported file sets must be pairwise disjoint, contained in their Declared File Scope, and their union must match `git status`. A violation means the plan was wrong to call the tasks independent.
 - **One Worker writes at most 6 files.** A task whose Declared File Scope is larger is dispatched as sequential **slices** of at most 6 files each, one fresh Worker per slice (`ENGINE.md` §6.5). The task, its attempts and its checkpoint stay one; only the Worker context is cut. Earned by Kanso Run 7: T-003 gave one Opus Worker 18 files, its context climbed to 258K in 12 minutes, and it re-read 7.9M cached tokens to write 79K — 94% of the Iteration's cost, and most of a five-hour window (ADR-039).
 - **A Worker reads narrowly.** The Brief quotes the text of every DoD criterion the task cites, so the Worker never opens `DoD.md`. It finds a line with Grep before reading, reads a range rather than a whole file when the file is long, and never re-reads a file it has not changed. Every token read is paid again on every later call of that Worker. The same Worker read `DoD.md` three times and 15 whole files before writing its first line (ADR-039).
+- **A Worker copies an existing file rather than guessing.** Every task's **Follow** list names the existing files whose shape its Worker copies — one for every kind of test it writes — and the Brief carries it. Earned by the Kanso A/B run of 2026-10-20 (arm C, Phase 2): both Fast Workers that failed did so on something an existing test already showed. T-004's test did not compile for a missing `import androidx.compose.ui.semantics.getOrNull`, which `AccessibilityWalkTest.kt` imports; T-003's test compared 120 px with 48 dp without converting for density, as the repository's other UI tests do. Each retry's Brief added exactly that pointer, at the Capable tier.
 - **A subagent reads only the part of `.harness/` its role was given, and the Runtime enforces it.** A
   `PreToolUse` hook, `bin/foreman-read-guard.ps1`, refuses a Worker — and any subagent not named below —
   every file under `.harness/` except `knowledge/reference/` and `knowledge/DOMAIN.md`; a Reviewer also

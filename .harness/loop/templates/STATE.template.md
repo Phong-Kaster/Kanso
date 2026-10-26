@@ -10,6 +10,7 @@
 - **Loop Branch:** loop/...
 - **Next Phase:** T-00x, T-00y
 - **DONE-candidate:** no
+- **PARTIAL-candidate:** no
 
 ## Progress
 

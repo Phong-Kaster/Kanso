@@ -92,7 +92,9 @@ this iteration had not committed.
 
 The consequence that bites: **a subagent started in the background is only useful if you keep issuing
 tool calls until its result arrives.** Ending the turn to "wait for it" does not wait; it kills it.
-Either wait inside the turn, or do not start it.
+Either wait inside the turn, or do not start it. The Runtime runs every subagent you dispatch in the
+foreground, so its manifest is the Agent call's result: never poll for one. Dispatch independent Workers
+in one message and they still run concurrently.
 
 Rules for `STATUS.md`:
 
@@ -161,7 +163,7 @@ If `.harness/run/` does not exist, this invocation is the Bootstrap. Do not impl
      Whether existing code stays is decided here, by the human, at the one gate they always see —
      never later as an Assumption. Earned by Calendar-Note `loop/music-player` (2026-09-24): a music player built on a pristine skeleton kept its Home and Setting screens, a posts API, a weather API, Room, Ktor and location and exact-alarm permissions — 61 of 99 Kotlin files unreachable from the feature — because nothing here ever asked what the PRD makes unnecessary.
    - `PLAN.md` — your execution strategy, including the **Phase grouping** produced by the conflict analysis and each task's **Declared File Scope** and **Model Tier**.
-   - `TASKS/` — one file per task; each task is a checkpoint of demonstrably working behavior, not an internal component (see `POLICIES.md` § Task Decomposition).
+   - `TASKS/` — one file per task; each task is a checkpoint of demonstrably working behavior, not an internal component (see `POLICIES.md` § Task Decomposition). Each fills **Follow** from the survey: the existing files its Worker copies the shape of, one for every kind of test it writes (`POLICIES.md`, Worker Standards).
    - `STATE.md` — initialized from the template. Note its field is `Stage`, not `Phase`: `Phase` means a group of tasks.
    - `RESUME.md` — the Resume Block (§9).
    - `AMENDMENTS.md`, `HISTORY.md`, `ESCALATION.md` — empty logs.
@@ -206,8 +208,9 @@ Do **not** read `HISTORY.md`, `AMENDMENTS.md`, the capability ledgers, or anythi
 
 **Before you dispatch anything, check the knowledge layout** (`POLICIES.md`, Knowledge Layout; ADR-040).
 If `PROJECT.md` still holds Reference text rather than an index, or a topic file sits directly under
-`.harness/knowledge/` (anything but `PROJECT.md`, `DOMAIN.md`, `ISSUES.md` and `capabilities.json`), move
-it into `.harness/knowledge/reference/` now, in this Iteration's checkpoint. A subagent cannot read it
+`.harness/knowledge/` (anything but `PROJECT.md`, `DOMAIN.md` and `capabilities.json`), move
+it into `.harness/knowledge/reference/` now, in this Iteration's checkpoint; an `ISSUES.md` there moves to
+`.harness/ISSUES.md` instead. A subagent cannot read it
 where it is: the read guard allows it only `reference/` and `DOMAIN.md`.
 
 **You read no source code** (ADR-041). Your context lives the whole Iteration and is re-sent on every
@@ -243,6 +246,7 @@ For each task in the Phase, dispatch one Worker subagent with a **Worker Brief**
   summarised, not judged relevant — you do not get to decide which traps a Worker needs. That judgement
   is exactly what shipped a delete icon rendered invisible against its own background, one commit after
   the trap had been written down correctly.
+- the task's **Follow** list, copied from its task file
 - the **paths** of the reference topics this task touches (`.harness/knowledge/reference/<topic>.md`), from
   `PROJECT.md`'s index — those you may filter, and the Worker reads them itself
 - the **text** of every DoD criterion the task cites, quoted — never a pointer to `DoD.md` (`POLICIES.md`, Worker Standards)
@@ -255,19 +259,15 @@ the Worker reading it: the refusal tells the Worker it is in the Brief, so put i
 
 **A task with more than 6 files of scope is dispatched in slices** (`POLICIES.md`, Worker Standards; ADR-039). Cut its Declared File Scope into slices of at most 6 files, production files before the tests that exercise them, and dispatch one fresh Worker per slice, **sequentially**. Each Brief carries the whole task, its slice as the Declared File Scope, `Slice k of n`, and pointers to the files earlier slices wrote. Slices of one task never run concurrently: a later slice reads what an earlier one wrote. Build and test once, after the last slice. A failure is attributed to the slice whose file it names; re-dispatching that slice is one attempt against the task, and the slice's files are reverted first like any Worker scope.
 
-A Worker **holds no git, build, or test capability**. It edits files and reports back. Its report is a **manifest, not a payload**: the files it wrote, the behavior now working, anything it could not do, anything it learned. You read the diff from git — never from the Worker's report.
+A Worker **holds no git and no test capability**, and one compile check: `bin/foreman-compile.ps1`, which compiles its module's code and unit tests and runs nothing (ADR-044). The Brief writes the command with the repository's absolute path and the module. It edits files, compiles until clean, and reports back. Its report is a **manifest, not a payload**: the files it wrote, the behavior now working, anything it could not do, anything it learned. You read the diff from git — never from the Worker's report.
 
-Dispatch each Worker at its assigned Model Tier, using the identifiers the Resume Block already resolved (falling back to `.harness/loop/models.json` if it does not carry them): Fast for a task classified Fast at planning time, Capable otherwise. **Pass the identifier explicitly on every dispatch.** Omitting it makes the subagent inherit the Runtime's `-Model`, which silently voids the whole tier system. You yourself act at the tier the Runtime pinned for this invocation: Fast while orchestrating, Capable when `STATE.md` records a DONE-candidate and you are therefore the Verifier (§11). You do not choose this and cannot change it mid-invocation — one model is fixed per invocation. The Reviewer and every bootstrap analysis role you dispatch are **always** Capable regardless of your own tier.
+Dispatch each Worker at its assigned Model Tier, using the identifiers the Resume Block already resolved (falling back to `.harness/loop/models.json` if it does not carry them): Capable for a task classified Capable at planning time, Fast otherwise (`POLICIES.md`, Model Tier Criteria). **Pass the identifier explicitly on every dispatch.** Omitting it makes the subagent inherit the Runtime's `-Model`, which silently voids the whole tier system. You yourself act at the tier the Runtime pinned for this invocation: Fast while orchestrating, Capable when you are the Bootstrap (§5) or `STATE.md` records a DONE-candidate and you are therefore the Verifier (§11). You do not choose this and cannot change it mid-invocation — one model is fixed per invocation. The Reviewer and every bootstrap analysis role you dispatch are **always** Capable regardless of your own tier.
 
 Within a Phase, Workers cannot see each other's work and must not need to. That is exactly what the disjoint-scope rule guarantees.
 
 ## 6.6 Verify scope, then wire
 
-Before trusting any Worker's work:
-
-1. Check the reported file sets are pairwise disjoint.
-2. Check each is contained in that Worker's Declared File Scope.
-3. Check the union matches `git status`.
+Before trusting any Worker's work, run `powershell -NoProfile -File .harness/loop/bin/foreman-check-scope.ps1 -Tasks <the Phase's ids>` (add `-Wiring <files>` once a Wiring Worker has run). It checks that the scopes are pairwise disjoint, that every changed file lies in exactly one of them, and that nothing changed outside them. Exit 0 means the work may be trusted; exit 3 lists each violation. Its exit code is the check: do not re-derive it from the manifests.
 
 A violation means the plan was wrong to call these tasks independent. Revert, re-split the Phase, log a Tier-1 amendment, and do not proceed on the collided work.
 
@@ -438,7 +438,7 @@ When `STATE.md` records a DONE-candidate, this invocation is the **Verifier**. Y
 6. Report `DONE`. Merging is the human's act, never yours.
 
 **Before `.harness/run/` is deleted — by the Cleanup Commit or by anyone starting a new goal — every
-criterion still awaiting a signature moves into `knowledge/ISSUES.md` as a tickable checklist item**,
+criterion still awaiting a signature moves into `.harness/ISSUES.md` as a tickable checklist item**,
 not a paragraph mentioning that one exists. An unsigned verification request is a claim of "done"
 nobody checked; it is the one thing in that directory that does not belong to the run that raised it.
 
@@ -480,7 +480,7 @@ In Autonomous mode, §14.3 replaces the request path below. A denied-but-needed 
 
 **Lifetime determines the ledger; they are not two independent choices.** A `goal` lifetime targets `.harness/run/capabilities.json`, so the grant expires when `run/` is removed at completion. A `permanent` lifetime targets `.harness/knowledge/capabilities.json` and survives future runs, which is why it needs separate explicit justification. Proposing `goal` while pointing at the standing ledger would make the grant permanent in fact while calling itself temporary — observed in the field, and nothing downstream cross-checks the two fields, so a human approving quickly would not catch it.
 
-Workers are granted strictly less than you: no git, no build, no test, enforced by their own tool list rather than by instruction. Do not attempt to delegate around your own limits.
+Workers are granted strictly less than you: no git, no test, and of the build only the compile check, enforced by their tool list and the Runtime's subagent shell guard rather than by instruction. Do not attempt to delegate around your own limits.
 
 **A device is driven only through `powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <operation>`, in both Run Modes; `adb` itself is denied.** The wrapper acts only on the debug build this repository produced — install, clear, grant, revoke, start, stop, and reading and tapping its own screen — and has no operation for another app, a device setting, the clock or the notification shade. A criterion that needs one is driven on none of them: it stays for a person, or is reported "not driven". Exit code 3 is a refusal by the human's rule, never a failure to retry (ADR-033).
 
@@ -568,7 +568,8 @@ Never report `ESCALATE` except for the DoD approval. When no executable task rem
 
 - every criterion satisfied, nothing abandoned, no Tier-3 assumption, nothing awaiting a signature →
   the normal DONE-candidate path (§6.11, §11) and `DONE`;
-- anything else → record **PARTIAL-candidate** in `STATE.md` and report `CONTINUE`. The next
+- anything else → set `STATE.md`'s own line to `- **PARTIAL-candidate:** yes` (reasons after it, never
+  inside the DONE-candidate line) and report `CONTINUE`. The next
   invocation is the Verifier: it re-proves every `machine` criterion and drives every
   `machine-then-human` one as §11 steps 1–2 say, files tasks
   for any gap it can still close, and otherwise reports `DONE_PARTIAL` — without a Cleanup Commit, so

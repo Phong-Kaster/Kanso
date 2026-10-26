@@ -16,6 +16,8 @@
 # PROJECT.md before writing a line, and the Reviewers and Workers of five iterations opened DoD.md
 # whole 15 times between them. Every token read is re-sent on every later call of that context.
 #
+# It also refuses a whole read of any long text file, from anyone (see below).
+#
 # Exit 2 refuses the call; Claude Code hands stderr to the subagent, so the message says where the
 # information it wanted lives instead. Any input this script cannot parse is let through: a guard
 # that broke every Read would stop the run, which is worse than one missed refusal.
@@ -27,11 +29,32 @@ try {
     $hook = $raw | ConvertFrom-Json
 } catch { exit 0 }
 
-$agent = "$($hook.agent_type)"
-if (-not $agent) { exit 0 }
-
 $tool = "$($hook.tool_name)"
 $input_ = $hook.tool_input
+
+# A long text file is read in parts, by every caller - the main engine included. Seven saved Kanso
+# runs (measured 2026-10-20) made 125 whole-file reads of text over 20,000 characters, 4.1 million
+# characters in all: Workers read ToolScreen.kt (63 KB) whole at least seven times, and the Iteration
+# read ISSUES.md (63 KB) whole. Whatever is read stays in that context and is re-sent on every later
+# call. Images are left alone: the model sees their pixels, not their bytes.
+$WholeReadLimitBytes = 24000
+if ($tool -eq "Read" -and $null -eq $input_.limit) {
+    $path = "$($input_.file_path)"
+    if ($path -and -not [System.IO.Path]::IsPathRooted($path) -and $hook.cwd) { $path = Join-Path "$($hook.cwd)" $path }
+    $ext = [System.IO.Path]::GetExtension($path).ToLowerInvariant()
+    if ($path -and (@(".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".ipynb") -notcontains $ext) -and (Test-Path -LiteralPath $path -PathType Leaf)) {
+        $size = (Get-Item -LiteralPath $path).Length
+        if ($size -gt $WholeReadLimitBytes) {
+            $lines = 0
+            try { $lines = [System.IO.File]::ReadAllLines($path).Length } catch { }
+            [Console]::Error.WriteLine("Refused by Foreman's read guard: $([System.IO.Path]::GetFileName($path)) is $lines lines ($([Math]::Floor($size / 1024)) KB), too long to read whole. Grep for what you need, then Read with offset and limit (a few hundred lines at a time).")
+            exit 2
+        }
+    }
+}
+
+$agent = "$($hook.agent_type)"
+if (-not $agent) { exit 0 }
 $target = switch ($tool) {
     "Read" { "$($input_.file_path)" }
     "Grep" { "$($input_.path)" }

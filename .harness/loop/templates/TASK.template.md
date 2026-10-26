@@ -9,6 +9,10 @@
 - **Model Tier:** Fast | Capable <!-- assigned at planning time by the arm's-length conflict-analysis
      role, sanity-checked by the critique role (ADR-013). Never self-assigned. Escalates to Capable
      automatically on a failed Fast-tier attempt. -->
+- **Follow:** <!-- existing files a Worker copies the shape of, each in backticks with what to take from it:
+     one for the production code, one for every kind of test the task writes - its imports, its
+     helpers, how it measures a size, a colour or a position. Written at bootstrap from the survey. -->
+  - `path/to/ExistingTest.kt` - imports, the test rule, how a node's size is read in dp
 
 ## Description
 

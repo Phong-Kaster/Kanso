@@ -73,6 +73,26 @@
         "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1*)",
         "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-record-baselines.ps1*)"
       ]
+    },
+    {
+      "intent": "Check a Phase's Workers stayed inside their Declared File Scopes (ENGINE.md 6.6): scopes disjoint, every change in exactly one scope, nothing outside them. Read-only: it reads the task files and git status and writes nothing.",
+      "command": "powershell -NoProfile -File .harness/loop/bin/foreman-check-scope.ps1 -Tasks <ids> [-Wiring <files>]",
+      "scope": "the task files under .harness/run/TASKS/ and the repository's working tree",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-check-scope.ps1*)",
+        "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-check-scope.ps1*)"
+      ]
+    },
+    {
+      "intent": "Let a Worker compile its module's code and unit tests, so it fixes its own compile errors before the Iteration builds (ADR-044). Compiles only: no test, no app, no git. bin/foreman-subagent-shell.ps1 refuses a subagent every other command.",
+      "command": "powershell -NoProfile -File .harness/loop/bin/foreman-compile.ps1 [-Module <module>] [-Variant <variant>]",
+      "scope": "gradlew :<module>:compile<Variant>UnitTestKotlin in the repository; reads and writes only Gradle's own build outputs",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-compile.ps1*)",
+        "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-compile.ps1*)"
+      ]
     }
   ],
   "autonomous": {
