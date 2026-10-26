@@ -277,6 +277,8 @@ fun ToolScreen(
                     settings = state.settings,
                     enabled = !state.comparing && !state.finishing,
                     onCropFinished = { rect -> viewModel.commitCrop(rect, processorFor) },
+                    // The session's stickers stay visible on the photo being cropped.
+                    stickers = state.settings.stickers,
                 )
             }
         },

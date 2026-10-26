@@ -13,3 +13,9 @@
 
 ## Iteration 4 (Phase 2) - Tier 1
 - T-002 slice 2 split into 2 and 2b (6-file cap): top bar and chips became their own files (one composable per file, CLAUDE.md hierarchy rule) and `EditBottomBar.kt` joined the scope because the sheet replaces the tool row there. PRD, DoD and architecture unchanged.
+
+## Iteration 5 - Tier 1: StickerOverlayTest joins T-004 slice 3 scope
+Since slice 1 sticker pixels arrive via the asynchronously rendered filtered copy, so `StickerOverlayTest.compare_hides...` (line 105) read the pixel too early and failed. The premise of the check changed; the test must poll for the pixel. PRD, DoD, architecture unchanged.
+
+## Iteration 5 - Tier 1: review-fix files join T-004
+Reviewer found dead `StickerImage` and a second composable `StickerPlace` in `StickerOverlay.kt`; both files join slice 3's scope (StickerPlace.kt new). PRD, DoD, architecture unchanged.

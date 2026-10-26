@@ -51,9 +51,10 @@ network are used. You can:
   down), bottom-left mirror, bottom-right a handle that resizes and turns it together. One finger
   drags, two fingers pinch and twist; a newer sticker lies on top. Each add, delete, duplicate,
   mirror and each whole drag, pinch or handle pull is one Undo step; selecting is not. Closing the
-  sheet by tick or cross selects none. Done draws them into the saved picture. Not done yet: the
-  on-screen stickers do not get the filter and colour sliders (Done applies them), and the
-  cropper does not show them.
+  sheet by tick or cross selects none. Done draws them into the saved picture. The live preview
+  shows them with the filter and colour sliders (the one you are moving follows your finger with
+  the sliders but no filter, and joins the filtered picture when you let go), the cropper shows
+  them, and Compare shows the photo without them.
 - **Undo** (top right, next to Done) and **Compare** (pinned at the right of the tool row), both in reach whatever
   sheet is open. Undo takes back one action at a time; Compare is a switch that shows the untouched
   photo while it is on and disables the row of tools, the sheet's controls, the cropper and Undo.
@@ -212,7 +213,17 @@ main thread; no pixel is computed.
   and `flipSticker`; the handle resizes and turns about the centre. `selectedStickerKey` lives in
   `ToolUiState`, and `publishSession` clears it when its sticker is gone.
 - **Drawing.** Done draws the saved picture's stickers (`EditProcessor`, `DrawableStickerPictures`),
-  see below; the overlay draws the on-screen ones without filter or colour sliders.
+  see below. On screen, `StickerOverlay` draws no pictures (frame, buttons, touches only).
+  `FilterPreviewRenderer.render(settings, touchedStickerKey)` draws every untouched sticker into
+  the small preview copy before the filter (so filter and Intensity act on them; it renders with
+  no filter when stickers exist, null when nothing to draw). The request key is filter, intensity
+  and untouched stickers. The first `previewStickers` that changes a sticker sets
+  `ToolUiState.touchedStickerKey`; `LivePreviewImage` draws that sticker in the same crop, turn
+  and flip, clipped to the photo, with the slider colour matrix and no filter, so it follows the
+  finger. `commitSettings`, `publishSession` and the tick or cross clear the key and it joins the
+  filtered copy (one small re-render at gesture start, one at finger up, none during the drag).
+  `EditCropper` (`withStickersDrawn`) bakes stickers into a copy of the original, same mirror,
+  turn and scale as `EditProcessor`, so they show while cropping. Compare shows none.
 
 ### Done, the full render and the Result screen
 

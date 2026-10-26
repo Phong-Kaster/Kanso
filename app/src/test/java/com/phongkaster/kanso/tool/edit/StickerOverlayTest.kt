@@ -44,6 +44,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -101,16 +102,14 @@ class StickerOverlayTest {
         val key = viewModel.state.value.selectedStickerKey
         assertNotNull("the added sticker was not selected", key)
         val tileTag = stickerTileTag(StickerCatalog.inCategory(viewModel.state.value.stickerCategory).first().pictureId)
-        val withSticker = pixelAt(centre.x, centre.y)
-        assertTrue("an opaque sticker left the photo's pixel as it was: $withSticker", distance(original, withSticker) > TOLERANCE)
+        pollPixel(centre.x, centre.y, { "an opaque sticker left the photo's pixel as it was: $it" }) { distance(original, it) > TOLERANCE }
         compose.onNodeWithTag(stickerNodeTag(key!!)).assertExists()
         cornerTags.forEach { compose.onNodeWithTag(it).assertExists() }
         compose.onNodeWithTag(tileTag).assertIsEnabled()
 
         viewModel.setComparing(true)
         compose.waitForIdle()
-        val comparing = pixelAt(centre.x, centre.y)
-        assertTrue("Compare shows $comparing, not the original $original", distance(original, comparing) <= TOLERANCE)
+        pollPixel(centre.x, centre.y, { "Compare shows $it, not the original $original" }) { distance(original, it) <= TOLERANCE }
         compose.onAllNodesWithTag(stickerNodeTag(key)).assertCountEquals(0)
         compose.onAllNodesWithTag(STICKER_OVERLAY_TAG).assertCountEquals(0)
         cornerTags.forEach { compose.onAllNodesWithTag(it).assertCountEquals(0) }
@@ -121,8 +120,7 @@ class StickerOverlayTest {
 
         viewModel.setComparing(false)
         compose.waitForIdle()
-        val back = pixelAt(centre.x, centre.y)
-        assertTrue("the sticker did not come back: $back", distance(original, back) > TOLERANCE)
+        pollPixel(centre.x, centre.y, { "the sticker did not come back: $it" }) { distance(original, it) > TOLERANCE }
         compose.onNodeWithTag(stickerNodeTag(key)).assertExists()
         cornerTags.forEach { compose.onNodeWithTag(it).assertExists() }
         compose.onNodeWithTag(tileTag).assertIsEnabled()
@@ -136,6 +134,25 @@ class StickerOverlayTest {
     /** The colour of the one screen pixel at ([x], [y]) in the Compose root, read from a drawn bitmap. */
     private fun pixelAt(x: Float, y: Float): Color =
         compose.activity.sampleScreen(Rect(x, y, x + 1f, y + 1f)).ink
+
+    /**
+     * Reads the pixel at ([x], [y]) again and again, in real time and at most [WAIT_TIMEOUT_MS],
+     * until [accept] holds for it, running the main queue and the composition between tries. The
+     * sticker pictures arrive through the live preview's small copy, drawn on a background thread,
+     * so one read right after a change can still show the old picture. Fails with [message] built
+     * from the last pixel read when time runs out; returns the accepted pixel.
+     */
+    private fun pollPixel(x: Float, y: Float, message: (Color) -> String, accept: (Color) -> Boolean): Color {
+        val deadline = System.currentTimeMillis() + WAIT_TIMEOUT_MS
+        while (true) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.waitForIdle()
+            val pixel = pixelAt(x, y)
+            if (accept(pixel)) return pixel
+            if (System.currentTimeMillis() > deadline) fail(message(pixel))
+            Thread.sleep(POLL_MS)
+        }
+    }
 
     /** The largest difference between a channel of [a] and the same channel of [b], from 0 to 255. */
     private fun distance(a: Color, b: Color): Float = maxOf(
@@ -187,5 +204,11 @@ class StickerOverlayTest {
 
         /** How far two pixels of the same photo may differ (out of 255) after two ways of drawing it. */
         const val TOLERANCE = 12f
+
+        /** The longest a pixel poll waits, in milliseconds, for the live preview's copy to land. */
+        const val WAIT_TIMEOUT_MS = 10_000L
+
+        /** How long, in milliseconds, to sleep between two reads of a poll. */
+        const val POLL_MS = 50L
     }
 }

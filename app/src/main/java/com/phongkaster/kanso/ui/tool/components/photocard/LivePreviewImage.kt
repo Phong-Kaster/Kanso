@@ -17,7 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -29,6 +33,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.Sticker
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.min
@@ -58,6 +63,19 @@ val LivePreviewGeometry = SemanticsPropertyKey<String>("LivePreviewGeometry")
 /** Writes [LivePreviewGeometry] in a `semantics { }` block; reading it back is for tests only. */
 var SemanticsPropertyReceiver.livePreviewGeometry by LivePreviewGeometry
 
+/**
+ * What [LivePreviewImage] draws for the sticker under a finger, as stable text for tests to read:
+ * `key=3;picture=<id>;drawn=true;` then the same `turns=..;flipH=..;flipV=..;crop=..` text as
+ * [LivePreviewGeometry] (the sticker is drawn inside that very crop, turn and flip), then
+ * `;matrix=` and the 20 numbers of [LivePreviewMatrix] (the sliders' colours, without the
+ * filter), joined by commas. `drawn=false` means the sticker's picture could not be decoded.
+ * The property is absent while no sticker is touched.
+ */
+val LivePreviewTouchedSticker = SemanticsPropertyKey<String>("LivePreviewTouchedSticker")
+
+/** Writes [LivePreviewTouchedSticker] in a `semantics { }` block; reading it back is for tests only. */
+var SemanticsPropertyReceiver.livePreviewTouchedSticker by LivePreviewTouchedSticker
+
 /** The identity colour matrix's 20 numbers: ones on the diagonal (places 0, 6, 12, 18). */
 private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f }
 
@@ -79,11 +97,26 @@ private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f
  *    ([EditColourMatrix.of], the very numbers the final render uses), handed to the GPU as a
  *    `ColorFilter.colorMatrix`; with every slider in the middle no filter is set at all.
  *
- * The node carries [LIVE_PREVIEW_TAG], and [LivePreviewMatrix] and [LivePreviewGeometry] say
- * what is applied, for tests.
+ * 4. **The sticker under a finger.** The stickers not being touched are already inside [bitmap]
+ *    (the ViewModel's small copy has them drawn before the filter, so they come out filtered).
+ *    The one being moved, pinched or turned cannot wait for a re-render of that copy, so it is
+ *    drawn here, every frame, from [touchedSticker] and its decoded [touchedPicture]: inside the
+ *    very same crop, turn and flip as the photo (it is placed in the photo's own pixels and goes
+ *    through the same transform), with the same colour matrix but without the filter, and
+ *    clipped to the part of the photo that is shown, so a sticker that sticks out of the crop is
+ *    cut at the photo's edge. Both are null when no sticker is touched.
+ *
+ * The node carries [LIVE_PREVIEW_TAG], and [LivePreviewMatrix], [LivePreviewGeometry] and
+ * [LivePreviewTouchedSticker] say what is applied, for tests.
  */
 @Composable
-fun LivePreviewImage(bitmap: Bitmap, settings: EditSettings, modifier: Modifier = Modifier) {
+fun LivePreviewImage(
+    bitmap: Bitmap,
+    settings: EditSettings,
+    modifier: Modifier = Modifier,
+    touchedSticker: Sticker? = null,
+    touchedPicture: ImageBitmap? = null,
+) {
     // asImageBitmap wraps the Android bitmap for Compose without copying its pixels; remember
     // keeps the wrapper until another bitmap arrives.
     val image = remember(bitmap) { bitmap.asImageBitmap() }
@@ -104,6 +137,11 @@ fun LivePreviewImage(bitmap: Bitmap, settings: EditSettings, modifier: Modifier 
             .semantics {
                 livePreviewMatrix = matrixNumbers
                 livePreviewGeometry = geometry
+                if (touchedSticker != null) {
+                    livePreviewTouchedSticker = "key=${touchedSticker.key};" +
+                        "picture=${touchedSticker.pictureId};drawn=${touchedPicture != null};" +
+                        "$geometry;matrix=${matrixNumbers.joinToString(",")}"
+                }
             },
     ) {
         // A quarter or three-quarter turn swaps the picture's width and height on screen.
@@ -134,6 +172,69 @@ fun LivePreviewImage(bitmap: Bitmap, settings: EditSettings, modifier: Modifier 
                 dstOffset = IntOffset(-drawWidth / 2, -drawHeight / 2),
                 dstSize = IntSize(drawWidth, drawHeight),
                 colorFilter = colourFilter,
+            )
+            if (touchedSticker != null && touchedPicture != null) {
+                drawTouchedSticker(
+                    sticker = touchedSticker,
+                    picture = touchedPicture,
+                    photoWidth = bitmap.width,
+                    photoHeight = bitmap.height,
+                    crop = crop,
+                    pixelScale = drawWidth.toFloat() / crop.width,
+                    drawWidth = drawWidth,
+                    drawHeight = drawHeight,
+                    colourFilter = colourFilter,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Draws the touched [sticker] ([picture] is its decoded image) in the already turned and mirrored
+ * space of [LivePreviewImage]: the origin is the middle of the shown photo, which is [drawWidth] x
+ * [drawHeight] before the turn and the flip. [pixelScale] is how many screen pixels one pixel of the
+ * photo takes there.
+ *
+ * The sticker's centre is a fraction of the ORIGINAL photo, so its place in the shown part is
+ * its distance, in photo pixels, from the crop's middle, times [scale]. It is then mirrored,
+ * turned by its own angle and moved there (the calls of `withTransform` act on the drawing in
+ * reverse order, like in the photo's own transform), and everything is clipped to the shown
+ * photo so nothing sticks out of it. [colourFilter] carries the colour sliders (null when they
+ * are all in the middle); the filter is not applied to it.
+ */
+private fun DrawScope.drawTouchedSticker(
+    sticker: Sticker,
+    picture: ImageBitmap,
+    photoWidth: Int,
+    photoHeight: Int,
+    crop: IntRect,
+    pixelScale: Float,
+    drawWidth: Int,
+    drawHeight: Int,
+    colourFilter: ColorFilter?,
+) {
+    val width = sticker.width * photoWidth * pixelScale
+    if (!width.isFinite() || width < 1f || picture.width <= 0) return
+    val height = width * picture.height / picture.width
+    val offsetX = (sticker.centreX * photoWidth - (crop.left + crop.right) / 2f) * pixelScale
+    val offsetY = (sticker.centreY * photoHeight - (crop.top + crop.bottom) / 2f) * pixelScale
+    if (!offsetX.isFinite() || !offsetY.isFinite() || !sticker.degrees.isFinite()) return
+    val w = width.roundToInt().coerceAtLeast(1)
+    val h = height.roundToInt().coerceAtLeast(1)
+    // Only the shown part of the photo can take a sticker pixel.
+    clipRect(-drawWidth / 2f, -drawHeight / 2f, drawWidth / 2f, drawHeight / 2f) {
+        withTransform({
+            translate(offsetX, offsetY)
+            rotate(degrees = sticker.degrees, pivot = Offset.Zero)
+            scale(scaleX = if (sticker.mirrored) -1f else 1f, scaleY = 1f, pivot = Offset.Zero)
+        }) {
+            drawImage(
+                image = picture,
+                dstOffset = IntOffset(-w / 2, -h / 2),
+                dstSize = IntSize(w, h),
+                colorFilter = colourFilter,
+                filterQuality = FilterQuality.Medium,
             )
         }
     }
@@ -167,6 +268,53 @@ private fun sampleGradientBitmap(): Bitmap {
     }
     android.graphics.Canvas(bitmap).drawRect(0f, 0f, 320f, 240f, paint)
     return bitmap
+}
+
+/** A made-up 100 x 60 sticker picture for the previews: an opaque magenta pill. Nothing is decoded. */
+private fun sampleStickerPicture(): ImageBitmap {
+    val bitmap = Bitmap.createBitmap(100, 60, Bitmap.Config.ARGB_8888)
+    val paint = Paint().apply { color = 0xFFD81B60.toInt() }
+    android.graphics.Canvas(bitmap).drawRoundRect(0f, 0f, 100f, 60f, 30f, 30f, paint)
+    return bitmap.asImageBitmap()
+}
+
+/**
+ * The same live preview with a sticker under a finger, drawn through the crop, turn, flip and
+ * colour of the photo and cut at the photo's edge (it sits half outside the crop), in light and
+ * in dark.
+ */
+@PreviewLightDark
+@Composable
+private fun LivePreviewImageTouchedStickerPreview() {
+    val bitmap = remember { sampleGradientBitmap() }
+    val picture = remember { sampleStickerPicture() }
+    KansoTheme(themeMode = ThemeMode.System) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface),
+        ) {
+            LivePreviewImage(
+                bitmap = bitmap,
+                settings = EditSettings(
+                    crop = EditSettings.CropRect(0f, 0f, 0.66f, 1f),
+                    quarterTurns = 1,
+                    flipHorizontal = true,
+                    brightness = 0.2f,
+                ),
+                touchedSticker = Sticker(
+                    key = 1,
+                    pictureId = "sample",
+                    centreX = 0.66f,
+                    centreY = 0.4f,
+                    width = 0.3f,
+                    degrees = 15f,
+                    mirrored = false,
+                ),
+                touchedPicture = picture,
+            )
+        }
+    }
 }
 
 /**

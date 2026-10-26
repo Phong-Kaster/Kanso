@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -25,6 +28,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.Sticker
@@ -32,6 +37,7 @@ import com.phongkaster.kanso.data.edit.edit.StickerCatalog
 import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import kotlin.math.roundToInt
 
 /** Test tag of the sticker overlay's root: tests drive their touches through this node. */
 const val STICKER_OVERLAY_TAG = "sticker-overlay"
@@ -47,9 +53,11 @@ fun stickerNodeTag(key: Long): String = "sticker-$key"
  * the original and the shown picture, which knows the crop, the turns and the flips) turns it
  * into pixels here, and back.
  *
- * The stickers are drawn oldest first, so a newer one is on top; each is one accessibility node
- * tagged [stickerNodeTag], in that order. The selected one also gets a frame with four corner
- * buttons ([StickerFrame]).
+ * The overlay draws NO sticker picture: the pictures are part of the live picture beneath it (the
+ * filtered preview holds the stickers at rest, the live preview itself draws the one under a
+ * finger), so nothing is drawn twice. Each sticker is one invisible accessibility node tagged
+ * [stickerNodeTag], oldest first, at the sticker's place. The selected one also gets a frame with
+ * four corner buttons ([StickerFrame]).
  *
  * **Touch.** While [enabled] is true (the Stickers sheet is open, Compare is off and Done is not
  * running) ONE handler on this whole layer ([stickerGestures]) reads the raw touches and decides
@@ -141,14 +149,12 @@ fun StickerOverlay(
             key(sticker.key) {
                 val centre = sticker.shownCentre(mapping, area)
                 val width = sticker.shownWidth(mapping, area)
-                StickerImage(
-                    painter = painter,
+                StickerPlace(
                     centreX = centre.x,
                     centreY = centre.y,
                     widthPx = width,
                     heightPx = width * painter.aspectRatio(),
                     degrees = sticker.shownDegrees(mapping),
-                    mirrored = sticker.shownMirrored(mapping),
                     modifier = Modifier
                         .testTag(stickerNodeTag(sticker.key))
                         .semantics { selected = sticker.key == selectedKey },
@@ -185,7 +191,11 @@ fun StickerOverlay(
     }
 }
 
-/** Two overlapping sample stickers on a 300 dp square, for the previews. */
+/**
+ * Two overlapping sample stickers on a 300 dp square, for the previews. The overlay draws only
+ * the frame and the buttons now (the pictures belong to the live picture beneath), so the
+ * preview shows the selected sticker's frame over an empty square.
+ */
 @Composable
 private fun SampleStickerOverlay(selectedKey: Long?, enabled: Boolean) {
     val first = StickerCatalog.all[0].pictureId

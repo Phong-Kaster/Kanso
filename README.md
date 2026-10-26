@@ -215,7 +215,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    sheets, the sticker taps and Done, so a sticker never disappears in one of them.
 6. **On the photo.** `PhotoCard.kt` puts a `StickerOverlay`
    (`ui/tool/components/photocard/stickeroverlay/StickerOverlay.kt`) over the live picture, inside
-   the same box, so it is drawn with any tool open, but not while Compare is on. A newer sticker
+   the same box (frame, buttons and touches; the pictures come from the live preview, see 9), so
+   stickers show with any tool open, but not while Compare is on. A newer sticker
    lies on top of an older one. Touches work only while the Stickers sheet is open, Compare is off
    and Done is not running (`ToolViewModel.stickerEditingOpen`); otherwise the stickers are only
    drawn. One handler (`StickerGestures.kt`, raw pointer input on the main thread) finds the
@@ -235,10 +236,24 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
 8. **Selection.** It lives in `ToolUiState.selectedStickerKey`, not in the edit settings. It is
    pruned in `publishSession` whenever its sticker is gone (Undo, delete), and closing the sheet
    by the tick or the cross selects none.
-9. **Not done yet.** The overlay draws each picture as it is: the live filter preview and the
-   colour sliders do not act on the stickers while you edit (Done applies them), and the cropper
-   does not draw them. On failure of a picture to decode, that sticker is skipped in Done, which
-   renders at 2000 px at most on `Dispatchers.Default`.
+9. **Filter and sliders on stickers, live.** The overlay no longer draws sticker pictures (it keeps
+   the frame, corner buttons and touch areas). Instead the small preview copy carries them:
+   `FilterPreviewRenderer.render(settings, touchedStickerKey)`
+   (`data/edit/edit/FilterPreviewRenderer.kt`) draws every sticker except the touched one into the
+   small copy before the filter, so the filter and Intensity act on them; it renders even with no
+   filter when stickers exist, and gives nothing when there is no filter and nothing to draw.
+   `ToolViewModel` keys the preview request on filter, intensity and the untouched stickers.
+   The first `previewStickers` that changes a sticker sets `ToolUiState.touchedStickerKey`; that
+   sticker is left out of the small copy and `LivePreviewImage`
+   (`ui/tool/components/photocard/LivePreviewImage.kt`) draws it inside the same crop, turn and
+   flip, clipped to the photo, with the colour sliders' matrix but no filter, so it follows the
+   finger. `commitSettings` (finger up), `publishSession` and the tick or cross clear the key and
+   the sticker joins the filtered copy: one small re-render at the start of a gesture and one at
+   its end, none during the drag. The cropper (`ui/tool/components/EditCropper.kt`,
+   `withStickersDrawn`) bakes the stickers into a copy of the original photo with the same
+   mirror, turn and scale as `EditProcessor`, so they show while you crop. Compare shows the
+   untouched photo with no stickers. On failure of a picture to decode, that sticker is skipped
+   in Done, which renders at 2000 px at most on `Dispatchers.Default`.
 
 ### Remove background, Enhance, Retouch and Artistic
 

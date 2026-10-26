@@ -112,6 +112,14 @@ data class ToolUiState(
      */
     val selectedStickerKey: Long? = null,
     /**
+     * The key of the sticker a finger is moving, pinching, turning or resizing right now, or null
+     * when no gesture is under way. It is set when the gesture's first change arrives and cleared
+     * when the last finger lifts. While it is set the live picture draws that one sticker itself,
+     * following the finger every frame, and the small filtered copy is rendered without it; when
+     * the finger lifts the sticker joins the filtered copy.
+     */
+    val touchedStickerKey: Long? = null,
+    /**
      * True for a moment after the person tried to add a sticker beyond the limit: the screen shows
      * the "20 stickers at most" message, then calls the ViewModel to clear this flag.
      */

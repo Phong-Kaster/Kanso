@@ -135,7 +135,11 @@ class ToolViewModel(
             mutableState.update { it.copy(photo = shown) }
             // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
             // to the newly decoded original now; everything else the screen draws by itself.
-            if (tool == Tool.EDIT && photo != null && session.settings.hasFilter) requestPreview()
+            if (tool == Tool.EDIT && photo != null &&
+                (session.settings.hasFilter || session.settings.stickers.isNotEmpty())
+            ) {
+                requestPreview()
+            }
         }
     }
 
@@ -326,8 +330,11 @@ class ToolViewModel(
             it.copy(
                 openTool = if (closing) null else tool,
                 selectedStickerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedStickerKey,
+                touchedStickerKey = null,
             )
         }
+        // A gesture cut short by the sheet changing never commits: let the sticker rejoin the copy.
+        if (current.touchedStickerKey != null) requestPreview()
     }
 
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
@@ -475,6 +482,15 @@ class ToolViewModel(
      */
     fun previewStickers(list: List<Sticker>, processorFor: (EditSettings) -> ToolProcessor) {
         if (!stickerEditingOpen()) return
+        // The first change of a gesture names the touched sticker: the one that differs from the
+        // session's list. It is set BEFORE the preview is asked for, so that request already
+        // leaves it out. Later changes of the same gesture keep it, so the request key of the
+        // untouched stickers never moves during a drag and nothing is re-rendered.
+        if (mutableState.value.touchedStickerKey == null) {
+            val before = session.settings.stickers
+            val changed = list.firstOrNull { it !in before }
+            if (changed != null) mutableState.update { it.copy(touchedStickerKey = changed.key) }
+        }
         previewSettings(session.settings.copy(stickers = list), processorFor)
     }
 
@@ -490,7 +506,9 @@ class ToolViewModel(
     fun confirmStickers() {
         if (mutableState.value.comparing || mutableState.value.finishing) return
         stickersSnapshot = null
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
+        // Clear the touched key BEFORE asking for a preview, so the request includes that sticker.
+        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
+        requestPreview()
     }
 
     /**
@@ -504,11 +522,12 @@ class ToolViewModel(
         if (mutableState.value.comparing || mutableState.value.finishing) return
         val snapshot = stickersSnapshot
         stickersSnapshot = null
+        // Clear the touched key first: a gesture cancelled by this close never reaches its commit.
+        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
         if (snapshot != null) {
             publishSession(snapshot)
-            requestPreview()
         }
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null) }
+        requestPreview()
     }
 
     // --- The Edit screen's session ---------------------------------------------------------------
@@ -577,7 +596,11 @@ class ToolViewModel(
      * half recorded.
      */
     fun commitSettings() {
+        // The last finger is up: no sticker is touched any more, so the next preview request
+        // includes the one that was (it joins the filtered copy).
+        mutableState.update { it.copy(touchedStickerKey = null) }
         publishSession(session.commit())
+        if (processorFor != null) requestPreview()
     }
 
     /**
@@ -644,10 +667,13 @@ class ToolViewModel(
         mutableState.update { state ->
             val selected = state.selectedStickerKey
             val stillThere = selected != null && new.settings.stickers.any { it.key == selected }
+            val touched = state.touchedStickerKey
+            val touchedStillThere = touched != null && new.settings.stickers.any { it.key == touched }
             state.copy(
                 settings = new.settings,
                 canUndo = new.canUndo,
                 selectedStickerKey = if (stillThere) selected else null,
+                touchedStickerKey = if (touchedStillThere) touched else null,
             )
         }
     }
@@ -682,8 +708,19 @@ class ToolViewModel(
      */
     private var previewSource: Bitmap? = null
 
-    /** The filter and intensity last asked for, so an unchanged filter is not rendered again. */
-    private var lastPreviewKey: Pair<FilterPreset, Float>? = null
+    /**
+     * What a preview request is made of: the filter and its strength (none and 0 without a
+     * filter) and the stickers drawn into the small copy, never the one under a finger. Two
+     * requests with an equal key would give the same picture, so the second is not rendered.
+     */
+    private data class PreviewKey(
+        val filter: FilterPreset,
+        val intensity: Float,
+        val stickers: List<Sticker>,
+    )
+
+    /** The key last asked for, so an unchanged request is not rendered again. */
+    private var lastPreviewKey: PreviewKey? = null
 
     /** The renderer in use, built on [previewSource] with the processor recipe it was given. */
     private var previewRenderer: FilterPreviewRenderer? = null
@@ -701,15 +738,24 @@ class ToolViewModel(
      * lock while a finger drags a slider.
      */
     private fun requestPreview() {
-        val settings = session.settings
-        if (!settings.hasFilter) {
+        // The sticker under a finger is not part of the request: the screen draws it live, and
+        // leaving it out is what keeps the request the same for the whole of a drag.
+        val touched = mutableState.value.touchedStickerKey
+        val full = session.settings
+        val settings = full.copy(stickers = full.stickers.filter { it.key != touched })
+        if (!settings.hasFilter && settings.stickers.isEmpty()) {
             lastPreviewKey = null
             mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        // A slider, turn or crop leaves the filter as it was: its preview is still right, so no
-        // render is repeated (it would only cost memory and a redraw during a drag).
-        val key = settings.filter to settings.filterIntensity
+        // A slider, turn or crop leaves the filter and the stickers as they were: the preview is
+        // still right, so no render is repeated (it would only cost memory and a redraw during a
+        // drag). The key is the filter, its strength and the untouched stickers.
+        val key = PreviewKey(
+            filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
+            intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
+            stickers = settings.stickers,
+        )
         if (key == lastPreviewKey) return
         lastPreviewKey = key
         if (previewCollector == null) {
@@ -749,10 +795,17 @@ class ToolViewModel(
             null
         }
         val now = session.settings
-        // Same filter still chosen: show this frame even when the intensity has moved on since,
-        // so a drag keeps changing the photo; the newer request is already queued and replaces it.
-        // A failed render shows the plain photo rather than the previous filter's look.
-        if (now.hasFilter && now.filter == requested.filter) {
+        // Same filter still chosen (or still none, with stickers): show this frame even when the
+        // intensity has moved on since, so a drag keeps changing the photo; the newer request is
+        // already queued and replaces it. A failed render shows the plain photo rather than the
+        // previous filter's look.
+        val stillWanted = if (requested.hasFilter) {
+            now.hasFilter && now.filter == requested.filter
+        } else {
+            val touched = mutableState.value.touchedStickerKey
+            !now.hasFilter && now.stickers.any { it.key != touched }
+        }
+        if (stillWanted) {
             mutableState.update { it.copy(filterPreview = rendered) }
             if (rendered == null) lastPreviewKey = null
         }
@@ -831,7 +884,10 @@ class ToolViewModel(
      * the edit again. The edit itself is never touched, so nothing is lost by comparing.
      */
     fun setComparing(on: Boolean) {
-        mutableState.update { it.copy(comparing = on) }
+        val hadTouched = mutableState.value.touchedStickerKey != null
+        mutableState.update { it.copy(comparing = on, touchedStickerKey = null) }
+        // A gesture cancelled by Compare never commits, so the sticker rejoins the filtered copy.
+        if (hadTouched) requestPreview()
     }
 
     /** Hides the message about the last failed edit, once the person has read it. */

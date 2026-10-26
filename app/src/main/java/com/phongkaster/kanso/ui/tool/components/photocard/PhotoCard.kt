@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +32,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.Sticker
@@ -145,9 +147,26 @@ internal fun PhotoCard(
                                     contentDescription = photoDescription
                                 },
                         ) {
+                            // The sticker under a finger is drawn by the live preview itself, every
+                            // frame; its picture is decoded once per picture, off the touch path's
+                            // hot loop (remember), at a size that suits the preview. The other
+                            // stickers are already inside the filtered copy.
+                            val touched = state.touchedStickerKey?.let { key ->
+                                state.settings.stickers.firstOrNull { it.key == key }
+                            }
+                            val context = LocalContext.current
+                            val touchedPicture = remember(touched?.pictureId) {
+                                touched?.let {
+                                    DrawableStickerPictures(context)
+                                        .picture(it.pictureId, TOUCHED_PICTURE_EDGE)
+                                        ?.asImageBitmap()
+                                }
+                            }
                             LivePreviewImage(
                                 bitmap = state.filterPreview ?: current.bitmap,
                                 settings = state.settings,
+                                touchedSticker = touched,
+                                touchedPicture = touchedPicture,
                             )
                             // The stickers sit on top of the live picture, inside the same box, so
                             // the overlay's coordinates are the shown picture's. They are drawn with
@@ -299,6 +318,12 @@ private fun PhotoCardStickersPreview() {
         )
     }
 }
+
+/**
+ * The width, in pixels, a touched sticker's picture is decoded at: enough for a sticker covering
+ * most of a phone-sized photo, and the decoder never goes below the file's own size.
+ */
+private const val TOUCHED_PICTURE_EDGE = 1024
 
 /** The Uri text the preview pretends its photo came from. */
 private const val SAMPLE_PHOTO_URI = "content://media/external/images/media/42"

@@ -21,3 +21,10 @@ Existing tests changed or removed, each with its reason (DoD 35). New test files
 ## Phase 3 (T-003)
 - No existing test file edited, moved or removed.
 - New: `tool/edit/StickerGeometryTest.kt` (handle, hit-test and pinch maths; DoD 8), `StickerFrameTest.kt` (corner buttons delete, duplicate, flip, resize handle, content descriptions, 48 dp; DoD 5, 6, 7, 8, 22), `StickerGestureTest.kt` (swipe, pinch, twist on a turned and flipped photo, edge clamp, flip mid-drag; DoD 9), `StickerSelectionTest.kt` (select, overlap, closed-sheet inertness, undo order, pruning; DoD 10, 11, 12, 21), `StickerOverlayTest.kt` (Compare shows the original; DoD 14).
+
+## Phase 4 (T-004)
+- NEW `tool/edit/StickerPreviewRendererTest.kt`: renderer draws stickers before the filter, renders with no filter, honours touchedStickerKey (DoD 19).
+- NEW `tool/edit/StickerLivePreviewTest.kt`: touched sticker left out of the request and reported by `LivePreviewTouchedSticker`; rejoins on finger-up; cut at photo edge (DoD 19).
+- NEW `tool/edit/StickerCropperTest.kt`: stickers visible in the cropper, drag still moves the crop (DoD 20).
+- NEW `tool/edit/StickerCompareTest.kt`: Compare shows the original, controls do nothing (DoD 14).
+- EDIT `tool/edit/StickerOverlayTest.kt`: its three sticker pixel reads now poll (up to 10 s), because since Phase 4 the sticker pixels arrive through the asynchronously rendered live-preview copy, not the overlay. Assertions and tolerances unchanged.
