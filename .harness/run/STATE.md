@@ -5,7 +5,7 @@
 
 ## Current
 
-- **Stage:** T-008 complete (Iteration 12); all tasks complete, PARTIAL-candidate recorded
+- **Stage:** Verifier (Iteration 13) found a docs gap in DoD 40, filed and fixed it as T-009; all tasks complete, PARTIAL-candidate recorded
 - **Loop Branch:** loop/kanso-stickers
 - **Next Phase:** none; the next invocation is the Verifier
 - **DONE-candidate:** no (cleared by the Verifier, Iteration 9)
@@ -23,6 +23,7 @@
 | T-006 | complete | README, edit.md, tool-screen.md, CONTEXT.md, ADR-004 | diff-phase6.patch |
 | T-007 | complete | README, edit.md, tool-screen.md, EditPhotoArea.kt + ToolTopBar.kt (KDoc) | compile + scope check, Iteration 10 |
 | T-008 | complete | README, edit.md | scope check, Iteration 12 |
+| T-009 | complete | README, edit.md | scope check, Iteration 13 |
 
 ## Signed-off human criteria
 

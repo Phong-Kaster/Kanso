@@ -158,7 +158,7 @@ flowchart TD
      switched off while the rectangle is moved so the new shape is not bent back to the old one).
      While Compare is on the cropper is not drawn at all (the plain photo shows); while Done is
      rendering, a layer on top of the cropper takes every touch, so it ignores them. The cropper, the sheets and the row all run on the main thread, as Compose draws;
-     none of them touches pixels.
+     the only pixels among them are the cropper's sticker bake (above).
    - `EditSession.change` pushes the old settings on the undo stack (an unchanged value adds
      nothing); `preview` follows the finger without an entry and `commit` turns the whole drag into
      one entry; `cropRatioChosen` sets the largest centred rectangle of the shape, fitted on its
@@ -187,7 +187,7 @@ flowchart TD
    The result becomes
    `ToolUiState.filterPreview`, and `LivePreviewImage` draws that bitmap instead of the original,
    cropping, turning and colouring it as above. A crop, turn or slider change keeps the same filter
-   preview. A preview that fails shows the plain photo, with no message.
+   preview. A preview that fails leaves `filterPreview` empty, so the card draws the plain photo (no resting stickers either), with no message.
 
 ### The Stickers sheet
 
@@ -210,7 +210,7 @@ flowchart TD
     G -->|"20 stickers"| L["stickerLimitShown = true: StickerLimitMessage for about 2.5 s"]
     G -->|no| M["StickerMapping: middle of the picture you see -> fractions of the original photo"]
     M --> S["EditSession.addSticker: one Undo entry, newest on top"]
-    S --> P["publishSession: selectedStickerKey = the new sticker"]
+    S --> P["publishSession: only prunes the selection; addSticker then sets selectedStickerKey = the new sticker"]
     P --> R["preview copy re-rendered with the new sticker (FilterPreviewRenderer)"]
 ```
 
@@ -382,8 +382,9 @@ flowchart TD
   the Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
   place of the cropper). In every case the person stays on Edit with every setting and Undo step
   kept, and nothing is handed over.
-- A filter preview that fails shows the photo without the filter, silently; Done reports a real
-  failure.
+- A filter preview that fails leaves `filterPreview` empty, silently: the card draws the original
+  photo, with no filter and no resting stickers on screen; the saved result is unaffected and Done
+  reports a real failure.
 - A photo that cannot be decoded shows "This photo cannot be opened. Go back and pick another one."
 - A failed Save shows "The photo could not be saved. Try again."; a refused storage permission
   shows that nothing was saved.
@@ -408,8 +409,8 @@ flowchart TD
   photo runs out of memory), un-turned, un-flipped and unfiltered. A turn after a crop turns
   the cropped picture with it (a 16:9 crop turned once comes out 9:16).
 - **Stickers.** At most **20** (`EditSettings.MAX_STICKERS`); a 21st add or duplicate changes
-  nothing and shows a message for about 2.5 seconds. A sticker's width stays between 5 and 100
-  percent of the shown width. While a sticker is being moved it shows no filter in the preview
+  nothing and shows a message for about 2.5 seconds. During a gesture or handle pull a sticker's
+  width is kept between 5 and 100 percent of the shown width; a later tighter crop can push it past 100. While a sticker is being moved it shows no filter in the preview
   (it does in the saved picture). A sticker wholly outside the crop draws nothing in the saved
   picture. A picture that cannot be decoded is skipped in Done. The sheet's cross and system Back
   throw away what was done since it opened, Undo steps included.

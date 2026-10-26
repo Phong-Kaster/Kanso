@@ -127,7 +127,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    un-flipped and unfiltered, because the crop is kept as
    fractions of the original and the render crops before it turns. When the last finger lifts, a
    rectangle that moved by more than a tenth of a percent becomes one `commitCrop`. All of this,
-   and the row and the sheets, runs on the main thread as Compose draws; no pixel is computed.
+   and the row and the sheets, runs on the main thread as Compose draws; the only pixels it
+   computes are the sticker bake (step 10): a copy of the photo with each sticker picture drawn on it.
 4. **Live preview.** `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) draws the original on a
    Compose `Canvas` every frame: crop, quarter turns, flips, and the four sliders as one
    `ColorFilter.colorMatrix` from `data/edit/edit/EditColourMatrix.kt`. A filter is the one part
@@ -178,8 +179,9 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    cropper replaces the photo card, so at first no message is visible (the spinner stops and Done
    can be tapped again); the message appears as soon as the photo card is shown again, when the
    Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
-   place of the cropper). A failed filter preview silently shows the
-   photo without the filter. A photo that cannot be decoded shows "This photo cannot be opened. Go
+   place of the cropper). A failed filter preview silently leaves
+   `filterPreview` empty: the card draws the original photo, with no filter and no resting
+   stickers on screen (Done's saved result is unaffected). A photo that cannot be decoded shows "This photo cannot be opened. Go
    back and pick another one." A failed Save says "The photo could not be saved. Try again."; a
    refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
    to show" and Edit reopens on the photo with no changes (the session lived only in memory).
@@ -208,8 +210,7 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    (`ui/tool/components/StickerLimitMessage.kt`) show "A photo can hold 20 stickers at most"
    (`stickers_limit_message` in `res/values/strings_stickers.xml`) for about 2.5 seconds. Taps are
    ignored while Compare is on or Done renders.
-4. **Keep or throw away.** The tick (`confirmStickers`) keeps everything and closes the sheet; so
-   does any other way of closing it (`closeTool`). The cross and the system Back (`cancelStickers`,
+4. **Keep or throw away.** The tick (`confirmStickers`) keeps everything and closes the sheet. The cross and the system Back (`cancelStickers`,
    reached by `onBackPressed`) put the session back to the snapshot, settings and Undo steps, so
    Undo is as it was, and clear the selection. While Compare is on or Done renders, the tick, the
    cross and Back do nothing (Back is consumed, so the screen stays): Done draws the stickers as
@@ -219,8 +220,9 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    `Dispatchers.Default`) decodes each picture with `data/edit/edit/DrawableStickerPictures.kt`
    (`BitmapFactory`, `inSampleSize`, nothing cached) and blends it into the cropped pixels, so the
    saved JPEG (quality 95, `Pictures/Kanso`) holds them. The one recipe from settings to processor,
-   `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the cropper, the
-   sheets, the sticker taps and Done, so a sticker never disappears in one of them.
+   `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the sheets, the
+   sticker taps and Done, and passed through the cropper to `commitCrop`. The cropper draws its own
+   stickers with a `DrawableStickerPictures`, so a sticker never disappears in one of them.
 6. **On the photo.** `PhotoCard.kt` puts a `StickerOverlay`
    (`ui/tool/components/photocard/stickeroverlay/StickerOverlay.kt`) over the live picture, inside
    the same box (frame, buttons and touches; the pictures come from the live preview, see 9), so
@@ -231,7 +233,7 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    topmost sticker under the finger on its turned rectangle: a finger put down on it calls
    `selectSticker` (so a drag selects too), a touch on empty photo selects none. One finger drags the sticker by the finger's move; two fingers
    scale it by the ratio of their distance and turn it by the change of their angle, with no
-   damping (width kept between 5 and 100 percent of the shown width, `StickerGeometry.kt`). Each
+   damping (during the gesture, width kept between 5 and 100 percent of the shown width, `StickerGeometry.kt`; a later tighter crop can push it past 100). Each
    move calls `previewStickers`, which shows the new list at once and makes no Undo entry; the
    last finger up calls `commitSettings`, so a whole drag or pinch is one Undo step.
 7. **The frame.** The selected sticker gets `StickerFrame.kt`: an outline that turns with it and
@@ -278,9 +280,10 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
     `Dispatchers.Default`, everything else (panel, gestures, selection) on the main thread,
     including the decode of the touched sticker's picture (`PhotoCard.kt`) and the cropper's
     sticker bake (`EditCropper.kt`), which run inside composition. A
-    picture that cannot be decoded, or a sticker with a non-finite number, is skipped in Done
-    without an error; running out of memory gives the usual "too large to edit" message and
-    keeps every sticker and Undo step. The 20-sticker limit is `EditSettings.MAX_STICKERS`.
+    picture that cannot be decoded (including running out of memory while decoding that one
+    picture), or a sticker with a non-finite number, is skipped in Done without an error; running
+    out of memory elsewhere in the render gives the usual "too large to edit" message and
+    keeps every setting and Undo step. The 20-sticker limit is `EditSettings.MAX_STICKERS`.
     The pictures are copies of the ones in `reference/pinity-stickers/res/drawable/`; none is
     downloaded.
 

@@ -59,3 +59,6 @@
 
 ### Iteration 12 - 2026-10-26
 - Phase 8 (T-008): one Fast Worker fixed the 5 doc items (preview diagram, pictures 69-82 credit, EditSettings list, cropper OOM fallback, requestPreview callers). Scope check green; docs only. All tasks complete; PARTIAL-candidate recorded (A-001).
+
+### Iteration 13 - 2026-10-26 (Verifier)
+- Fresh assemble, test, lint exit 0; verifyRoborazziDebug fails only A-001's 15 pictures plus the known `SettingsUiStateTest` flake (green in the first run). Static criteria 29, 30, 32, 33, 35, 37 hold; a fresh Capable reader confirmed 38 and 39. 40: two false sentences (cropper "computes no pixels") and six over-claims. Filed T-009 and fixed it in this Iteration with one Fast Worker (scope check green, docs only); PARTIAL-candidate kept so the next fresh Verifier re-reads. Device criteria not driven while the gap was open. Evidence: evidence/v3-verifier-2026-10-26.md.
