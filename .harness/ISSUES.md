@@ -1,6 +1,11 @@
 # ISSUES
 
-## Run 10 (stickers on the Edit screen), loop/kanso-stickers: DONE-candidate, Iteration 15
+## Run 10 (stickers on the Edit screen), loop/kanso-stickers: DONE, Iteration 16
+
+- **Verifier, Iteration 16 (2026-10-26): DONE.** Assemble, 941 unit tests (0 skipped, equal to the `@Test` count), lint and `verifyRoborazziDebug` exit 0, with tests, lint and screenshots re-run without the build cache. Every criterion that needs a person is signed. `.harness/run/` (with its evidence and `baseline-diffs/`) was removed by the Cleanup Commit. Two criteria hold only because of something the owner did, not by their literal wording:
+  - Criterion 30 lists only pictures 51, 52 and 55 to 68 as allowed to change. The diff since `fadd7c4` also changes the 15 pictures the owner told the run to re-record when overturning A-001 (3-6, 16, 17, 24, 25, 40-42, 47-50). All 31 are on the owner's `## Baselines` list in `DECISIONS.md`, and each kept its old version until the cleanup. The Verifier counts the owner's decision as their later word on criterion 30.
+  - Criterion 36 says lint's unused-resource list should equal the base's. It has one extra entry, `R.color.ic_launcher_kanso_blue`, which became unused in the owner's own commit `9f860e6` (launcher icon redraw), not in the Stickers code. None of this run's new strings are unused. Remove the colour, or use it again, when you next touch the launcher icon.
+- Criterion 24 names the Galaxy A13. The owner signed it after checking on a Vivo V2408A, so the drag with 20 stickers has still not been tried on the A13 itself.
 
 - **Iteration 15 (2026-10-26): the owner overturned A-001 and signed 23, 24, 25, 28, 31 and 40.** The 15 pictures were re-recorded through `foreman-record-baselines.ps1` (`.harness/run/evidence/record-a001.log`); the old versions are `*.old.png` in `.harness/run/evidence/baseline-diffs/`. `verifyRoborazziDebug` exits 0 (`verify-a001.log`). A fresh Verifier re-proves everything next.
 
