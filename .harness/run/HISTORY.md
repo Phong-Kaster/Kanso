@@ -65,3 +65,10 @@
 
 ### Iteration 14 - 2026-10-26 (Verifier)
 - Fresh assemble, test, lint exit 0; verifyRoborazziDebug fails only A-001's 15 pictures (941 tests, 0 skipped). Criteria 1-22, 26, 29, 30, 32, 33, 35-39, 41-43 hold. 40: a fresh Capable reader found no false sentence (7 imprecise ones logged to ISSUES.md, not filed: they are not untrue). 23 not driven: the only device was the owner's A13, in use; no emulator. Moved the Runs 2-9 sections of ISSUES.md to `.harness/archive/ISSUES-run-2-to-9.md`, carrying all 61 unsigned items word for word; added Run 10's "Awaiting a person" checklist. Run ends DONE_PARTIAL (A-001; criteria 23, 24, 25, 28, 31, 40 unsigned). Evidence: evidence/v4-verifier-2026-10-26.md.
+
+## Iteration 15 (2026-10-26): A-001 overturned, signatures consumed
+
+- Recover: only `DECISIONS.md` and `TELEMETRY.tsv` dirty (both expected).
+- Consumed the owner's A-001 answer (re-record) and the Run 10 signatures (23, 24, 25, 28, 31, 40).
+- Kept the 15 old pictures as `*.old.png`, ran `foreman-record-baselines.ps1 -Module app` (exit 0, "re-recorded with the human's approval: 15", `record-a001.log`), then `verifyRoborazziDebug` (exit 0, `verify-a001.log`).
+- No source code changed, no Workers dispatched. All criteria now appear satisfied with nothing assumed or abandoned: DONE-candidate recorded; the next invocation is the Verifier.

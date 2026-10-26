@@ -59,6 +59,21 @@ assumptions.
 - app/src/test/screenshots/66_edit_compare_on_dark.png
 - app/src/test/screenshots/67_edit_pill_light.png
 - app/src/test/screenshots/68_edit_pill_dark.png
+- app/src/test/screenshots/3_home_custom_colour.png
+- app/src/test/screenshots/4_settings_light.png
+- app/src/test/screenshots/5_settings_dark.png
+- app/src/test/screenshots/6_settings_custom_colour.png
+- app/src/test/screenshots/16_tool_photo_light.png
+- app/src/test/screenshots/17_tool_photo_dark.png
+- app/src/test/screenshots/24_settings_swatches_light.png
+- app/src/test/screenshots/25_settings_swatches_dark.png
+- app/src/test/screenshots/40_tool_narrow_photo_light.png
+- app/src/test/screenshots/41_tool_narrow_photo_dark.png
+- app/src/test/screenshots/42_tool_narrow_photo_sdk30_light.png
+- app/src/test/screenshots/47_tool_retouch_light.png
+- app/src/test/screenshots/48_tool_retouch_dark.png
+- app/src/test/screenshots/49_tool_artistic_light.png
+- app/src/test/screenshots/50_tool_artistic_dark.png
 
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty
@@ -80,3 +95,24 @@ cannot be lost.
 An item left unticked stays queued. Partial answers are fine and expected: answer what you have
 actually checked, and the rest waits.
 -->
+
+## A-001
+
+**Overturned by the owner, 2026-10-26: re-record the 15 pictures.** I looked at them and they are correct as I
+expect ("i have checked them, they are working well now. They are correct as i expect"), so the new picture is
+right for each one. The 15 are added to the `## Baselines` list above. Record them through
+`bin/foreman-record-baselines.ps1`, keep each old version in `.harness/run/evidence/baseline-diffs/`, and let
+criteria 27 and 34 hold.
+
+## Run 10 - Awaiting a person
+
+Signed by the owner, 2026-10-26, after installing `18324bf`'s debug build on a Vivo V2408A and checking each:
+"i have check stickers feature, it works as i wish. i am ok with sticker feature", then, for the rest, "i have
+checked them, they are working well now. They are correct as i expect".
+
+- [x] 23 - stickers by hand: add, drag, pinch, twist, delete, duplicate, flip, resize; inert with another tool open
+- [x] 24 - smooth with 20 stickers on the Galaxy A13
+- [x] 25 - saved result: stickers sharp, cut by the crop, tinted by the filter
+- [x] 28 - new pictures 69 to 82 read as part of Kanso in both themes
+- [x] 31 - re-recorded pictures 51, 52, 55 to 68: only the tool row changed
+- [x] 40 - README and the Edit docs are true of the app

@@ -2,9 +2,9 @@
 
 > Regenerated every iteration. A derived cache, never a source of truth.
 
-- **Stage:** Ended `DONE_PARTIAL` (Verifier, Iteration 14). All tasks complete; every machine criterion holds except 27 and 34 (A-001, Tier 3: 15 stale screenshot references). Criteria 23, 24, 25, 28, 31 and 40 await a person (`.harness/ISSUES.md`, "Awaiting a person, Run 10"). A later invocation acts only on a human answer in `DECISIONS.md` (for example, re-record the 15 pictures under A-001).
+- **Stage:** DONE-candidate (Iteration 15). The owner overturned A-001 (15 pictures re-recorded, `verifyRoborazziDebug` exits 0) and signed criteria 23, 24, 25, 28, 31 and 40 (see `STATE.md`). Next invocation is the Verifier (§11): re-prove every machine criterion.
 - **Next Phase:** none
-- **Queued decisions:** 0 | **Abandoned:** none | **Unreachable:** none | **Assumptions:** A-001
-- **Verified commands:** build `timeout 3600 ./gradlew :app:assembleDebug` | test `timeout 3600 ./gradlew :app:testDebugUnitTest` | lint `timeout 3600 ./gradlew :app:lintDebug` | screenshots `timeout 3600 ./gradlew :app:verifyRoborazziDebug` (fails A-001's 15 pictures).
+- **Queued decisions:** 0 | **Abandoned:** none | **Unreachable:** none | **Assumptions:** none open (A-001 overturned)
+- **Verified commands:** build `timeout 3600 ./gradlew :app:assembleDebug` | test `timeout 3600 ./gradlew :app:testDebugUnitTest` | lint `timeout 3600 ./gradlew :app:lintDebug` | screenshots `timeout 3600 ./gradlew :app:verifyRoborazziDebug`.
 - **Open issues in scope:** none
 - **Model tiers:** fast: `sonnet` | capable: `opus`

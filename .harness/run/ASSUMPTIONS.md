@@ -39,3 +39,10 @@ and 34 require the whole check to exit 0. Re-record the 15, or leave them?
 
 Option 2. Moving a reference picture is a human decision, and D-001 named exactly which ones could move. Every
 one of the 15 needs a person to look at the new image anyway; the list is in `.harness/ISSUES.md`.
+
+### Overturned (Iteration 15, 2026-10-26)
+
+The owner answered A-001 in `DECISIONS.md`: re-record the 15 pictures; they looked at them and the new
+pictures are right. Recorded through `foreman-record-baselines.ps1` with the 15 listed under `## Baselines`;
+old versions kept as `*.old.png` in `.harness/run/evidence/baseline-diffs/`. Criteria 27 and 34 are no longer
+assumed. Undo: `git revert` of Iteration 15's checkpoint.

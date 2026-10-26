@@ -5,11 +5,11 @@
 
 ## Current
 
-- **Stage:** Ended DONE_PARTIAL (Verifier, Iteration 14): no gap this run can close
+- **Stage:** DONE-candidate (Iteration 15): the owner overturned A-001 and signed every human criterion; the next invocation is the Verifier
 - **Loop Branch:** loop/kanso-stickers
 - **Next Phase:** none
-- **DONE-candidate:** no (cleared by the Verifier, Iteration 9)
-- **PARTIAL-candidate:** yes (A-001: criteria 27 and 34 assumed; criteria 23, 24, 25, 28, 31 and 40 await a signature)
+- **DONE-candidate:** yes (Iteration 15)
+- **PARTIAL-candidate:** no (A-001 overturned by the owner; all signatures given, Iteration 15)
 
 ## Progress
 
@@ -27,8 +27,8 @@
 
 ## Signed-off human criteria
 
-- none
+- 23, 24, 25, 28, 31, 40: signed by the owner, 2026-10-26, on a Vivo V2408A with `18324bf`'s debug build (`DECISIONS.md`, "Run 10 - Awaiting a person"). Criterion 24 names the Galaxy A13; the owner signed it having checked on the Vivo.
 
 ## Assumptions
 
-- A-001 (Tier 3): 15 stale screenshot references are not re-recorded. **Assumed criteria: 27, 34** (verifyRoborazziDebug does not exit 0). This run cannot end `DONE`.
+- A-001 (Tier 3): overturned by the owner, 2026-10-26. The 15 pictures were re-recorded in Iteration 15; criteria 27 and 34 are no longer assumed.
