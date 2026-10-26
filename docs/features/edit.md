@@ -96,8 +96,8 @@ flowchart TD
     P --> U
     C --> U
     U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders"]
-    U -->|filter or intensity changed| Q["conflated Channel of filter requests"]
-    Q --> R["FilterPreviewRenderer: 640 px copy of the original, filter only, Dispatchers.Default"]
+    U -->|filter, intensity or sticker changed| Q["conflated Channel of preview requests"]
+    Q --> R["FilterPreviewRenderer: 640 px copy of the original, stickers (not the touched one) then filter, Dispatchers.Default"]
     R -->|ToolUiState.filterPreview| L
 ```
 
@@ -131,7 +131,8 @@ flowchart TD
 3. **One settings value for the whole visit.** Everything the person has done is one immutable
    [`data/edit/edit/EditSettings.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt):
    the crop rectangle (fractions of the original), the locked crop shape, quarter turns, the two
-   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1). It is
+   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1), and the
+   stickers. It is
    held, with its undo stack, by
    [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
    No control ever asks for a change on top of the last result: each re-renders from the original
@@ -147,8 +148,9 @@ flowchart TD
    - [`ui/tool/components/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditCropper.kt)
      wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
      [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
-     It always shows the decoded photo with the stickers drawn into a copy of it (on the main
-     thread, inside composition), un-turned, un-flipped and unfiltered, because the crop is stored as
+     It shows the decoded photo with the stickers drawn into a copy of it (on the main
+     thread, inside composition; if copying the photo runs out of memory it shows the photo without
+     stickers), un-turned, un-flipped and unfiltered, because the crop is stored as
      fractions of the original and the render crops before it turns. When the last finger lifts,
      the rectangle becomes fractions and, if it differs from the session's crop by more than a tenth
      of a percent, goes to `commitCrop` once. A session crop or shape that changes (a chip, Undo)
@@ -178,8 +180,10 @@ flowchart TD
    runs the real `EditProcessor` with the filter, its intensity and every sticker except the one
    being touched, on `Dispatchers.Default`, on a copy of
    the original shrunk once to at most 640 px (`PREVIEW_EDGE`). It also renders when there is no
-   filter but there are stickers. `requestPreview` is called from `addSticker`, `deleteSticker`,
-   `duplicateSticker`, `flipSticker`, `commitSettings`, `confirmStickers` and `cancelStickers`.
+   filter but there are stickers. `requestPreview` is called, among other places, from `addSticker`,
+   `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`, `confirmStickers` and
+   `cancelStickers` (also `changeSettings`, `previewSettings`, `chooseCropRatio`, `undo`, `load`,
+   `openTool` and `setComparing`).
    The result becomes
    `ToolUiState.filterPreview`, and `LivePreviewImage` draws that bitmap instead of the original,
    cropping, turning and colouring it as above. A crop, turn or slider change keeps the same filter
@@ -400,8 +404,8 @@ flowchart TD
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
-- **Crop.** The cropper always shows the photo, with the stickers drawn in, un-turned, un-flipped
-  and unfiltered. A turn after a crop turns
+- **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the
+  photo runs out of memory), un-turned, un-flipped and unfiltered. A turn after a crop turns
   the cropped picture with it (a 16:9 crop turned once comes out 9:16).
 - **Stickers.** At most **20** (`EditSettings.MAX_STICKERS`); a 21st add or duplicate changes
   nothing and shows a message for about 2.5 seconds. A sticker's width stays between 5 and 100
@@ -445,10 +449,12 @@ and the other sticker tests in the same folder: `StickerCatalogTest.kt`, `Sticke
 `StickerGestureTest.kt`, `StickerFrameTest.kt`, `StickerOverlayTest.kt`,
 `StickerLivePreviewTest.kt`, `StickerPreviewRendererTest.kt`, `StickerCropperTest.kt`,
 `StickerCompareTest.kt` and `EditProcessorStickerTest.kt` (the order and the blend in Done). The
-Stickers screenshots (pictures 69 to 82 in `app/src/test/screenshots/`) are recorded by
-[`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt),
+Stickers screenshots (pictures 69 to 82 in `app/src/test/screenshots/`) are recorded only by
+[`screenshots/StickerScreenshotTest.kt`](../../app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt).
+The Edit tests also include
 [`DiscardDialogTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/DiscardDialogTest.kt)
-and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt).
+and [`EditToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolTest.kt),
+which capture no picture.
 Done and the Result screen are covered by
 [`tool/DoneResultTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/DoneResultTest.kt),
 [`result/ResultViewModelTest.kt`](../../app/src/test/java/com/phongkaster/kanso/result/ResultViewModelTest.kt)

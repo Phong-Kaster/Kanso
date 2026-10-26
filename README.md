@@ -122,7 +122,8 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    moves and `commitSettings` when let go (the whole drag is one Undo step). The cropper,
    `ui/tool/components/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview`
    (`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`) and its `CropState`;
-   it always shows the decoded photo with the stickers drawn into a copy of it, un-turned,
+   it shows the decoded photo with the stickers drawn into a copy of it (if copying the photo runs
+   out of memory, the photo without stickers), un-turned,
    un-flipped and unfiltered, because the crop is kept as
    fractions of the original and the render crops before it turns. When the last finger lifts, a
    rectangle that moved by more than a tenth of a percent becomes one `commitCrop`. All of this,
@@ -134,9 +135,10 @@ here end to end, with diagrams on [its page](docs/features/edit.md).
    `data/edit/edit/FilterPreviewRenderer.kt` renders the filter, its intensity and every sticker
    except the one being touched on a copy of the original at most 640 px, on
    `Dispatchers.Default`, which the canvas then draws in place of the original. It also renders
-   when there is no filter but there are stickers. The ViewModel asks for it from `addSticker`,
-   `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`, `confirmStickers` and
-   `cancelStickers`.
+   when there is no filter but there are stickers. The ViewModel asks for it, among other places, from
+   `addSticker`, `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`,
+   `confirmStickers` and `cancelStickers` (also `changeSettings`, `previewSettings`,
+   `chooseCropRatio`, `undo`, `load`, `openTool` and `setComparing`).
 5. **Done.** `ToolViewModel.done` shows a spinner in Done, disables the row, the sheet and the
    cropper, and renders the whole current settings once from the decoded original (at most twice
    the screen's longest edge), shrunk to at most 2000 px (`WorkingSize.EDIT` in
