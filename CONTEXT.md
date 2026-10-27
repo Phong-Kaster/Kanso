@@ -9,13 +9,24 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).
 
-**EditTool** - One of the five groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`, `STICKERS`. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
+**EditTool** - One of the six groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+`ADJUST`, `FILTERS`, `STICKERS`, `TEXT` (planned). Text is its own tool with its own sheet, not a
+section of the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
 opens one sheet; only one sheet is open at a time (the Stickers sheet takes the row's place while
 open). Holds no strings or icons.
 `data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
 
-**Sticker** - One ready-made picture placed on the photo in Edit: an immutable value with a key,
+**Layer** (planned) - One thing placed on the photo in Edit, which the person can select, move,
+pinch and turn. A layer has one of two kinds: a *picture* (a **Sticker**, added by the Stickers
+tool) or *text* (added by the Text tool). All layers sit in one list, oldest first, so the stacking
+order runs across both kinds; selecting a layer brings it to the front. A photo holds at most 20 layers in total. Every layer, of either kind, has a size (1-100, relative to the
+photo) and an opacity (10-100%), each set by a slider in its tool's sheet; pinching a layer
+changes the same size. Like a sticker today, a layer is part of the photo (ADR-004): crop,
+turns, flips, filter and sliders act on it. *Not* a layer drawn over the finished picture (the
+option ADR-004 rejected), and not Compose's `graphicsLayer`.
+
+**Sticker** - One ready-made picture placed on the photo in Edit (once Layer lands: a layer of the
+*picture* kind): an immutable value with a key,
 a picture id, a centre, a width (all fractions of the ORIGINAL photo), a turn in degrees and a
 mirrored flag. A photo holds at most 20 (`EditSettings.MAX_STICKERS`) in `EditSettings.stickers`.
 It is part of the photo: `EditProcessor` draws it first, so crop, turns, flips, filter and sliders
