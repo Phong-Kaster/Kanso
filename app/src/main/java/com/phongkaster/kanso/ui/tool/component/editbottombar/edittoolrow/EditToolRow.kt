@@ -27,7 +27,8 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
@@ -182,7 +183,7 @@ private fun EditToolRowPreview() {
                 settings = EditSettings(
                     brightness = 0.4f,
                     filter = FilterPreset.KELVIN,
-                    stickers = listOf(Sticker(key = 1L, pictureId = "apple", centreX = 0.5f, centreY = 0.5f, width = 0.3f, degrees = 0f, mirrored = false)),
+                    layers = listOf(Layer(key = 1L, content = LayerContent.Picture("apple"), centreX = 0.5f, centreY = 0.5f, width = 0.3f, degrees = 0f, mirrored = false)),
                 ),
             )
         }

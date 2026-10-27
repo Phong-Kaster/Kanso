@@ -7,8 +7,9 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerPictures
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerPictures
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -21,10 +22,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks on Android 15, with real bitmaps, what [FilterPreviewRenderer] does with stickers (Run 10,
- * DoD 19): the small copy of the original that the Edit screen filters carries the stickers too.
+ * Checks on Android 15, with real bitmaps, what [FilterPreviewRenderer] does with layers (Run 10,
+ * DoD 19): the small copy of the original that the Edit screen filters carries the layers too.
  *
- * - The stickers are drawn BEFORE the filter, so a sticker under a filter comes out filtered, as
+ * - The layers are drawn BEFORE the filter, so a sticker under a filter comes out filtered, as
  *   it does in Done.
  * - A sticker alone (no filter) is enough to make the renderer answer with a picture.
  * - The sticker whose key is the touched one is left out (the screen draws it live instead).
@@ -42,7 +43,7 @@ class StickerPreviewRendererTest {
     @Test
     fun a_sticker_alone_is_rendered_without_a_filter() {
         val photo = photo()
-        val result = render(rendererOn(photo), EditSettings(stickers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))))
+        val result = render(rendererOn(photo), EditSettings(layers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))))
         assertNotNull("a sticker with no filter gave no picture", result)
         assertEquals(photo.width, result!!.width)
         assertEquals(photo.height, result.height)
@@ -57,7 +58,7 @@ class StickerPreviewRendererTest {
         val settings = EditSettings(
             filter = FilterPreset.KELVIN,
             filterIntensity = 1f,
-            stickers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f)),
+            layers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f)),
         )
         val result = render(rendererOn(photo), settings)!!
         val expectedSticker = lut.map(OPAQUE_RED) and RGB
@@ -77,19 +78,19 @@ class StickerPreviewRendererTest {
         val photo = photo()
         val left = sticker(1L, 0.25f, 0.5f, 0.25f)
         val right = sticker(2L, 0.75f, 0.5f, 0.25f)
-        val settings = EditSettings(stickers = listOf(left, right))
+        val settings = EditSettings(layers = listOf(left, right))
         val renderer = rendererOn(photo)
 
-        val oneTouched = runBlocking { renderer.render(settings, touchedStickerKey = 1L) }!!
+        val oneTouched = runBlocking { renderer.render(settings, touchedLayerKey = 1L) }!!
         assertEquals("the touched sticker was drawn", photo.getPixel(24, 32) and RGB, oneTouched.getPixel(24, 32) and RGB)
         assertEquals("the other sticker was left out too", RED, oneTouched.getPixel(72, 32) and RGB)
 
-        val noneTouched = runBlocking { renderer.render(settings, touchedStickerKey = null) }!!
+        val noneTouched = runBlocking { renderer.render(settings, touchedLayerKey = null) }!!
         assertEquals(RED, noneTouched.getPixel(24, 32) and RGB)
         assertEquals(RED, noneTouched.getPixel(72, 32) and RGB)
 
         // A key that names no sticker leaves out nothing.
-        val unknown = runBlocking { renderer.render(settings, touchedStickerKey = 99L) }!!
+        val unknown = runBlocking { renderer.render(settings, touchedLayerKey = 99L) }!!
         assertEquals(RED, unknown.getPixel(24, 32) and RGB)
         assertEquals(RED, unknown.getPixel(72, 32) and RGB)
     }
@@ -100,28 +101,28 @@ class StickerPreviewRendererTest {
         val renderer = rendererOn(photo())
         assertNull(render(renderer, EditSettings()))
         assertNull(render(renderer, EditSettings(brightness = 0.5f, quarterTurns = 1)))
-        val only = EditSettings(stickers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f)))
-        assertNull(runBlocking { renderer.render(only, touchedStickerKey = 1L) })
+        val only = EditSettings(layers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f)))
+        assertNull(runBlocking { renderer.render(only, touchedLayerKey = 1L) })
     }
 
-    /** The source copy is never modified by drawing stickers on it. */
+    /** The source copy is never modified by drawing layers on it. */
     @Test
     fun the_source_is_not_modified_by_stickers() {
         val photo = photo()
         val before = pixels(photo)
         val renderer = rendererOn(photo)
-        render(renderer, EditSettings(stickers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))))
+        render(renderer, EditSettings(layers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))))
         render(
             renderer,
-            EditSettings(filter = FilterPreset.KELVIN, stickers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))),
+            EditSettings(filter = FilterPreset.KELVIN, layers = listOf(sticker(1L, 0.5f, 0.5f, 0.5f))),
         )
         assertArrayEquals("the source photo was changed", before, pixels(photo))
     }
 
     // --- Helpers -----------------------------------------------------------------------------
 
-    /** Sticker pictures that are a solid opaque red square, as wide as asked for. */
-    private val pictures = StickerPictures { _, widthPx ->
+    /** Layer pictures that are a solid opaque red square, as wide as asked for. */
+    private val pictures = LayerPictures { _, widthPx ->
         val edge = widthPx.coerceAtLeast(1)
         Bitmap.createBitmap(edge, edge, Bitmap.Config.ARGB_8888).also { it.eraseColor(OPAQUE_RED) }
     }
@@ -142,9 +143,9 @@ class StickerPreviewRendererTest {
     }
 
     /** A sticker with [key], upright, at the given centre, [width] of the photo wide. */
-    private fun sticker(key: Long, centreX: Float, centreY: Float, width: Float): Sticker = Sticker(
+    private fun sticker(key: Long, centreX: Float, centreY: Float, width: Float): Layer = Layer(
         key = key,
-        pictureId = "red",
+        content = LayerContent.Picture("red"),
         centreX = centreX,
         centreY = centreY,
         width = width,

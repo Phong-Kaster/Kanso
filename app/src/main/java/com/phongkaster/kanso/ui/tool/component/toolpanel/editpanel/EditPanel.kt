@@ -26,7 +26,7 @@ import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
-import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
+import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
@@ -78,7 +78,7 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  * Each callback that changes the picture also carries a `processorFor` function, which builds the
  * [EditProcessor] that draws a set of settings. It comes from the app's one recipe,
  * [editProcessorFor] (filter look-up images from the assets, see [FilterPreset], and the sticker
- * pictures from the drawables), so every place that draws settings draws stickers too. When
+ * pictures from the drawables), so every place that draws settings draws layers too. When
  * [filterSource] is not null (a test) it supplies the filters instead. So
  * the screen simply forwards each callback to the ViewModel.
  *
@@ -92,7 +92,7 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
  * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
  * sheet's own Cancel and Confirm buttons; they are forwarded to the stateless content untouched,
- * as stickers need no processor built here.
+ * as layers need no processor built here.
  *
  * The drawing itself is the stateless [EditPanelContent].
  */
@@ -123,8 +123,8 @@ fun EditPanel(
         if (filterSource == null) {
             editProcessorFor(context)
         } else {
-            val stickers = DrawableStickerPictures(context.applicationContext)
-            ({ wanted: EditSettings -> EditProcessor(wanted, filterSource, stickers) })
+            val layers = AppLayerPictures(context.applicationContext)
+            ({ wanted: EditSettings -> EditProcessor(wanted, filterSource, layers) })
         }
     }
 

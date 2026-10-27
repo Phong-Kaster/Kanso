@@ -1,19 +1,19 @@
 package com.phongkaster.kanso.tool.edit
 
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.MAX_STICKER_WIDTH_FRACTION
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.MIN_STICKER_WIDTH_FRACTION
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.SIDE_END
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.SIDE_START
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleBetween
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleChange
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.cornerX
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.cornerY
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.distanceBetween
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.handleDegrees
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.handleWidth
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.pinchCentreX
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.pinchCentreY
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.pointOnSticker
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.MAX_LAYER_WIDTH_FRACTION
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.MIN_LAYER_WIDTH_FRACTION
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.SIDE_END
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.SIDE_START
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleChange
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.cornerX
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.cornerY
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.distanceBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.handleDegrees
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.handleWidth
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.pinchCentreX
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.pinchCentreY
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.pointOnLayer
 import kotlin.math.cos
 import kotlin.math.sin
 import org.junit.Assert.assertEquals
@@ -31,23 +31,23 @@ class StickerGeometryTest {
     /** A point inside, on the edge of and outside an unturned rectangle is a hit, a hit and a miss. */
     @Test
     fun an_unturned_rectangle_is_hit_inside_and_on_its_edge_only() {
-        assertTrue(pointOnSticker(100f, 100f, 100f, 100f, 80f, 40f, 0f))
-        assertTrue(pointOnSticker(139f, 119f, 100f, 100f, 80f, 40f, 0f))
-        assertTrue("the edge counts", pointOnSticker(140f, 120f, 100f, 100f, 80f, 40f, 0f))
-        assertFalse(pointOnSticker(141f, 100f, 100f, 100f, 80f, 40f, 0f))
-        assertFalse(pointOnSticker(100f, 121f, 100f, 100f, 80f, 40f, 0f))
+        assertTrue(pointOnLayer(100f, 100f, 100f, 100f, 80f, 40f, 0f))
+        assertTrue(pointOnLayer(139f, 119f, 100f, 100f, 80f, 40f, 0f))
+        assertTrue("the edge counts", pointOnLayer(140f, 120f, 100f, 100f, 80f, 40f, 0f))
+        assertFalse(pointOnLayer(141f, 100f, 100f, 100f, 80f, 40f, 0f))
+        assertFalse(pointOnLayer(100f, 121f, 100f, 100f, 80f, 40f, 0f))
     }
 
     /** A wide rectangle turned a quarter turn covers what was its tall side, not its wide side. */
     @Test
     fun a_turned_rectangle_is_hit_where_it_lies_after_the_turn() {
         // 100 wide and 20 tall, turned 90 degrees: now 20 wide and 100 tall about (0, 0).
-        assertTrue(pointOnSticker(0f, 45f, 0f, 0f, 100f, 20f, 90f))
-        assertTrue(pointOnSticker(0f, -45f, 0f, 0f, 100f, 20f, 90f))
-        assertFalse("the old wide side is empty now", pointOnSticker(45f, 0f, 0f, 0f, 100f, 20f, 90f))
+        assertTrue(pointOnLayer(0f, 45f, 0f, 0f, 100f, 20f, 90f))
+        assertTrue(pointOnLayer(0f, -45f, 0f, 0f, 100f, 20f, 90f))
+        assertFalse("the old wide side is empty now", pointOnLayer(45f, 0f, 0f, 0f, 100f, 20f, 90f))
         // Turned 45 degrees: the diagonal is covered, a point off the diagonal is not.
-        assertTrue(pointOnSticker(30f, 30f, 0f, 0f, 100f, 20f, 45f))
-        assertFalse(pointOnSticker(30f, -30f, 0f, 0f, 100f, 20f, 45f))
+        assertTrue(pointOnLayer(30f, 30f, 0f, 0f, 100f, 20f, 45f))
+        assertFalse(pointOnLayer(30f, -30f, 0f, 0f, 100f, 20f, 45f))
     }
 
     /** Unturned, the four corners are the rectangle's own corners (y grows downward). */
@@ -132,8 +132,8 @@ class StickerGeometryTest {
         assertEquals(10f, handleWidth(80f, 100f, 1f, 10f, 200f), EPS)
         assertEquals(200f, handleWidth(80f, 10f, 1000f, 10f, 200f), EPS)
         assertEquals(80f, handleWidth(80f, 0f, 50f, 10f, 200f), EPS)
-        assertTrue(MIN_STICKER_WIDTH_FRACTION > 0f)
-        assertTrue(MAX_STICKER_WIDTH_FRACTION <= 1f)
+        assertTrue(MIN_LAYER_WIDTH_FRACTION > 0f)
+        assertTrue(MAX_LAYER_WIDTH_FRACTION <= 1f)
     }
 
     /** One finger, no scale, no turn: the centre moves by exactly the finger's move. */

@@ -32,13 +32,13 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
-import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
-import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.EditSettings
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.EditTool
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
 import com.phongkaster.kanso.data.edit.edit.StickerCatalog
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.StickerOverlay
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.component.BlurredBackdrop
@@ -52,6 +52,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.Checkerboard
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LayerOverlay
 
 /**
  * The large rounded card holding the photo for [state], full width, with the "Replace" chip
@@ -77,9 +78,9 @@ import com.phongkaster.kanso.ui.tool.component.Checkerboard
  * not finished. With [showReplace] false (the Edit screen) no Replace chip is drawn at
  * all, so nothing sits at the photo's bottom right.
  *
- * **Stickers (Edit screen only).** The live picture carries a [StickerOverlay] with the stickers of
+ * **Stickers (Edit screen only).** The live picture carries a [LayerOverlay] with the layers of
  * `state.settings`. It is touchable only while the Stickers sheet is open and Done is not running;
- * with Compare on the live picture is not drawn at all, so the original shows with no stickers.
+ * with Compare on the live picture is not drawn at all, so the original shows with no layers.
  * The `onSticker...` callbacks pass the overlay's events up (select, a gesture's new list, the
  * gesture's end, and the three frame buttons); they default to doing nothing.
  */
@@ -90,12 +91,12 @@ internal fun PhotoCard(
     onDismissFailure: () -> Unit,
     modifier: Modifier = Modifier,
     showReplace: Boolean = true,
-    onStickerSelect: (Long?) -> Unit = {},
-    onStickerPreview: (List<Sticker>) -> Unit = {},
-    onStickerCommit: () -> Unit = {},
-    onStickerDelete: (Long) -> Unit = {},
-    onStickerDuplicate: (Long) -> Unit = {},
-    onStickerFlip: (Long) -> Unit = {},
+    onLayerSelect: (Long?) -> Unit = {},
+    onLayerPreview: (List<Layer>) -> Unit = {},
+    onLayerCommit: () -> Unit = {},
+    onLayerDelete: (Long) -> Unit = {},
+    onLayerDuplicate: (Long) -> Unit = {},
+    onLayerFlip: (Long) -> Unit = {},
 ) {
     val running = state.processing as? ToolUiState.Processing.Running
     Card(
@@ -149,43 +150,43 @@ internal fun PhotoCard(
                             // The sticker under a finger is drawn by the live preview itself, every
                             // frame; its picture is decoded once per picture, off the touch path's
                             // hot loop (remember), at a size that suits the preview. The other
-                            // stickers are already inside the filtered copy.
-                            val touched = state.touchedStickerKey?.let { key ->
-                                state.settings.stickers.firstOrNull { it.key == key }
+                            // layers are already inside the filtered copy.
+                            val touched = state.touchedLayerKey?.let { key ->
+                                state.settings.layers.firstOrNull { it.key == key }
                             }
                             val context = LocalContext.current
-                            val touchedPicture = remember(touched?.pictureId) {
+                            val touchedPicture = remember(touched?.content) {
                                 touched?.let {
-                                    DrawableStickerPictures(context)
-                                        .picture(it.pictureId, TOUCHED_PICTURE_EDGE)
+                                    AppLayerPictures(context)
+                                        .picture(it.content, TOUCHED_PICTURE_EDGE)
                                         ?.asImageBitmap()
                                 }
                             }
                             LivePreviewImage(
                                 bitmap = state.filterPreview ?: current.bitmap,
                                 settings = state.settings,
-                                touchedSticker = touched,
+                                touchedLayer = touched,
                                 touchedPicture = touchedPicture,
                             )
-                            // The stickers sit on top of the live picture, inside the same box, so
+                            // The layers sit on top of the live picture, inside the same box, so
                             // the overlay's coordinates are the shown picture's. They are drawn with
                             // any tool open (they are part of the photo); only the Stickers sheet,
                             // with Compare off and Done idle, gives them touches, a frame and buttons.
-                            if (state.settings.stickers.isNotEmpty()) {
+                            if (state.settings.layers.isNotEmpty()) {
                                 val mapping = remember(current.bitmap, state.settings) {
-                                    StickerMapping(current.bitmap.width, current.bitmap.height, state.settings)
+                                    LayerMapping(current.bitmap.width, current.bitmap.height, state.settings)
                                 }
-                                StickerOverlay(
-                                    stickers = state.settings.stickers,
-                                    selectedKey = state.selectedStickerKey,
+                                LayerOverlay(
+                                    layers = state.settings.layers,
+                                    selectedKey = state.selectedLayerKey,
                                     mapping = mapping,
                                     enabled = state.openTool == EditTool.STICKERS && !state.finishing,
-                                    onSelect = onStickerSelect,
-                                    onPreview = onStickerPreview,
-                                    onCommit = onStickerCommit,
-                                    onDelete = onStickerDelete,
-                                    onDuplicate = onStickerDuplicate,
-                                    onFlip = onStickerFlip,
+                                    onSelect = onLayerSelect,
+                                    onPreview = onLayerPreview,
+                                    onCommit = onLayerCommit,
+                                    onDelete = onLayerDelete,
+                                    onDuplicate = onLayerDuplicate,
+                                    onFlip = onLayerFlip,
                                 )
                             }
                         }
@@ -295,10 +296,10 @@ private fun PhotoCardStickersPreview() {
                 photoUri = SAMPLE_PHOTO_URI,
                 photo = ToolUiState.PhotoState.Ready(samplePhoto()),
                 settings = EditSettings(
-                    stickers = listOf(
-                        Sticker(
+                    layers = listOf(
+                        Layer(
                             key = 1,
-                            pictureId = StickerCatalog.all[0].pictureId,
+                            content = LayerContent.Picture(StickerCatalog.all[0].pictureId),
                             centreX = 0.5f,
                             centreY = 0.5f,
                             width = 0.3f,
@@ -308,7 +309,7 @@ private fun PhotoCardStickersPreview() {
                     ),
                 ),
                 openTool = EditTool.STICKERS,
-                selectedStickerKey = 1L,
+                selectedLayerKey = 1L,
             ),
             onReplace = {},
             onDismissFailure = {},

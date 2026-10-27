@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -7,30 +7,30 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
 
 /**
  * Where [this] sticker's centre is on the shown picture, in pixels of an overlay [size].
  * The sticker is stored as fractions of the ORIGINAL photo, so the position goes through the one
- * [StickerMapping] (which knows the crop, the quarter turns and the flips) and is then scaled up
+ * [LayerMapping] (which knows the crop, the quarter turns and the flips) and is then scaled up
  * from 0..1 to pixels. No other file does this arithmetic.
  */
-internal fun Sticker.shownCentre(mapping: StickerMapping, size: Size): Offset {
-    val p = mapping.originalToShown(StickerMapping.Point(centreX, centreY))
+internal fun Layer.shownCentre(mapping: LayerMapping, size: Size): Offset {
+    val p = mapping.originalToShown(LayerMapping.Point(centreX, centreY))
     return Offset(p.x * size.width, p.y * size.height)
 }
 
 /** This sticker's width on the shown picture in pixels of an overlay [size] (through [mapping]). */
-internal fun Sticker.shownWidth(mapping: StickerMapping, size: Size): Float =
+internal fun Layer.shownWidth(mapping: LayerMapping, size: Size): Float =
     mapping.originalWidthToShown(width) * size.width
 
 /** This sticker's turn in degrees as the person sees it on the shown picture (through [mapping]). */
-internal fun Sticker.shownDegrees(mapping: StickerMapping): Float =
+internal fun Layer.shownDegrees(mapping: LayerMapping): Float =
     mapping.originalAngleToShown(degrees)
 
 /** Whether this sticker is mirrored as the person sees it on the shown picture (through [mapping]). */
-internal fun Sticker.shownMirrored(mapping: StickerMapping): Boolean =
+internal fun Layer.shownMirrored(mapping: LayerMapping): Boolean =
     mapping.originalMirrorToShown(mirrored)
 
 /**
@@ -39,14 +39,14 @@ internal fun Sticker.shownMirrored(mapping: StickerMapping): Boolean =
  * fractions of the original photo through [mapping], the exact inverse of the three functions
  * above. The picture and the mirror flag are not touched, so a move never mirrors anything.
  */
-internal fun Sticker.placedAt(
-    mapping: StickerMapping,
+internal fun Layer.placedAt(
+    mapping: LayerMapping,
     size: Size,
     centre: Offset,
     widthPx: Float,
     degrees: Float,
-): Sticker {
-    val p = mapping.shownToOriginal(StickerMapping.Point(centre.x / size.width, centre.y / size.height))
+): Layer {
+    val p = mapping.shownToOriginal(LayerMapping.Point(centre.x / size.width, centre.y / size.height))
     return copy(
         centreX = p.x,
         centreY = p.y,
@@ -56,7 +56,7 @@ internal fun Sticker.placedAt(
 }
 
 /**
- * Puts the one handler on the sticker overlay that moves, pinches and turns the stickers.
+ * Puts the one handler on the sticker overlay that moves, pinches and turns the layers.
  *
  * **Raw pointer input.** `pointerInput` gives a coroutine that reads every touch event itself.
  * `awaitEachGesture` repeats one gesture after another: `awaitFirstDown` waits for the first
@@ -65,8 +65,8 @@ internal fun Sticker.placedAt(
  *
  * **Why ONE handler for every sticker.** Stickers overlap and are turned, so the system's own
  * hit testing (a rectangle per node) cannot say which one is under a finger. This handler sits on
- * the whole overlay, takes the first finger's position, and tests the stickers itself from the
- * newest (drawn on top) to the oldest through [pointOnSticker], on the turned rectangle.
+ * the whole overlay, takes the first finger's position, and tests the layers itself from the
+ * newest (drawn on top) to the oldest through [pointOnLayer], on the turned rectangle.
  *
  * **What a gesture does.** A finger down on a sticker selects it ([onSelect]) and starts the
  * gesture; one finger drags it by exactly the finger's move; two fingers scale it by the ratio of
@@ -80,32 +80,32 @@ internal fun Sticker.placedAt(
  * handle. All the lambdas are read afresh at every gesture, so the handler never goes stale and
  * is composed only while the overlay is enabled.
  *
- * @param stickers the stickers now, oldest first (the last one is on top).
+ * @param layers the layers now, oldest first (the last one is on top).
  * @param selectedKey the selected sticker's key, or null.
  * @param mapping the translation between the shown picture and the original photo.
  * @param size the overlay's size in pixels (the shown picture's size).
  * @param aspectOf a sticker's picture height divided by its width.
  * @param buttonRadiusPx how far from a corner of the selected sticker a touch belongs to its button.
  * @param onSelect called with the key now selected, or null for none.
- * @param onPreview called on each move with the complete new list of stickers.
+ * @param onPreview called on each move with the complete new list of layers.
  * @param onCommit called once when the gesture ends after at least one preview.
  * @param isDrawn whether a sticker is drawn (its picture is in the catalogue); only those can be touched.
  */
-fun Modifier.stickerGestures(
-    stickers: () -> List<Sticker>,
+fun Modifier.layerGestures(
+    layers: () -> List<Layer>,
     selectedKey: () -> Long?,
-    mapping: () -> StickerMapping,
+    mapping: () -> LayerMapping,
     size: () -> Size,
-    aspectOf: (Sticker) -> Float,
+    aspectOf: (Layer) -> Float,
     buttonRadiusPx: Float,
     onSelect: (Long?) -> Unit,
-    onPreview: (List<Sticker>) -> Unit,
+    onPreview: (List<Layer>) -> Unit,
     onCommit: () -> Unit,
-    isDrawn: (Sticker) -> Boolean = { true },
+    isDrawn: (Layer) -> Boolean = { true },
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown()
-        val list = stickers()
+        val list = layers()
         val map = mapping()
         val area = size()
         if (area.width <= 0f || area.height <= 0f) return@awaitEachGesture
@@ -122,7 +122,7 @@ fun Modifier.stickerGestures(
             if (!isDrawn(s)) return@lastOrNull false
             val centre = s.shownCentre(map, area)
             val w = s.shownWidth(map, area)
-            pointOnSticker(
+            pointOnLayer(
                 down.position.x, down.position.y, centre.x, centre.y,
                 w, w * aspectOf(s), s.shownDegrees(map),
             )
@@ -173,8 +173,8 @@ fun Modifier.stickerGestures(
                 }
                 // Keep the width within its limits; the centre follows the scale really applied.
                 val newWidth = (widthPx * scale).coerceIn(
-                    MIN_STICKER_WIDTH_FRACTION * area.width,
-                    MAX_STICKER_WIDTH_FRACTION * area.width,
+                    MIN_LAYER_WIDTH_FRACTION * area.width,
+                    MAX_LAYER_WIDTH_FRACTION * area.width,
                 )
                 val applied = newWidth / widthPx
                 // The centre may not leave the shown picture, or the sticker could never be grasped again.
@@ -189,14 +189,14 @@ fun Modifier.stickerGestures(
                 degrees += turn
                 // Build from the sticker AS IT IS NOW, so a flip made meanwhile (a second finger on
                 // the flip button) is kept; only the place, size and turn come from this gesture.
-                val current = stickers().firstOrNull { it.key == hit.key }
+                val current = layers().firstOrNull { it.key == hit.key }
                 if (current == null) {
                     // Deleted or undone away mid-gesture: nothing left to move, and no commit.
                     vanished = true
                     break
                 }
                 val moved = current.placedAt(map, area, centre, widthPx, degrees)
-                onPreview(stickers().map { if (it.key == hit.key) moved else it })
+                onPreview(layers().map { if (it.key == hit.key) moved else it })
                 previewed = true
                 event.changes.forEach(PointerInputChange::consume)
             }
@@ -219,8 +219,8 @@ internal fun clampCentre(centre: Offset, area: Size): Offset =
  * its corner buttons sit. Used so the overlay's handler leaves those touches to the buttons.
  */
 private fun touchesButton(
-    sticker: Sticker,
-    mapping: StickerMapping,
+    sticker: Layer,
+    mapping: LayerMapping,
     area: Size,
     aspect: Float,
     position: Offset,

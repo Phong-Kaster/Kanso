@@ -21,9 +21,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerPictures
 import com.phongkaster.kanso.data.edit.edit.StickerCatalog
-import com.phongkaster.kanso.data.edit.edit.StickerPictures
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.settings.sampleScreen
@@ -51,7 +52,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks on Android 15 that the stickers stay on the photo while Crop is open (Run 10, DoD 20), so
+ * Checks on Android 15 that the layers stay on the photo while Crop is open (Run 10, DoD 20), so
  * the person sees what the crop will cut.
  *
  * - **The cropper alone, one opaque sticker.** The real [EditCropper] is drawn on a blue photo with
@@ -97,19 +98,19 @@ class StickerCropperTest {
         val reported = mutableListOf<EditSettings.CropRect>()
         val photo = Bitmap.createBitmap(PHOTO_WIDTH, PHOTO_HEIGHT, Bitmap.Config.ARGB_8888)
             .also { it.eraseColor(BLUE) }
-        val sticker = Sticker(
+        val sticker = Layer(
             key = 1L,
-            pictureId = "red",
+            content = LayerContent.Picture("red"),
             centreX = 0.5f,
             centreY = 0.5f,
             width = 0.5f,
             degrees = 0f,
             mirrored = false,
         )
-        val stickers = listOf(sticker)
-        val settings = EditSettings(crop = CROP, stickers = stickers)
+        val layers = listOf(sticker)
+        val settings = EditSettings(crop = CROP, layers = layers)
         // One picture source for the whole composition (the cropper remembers by it).
-        val pictures = StickerPictures { _, widthPx ->
+        val pictures = LayerPictures { _, widthPx ->
             val edge = widthPx.coerceAtLeast(1)
             Bitmap.createBitmap(edge, edge, Bitmap.Config.ARGB_8888).also { it.eraseColor(RED) }
         }
@@ -121,8 +122,8 @@ class StickerCropperTest {
                         settings = settings,
                         enabled = true,
                         onCropFinished = { rect -> reported += rect },
-                        stickers = stickers,
-                        stickerPictures = pictures,
+                        layers = layers,
+                        layerPictures = pictures,
                     )
                 }
             }
@@ -160,16 +161,16 @@ class StickerCropperTest {
             distance(stickerColour, photoColour) > LOOSE,
         )
 
-        val sticker = Sticker(
+        val sticker = Layer(
             key = 7L,
-            pictureId = entry.pictureId,
+            content = LayerContent.Picture(entry.pictureId),
             centreX = 0.5f,
             centreY = 0.5f,
             width = 0.4f,
             degrees = 0f,
             mirrored = false,
         )
-        viewModel.changeSettings(EditSettings(stickers = listOf(sticker)), processorFor)
+        viewModel.changeSettings(EditSettings(layers = listOf(sticker)), processorFor)
         viewModel.openTool(EditTool.CROP)
         compose.waitForIdle()
 

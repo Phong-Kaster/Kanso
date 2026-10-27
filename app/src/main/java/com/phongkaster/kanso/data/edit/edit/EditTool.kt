@@ -23,6 +23,6 @@ enum class EditTool {
     /** The ready-made looks (filters) and how strongly the chosen one is applied. */
     FILTERS,
 
-    /** Ready-made pictures (stickers) placed on the photo, then moved, resized and turned. */
+    /** Ready-made pictures (layers) placed on the photo, then moved, resized and turned. */
     STICKERS,
 }

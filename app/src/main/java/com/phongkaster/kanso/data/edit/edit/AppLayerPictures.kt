@@ -5,21 +5,28 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 
 /**
- * The app's [StickerPictures]: finds a sticker in [StickerCatalog] and decodes its drawable file.
+ * The app's [LayerPictures]: for a [LayerContent.Picture] it finds the sticker in [StickerCatalog]
+ * and decodes its drawable file.
  *
  * Decoding with `inSampleSize` makes the bitmap smaller while it is read (the size is divided by
  * a power of two), which is much cheaper than decoding it whole and scaling it down; the
  * processor then scales to the exact size. Nothing is cached, so every call returns a fresh
- * bitmap that nobody else holds, which satisfies [StickerPictures]'s ownership rule.
+ * bitmap that nobody else holds, which satisfies [LayerPictures]'s ownership rule.
  */
-class DrawableStickerPictures(private val context: Context) : StickerPictures {
+class AppLayerPictures(private val context: Context) : LayerPictures {
 
     /**
-     * Returns the sticker [pictureId] decoded at [widthPx] wide or a little wider (never narrower
-     * unless the file itself is narrower), as ARGB_8888 so transparent edges stay transparent.
-     * Returns null for an id the catalog does not know or a file that cannot be decoded.
+     * Returns the picture of [content] at [widthPx] wide or a little wider. A sticker is decoded
+     * from its drawable (never narrower unless the file itself is narrower), as ARGB_8888 so
+     * transparent edges stay transparent; null for an id the catalog does not know or a file that
+     * cannot be decoded.
      */
-    override fun picture(pictureId: String, widthPx: Int): Bitmap? {
+    override fun picture(content: LayerContent, widthPx: Int): Bitmap? = when (content) {
+        is LayerContent.Picture -> sticker(content.pictureId, widthPx)
+    }
+
+    /** Decodes the catalogue sticker [pictureId] at [widthPx] wide or a little wider. */
+    private fun sticker(pictureId: String, widthPx: Int): Bitmap? {
         val sticker = StickerCatalog.byId(pictureId) ?: return null
         val resources = context.resources
 

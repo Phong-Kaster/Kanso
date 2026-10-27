@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -32,21 +32,22 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.edit.EditSettings
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
 import com.phongkaster.kanso.data.edit.edit.StickerCatalog
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.roundToInt
 
 /** Test tag of the sticker overlay's root: tests drive their touches through this node. */
-const val STICKER_OVERLAY_TAG = "sticker-overlay"
+const val LAYER_OVERLAY_TAG = "layer-overlay"
 
 /** The test tag of the node that draws the sticker with this [key]; one node per sticker. */
-fun stickerNodeTag(key: Long): String = "sticker-$key"
+fun layerNodeTag(key: Long): String = "layer-$key"
 
 /**
- * The layer that draws the stickers on the shown picture and lets the person move them. It
+ * The layer that draws the layers on the shown picture and lets the person move them. It
  * fills the box of the shown picture it is given (PhotoCard puts it inside the box that carries
  * `TOOL_IMAGE_TAG`), clips everything to it, and works in that box's own coordinates: a sticker's
  * place is stored as fractions of the ORIGINAL photo and [mapping] (the one translation between
@@ -54,20 +55,20 @@ fun stickerNodeTag(key: Long): String = "sticker-$key"
  * into pixels here, and back.
  *
  * The overlay draws NO sticker picture: the pictures are part of the live picture beneath it (the
- * filtered preview holds the stickers at rest, the live preview itself draws the one under a
+ * filtered preview holds the layers at rest, the live preview itself draws the one under a
  * finger), so nothing is drawn twice. Each sticker is one invisible accessibility node tagged
- * [stickerNodeTag], oldest first, at the sticker's place. The selected one also gets a frame with
- * four corner buttons ([StickerFrame]).
+ * [layerNodeTag], oldest first, at the sticker's place. The selected one also gets a frame with
+ * four corner buttons ([LayerFrame]).
  *
  * **Touch.** While [enabled] is true (the Stickers sheet is open, Compare is off and Done is not
- * running) ONE handler on this whole layer ([stickerGestures]) reads the raw touches and decides
+ * running) ONE handler on this whole layer ([layerGestures]) reads the raw touches and decides
  * which sticker is under a finger; while it is false no pointer input is composed at all, the
- * frame and its buttons are gone, and the stickers are only drawn.
+ * frame and its buttons are gone, and the layers are only drawn.
  *
- * The overlay keeps no state of its own about the stickers: everything comes in as a parameter
+ * The overlay keeps no state of its own about the layers: everything comes in as a parameter
  * and every change goes out as a callback, so the screen's ViewModel stays the one owner.
  *
- * @param stickers the stickers on the photo, oldest first (as in `EditSettings.stickers`).
+ * @param layers the layers on the photo, oldest first (as in `EditSettings.layers`).
  * @param selectedKey the key of the selected sticker, or null for none.
  * @param mapping the translation between the shown picture and the original photo.
  * @param enabled whether touches work and the frame shows.
@@ -81,13 +82,13 @@ fun stickerNodeTag(key: Long): String = "sticker-$key"
  * @param onFlip the flip button of the sticker with this key was tapped.
  */
 @Composable
-fun StickerOverlay(
-    stickers: List<Sticker>,
+fun LayerOverlay(
+    layers: List<Layer>,
     selectedKey: Long?,
-    mapping: StickerMapping,
+    mapping: LayerMapping,
     enabled: Boolean,
     onSelect: (Long?) -> Unit,
-    onPreview: (List<Sticker>) -> Unit,
+    onPreview: (List<Layer>) -> Unit,
     onCommit: () -> Unit,
     onDelete: (Long) -> Unit,
     onDuplicate: (Long) -> Unit,
@@ -95,16 +96,16 @@ fun StickerOverlay(
     modifier: Modifier = Modifier,
 ) {
     // A picture per sticker, in the same order (null for an id the catalogue lacks: not drawn).
-    val painters = stickers.map { rememberStickerPainter(it.pictureId) }
-    val aspects = stickers.indices.associate { stickers[it].key to (painters[it]?.aspectRatio() ?: 1f) }
+    val painters = layers.map { rememberLayerPainter(it.content) }
+    val aspects = layers.indices.associate { layers[it].key to (painters[it]?.aspectRatio() ?: 1f) }
 
     // The handlers outlive a recomposition, so they read the latest values through these.
-    val latestStickers by rememberUpdatedState(stickers)
+    val latestStickers by rememberUpdatedState(layers)
     val latestSelected by rememberUpdatedState(selectedKey)
     val latestMapping by rememberUpdatedState(mapping)
     val latestAspects by rememberUpdatedState(aspects)
-    // The keys of the stickers that are really drawn: only those can be touched.
-    val drawnKeys = stickers.indices.filter { painters[it] != null }.map { stickers[it].key }.toSet()
+    // The keys of the layers that are really drawn: only those can be touched.
+    val drawnKeys = layers.indices.filter { painters[it] != null }.map { layers[it].key }.toSet()
     val latestDrawn by rememberUpdatedState(drawnKeys)
     val latestOnSelect by rememberUpdatedState(onSelect)
     val latestOnPreview by rememberUpdatedState(onPreview)
@@ -113,19 +114,19 @@ fun StickerOverlay(
     var origin by remember { mutableStateOf(Offset.Zero) }
     // The overlay's size in pixels, which the touch handler reads when a gesture starts.
     var sizePx by remember { mutableStateOf(Size.Zero) }
-    val buttonRadiusPx = with(LocalDensity.current) { (STICKER_BUTTON_TARGET / 2).toPx() }
+    val buttonRadiusPx = with(LocalDensity.current) { (LAYER_BUTTON_TARGET / 2).toPx() }
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .clipToBounds()
-            .testTag(STICKER_OVERLAY_TAG)
+            .testTag(LAYER_OVERLAY_TAG)
             .onSizeChanged { sizePx = Size(it.width.toFloat(), it.height.toFloat()) }
             .onGloballyPositioned { origin = it.positionInRoot() }
             .then(
                 if (enabled) {
-                    Modifier.stickerGestures(
-                        stickers = { latestStickers },
+                    Modifier.layerGestures(
+                        layers = { latestStickers },
                         selectedKey = { latestSelected },
                         mapping = { latestMapping },
                         size = { sizePx },
@@ -144,38 +145,38 @@ fun StickerOverlay(
         val area = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
 
         // Oldest first: the Box draws its children in order, so the last is on top.
-        stickers.forEachIndexed { index, sticker ->
+        layers.forEachIndexed { index, sticker ->
             val painter = painters[index] ?: return@forEachIndexed
             key(sticker.key) {
                 val centre = sticker.shownCentre(mapping, area)
                 val width = sticker.shownWidth(mapping, area)
-                StickerPlace(
+                LayerPlace(
                     centreX = centre.x,
                     centreY = centre.y,
                     widthPx = width,
                     heightPx = width * painter.aspectRatio(),
                     degrees = sticker.shownDegrees(mapping),
                     modifier = Modifier
-                        .testTag(stickerNodeTag(sticker.key))
+                        .testTag(layerNodeTag(sticker.key))
                         .semantics { selected = sticker.key == selectedKey },
                 )
             }
         }
 
-        val selectedIndex = stickers.indexOfFirst { it.key == selectedKey }
+        val selectedIndex = layers.indexOfFirst { it.key == selectedKey }
         if (enabled && selectedIndex >= 0 && painters[selectedIndex] != null) {
-            val sticker = stickers[selectedIndex]
+            val sticker = layers[selectedIndex]
             val centre = sticker.shownCentre(mapping, area)
             val width = sticker.shownWidth(mapping, area)
-            StickerFrame(
+            LayerFrame(
                 centreX = centre.x,
                 centreY = centre.y,
                 widthPx = width,
                 heightPx = width * (aspects[sticker.key] ?: 1f),
                 degrees = sticker.shownDegrees(mapping),
                 overlayOrigin = { origin },
-                minWidthPx = MIN_STICKER_WIDTH_FRACTION * area.width,
-                maxWidthPx = MAX_STICKER_WIDTH_FRACTION * area.width,
+                minWidthPx = MIN_LAYER_WIDTH_FRACTION * area.width,
+                maxWidthPx = MAX_LAYER_WIDTH_FRACTION * area.width,
                 onDelete = { onDelete(sticker.key) },
                 onDuplicate = { onDuplicate(sticker.key) },
                 onFlip = { onFlip(sticker.key) },
@@ -192,7 +193,7 @@ fun StickerOverlay(
 }
 
 /**
- * Two overlapping sample stickers on a 300 dp square, for the previews. The overlay draws only
+ * Two overlapping sample layers on a 300 dp square, for the previews. The overlay draws only
  * the frame and the buttons now (the pictures belong to the live picture beneath), so the
  * preview shows the selected sticker's frame over an empty square.
  */
@@ -200,9 +201,9 @@ fun StickerOverlay(
 private fun SampleStickerOverlay(selectedKey: Long?, enabled: Boolean) {
     val first = StickerCatalog.all[0].pictureId
     val second = StickerCatalog.all[1].pictureId
-    val stickers = listOf(
-        Sticker(key = 1, pictureId = first, centreX = 0.35f, centreY = 0.4f, width = 0.4f, degrees = -15f, mirrored = false),
-        Sticker(key = 2, pictureId = second, centreX = 0.6f, centreY = 0.6f, width = 0.35f, degrees = 20f, mirrored = true),
+    val layers = listOf(
+        Layer(key = 1, content = LayerContent.Picture(first), centreX = 0.35f, centreY = 0.4f, width = 0.4f, degrees = -15f, mirrored = false),
+        Layer(key = 2, content = LayerContent.Picture(second), centreX = 0.6f, centreY = 0.6f, width = 0.35f, degrees = 20f, mirrored = true),
     )
     KansoTheme(themeMode = ThemeMode.System) {
         // The theme stretches its single child to the whole screen, so a Box goes first.
@@ -212,10 +213,10 @@ private fun SampleStickerOverlay(selectedKey: Long?, enabled: Boolean) {
                     .size(300.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                StickerOverlay(
-                    stickers = stickers,
+                LayerOverlay(
+                    layers = layers,
                     selectedKey = selectedKey,
-                    mapping = StickerMapping(1000, 1000, EditSettings()),
+                    mapping = LayerMapping(1000, 1000, EditSettings()),
                     enabled = enabled,
                     onSelect = {},
                     onPreview = {},
@@ -229,14 +230,14 @@ private fun SampleStickerOverlay(selectedKey: Long?, enabled: Boolean) {
     }
 }
 
-/** Two stickers, the newer one selected with its frame and four buttons, in light and in dark. */
+/** Two layers, the newer one selected with its frame and four buttons, in light and in dark. */
 @PreviewLightDark
 @Composable
 private fun StickerOverlayPreview() {
     SampleStickerOverlay(selectedKey = 2L, enabled = true)
 }
 
-/** The same stickers with the overlay not enabled: drawn, but no frame and no buttons. */
+/** The same layers with the overlay not enabled: drawn, but no frame and no buttons. */
 @PreviewLightDark
 @Composable
 private fun StickerOverlayDisabledPreview() {

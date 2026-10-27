@@ -17,8 +17,10 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.a11y.TouchTargetCheck
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
+import com.phongkaster.kanso.data.edit.edit.pictureId
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
@@ -27,14 +29,15 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DELETE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DUPLICATE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_FLIP_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_RESIZE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleBetween
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleChange
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.distanceBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DELETE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DUPLICATE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_FLIP_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.layerNodeTag
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_RESIZE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleChange
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.distanceBetween
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.cos
 import kotlin.math.sin
@@ -80,24 +83,24 @@ class StickerFrameTest {
     }
 
     /**
-     * DoD 5: from two stickers with the second selected, a tap on the delete corner leaves only
+     * DoD 5: from two layers with the second selected, a tap on the delete corner leaves only
      * the first sticker, and nothing is selected.
      */
     @Test
     fun delete_removes_the_selected_sticker_and_selects_none() {
-        val viewModel = showWith(EditSettings(stickers = listOf(sticker(100L, 0.3f), sticker(101L, 0.7f))), select = 101L)
+        val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.3f), sticker(101L, 0.7f))), select = 101L)
 
-        compose.onNodeWithTag(STICKER_DELETE_TAG).performClick()
+        compose.onNodeWithTag(LAYER_DELETE_TAG).performClick()
         compose.waitForIdle()
 
         val state = viewModel.state.value
-        assertEquals(listOf(100L), state.settings.stickers.map { it.key })
-        assertNull("a deleted sticker stayed selected", state.selectedStickerKey)
+        assertEquals(listOf(100L), state.settings.layers.map { it.key })
+        assertNull("a deleted sticker stayed selected", state.selectedLayerKey)
     }
 
     /**
      * DoD 6: from one selected sticker turned 30 degrees and mirrored, on a photo turned a quarter
-     * turn, a tap on the duplicate corner gives two stickers. The copy has the same picture, size,
+     * turn, a tap on the duplicate corner gives two layers. The copy has the same picture, size,
      * turn and mirror; on the SHOWN picture its centre is right of and below the original's by more
      * than 0 and at most 10 percent of the shown width on each axis; the copy is the newest and is
      * selected.
@@ -105,28 +108,28 @@ class StickerFrameTest {
     @Test
     fun duplicate_copies_the_sticker_a_little_right_and_down_on_the_shown_picture() {
         val original = sticker(100L, 0.5f, degrees = 30f, mirrored = true)
-        val settings = EditSettings(quarterTurns = 1, stickers = listOf(original))
+        val settings = EditSettings(quarterTurns = 1, layers = listOf(original))
         val viewModel = showWith(settings, select = 100L)
 
-        compose.onNodeWithTag(STICKER_DUPLICATE_TAG).performClick()
+        compose.onNodeWithTag(LAYER_DUPLICATE_TAG).performClick()
         compose.waitForIdle()
 
         val state = viewModel.state.value
-        assertEquals(2, state.settings.stickers.size)
-        val first = state.settings.stickers.first()
-        val copy = state.settings.stickers.last()
+        assertEquals(2, state.settings.layers.size)
+        val first = state.settings.layers.first()
+        val copy = state.settings.layers.last()
         assertEquals(original, first)
         assertTrue("the copy reuses the key", copy.key != original.key)
         assertEquals(original.pictureId, copy.pictureId)
         assertEquals(original.width, copy.width, 1e-4f)
         assertEquals(original.degrees, copy.degrees, 1e-3f)
         assertEquals(original.mirrored, copy.mirrored)
-        assertEquals("the copy is the selected one", copy.key, state.selectedStickerKey)
+        assertEquals("the copy is the selected one", copy.key, state.selectedLayerKey)
 
         val photo = (state.photo as ToolUiState.PhotoState.Ready).bitmap
-        val mapping = StickerMapping(photo.width, photo.height, state.settings)
-        val a = mapping.originalToShown(StickerMapping.Point(first.centreX, first.centreY))
-        val b = mapping.originalToShown(StickerMapping.Point(copy.centreX, copy.centreY))
+        val mapping = LayerMapping(photo.width, photo.height, state.settings)
+        val a = mapping.originalToShown(LayerMapping.Point(first.centreX, first.centreY))
+        val b = mapping.originalToShown(LayerMapping.Point(copy.centreX, copy.centreY))
         // The quarter turn swaps the photo's sides: the shown picture is 400 x 600 pixels.
         val shownWidthPx = 400f
         val shownHeightPx = 600f
@@ -142,14 +145,14 @@ class StickerFrameTest {
      */
     @Test
     fun flip_twice_gives_back_the_starting_settings() {
-        val start = EditSettings(stickers = listOf(sticker(100L, 0.5f)))
+        val start = EditSettings(layers = listOf(sticker(100L, 0.5f)))
         val viewModel = showWith(start, select = 100L)
 
-        compose.onNodeWithTag(STICKER_FLIP_TAG).performClick()
+        compose.onNodeWithTag(LAYER_FLIP_TAG).performClick()
         compose.waitForIdle()
-        assertTrue("the first tap did not mirror", viewModel.state.value.settings.stickers.single().mirrored)
+        assertTrue("the first tap did not mirror", viewModel.state.value.settings.layers.single().mirrored)
 
-        compose.onNodeWithTag(STICKER_FLIP_TAG).performClick()
+        compose.onNodeWithTag(LAYER_FLIP_TAG).performClick()
         compose.waitForIdle()
         assertEquals(start, viewModel.state.value.settings)
     }
@@ -162,13 +165,13 @@ class StickerFrameTest {
      */
     @Test
     fun dragging_the_handle_doubles_and_turns_the_sticker() {
-        resizeAndTurn(EditSettings(stickers = listOf(sticker(100L, 0.5f, width = 0.2f))))
+        resizeAndTurn(EditSettings(layers = listOf(sticker(100L, 0.5f, width = 0.2f))))
     }
 
     /** The same drag as above on a photo turned a quarter turn, where shown and original differ. */
     @Test
     fun dragging_the_handle_works_on_a_turned_photo() {
-        resizeAndTurn(EditSettings(quarterTurns = 1, stickers = listOf(sticker(100L, 0.5f, width = 0.2f))))
+        resizeAndTurn(EditSettings(quarterTurns = 1, layers = listOf(sticker(100L, 0.5f, width = 0.2f))))
     }
 
     /**
@@ -177,13 +180,13 @@ class StickerFrameTest {
      */
     @Test
     fun the_four_corner_buttons_have_names_and_48_dp_targets() {
-        showWith(EditSettings(stickers = listOf(sticker(100L, 0.5f))), select = 100L)
+        showWith(EditSettings(layers = listOf(sticker(100L, 0.5f))), select = 100L)
         val density = Density(context)
         val expected = mapOf(
-            STICKER_DELETE_TAG to context.getString(R.string.sticker_frame_delete),
-            STICKER_DUPLICATE_TAG to context.getString(R.string.sticker_frame_duplicate),
-            STICKER_FLIP_TAG to context.getString(R.string.sticker_frame_flip),
-            STICKER_RESIZE_TAG to context.getString(R.string.sticker_frame_resize),
+            LAYER_DELETE_TAG to context.getString(R.string.sticker_frame_delete),
+            LAYER_DUPLICATE_TAG to context.getString(R.string.sticker_frame_duplicate),
+            LAYER_FLIP_TAG to context.getString(R.string.sticker_frame_flip),
+            LAYER_RESIZE_TAG to context.getString(R.string.sticker_frame_resize),
         )
         val minPx = with(density) { TouchTargetCheck.MIN_SIZE.toPx() }
         expected.forEach { (tag, description) ->
@@ -227,7 +230,7 @@ class StickerFrameTest {
 
     /** The sticker node's own width over its height (its layout size, unaffected by the turn). */
     private fun nodeShape(): Float {
-        val size = compose.onNodeWithTag("sticker-100").fetchSemanticsNode().size
+        val size = compose.onNodeWithTag(layerNodeTag(100L)).fetchSemanticsNode().size
         return size.width.toFloat() / size.height
     }
 
@@ -237,8 +240,8 @@ class StickerFrameTest {
      * lifts. Everything is in the overlay's own pixels, which stand still during the drag.
      */
     private fun dragHandle(viewModel: ToolViewModel, turnDegrees: Float, scale: Float) {
-        val origin = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().positionInRoot
-        val handleNode = compose.onNodeWithTag(STICKER_RESIZE_TAG).fetchSemanticsNode()
+        val origin = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().positionInRoot
+        val handleNode = compose.onNodeWithTag(LAYER_RESIZE_TAG).fetchSemanticsNode()
         // Position plus half the size: the bounds rectangle would be clipped to the visible area.
         val handleRoot = handleNode.positionInRoot +
             Offset(handleNode.size.width / 2f, handleNode.size.height / 2f)
@@ -246,7 +249,7 @@ class StickerFrameTest {
         val centre = shownCentre(viewModel)
         val d = distanceBetween(centre.x, centre.y, handle.x, handle.y)
         val a = angleBetween(centre.x, centre.y, handle.x, handle.y)
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             down(handle)
             val steps = 12
             for (i in 1..steps) {
@@ -261,27 +264,27 @@ class StickerFrameTest {
     }
 
     /** The mapping between the shown picture and the original for the ViewModel's settings now. */
-    private fun mappingOf(viewModel: ToolViewModel): StickerMapping {
+    private fun mappingOf(viewModel: ToolViewModel): LayerMapping {
         val state = viewModel.state.value
         val photo = (state.photo as ToolUiState.PhotoState.Ready).bitmap
-        return StickerMapping(photo.width, photo.height, state.settings)
+        return LayerMapping(photo.width, photo.height, state.settings)
     }
 
     /** The sticker 100's centre on the shown picture, in the overlay's own pixels. */
     private fun shownCentre(viewModel: ToolViewModel): Offset {
-        val sticker = viewModel.state.value.settings.stickers.first { it.key == 100L }
-        val p = mappingOf(viewModel).originalToShown(StickerMapping.Point(sticker.centreX, sticker.centreY))
-        val size = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().size
+        val sticker = viewModel.state.value.settings.layers.first { it.key == 100L }
+        val p = mappingOf(viewModel).originalToShown(LayerMapping.Point(sticker.centreX, sticker.centreY))
+        val size = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().size
         return Offset(p.x * size.width, p.y * size.height)
     }
 
     /** The sticker 100's width as a fraction of the shown picture's width. */
     private fun shownWidth(viewModel: ToolViewModel): Float =
-        mappingOf(viewModel).originalWidthToShown(viewModel.state.value.settings.stickers.first { it.key == 100L }.width)
+        mappingOf(viewModel).originalWidthToShown(viewModel.state.value.settings.layers.first { it.key == 100L }.width)
 
     /** The sticker 100's turn as the person sees it. */
     private fun shownDegrees(viewModel: ToolViewModel): Float =
-        mappingOf(viewModel).originalAngleToShown(viewModel.state.value.settings.stickers.first { it.key == 100L }.degrees)
+        mappingOf(viewModel).originalAngleToShown(viewModel.state.value.settings.layers.first { it.key == 100L }.degrees)
 
     /** A made-up sticker with [key], its centre at [x] across and the middle down the original. */
     private fun sticker(
@@ -290,7 +293,7 @@ class StickerFrameTest {
         width: Float = 0.3f,
         degrees: Float = 0f,
         mirrored: Boolean = false,
-    ): Sticker = Sticker(key, "img_sticker_apple", x, 0.5f, width, degrees, mirrored)
+    ): Layer = Layer(key, LayerContent.Picture("img_sticker_apple"), x, 0.5f, width, degrees, mirrored)
 
     /** Draws the screen, puts [settings] on the photo, opens the Stickers sheet and selects [select]. */
     private fun showWith(settings: EditSettings, select: Long): ToolViewModel {
@@ -315,9 +318,9 @@ class StickerFrameTest {
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)
-        viewModel.selectSticker(select)
+        viewModel.selectLayer(select)
         compose.waitForIdle()
-        assertEquals(select, viewModel.state.value.selectedStickerKey)
+        assertEquals(select, viewModel.state.value.selectedLayerKey)
         return viewModel
     }
 

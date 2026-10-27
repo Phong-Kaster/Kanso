@@ -6,18 +6,18 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * The one translation between what the user SEES while placing stickers and where a sticker
+ * The one translation between what the user SEES while placing layers and where a sticker
  * really lives.
  *
  * The user sees the photo after the crop, the quarter turns and the flips (the "shown picture").
- * A [Sticker] is stored as fractions of the ORIGINAL photo, so a later crop, turn or flip carries
+ * A [Layer] is stored as fractions of the ORIGINAL photo, so a later crop, turn or flip carries
  * it along. Done ([EditProcessor]) applies the steps in this order: crop, then turn, then flip,
  * and draws each sticker before them. This class is exactly the inverse of that, so a sticker put
  * at a spot of the shown picture is drawn by Done at that same spot.
  *
  * Positions are [Point]s from 0 to 1 across the picture, y growing downward. Turning and flipping
  * the whole picture also turns the sticker's look, so the angle and the mirror flag are mapped
- * too. A flip is a mirror: it reverses the sense of every angle and toggles [Sticker.mirrored].
+ * too. A flip is a mirror: it reverses the sense of every angle and toggles [Layer.mirrored].
  *
  * It is plain Kotlin with no Android types, so it can be tested on the JVM.
  *
@@ -25,7 +25,7 @@ import kotlin.math.sin
  * @param originalHeight the original photo's height in pixels.
  * @param settings the edit whose crop, quarter turns and flips define the shown picture.
  */
-class StickerMapping(
+class LayerMapping(
     originalWidth: Int,
     originalHeight: Int,
     settings: EditSettings,
@@ -145,11 +145,11 @@ class StickerMapping(
      * A new sticker of [pictureId] with identity [key], at the shown picture's centre, a third of
      * its width, upright and not mirrored, already converted to the original's fractions.
      */
-    fun centredSticker(key: Long, pictureId: String): Sticker {
+    fun centredPicture(key: Long, pictureId: String): Layer {
         val centre = shownToOriginal(Point(0.5f, 0.5f))
-        return Sticker(
+        return Layer(
             key = key,
-            pictureId = pictureId,
+            content = LayerContent.Picture(pictureId),
             centreX = centre.x,
             centreY = centre.y,
             width = shownWidthToOriginal(1f / 3f),

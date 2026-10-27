@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -25,7 +26,9 @@ import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.pictureId
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
@@ -37,7 +40,7 @@ import com.phongkaster.kanso.ui.tool.component.photocard.LIVE_PREVIEW_TAG
 import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewGeometry
 import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewImage
 import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewMatrix
-import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewTouchedSticker
+import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewTouchedLayer
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
@@ -52,22 +55,21 @@ import org.koin.core.context.stopKoin
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**
- * Checks on Android 15 how stickers show in the Edit screen's live picture (Run 10, DoD 19).
+ * Checks on Android 15 how layers show in the Edit screen's live picture (Run 10, DoD 19).
  *
- * **The finger and the filtered copy.** The untouched stickers are drawn into the small copy the
+ * **The finger and the filtered copy.** The untouched layers are drawn into the small copy the
  * ViewModel filters; the one under a finger is drawn live by `LivePreviewImage` instead. The first
  * test drives the real tool screen for a real [ToolViewModel] from a filter, a raised brightness, a
- * crop, a turn, a flip and two stickers, with a recording processor standing in for the recipe, and
+ * crop, a turn, a flip and two layers, with a recording processor standing in for the recipe, and
  * checks the whole life of one touch:
  *
- * - before the touch both stickers are in the request that was rendered, and the live picture
+ * - before the touch both layers are in the request that was rendered, and the live picture
  *   reports no touched sticker;
- * - between finger-down (the first changed sticker list, `previewStickers`) and finger-up
+ * - between finger-down (the first changed sticker list, `previewLayers`) and finger-up
  *   (`commitSettings`) the touched sticker is left out of the request, the live picture reports it
- *   (`LivePreviewTouchedSticker`) with exactly the picture's own crop, turn and flip
+ *   (`LivePreviewTouchedLayer`) with exactly the picture's own crop, turn and flip
  *   (`LivePreviewGeometry`) and its colour matrix (`LivePreviewMatrix`, the sliders' numbers), and
  *   further drag steps send no new request;
  * - after finger-up the next request includes it at its new place, and the live picture reports
@@ -115,28 +117,28 @@ class StickerLivePreviewTest {
             quarterTurns = 1,
             flipHorizontal = true,
             crop = EditSettings.CropRect(0.1f, 0.1f, 0.9f, 0.9f),
-            stickers = listOf(first, second),
+            layers = listOf(first, second),
         )
         val recorder = RequestRecorder()
         val viewModel = showEdit()
 
         viewModel.changeSettings(base, recorder.processorFor)
-        waitUntil("both stickers in the first request") { recorder.requests.any { it.stickers == listOf(first, second) } }
+        waitUntil("both stickers in the first request") { recorder.requests.any { it.layers == listOf(first, second) } }
         viewModel.openTool(EditTool.STICKERS)
         compose.waitForIdle()
         assertNull("a sticker is reported touched before any touch", touchedReport())
-        assertNull(viewModel.state.value.touchedStickerKey)
+        assertNull(viewModel.state.value.touchedLayerKey)
 
         // Finger down and a first move: the first sticker is touched.
         val moved = first.copy(centreX = 0.35f)
         val requestsBefore = recorder.requests.size
-        viewModel.previewStickers(listOf(moved, second), recorder.processorFor)
+        viewModel.previewLayers(listOf(moved, second), recorder.processorFor)
         waitUntil("a request without the touched sticker") { recorder.requests.size > requestsBefore }
-        assertEquals("the touched sticker is not the first", 100L, viewModel.state.value.touchedStickerKey)
+        assertEquals("the touched sticker is not the first", 100L, viewModel.state.value.touchedLayerKey)
         assertEquals(
             "the request still holds the touched sticker",
             listOf(second),
-            recorder.requests.last().stickers,
+            recorder.requests.last().layers,
         )
         compose.waitForIdle()
         val geometry = shownGeometry()
@@ -152,8 +154,8 @@ class StickerLivePreviewTest {
         // More drag steps: the request does not change, so nothing is rendered again.
         val afterTouch = recorder.requests.size
         val last = first.copy(centreX = 0.45f, centreY = 0.4f)
-        viewModel.previewStickers(listOf(first.copy(centreX = 0.4f), second), recorder.processorFor)
-        viewModel.previewStickers(listOf(last, second), recorder.processorFor)
+        viewModel.previewLayers(listOf(first.copy(centreX = 0.4f), second), recorder.processorFor)
+        viewModel.previewLayers(listOf(last, second), recorder.processorFor)
         pumpFor(PUMP_MS)
         compose.waitForIdle()
         assertEquals("a drag step re-rendered the filtered copy", afterTouch, recorder.requests.size)
@@ -165,10 +167,10 @@ class StickerLivePreviewTest {
 
         // Finger up: the touched sticker joins the next request, at its new place.
         viewModel.commitSettings()
-        waitUntil("a request with the lifted sticker") { recorder.requests.last().stickers == listOf(last, second) }
+        waitUntil("a request with the lifted sticker") { recorder.requests.last().layers == listOf(last, second) }
         waitUntil("the touched report to go") { touchedReport() == null }
-        assertNull(viewModel.state.value.touchedStickerKey)
-        assertEquals(listOf(last, second), viewModel.state.value.settings.stickers)
+        assertNull(viewModel.state.value.touchedLayerKey)
+        assertEquals(listOf(last, second), viewModel.state.value.settings.layers)
     }
 
     /**
@@ -183,9 +185,9 @@ class StickerLivePreviewTest {
         val photo = solidBitmap(120, 80, BLUE)
         val picture = solidBitmap(40, 40, RED).asImageBitmap()
         val settings = EditSettings(crop = EditSettings.CropRect(0.25f, 0.25f, 0.75f, 0.75f))
-        val touched = Sticker(
+        val touched = Layer(
             key = 1L,
-            pictureId = "red",
+            content = LayerContent.Picture("red"),
             centreX = 0.25f,
             centreY = 0.25f,
             width = 0.4f,
@@ -198,7 +200,7 @@ class StickerLivePreviewTest {
                     LivePreviewImage(
                         bitmap = photo,
                         settings = settings,
-                        touchedSticker = touched,
+                        touchedLayer = touched,
                         touchedPicture = picture,
                     )
                 }
@@ -258,9 +260,9 @@ class StickerLivePreviewTest {
     }
 
     /** A real catalogue picture as a sticker with [key], upright, at the given horizontal place, in the photo's middle row. */
-    private fun sticker(key: Long, centreX: Float): Sticker = Sticker(
+    private fun sticker(key: Long, centreX: Float): Layer = Layer(
         key = key,
-        pictureId = "img_sticker_apple",
+        content = LayerContent.Picture("img_sticker_apple"),
         centreX = centreX,
         centreY = 0.5f,
         width = 0.2f,
@@ -271,7 +273,7 @@ class StickerLivePreviewTest {
     /** The live picture's report of the touched sticker, or null when it reports none. */
     private fun touchedReport(): String? {
         val config = compose.onNodeWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).fetchSemanticsNode().config
-        return if (LivePreviewTouchedSticker in config) config[LivePreviewTouchedSticker] else null
+        return if (LivePreviewTouchedLayer in config) config[LivePreviewTouchedLayer] else null
     }
 
     /** The crop, turn and flip the live picture says it applies. */

@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -23,13 +23,13 @@ import kotlin.math.roundToInt
  * The invisible node that marks where one sticker is on the shown picture: [widthPx] by [heightPx]
  * pixels, its centre at ([centreX], [centreY]) of the overlay, turned clockwise by [degrees] about
  * that centre. It draws nothing: the sticker's picture is part of the live picture beneath (the
- * filtered preview for the stickers at rest, the live preview's own drawing for the one under a
+ * filtered preview for the layers at rest, the live preview's own drawing for the one under a
  * finger), so drawing it here as well would show it twice. The node still carries the caller's
  * test tag and semantics, and its bounds are the sticker's own place and size, as the
  * accessibility tree and the tests expect.
  */
 @Composable
-internal fun StickerPlace(
+internal fun LayerPlace(
     centreX: Float,
     centreY: Float,
     widthPx: Float,
@@ -64,7 +64,7 @@ private fun StickerPlacePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.size(240.dp).clipToBounds()) {
-                StickerPlace(
+                LayerPlace(
                     centreX = 300f,
                     centreY = 300f,
                     widthPx = 300f,

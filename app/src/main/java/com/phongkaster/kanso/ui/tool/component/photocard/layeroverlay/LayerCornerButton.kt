@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
@@ -26,19 +26,19 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
 /** Test tag of the delete button at the selected sticker's top-left corner. */
-const val STICKER_DELETE_TAG = "sticker-delete"
+const val LAYER_DELETE_TAG = "layer-delete"
 
 /** Test tag of the duplicate button at the selected sticker's top-right corner. */
-const val STICKER_DUPLICATE_TAG = "sticker-duplicate"
+const val LAYER_DUPLICATE_TAG = "layer-duplicate"
 
 /** Test tag of the flip (mirror) button at the selected sticker's bottom-left corner. */
-const val STICKER_FLIP_TAG = "sticker-flip"
+const val LAYER_FLIP_TAG = "layer-flip"
 
 /** Test tag of the resize and turn handle at the selected sticker's bottom-right corner. */
-const val STICKER_RESIZE_TAG = "sticker-resize"
+const val LAYER_RESIZE_TAG = "layer-resize"
 
 /** The size of a corner button's touch target: the 48 dp the accessibility guidelines ask for. */
-val STICKER_BUTTON_TARGET = 48.dp
+val LAYER_BUTTON_TARGET = 48.dp
 
 /** The size of the coloured disc inside a corner button's touch target. */
 private val DISC_SIZE = 28.dp
@@ -58,7 +58,7 @@ private val GLYPH_SIZE = 16.dp
  * glyph is drawn with `Icon`, which tints it with the content colour: the file itself is white.
  */
 @Composable
-fun StickerCornerButton(
+fun LayerCornerButton(
     @DrawableRes iconRes: Int,
     description: String,
     tag: String,
@@ -69,7 +69,7 @@ fun StickerCornerButton(
     Box(
         modifier = modifier
             .testTag(tag)
-            .size(STICKER_BUTTON_TARGET)
+            .size(LAYER_BUTTON_TARGET)
             .semantics { contentDescription = description }
             .then(gestures)
             .then(if (onClick != null) Modifier.clip(CircleShape).clickable(onClick = onClick) else Modifier),
@@ -100,10 +100,10 @@ private fun StickerCornerButtonPreview() {
         // The theme stretches its single child to the whole screen, so a Box goes first.
         Box(Modifier.fillMaxSize()) {
             Row {
-                StickerCornerButton(R.drawable.ic_close_circle, stringResource(R.string.sticker_frame_delete), STICKER_DELETE_TAG, onClick = {})
-                StickerCornerButton(R.drawable.ic_duplicate, stringResource(R.string.sticker_frame_duplicate), STICKER_DUPLICATE_TAG, onClick = {})
-                StickerCornerButton(R.drawable.ic_flip, stringResource(R.string.sticker_frame_flip), STICKER_FLIP_TAG, onClick = {})
-                StickerCornerButton(R.drawable.ic_resize_circle, stringResource(R.string.sticker_frame_resize), STICKER_RESIZE_TAG)
+                LayerCornerButton(R.drawable.ic_close_circle, stringResource(R.string.sticker_frame_delete), LAYER_DELETE_TAG, onClick = {})
+                LayerCornerButton(R.drawable.ic_duplicate, stringResource(R.string.sticker_frame_duplicate), LAYER_DUPLICATE_TAG, onClick = {})
+                LayerCornerButton(R.drawable.ic_flip, stringResource(R.string.sticker_frame_flip), LAYER_FLIP_TAG, onClick = {})
+                LayerCornerButton(R.drawable.ic_resize_circle, stringResource(R.string.sticker_frame_resize), LAYER_RESIZE_TAG)
             }
         }
     }

@@ -7,7 +7,9 @@ import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import kotlin.math.abs
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -16,16 +18,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.abs
 
 /**
- * Checks how [EditProcessor] draws stickers, on Android 15 with real bitmap drawing (Run 10,
+ * Checks how [EditProcessor] draws layers, on Android 15 with real bitmap drawing (Run 10,
  * DoD 15, 16 and 18): a crop cuts a sticker; a turn and a flip carry it with the photo; a filter
- * and the colour sliders colour it; the output size does not depend on stickers; a one-pixel
- * checkerboard drawn 1:1 appears pixel for pixel; no stickers gives the old pixels.
+ * and the colour sliders colour it; the output size does not depend on layers; a one-pixel
+ * checkerboard drawn 1:1 appears pixel for pixel; no layers gives the old pixels.
  *
  * The photo is a flat grey, so any pixel that is not grey is a sticker pixel. The fake
- * [SolidStickerPictures] makes square pictures, so a sticker of width 0.2 on a 100 x 100 photo is a
+ * [SolidLayerPictures] makes square pictures, so a sticker of width 0.2 on a 100 x 100 photo is a
  * 20 x 20 block.
  */
 @RunWith(AndroidJUnit4::class)
@@ -40,13 +41,13 @@ class EditProcessorStickerTest {
     private val noFilters = FilterLut.Source { null }
 
     /** One solid sticker at [centreX], [centreY] of the given [width] (all fractions of the photo). */
-    private fun sticker(centreX: Float, centreY: Float, width: Float, id: String = "solid") = Sticker(
-        key = 1, pictureId = id, centreX = centreX, centreY = centreY, width = width, degrees = 0f, mirrored = false,
+    private fun sticker(centreX: Float, centreY: Float, width: Float, id: String = "solid") = Layer(
+        key = 1, content = LayerContent.Picture(id), centreX = centreX, centreY = centreY, width = width, degrees = 0f, mirrored = false,
     )
 
     /** A 40 px (0.4 wide) four-quadrant sticker in the middle of a 100 x 100 photo (covers 30..69). */
-    private fun quad(degrees: Float = 0f, mirrored: Boolean = false) = Sticker(
-        key = 1, pictureId = SolidStickerPictures.QUAD, centreX = 0.5f, centreY = 0.5f, width = 0.4f,
+    private fun quad(degrees: Float = 0f, mirrored: Boolean = false) = Layer(
+        key = 1, content = LayerContent.Picture(SolidLayerPictures.QUAD), centreX = 0.5f, centreY = 0.5f, width = 0.4f,
         degrees = degrees, mirrored = mirrored,
     )
 
@@ -63,13 +64,13 @@ class EditProcessorStickerTest {
     fun a_crop_through_a_sticker_keeps_only_the_kept_part() {
         val settings = EditSettings(
             crop = EditSettings.CropRect(0.5f, 0f, 1f, 1f),
-            stickers = listOf(sticker(0.5f, 0.5f, 0.4f)), // covers x 30..69, y 30..69
+            layers = listOf(sticker(0.5f, 0.5f, 0.4f)), // covers x 30..69, y 30..69
         )
         val edited = run(photo(100, 100), settings)
         assertEquals(50, edited.width)
         assertEquals(100, edited.height)
-        assertEquals(SolidStickerPictures.SOLID, edited.getPixel(0, 50))
-        assertEquals(SolidStickerPictures.SOLID, edited.getPixel(19, 50))
+        assertEquals(SolidLayerPictures.SOLID, edited.getPixel(0, 50))
+        assertEquals(SolidLayerPictures.SOLID, edited.getPixel(19, 50))
         assertEquals(grey, edited.getPixel(20, 50))
         assertEquals(grey, edited.getPixel(10, 10))
         assertEquals(grey, edited.getPixel(10, 75))
@@ -80,7 +81,7 @@ class EditProcessorStickerTest {
     fun a_crop_that_excludes_a_sticker_shows_none_of_it() {
         val settings = EditSettings(
             crop = EditSettings.CropRect(0.75f, 0f, 1f, 1f),
-            stickers = listOf(sticker(0.4f, 0.5f, 0.2f)), // covers x 30..49
+            layers = listOf(sticker(0.4f, 0.5f, 0.2f)), // covers x 30..49
         )
         val edited = run(photo(100, 100), settings)
         assertTrue(pixels(edited).all { it == grey })
@@ -92,7 +93,7 @@ class EditProcessorStickerTest {
         val settings = EditSettings(
             quarterTurns = 1,
             flipHorizontal = true,
-            stickers = listOf(sticker(0.25f, 0.75f, 0.2f)), // x 15..34, y 65..84 before the turn
+            layers = listOf(sticker(0.25f, 0.75f, 0.2f)), // x 15..34, y 65..84 before the turn
         )
         val edited = run(photo(100, 100), settings)
         // Turn right: (x, y) -> (99 - y, x), so x 15..34, y 65..84 -> x 15..34, y 15..34.
@@ -100,7 +101,7 @@ class EditProcessorStickerTest {
         for (y in 0 until 100) {
             for (x in 0 until 100) {
                 val inside = x in 65..84 && y in 15..34
-                assertEquals("pixel ($x, $y)", if (inside) SolidStickerPictures.SOLID else grey, edited.getPixel(x, y))
+                assertEquals("pixel ($x, $y)", if (inside) SolidLayerPictures.SOLID else grey, edited.getPixel(x, y))
             }
         }
     }
@@ -113,22 +114,22 @@ class EditProcessorStickerTest {
         val settings = EditSettings(
             filter = FilterPreset.HUDSON,
             filterIntensity = 1f,
-            stickers = listOf(sticker(0.5f, 0.5f, 0.2f)),
+            layers = listOf(sticker(0.5f, 0.5f, 0.2f)),
         )
         val edited = run(photo(100, 100), settings, filters)
-        assertEquals(lut.map(SolidStickerPictures.SOLID) or OPAQUE, edited.getPixel(50, 50))
+        assertEquals(lut.map(SolidLayerPictures.SOLID) or OPAQUE, edited.getPixel(50, 50))
         assertEquals(lut.map(grey) or OPAQUE, edited.getPixel(5, 5))
     }
 
     /** Raised brightness moves the sticker's colour through the same colour matrix as the photo. */
     @Test
     fun a_colour_slider_colours_the_sticker() {
-        val settings = EditSettings(brightness = 0.5f, stickers = listOf(sticker(0.5f, 0.5f, 0.2f)))
+        val settings = EditSettings(brightness = 0.5f, layers = listOf(sticker(0.5f, 0.5f, 0.2f)))
         val matrix = EditProcessor.colourMatrix(settings)
         val edited = run(photo(100, 100), settings)
-        assertClose(through(matrix, SolidStickerPictures.SOLID), edited.getPixel(50, 50), 1)
+        assertClose(through(matrix, SolidLayerPictures.SOLID), edited.getPixel(50, 50), 1)
         assertClose(through(matrix, grey), edited.getPixel(5, 5), 1)
-        assertTrue(edited.getPixel(50, 50) != SolidStickerPictures.SOLID)
+        assertTrue(edited.getPixel(50, 50) != SolidLayerPictures.SOLID)
     }
 
     /** Stickers never change the output's size, with or without a crop and a turn. */
@@ -136,7 +137,7 @@ class EditProcessorStickerTest {
     fun stickers_do_not_change_the_output_size() {
         val base = EditSettings(crop = EditSettings.CropRect(0.1f, 0.2f, 0.9f, 0.7f), quarterTurns = 1)
         val without = run(photo(100, 100), base)
-        val with = run(photo(100, 100), base.copy(stickers = listOf(sticker(0.5f, 0.5f, 0.6f), sticker(0.0f, 0.0f, 0.5f))))
+        val with = run(photo(100, 100), base.copy(layers = listOf(sticker(0.5f, 0.5f, 0.6f), sticker(0.0f, 0.0f, 0.5f))))
         assertEquals(without.width, with.width)
         assertEquals(without.height, with.height)
     }
@@ -145,13 +146,13 @@ class EditProcessorStickerTest {
     @Test
     fun a_checkerboard_sticker_at_scale_one_appears_pixel_for_pixel() {
         // 32 x 32 photo, sticker 0.25 wide = 8 px, centred: covers x 12..19, y 12..19.
-        val settings = EditSettings(stickers = listOf(sticker(0.5f, 0.5f, 0.25f, SolidStickerPictures.CHECKER)))
+        val settings = EditSettings(layers = listOf(sticker(0.5f, 0.5f, 0.25f, SolidLayerPictures.CHECKER)))
         val edited = run(photo(32, 32), settings)
         assertEquals(32, edited.width)
         for (y in 0 until 32) {
             for (x in 0 until 32) {
                 val expected = if (x in 12..19 && y in 12..19) {
-                    if (((x - 12) + (y - 12)) % 2 == 0) SolidStickerPictures.CHECKER_A else SolidStickerPictures.CHECKER_B
+                    if (((x - 12) + (y - 12)) % 2 == 0) SolidLayerPictures.CHECKER_A else SolidLayerPictures.CHECKER_B
                 } else {
                     grey
                 }
@@ -168,12 +169,12 @@ class EditProcessorStickerTest {
     @Test
     fun a_checkerboard_at_a_quarter_pixel_offset_is_not_smoothed() {
         // 32 x 32 photo, 8 px wide, centre x = 16.25 -> the picture starts at x = 12.25.
-        val settings = EditSettings(stickers = listOf(sticker(0.5078125f, 0.5f, 0.25f, SolidStickerPictures.CHECKER)))
+        val settings = EditSettings(layers = listOf(sticker(0.5078125f, 0.5f, 0.25f, SolidLayerPictures.CHECKER)))
         val edited = run(photo(32, 32), settings)
         for (y in 0 until 32) {
             for (x in 0 until 32) {
                 val expected = if (x in 12..19 && y in 12..19) {
-                    if (((x - 12) + (y - 12)) % 2 == 0) SolidStickerPictures.CHECKER_A else SolidStickerPictures.CHECKER_B
+                    if (((x - 12) + (y - 12)) % 2 == 0) SolidLayerPictures.CHECKER_A else SolidLayerPictures.CHECKER_B
                 } else {
                     grey
                 }
@@ -185,15 +186,15 @@ class EditProcessorStickerTest {
     /** A sticker turned 90 degrees clockwise: each quadrant moves to the next corner clockwise. */
     @Test
     fun a_sticker_turned_ninety_degrees_goes_clockwise_about_its_centre() {
-        val edited = run(photo(100, 100), EditSettings(stickers = listOf(quad(degrees = 90f))))
+        val edited = run(photo(100, 100), EditSettings(layers = listOf(quad(degrees = 90f))))
         // Top-left red -> top-right, top-right green -> bottom-right, bottom-right yellow ->
         // bottom-left, bottom-left blue -> top-left.
         assertQuadrants(
             edited,
-            topLeft = SolidStickerPictures.QUAD_BOTTOM_LEFT,
-            topRight = SolidStickerPictures.QUAD_TOP_LEFT,
-            bottomLeft = SolidStickerPictures.QUAD_BOTTOM_RIGHT,
-            bottomRight = SolidStickerPictures.QUAD_TOP_RIGHT,
+            topLeft = SolidLayerPictures.QUAD_BOTTOM_LEFT,
+            topRight = SolidLayerPictures.QUAD_TOP_LEFT,
+            bottomLeft = SolidLayerPictures.QUAD_BOTTOM_RIGHT,
+            bottomRight = SolidLayerPictures.QUAD_TOP_RIGHT,
         )
         // Still the same 40 x 40 square about the centre, nothing outside it.
         assertEquals(grey, edited.getPixel(25, 25))
@@ -203,13 +204,13 @@ class EditProcessorStickerTest {
     /** At 45 degrees clockwise the quadrants' centres move to the top, right, bottom and left. */
     @Test
     fun a_sticker_turned_forty_five_degrees_lands_on_the_diagonal_positions() {
-        val edited = run(photo(100, 100), EditSettings(stickers = listOf(quad(degrees = 45f))))
+        val edited = run(photo(100, 100), EditSettings(layers = listOf(quad(degrees = 45f))))
         // A quadrant centre is 10 px right and 10 px down/up of the middle (14.14 px away); turned
         // clockwise by 45 degrees the top-left one (-10, -10) lands straight above the middle.
-        assertEquals(SolidStickerPictures.QUAD_TOP_LEFT, edited.getPixel(50, 36))
-        assertEquals(SolidStickerPictures.QUAD_TOP_RIGHT, edited.getPixel(64, 50))
-        assertEquals(SolidStickerPictures.QUAD_BOTTOM_RIGHT, edited.getPixel(50, 64))
-        assertEquals(SolidStickerPictures.QUAD_BOTTOM_LEFT, edited.getPixel(36, 50))
+        assertEquals(SolidLayerPictures.QUAD_TOP_LEFT, edited.getPixel(50, 36))
+        assertEquals(SolidLayerPictures.QUAD_TOP_RIGHT, edited.getPixel(64, 50))
+        assertEquals(SolidLayerPictures.QUAD_BOTTOM_RIGHT, edited.getPixel(50, 64))
+        assertEquals(SolidLayerPictures.QUAD_BOTTOM_LEFT, edited.getPixel(36, 50))
         // The square's old corner is empty after the turn: |dx| + |dy| = 38 is beyond 28.3.
         assertEquals(grey, edited.getPixel(31, 31))
         assertEquals(grey, edited.getPixel(68, 68))
@@ -218,28 +219,28 @@ class EditProcessorStickerTest {
     /** A mirrored sticker swaps left and right. */
     @Test
     fun a_mirrored_sticker_swaps_left_and_right() {
-        val edited = run(photo(100, 100), EditSettings(stickers = listOf(quad(mirrored = true))))
+        val edited = run(photo(100, 100), EditSettings(layers = listOf(quad(mirrored = true))))
         assertQuadrants(
             edited,
-            topLeft = SolidStickerPictures.QUAD_TOP_RIGHT,
-            topRight = SolidStickerPictures.QUAD_TOP_LEFT,
-            bottomLeft = SolidStickerPictures.QUAD_BOTTOM_RIGHT,
-            bottomRight = SolidStickerPictures.QUAD_BOTTOM_LEFT,
+            topLeft = SolidLayerPictures.QUAD_TOP_RIGHT,
+            topRight = SolidLayerPictures.QUAD_TOP_LEFT,
+            bottomLeft = SolidLayerPictures.QUAD_BOTTOM_RIGHT,
+            bottomRight = SolidLayerPictures.QUAD_BOTTOM_LEFT,
         )
     }
 
     /** The mirror is applied before the turn: mirror first, then 90 degrees clockwise. */
     @Test
     fun a_mirrored_and_turned_sticker_mirrors_first_then_turns() {
-        val edited = run(photo(100, 100), EditSettings(stickers = listOf(quad(degrees = 90f, mirrored = true))))
+        val edited = run(photo(100, 100), EditSettings(layers = listOf(quad(degrees = 90f, mirrored = true))))
         // Mirrored: TL green, TR red, BL yellow, BR blue. Then clockwise 90: TL -> TR, TR -> BR,
         // BR -> BL, BL -> TL. (Turning first and mirroring after would give red, blue, green, yellow.)
         assertQuadrants(
             edited,
-            topLeft = SolidStickerPictures.QUAD_BOTTOM_RIGHT,
-            topRight = SolidStickerPictures.QUAD_TOP_RIGHT,
-            bottomLeft = SolidStickerPictures.QUAD_BOTTOM_LEFT,
-            bottomRight = SolidStickerPictures.QUAD_TOP_LEFT,
+            topLeft = SolidLayerPictures.QUAD_BOTTOM_RIGHT,
+            topRight = SolidLayerPictures.QUAD_TOP_RIGHT,
+            bottomLeft = SolidLayerPictures.QUAD_BOTTOM_LEFT,
+            bottomRight = SolidLayerPictures.QUAD_TOP_LEFT,
         )
     }
 
@@ -252,7 +253,7 @@ class EditProcessorStickerTest {
     fun a_sticker_on_a_wide_cropped_photo_lands_by_width_height_and_crop_corner() {
         val settings = EditSettings(
             crop = EditSettings.CropRect(0.25f, 0.5f, 0.75f, 1f), // x 50..149, y 50..99
-            stickers = listOf(sticker(0.5f, 0.75f, 0.1f)), // centre (100, 75), 20 px: x 90..109, y 65..84
+            layers = listOf(sticker(0.5f, 0.75f, 0.1f)), // centre (100, 75), 20 px: x 90..109, y 65..84
         )
         val edited = run(photo(200, 100), settings)
         assertEquals(100, edited.width)
@@ -261,7 +262,7 @@ class EditProcessorStickerTest {
         for (y in 0 until 50) {
             for (x in 0 until 100) {
                 val inside = x in 40..59 && y in 15..34
-                assertEquals("pixel ($x, $y)", if (inside) SolidStickerPictures.SOLID else grey, edited.getPixel(x, y))
+                assertEquals("pixel ($x, $y)", if (inside) SolidLayerPictures.SOLID else grey, edited.getPixel(x, y))
             }
         }
     }
@@ -269,7 +270,7 @@ class EditProcessorStickerTest {
     /** A half see-through sticker mixes with the photo: s * a + d * (255 - a), rounded, per channel. */
     @Test
     fun a_half_see_through_sticker_blends_with_the_photo() {
-        val edited = run(photo(100, 100), EditSettings(stickers = listOf(sticker(0.5f, 0.5f, 0.2f, SolidStickerPictures.HALF))))
+        val edited = run(photo(100, 100), EditSettings(layers = listOf(sticker(0.5f, 0.5f, 0.2f, SolidLayerPictures.HALF))))
         val alpha = 128
         val expected = rgb(
             (255 * alpha + 100 * (255 - alpha) + 127) / 255,
@@ -287,15 +288,15 @@ class EditProcessorStickerTest {
     /** An over-sized sticker asks for a picture no wider than the photo's long side, and still covers it. */
     @Test
     fun an_oversized_sticker_decodes_no_wider_than_the_photo() {
-        val pictures = SolidStickerPictures()
+        val pictures = SolidLayerPictures()
         val result = runBlocking {
-            EditProcessor(EditSettings(stickers = listOf(sticker(0.5f, 0.5f, 50f))), noFilters, pictures)
+            EditProcessor(EditSettings(layers = listOf(sticker(0.5f, 0.5f, 50f))), noFilters, pictures)
                 .process(photo(100, 60)) {}
         }
         assertTrue("the edit failed: $result", result is EditResult.Edited)
         assertEquals(listOf(100), pictures.requestedWidths)
         val edited = (result as EditResult.Edited).bitmap
-        assertTrue(pixels(edited).all { it == SolidStickerPictures.SOLID })
+        assertTrue(pixels(edited).all { it == SolidLayerPictures.SOLID })
     }
 
     /** A sticker with a NaN or infinite number draws nothing and does not fail the edit. */
@@ -309,11 +310,11 @@ class EditProcessorStickerTest {
             good.copy(key = 5, centreY = Float.POSITIVE_INFINITY),
             good.copy(key = 6, degrees = Float.NaN),
         )
-        val edited = run(photo(100, 100), EditSettings(stickers = bad))
+        val edited = run(photo(100, 100), EditSettings(layers = bad))
         assertTrue(pixels(edited).all { it == grey })
     }
 
-    /** With no stickers the pixels are the old ones, even when a picture source is given. */
+    /** With no layers the pixels are the old ones, even when a picture source is given. */
     @Test
     fun no_stickers_gives_the_old_pixels() {
         val input = photo(100, 100)
@@ -326,7 +327,7 @@ class EditProcessorStickerTest {
 
     /** Renders [settings] over [input] with the fake sticker pictures and returns the bitmap. */
     private fun run(input: Bitmap, settings: EditSettings, filters: FilterLut.Source = noFilters): Bitmap {
-        val result = runBlocking { EditProcessor(settings, filters, SolidStickerPictures()).process(input) {} }
+        val result = runBlocking { EditProcessor(settings, filters, SolidLayerPictures()).process(input) {} }
         assertTrue("the edit failed: $result", result is EditResult.Edited)
         return (result as EditResult.Edited).bitmap
     }

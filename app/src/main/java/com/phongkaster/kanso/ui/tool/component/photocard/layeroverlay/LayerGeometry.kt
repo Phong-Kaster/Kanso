@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -13,7 +13,7 @@ import kotlin.math.sin
  * grows CLOCKWISE (turning from "right" towards "down"), the same sense as a sticker's own
  * degrees and as a layer's rotation. The file knows nothing about Android, the screen or the
  * photo's crop, so a plain JVM test can check every line; the conversion from the photo's
- * fractions to these pixels is done elsewhere, through the one StickerMapping.
+ * fractions to these pixels is done elsewhere, through the one LayerMapping.
  */
 
 /** A sign meaning "the left side" or "the top side" of a sticker rectangle (see [cornerX]). */
@@ -23,10 +23,10 @@ const val SIDE_START = -1f
 const val SIDE_END = 1f
 
 /** The smallest a sticker may be made, as a fraction of the overlay's width (about a twentieth). */
-const val MIN_STICKER_WIDTH_FRACTION = 0.05f
+const val MIN_LAYER_WIDTH_FRACTION = 0.05f
 
 /** The largest a sticker may be made, as a fraction of the overlay's width (the whole width). */
-const val MAX_STICKER_WIDTH_FRACTION = 1f
+const val MAX_LAYER_WIDTH_FRACTION = 1f
 
 /**
  * Rotates the offset ([x], [y]) clockwise by [degrees] about the origin and returns the new x.
@@ -52,7 +52,7 @@ private fun rotatedY(x: Float, y: Float, degrees: Float): Float {
  * centre? A mirrored sticker covers the same rectangle (a mirror about its own vertical axis maps
  * the rectangle onto itself), so the mirror needs no part in the test. The edge counts as a hit.
  */
-fun pointOnSticker(
+fun pointOnLayer(
     pointX: Float,
     pointY: Float,
     centreX: Float,

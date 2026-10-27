@@ -33,7 +33,7 @@ private const val GRID_COLUMNS = 3
 
 /**
  * The Stickers sheet's contents: a top bar with Cancel and Confirm, a row of category chips, and
- * a grid of the stickers of [category], three to a row, scrolling vertically.
+ * a grid of the layers of [category], three to a row, scrolling vertically.
  *
  * It has no state of its own: [category] is the chosen chip, a chip tap calls [onCategoryChosen],
  * a tile tap calls [onStickerChosen] with that [CatalogSticker], and the top bar buttons call

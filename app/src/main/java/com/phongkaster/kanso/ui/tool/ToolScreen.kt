@@ -58,7 +58,7 @@ import com.phongkaster.kanso.ui.tool.component.EditPhotoArea
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EditBottomBar
 import com.phongkaster.kanso.ui.tool.component.photocard.PhotoCard
 import com.phongkaster.kanso.ui.tool.component.StickerLimitMessage
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
@@ -278,8 +278,8 @@ fun ToolScreen(
                     settings = state.settings,
                     enabled = !state.comparing && !state.finishing,
                     onCropFinished = { rect -> viewModel.commitCrop(rect, processorFor) },
-                    // The session's stickers stay visible on the photo being cropped.
-                    stickers = state.settings.stickers,
+                    // The session's layers stay visible on the photo being cropped.
+                    layers = state.settings.layers,
                 )
             }
         },
@@ -290,7 +290,7 @@ fun ToolScreen(
         // re-renders from the original photo.
         editSheet = { tool ->
             // Whatever recipe a panel offers, the screen's own (with sticker pictures) is the one
-            // the ViewModel keeps, so Done always draws the stickers.
+            // the ViewModel keeps, so Done always draws the layers.
             if (tool == EditTool.STICKERS) {
                 EditPanel(
                     openTool = tool,
@@ -321,12 +321,12 @@ fun ToolScreen(
             }
         },
         onStickerLimitShown = viewModel::onStickerLimitMessageShown,
-        onStickerSelect = viewModel::selectSticker,
-        onStickerPreview = { list -> viewModel.previewStickers(list, processorFor) },
-        onStickerCommit = viewModel::commitSettings,
-        onStickerDelete = { viewModel.deleteSticker(it, processorFor) },
-        onStickerDuplicate = { viewModel.duplicateSticker(it, processorFor) },
-        onStickerFlip = { viewModel.flipSticker(it, processorFor) },
+        onLayerSelect = viewModel::selectLayer,
+        onLayerPreview = { list -> viewModel.previewLayers(list, processorFor) },
+        onLayerCommit = viewModel::commitSettings,
+        onLayerDelete = { viewModel.deleteLayer(it, processorFor) },
+        onLayerDuplicate = { viewModel.duplicateLayer(it, processorFor) },
+        onLayerFlip = { viewModel.flipLayer(it, processorFor) },
     )
 
     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
@@ -406,12 +406,12 @@ fun ToolContent(
     editSheet: @Composable (EditTool) -> Unit = {},
     editCropper: (@Composable () -> Unit)? = null,
     onStickerLimitShown: () -> Unit = {},
-    onStickerSelect: (Long?) -> Unit = {},
-    onStickerPreview: (List<Sticker>) -> Unit = {},
-    onStickerCommit: () -> Unit = {},
-    onStickerDelete: (Long) -> Unit = {},
-    onStickerDuplicate: (Long) -> Unit = {},
-    onStickerFlip: (Long) -> Unit = {},
+    onLayerSelect: (Long?) -> Unit = {},
+    onLayerPreview: (List<Layer>) -> Unit = {},
+    onLayerCommit: () -> Unit = {},
+    onLayerDelete: (Long) -> Unit = {},
+    onLayerDuplicate: (Long) -> Unit = {},
+    onLayerFlip: (Long) -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
     Scaffold(
@@ -477,12 +477,12 @@ fun ToolContent(
                             onReplace = onReplace,
                             onDismissFailure = onDismissFailure,
                             showReplace = false,
-                            onStickerSelect = onStickerSelect,
-                            onStickerPreview = onStickerPreview,
-                            onStickerCommit = onStickerCommit,
-                            onStickerDelete = onStickerDelete,
-                            onStickerDuplicate = onStickerDuplicate,
-                            onStickerFlip = onStickerFlip,
+                            onLayerSelect = onLayerSelect,
+                            onLayerPreview = onLayerPreview,
+                            onLayerCommit = onLayerCommit,
+                            onLayerDelete = onLayerDelete,
+                            onLayerDuplicate = onLayerDuplicate,
+                            onLayerFlip = onLayerFlip,
                             modifier = Modifier.fillMaxSize(),
                         )
                         // The "20 stickers at most" card, a moment on the photo's top edge.

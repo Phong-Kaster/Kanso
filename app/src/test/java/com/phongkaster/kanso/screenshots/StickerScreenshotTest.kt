@@ -33,10 +33,10 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DELETE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DUPLICATE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_FLIP_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_RESIZE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DELETE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DUPLICATE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_FLIP_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_RESIZE_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKER_CHIPS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerChipTag
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
@@ -55,14 +55,14 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Takes the reference pictures of the Edit screen's stickers (Run 10, DoD 27), each in light and
+ * Takes the reference pictures of the Edit screen's layers (Run 10, DoD 27), each in light and
  * in dark, numbered 69 to 82:
  *
  * - 69 and 70: the row of tools after a sticker was added and the sheet closed, the dot showing
  *   on Stickers;
  * - 71 to 78: the Stickers sheet on each category tab, Food, Mood, Quote and Emoji;
  * - 79 and 80: a sticker just added and selected, its four corner buttons around it;
- * - 81 and 82: the photo with stickers after a crop through one and a filter.
+ * - 81 and 82: the photo with layers after a crop through one and a filter.
  *
  * Stickers reach the live picture through a small copy drawn on a background thread, so a picture
  * is never taken right after a change: the test polls a screen pixel in real time until the
@@ -239,9 +239,9 @@ class StickerScreenshotTest {
         openStickers()
         viewModel.addSticker(opaqueSticker(), processorFor)
         compose.waitForIdle()
-        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedStickerKey)
+        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedLayerKey)
         pollPixel(centre.x, centre.y, "the sticker never covered the photo's middle") { distance(original, it) > TOLERANCE }
-        listOf(STICKER_DELETE_TAG, STICKER_DUPLICATE_TAG, STICKER_FLIP_TAG, STICKER_RESIZE_TAG)
+        listOf(LAYER_DELETE_TAG, LAYER_DUPLICATE_TAG, LAYER_FLIP_TAG, LAYER_RESIZE_TAG)
             .forEach { compose.onNodeWithTag(it).assertExists() }
     }
 
@@ -260,7 +260,7 @@ class StickerScreenshotTest {
     /**
      * Adds a sticker, ticks the sheet closed, then crops to a rectangle that still holds the
      * sticker's middle and chooses the 1977 filter. It waits for the filtered copy (which holds the
-     * stickers) to exist and then for the picture to stop changing, so the render has landed.
+     * layers) to exist and then for the picture to stop changing, so the render has landed.
      */
     private fun cropAndFilterWithSticker(viewModel: ToolViewModel) {
         addSelectedSticker(viewModel)

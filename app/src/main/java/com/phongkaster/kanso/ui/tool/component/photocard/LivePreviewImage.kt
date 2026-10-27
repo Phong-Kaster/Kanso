@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import com.phongkaster.kanso.data.edit.edit.EditColourMatrix
 import com.phongkaster.kanso.data.edit.edit.EditSettings
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.pictureId
+import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.min
@@ -71,10 +73,10 @@ var SemanticsPropertyReceiver.livePreviewGeometry by LivePreviewGeometry
  * filter), joined by commas. `drawn=false` means the sticker's picture could not be decoded.
  * The property is absent while no sticker is touched.
  */
-val LivePreviewTouchedSticker = SemanticsPropertyKey<String>("LivePreviewTouchedSticker")
+val LivePreviewTouchedLayer = SemanticsPropertyKey<String>("LivePreviewTouchedSticker")
 
-/** Writes [LivePreviewTouchedSticker] in a `semantics { }` block; reading it back is for tests only. */
-var SemanticsPropertyReceiver.livePreviewTouchedSticker by LivePreviewTouchedSticker
+/** Writes [LivePreviewTouchedLayer] in a `semantics { }` block; reading it back is for tests only. */
+var SemanticsPropertyReceiver.livePreviewTouchedLayer by LivePreviewTouchedLayer
 
 /** The identity colour matrix's 20 numbers: ones on the diagonal (places 0, 6, 12, 18). */
 private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f }
@@ -97,24 +99,24 @@ private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f
  *    ([EditColourMatrix.of], the very numbers the final render uses), handed to the GPU as a
  *    `ColorFilter.colorMatrix`; with every slider in the middle no filter is set at all.
  *
- * 4. **The sticker under a finger.** The stickers not being touched are already inside [bitmap]
+ * 4. **The sticker under a finger.** The layers not being touched are already inside [bitmap]
  *    (the ViewModel's small copy has them drawn before the filter, so they come out filtered).
  *    The one being moved, pinched or turned cannot wait for a re-render of that copy, so it is
- *    drawn here, every frame, from [touchedSticker] and its decoded [touchedPicture]: inside the
+ *    drawn here, every frame, from [touchedLayer] and its decoded [touchedPicture]: inside the
  *    very same crop, turn and flip as the photo (it is placed in the photo's own pixels and goes
  *    through the same transform), with the same colour matrix but without the filter, and
  *    clipped to the part of the photo that is shown, so a sticker that sticks out of the crop is
  *    cut at the photo's edge. Both are null when no sticker is touched.
  *
  * The node carries [LIVE_PREVIEW_TAG], and [LivePreviewMatrix], [LivePreviewGeometry] and
- * [LivePreviewTouchedSticker] say what is applied, for tests.
+ * [LivePreviewTouchedLayer] say what is applied, for tests.
  */
 @Composable
 fun LivePreviewImage(
     bitmap: Bitmap,
     settings: EditSettings,
     modifier: Modifier = Modifier,
-    touchedSticker: Sticker? = null,
+    touchedLayer: Layer? = null,
     touchedPicture: ImageBitmap? = null,
 ) {
     // asImageBitmap wraps the Android bitmap for Compose without copying its pixels; remember
@@ -137,9 +139,9 @@ fun LivePreviewImage(
             .semantics {
                 livePreviewMatrix = matrixNumbers
                 livePreviewGeometry = geometry
-                if (touchedSticker != null) {
-                    livePreviewTouchedSticker = "key=${touchedSticker.key};" +
-                        "picture=${touchedSticker.pictureId};drawn=${touchedPicture != null};" +
+                if (touchedLayer != null) {
+                    livePreviewTouchedLayer = "key=${touchedLayer.key};" +
+                        "picture=${touchedLayer.pictureId};drawn=${touchedPicture != null};" +
                         "$geometry;matrix=${matrixNumbers.joinToString(",")}"
                 }
             },
@@ -173,9 +175,9 @@ fun LivePreviewImage(
                 dstSize = IntSize(drawWidth, drawHeight),
                 colorFilter = colourFilter,
             )
-            if (touchedSticker != null && touchedPicture != null) {
-                drawTouchedSticker(
-                    sticker = touchedSticker,
+            if (touchedLayer != null && touchedPicture != null) {
+                drawTouchedLayer(
+                    sticker = touchedLayer,
                     picture = touchedPicture,
                     photoWidth = bitmap.width,
                     photoHeight = bitmap.height,
@@ -203,8 +205,8 @@ fun LivePreviewImage(
  * photo so nothing sticks out of it. [colourFilter] carries the colour sliders (null when they
  * are all in the middle); the filter is not applied to it.
  */
-private fun DrawScope.drawTouchedSticker(
-    sticker: Sticker,
+private fun DrawScope.drawTouchedLayer(
+    sticker: Layer,
     picture: ImageBitmap,
     photoWidth: Int,
     photoHeight: Int,
@@ -302,9 +304,9 @@ private fun LivePreviewImageTouchedStickerPreview() {
                     flipHorizontal = true,
                     brightness = 0.2f,
                 ),
-                touchedSticker = Sticker(
+                touchedLayer = Layer(
                     key = 1,
-                    pictureId = "sample",
+                    content = LayerContent.Picture("sample"),
                     centreX = 0.66f,
                     centreY = 0.4f,
                     width = 0.3f,

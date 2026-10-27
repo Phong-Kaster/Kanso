@@ -14,8 +14,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
@@ -25,8 +26,8 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleChange
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleChange
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.cos
 import kotlin.math.sin
@@ -82,7 +83,7 @@ class StickerGestureTest {
         val degrees = shownDegrees(viewModel)
         val move = Offset(70f, -45f)
 
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             swipe(centre, centre + move, durationMillis = 300)
         }
         compose.waitForIdle()
@@ -145,7 +146,7 @@ class StickerGestureTest {
         val before = viewModel.state.value.settings
         val centre = shownCentre(viewModel)
 
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             swipe(centre, centre + Offset(60f, 60f), durationMillis = 600)
         }
         compose.waitForIdle()
@@ -166,9 +167,9 @@ class StickerGestureTest {
     fun a_sticker_dragged_past_the_edge_keeps_its_centre_on_the_photo() {
         val viewModel = showTurnedAndFlipped()
         val centre = shownCentre(viewModel)
-        val size = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().size
+        val size = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().size
 
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             swipe(centre, centre + Offset(5000f, 5000f), durationMillis = 300)
         }
         compose.waitForIdle()
@@ -187,23 +188,23 @@ class StickerGestureTest {
     fun a_flip_during_a_drag_is_kept_by_the_next_move() {
         val viewModel = showTurnedAndFlipped()
         val centre = shownCentre(viewModel)
-        val mirroredBefore = viewModel.state.value.settings.stickers.first { it.key == 100L }.mirrored
+        val mirroredBefore = viewModel.state.value.settings.layers.first { it.key == 100L }.mirrored
 
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             down(centre)
             moveTo(centre + Offset(10f, 0f))
         }
         compose.waitForIdle()
-        viewModel.flipSticker(100L, processorFor)
+        viewModel.flipLayer(100L, processorFor)
         shadowOf(Looper.getMainLooper()).idle()
         compose.waitForIdle()
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             moveTo(centre + Offset(20f, 0f))
             up()
         }
         compose.waitForIdle()
 
-        val mirroredAfter = viewModel.state.value.settings.stickers.first { it.key == 100L }.mirrored
+        val mirroredAfter = viewModel.state.value.settings.layers.first { it.key == 100L }.mirrored
         assertEquals("the flip survived the move", !mirroredBefore, mirroredAfter)
     }
 
@@ -219,7 +220,7 @@ class StickerGestureTest {
             val r = Math.toRadians(degrees.toDouble())
             return Offset(centre.x + sign * radius * cos(r).toFloat(), centre.y + sign * radius * sin(r).toFloat())
         }
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             down(0, at(startRadius, 0f, 1f))
             down(1, at(startRadius, 0f, -1f))
             val steps = 9
@@ -237,27 +238,27 @@ class StickerGestureTest {
     }
 
     /** The mapping between the shown picture and the original for the ViewModel's settings now. */
-    private fun mappingOf(viewModel: ToolViewModel): StickerMapping {
+    private fun mappingOf(viewModel: ToolViewModel): LayerMapping {
         val state = viewModel.state.value
         val photo = (state.photo as ToolUiState.PhotoState.Ready).bitmap
-        return StickerMapping(photo.width, photo.height, state.settings)
+        return LayerMapping(photo.width, photo.height, state.settings)
     }
 
     /** The sticker 100's centre on the shown picture, in the overlay's own pixels. */
     private fun shownCentre(viewModel: ToolViewModel): Offset {
-        val sticker = viewModel.state.value.settings.stickers.first { it.key == 100L }
-        val p = mappingOf(viewModel).originalToShown(StickerMapping.Point(sticker.centreX, sticker.centreY))
-        val size = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().size
+        val sticker = viewModel.state.value.settings.layers.first { it.key == 100L }
+        val p = mappingOf(viewModel).originalToShown(LayerMapping.Point(sticker.centreX, sticker.centreY))
+        val size = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().size
         return Offset(p.x * size.width, p.y * size.height)
     }
 
     /** The sticker 100's width as a fraction of the shown picture's width. */
     private fun shownWidth(viewModel: ToolViewModel): Float =
-        mappingOf(viewModel).originalWidthToShown(viewModel.state.value.settings.stickers.first { it.key == 100L }.width)
+        mappingOf(viewModel).originalWidthToShown(viewModel.state.value.settings.layers.first { it.key == 100L }.width)
 
     /** The sticker 100's turn as the person sees it. */
     private fun shownDegrees(viewModel: ToolViewModel): Float =
-        mappingOf(viewModel).originalAngleToShown(viewModel.state.value.settings.stickers.first { it.key == 100L }.degrees)
+        mappingOf(viewModel).originalAngleToShown(viewModel.state.value.settings.layers.first { it.key == 100L }.degrees)
 
     /**
      * Draws the screen on a photo turned a quarter turn and flipped sideways, with one sticker
@@ -280,17 +281,17 @@ class StickerGestureTest {
             }
         }
         compose.waitForIdle()
-        val sticker = Sticker(100L, "img_sticker_apple", 0.45f, 0.55f, 0.25f, 10f, false)
+        val sticker = Layer(100L, LayerContent.Picture("img_sticker_apple"), 0.45f, 0.55f, 0.25f, 10f, false)
         viewModel.changeSettings(
-            EditSettings(quarterTurns = 1, flipHorizontal = true, stickers = listOf(sticker)),
+            EditSettings(quarterTurns = 1, flipHorizontal = true, layers = listOf(sticker)),
             processorFor,
         )
         compose.waitForIdle()
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
-        viewModel.selectSticker(100L)
+        viewModel.selectLayer(100L)
         compose.waitForIdle()
-        assertEquals(100L, viewModel.state.value.selectedStickerKey)
+        assertEquals(100L, viewModel.state.value.selectedLayerKey)
         return viewModel
     }
 

@@ -8,21 +8,23 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.edit.Sticker
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
 import com.phongkaster.kanso.data.edit.edit.StickerCatalog
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
+import com.phongkaster.kanso.data.edit.edit.pictureId
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
@@ -32,14 +34,14 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DELETE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DUPLICATE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_FLIP_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_RESIZE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.angleBetween
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.distanceBetween
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.stickerNodeTag
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DELETE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DUPLICATE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_FLIP_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_RESIZE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.distanceBetween
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.layerNodeTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
@@ -63,7 +65,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Proves which sticker is selected and what selecting does (Run 10, Android 15): the hit rules
- * for overlapping stickers (DoD 10), stickers that are inert once the sheet is closed (DoD 11),
+ * for overlapping layers (DoD 10), layers that are inert once the sheet is closed (DoD 11),
  * one undo step per action through the screen's Undo (DoD 12), selection that is not an edit and
  * not part of the settings (DoD 12, 21). The Compose tests draw the real `ToolScreen` on a fake
  * 600 x 400 photo; the ViewModel tests need no screen.
@@ -92,7 +94,7 @@ class StickerSelectionTest {
 
     // --- DoD 10: which sticker a tap selects --------------------------------------------------
 
-    /** A tap where only the newer of two overlapping stickers lies selects the newer, changing no setting. */
+    /** A tap where only the newer of two overlapping layers lies selects the newer, changing no setting. */
     @Test
     fun a_tap_where_only_the_newer_sticker_lies_selects_it() {
         val viewModel = showOverlapping(select = 100L)
@@ -100,11 +102,11 @@ class StickerSelectionTest {
 
         tapAt(0.70f, 0.5f)
 
-        assertEquals(101L, viewModel.state.value.selectedStickerKey)
+        assertEquals(101L, viewModel.state.value.selectedLayerKey)
         assertEquals(start, viewModel.state.value.settings)
     }
 
-    /** A tap on the overlap of two stickers selects the newer one (the one drawn on top). */
+    /** A tap on the overlap of two layers selects the newer one (the one drawn on top). */
     @Test
     fun a_tap_on_the_overlap_selects_the_newer_sticker() {
         val viewModel = showOverlapping(select = 100L)
@@ -112,20 +114,20 @@ class StickerSelectionTest {
 
         tapAt(0.45f, 0.5f)
 
-        assertEquals(101L, viewModel.state.value.selectedStickerKey)
+        assertEquals(101L, viewModel.state.value.selectedLayerKey)
         assertEquals(start, viewModel.state.value.settings)
     }
 
-    /** The sticker nodes of the overlay come in the stickers' own order, oldest first. */
+    /** The sticker nodes of the overlay come in the layers' own order, oldest first. */
     @Test
     fun the_sticker_nodes_are_in_semantics_order_oldest_first() {
         showOverlapping(select = 100L)
 
-        val overlay = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode()
+        val overlay = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode()
         val order = overlay.children
             .mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }
-            .filter { it == stickerNodeTag(100L) || it == stickerNodeTag(101L) }
-        assertEquals(listOf(stickerNodeTag(100L), stickerNodeTag(101L)), order)
+            .filter { it == layerNodeTag(100L) || it == layerNodeTag(101L) }
+        assertEquals(listOf(layerNodeTag(100L), layerNodeTag(101L)), order)
     }
 
     /** A tap on empty photo selects none and changes no setting. */
@@ -136,7 +138,7 @@ class StickerSelectionTest {
 
         tapAt(0.05f, 0.05f)
 
-        assertNull(viewModel.state.value.selectedStickerKey)
+        assertNull(viewModel.state.value.selectedLayerKey)
         assertEquals(start, viewModel.state.value.settings)
     }
 
@@ -149,9 +151,9 @@ class StickerSelectionTest {
         tapAt(0.55f, 0.5f)
 
         val state = viewModel.state.value
-        assertEquals(101L, state.selectedStickerKey)
+        assertEquals(101L, state.selectedLayerKey)
         assertEquals(start, state.settings)
-        assertEquals(start.stickers.map { it.pictureId }, state.settings.stickers.map { it.pictureId })
+        assertEquals(start.layers.map { it.pictureId }, state.settings.layers.map { it.pictureId })
     }
 
     // --- DoD 11: inert once the sheet is closed -------------------------------------------------
@@ -178,13 +180,13 @@ class StickerSelectionTest {
         val viewModel = showEdit()
         openStickers(viewModel)
         tapTile(0)
-        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedStickerKey)
+        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedLayerKey)
 
         compose.onNodeWithTag(STICKERS_CONFIRM_TAG).performClick()
         compose.waitForIdle()
 
-        assertNull(viewModel.state.value.selectedStickerKey)
-        assertEquals(1, viewModel.state.value.settings.stickers.size)
+        assertNull(viewModel.state.value.selectedLayerKey)
+        assertEquals(1, viewModel.state.value.settings.layers.size)
     }
 
     /** With a sticker selected, the cross closes the sheet and leaves none selected. */
@@ -193,13 +195,13 @@ class StickerSelectionTest {
         val viewModel = showEdit()
         openStickers(viewModel)
         tapTile(0)
-        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedStickerKey)
+        assertNotNull("the added sticker was not selected", viewModel.state.value.selectedLayerKey)
 
         compose.onNodeWithTag(STICKERS_CANCEL_TAG).performClick()
         compose.waitForIdle()
 
-        assertNull(viewModel.state.value.selectedStickerKey)
-        assertTrue("Cancel kept the sticker", viewModel.state.value.settings.stickers.isEmpty())
+        assertNull(viewModel.state.value.selectedLayerKey)
+        assertTrue("Cancel kept the sticker", viewModel.state.value.settings.layers.isEmpty())
     }
 
     // --- DoD 12: one undo step per action -------------------------------------------------------
@@ -232,13 +234,13 @@ class StickerSelectionTest {
         val before = viewModel.state.value.settings
         assertTrue(viewModel.state.value.canUndo)
 
-        viewModel.selectSticker(null)
+        viewModel.selectLayer(null)
         assertEquals(before, viewModel.state.value.settings)
         assertTrue(viewModel.state.value.canUndo)
-        viewModel.selectSticker(before.stickers.single().key)
-        viewModel.selectSticker(9999L)
-        assertNull("an unknown key selected something", viewModel.state.value.selectedStickerKey)
-        viewModel.selectSticker(before.stickers.single().key)
+        viewModel.selectLayer(before.layers.single().key)
+        viewModel.selectLayer(9999L)
+        assertNull("an unknown key selected something", viewModel.state.value.selectedLayerKey)
+        viewModel.selectLayer(before.layers.single().key)
         assertEquals(before, viewModel.state.value.settings)
         assertTrue(viewModel.state.value.canUndo)
 
@@ -258,10 +260,10 @@ class StickerSelectionTest {
         viewModel.openTool(EditTool.STICKERS)
         viewModel.addSticker(StickerCatalog.inCategory(StickerCategory.FOOD).first(), processorFor)
         val beforeDrag = viewModel.state.value.settings
-        val sticker = beforeDrag.stickers.single()
+        val sticker = beforeDrag.layers.single()
 
         for (move in 1..50) {
-            viewModel.previewStickers(listOf(sticker.copy(centreX = sticker.centreX + move * 0.002f)), processorFor)
+            viewModel.previewLayers(listOf(sticker.copy(centreX = sticker.centreX + move * 0.002f)), processorFor)
         }
         viewModel.commitSettings()
         assertTrue("the drag did not move the sticker", viewModel.state.value.settings != beforeDrag)
@@ -271,7 +273,7 @@ class StickerSelectionTest {
         assertEquals("the first Undo", beforeDrag, viewModel.state.value.settings)
         assertTrue(viewModel.state.value.canUndo)
         viewModel.undo()
-        assertTrue("the second Undo", viewModel.state.value.settings.stickers.isEmpty())
+        assertTrue("the second Undo", viewModel.state.value.settings.layers.isEmpty())
         assertFalse(viewModel.state.value.canUndo)
     }
 
@@ -283,18 +285,18 @@ class StickerSelectionTest {
         val viewModel = loadedViewModel()
         viewModel.openTool(EditTool.STICKERS)
         viewModel.addSticker(StickerCatalog.inCategory(StickerCategory.FOOD).first(), processorFor)
-        assertNotNull(viewModel.state.value.selectedStickerKey)
+        assertNotNull(viewModel.state.value.selectedLayerKey)
 
         viewModel.undo()
 
-        assertTrue(viewModel.state.value.settings.stickers.isEmpty())
-        assertNull(viewModel.state.value.selectedStickerKey)
+        assertTrue(viewModel.state.value.settings.layers.isEmpty())
+        assertNull(viewModel.state.value.selectedLayerKey)
     }
 
-    /** Neither EditSettings nor Sticker has a field about selection: it is the screen's state only. */
+    /** Neither EditSettings nor Layer has a field about selection: it is the screen's state only. */
     @Test
     fun the_settings_and_the_sticker_have_no_selection_field() {
-        listOf(EditSettings::class.java, Sticker::class.java).forEach { type ->
+        listOf(EditSettings::class.java, Layer::class.java).forEach { type ->
             val names = type.declaredFields.map { it.name }
             names.forEach { name ->
                 assertFalse("${type.simpleName} has a field called $name", name.contains("select", ignoreCase = true))
@@ -324,19 +326,19 @@ class StickerSelectionTest {
         }
         val settings = viewModel.state.value.settings
         val canUndo = viewModel.state.value.canUndo
-        assertEquals(1, settings.stickers.size)
-        val centre = shownCentre(viewModel, settings.stickers.single())
+        assertEquals(1, settings.layers.size)
+        val centre = shownCentre(viewModel, settings.layers.single())
 
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput { click(centre) }
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput { click(centre) }
         compose.waitForIdle()
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput { swipe(centre, centre + Offset(80f, 50f), durationMillis = 300) }
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput { swipe(centre, centre + Offset(80f, 50f), durationMillis = 300) }
         compose.waitForIdle()
 
         val state = viewModel.state.value
         assertEquals("a touch changed the settings", settings, state.settings)
         assertEquals("a touch changed Undo", canUndo, state.canUndo)
-        assertNull("a touch selected a sticker", state.selectedStickerKey)
-        listOf(STICKER_DELETE_TAG, STICKER_DUPLICATE_TAG, STICKER_FLIP_TAG, STICKER_RESIZE_TAG).forEach {
+        assertNull("a touch selected a sticker", state.selectedLayerKey)
+        listOf(LAYER_DELETE_TAG, LAYER_DUPLICATE_TAG, LAYER_FLIP_TAG, LAYER_RESIZE_TAG).forEach {
             compose.onAllNodesWithTag(it).assertCountEquals(0)
         }
         viewModel.undo()
@@ -352,13 +354,13 @@ class StickerSelectionTest {
 
         tapTile(0)
         val s1 = viewModel.state.value.settings
-        assertEquals(1, s1.stickers.size)
+        assertEquals(1, s1.layers.size)
 
         dragHandle(viewModel, turnDegrees = 40f, scale = 1f)
         val s2 = viewModel.state.value.settings
         assertTrue("the turn changed nothing", s2 != s1)
 
-        compose.onNodeWithTag(STICKER_FLIP_TAG).performClick()
+        compose.onNodeWithTag(LAYER_FLIP_TAG).performClick()
         compose.waitForIdle()
         val s3 = viewModel.state.value.settings
         assertTrue("the flip changed nothing", s3 != s2)
@@ -379,18 +381,18 @@ class StickerSelectionTest {
             compose.waitForIdle()
             assertEquals("Undo number ${index + 1}", expected, viewModel.state.value.settings)
         }
-        assertTrue("the fourth Undo left a sticker", viewModel.state.value.settings.stickers.isEmpty())
+        assertTrue("the fourth Undo left a sticker", viewModel.state.value.settings.layers.isEmpty())
     }
 
     /** Moves the finger on the resize handle so its distance from the centre is times [scale] and its direction turns [turnDegrees]. */
     private fun dragHandle(viewModel: ToolViewModel, turnDegrees: Float, scale: Float) {
-        val origin = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().positionInRoot
-        val handleRoot = compose.onNodeWithTag(STICKER_RESIZE_TAG).fetchSemanticsNode().boundsInRoot.center
+        val origin = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().positionInRoot
+        val handleRoot = compose.onNodeWithTag(LAYER_RESIZE_TAG).fetchSemanticsNode().boundsInRoot.center
         val handle = Offset(handleRoot.x - origin.x, handleRoot.y - origin.y)
-        val centre = shownCentre(viewModel, viewModel.state.value.settings.stickers.single())
+        val centre = shownCentre(viewModel, viewModel.state.value.settings.layers.single())
         val d = distanceBetween(centre.x, centre.y, handle.x, handle.y)
         val a = angleBetween(centre.x, centre.y, handle.x, handle.y)
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput {
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput {
             down(handle)
             val steps = 12
             for (i in 1..steps) {
@@ -405,36 +407,36 @@ class StickerSelectionTest {
     }
 
     /** The [sticker]'s centre on the shown picture, in the overlay's own pixels. */
-    private fun shownCentre(viewModel: ToolViewModel, sticker: Sticker): Offset {
+    private fun shownCentre(viewModel: ToolViewModel, sticker: Layer): Offset {
         val state = viewModel.state.value
         val photo = (state.photo as ToolUiState.PhotoState.Ready).bitmap
-        val p = StickerMapping(photo.width, photo.height, state.settings)
-            .originalToShown(StickerMapping.Point(sticker.centreX, sticker.centreY))
-        val size = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().size
+        val p = LayerMapping(photo.width, photo.height, state.settings)
+            .originalToShown(LayerMapping.Point(sticker.centreX, sticker.centreY))
+        val size = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().size
         return Offset(p.x * size.width, p.y * size.height)
     }
 
     /** One tap on the overlay at ([x], [y]) given as fractions of the shown picture. */
     private fun tapAt(x: Float, y: Float) {
-        val size = compose.onNodeWithTag(STICKER_OVERLAY_TAG).fetchSemanticsNode().size
-        compose.onNodeWithTag(STICKER_OVERLAY_TAG).performTouchInput { click(Offset(x * size.width, y * size.height)) }
+        val size = compose.onNodeWithTag(LAYER_OVERLAY_TAG).fetchSemanticsNode().size
+        compose.onNodeWithTag(LAYER_OVERLAY_TAG).performTouchInput { click(Offset(x * size.width, y * size.height)) }
         compose.waitForIdle()
     }
 
     /**
-     * Two stickers 0.4 wide, the older (key 100) with its centre at 0.35 across and the newer (key
+     * Two layers 0.4 wide, the older (key 100) with its centre at 0.35 across and the newer (key
      * 101) at 0.55, so they overlap between 0.35 and 0.55, with the sheet open and [select] selected.
      */
     private fun showOverlapping(select: Long): ToolViewModel {
         val viewModel = showEdit()
-        val older = Sticker(100L, "img_sticker_apple", 0.35f, 0.5f, 0.4f, 0f, false)
-        val newer = Sticker(101L, "img_sticker_apple", 0.55f, 0.5f, 0.4f, 0f, false)
-        viewModel.changeSettings(EditSettings(stickers = listOf(older, newer)), processorFor)
+        val older = Layer(100L, LayerContent.Picture("img_sticker_apple"), 0.35f, 0.5f, 0.4f, 0f, false)
+        val newer = Layer(101L, LayerContent.Picture("img_sticker_apple"), 0.55f, 0.5f, 0.4f, 0f, false)
+        viewModel.changeSettings(EditSettings(layers = listOf(older, newer)), processorFor)
         compose.waitForIdle()
         openStickers(viewModel)
-        viewModel.selectSticker(select)
+        viewModel.selectLayer(select)
         compose.waitForIdle()
-        assertEquals(select, viewModel.state.value.selectedStickerKey)
+        assertEquals(select, viewModel.state.value.selectedLayerKey)
         return viewModel
     }
 

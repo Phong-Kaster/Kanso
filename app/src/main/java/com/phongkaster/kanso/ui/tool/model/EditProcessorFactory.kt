@@ -1,7 +1,7 @@
 package com.phongkaster.kanso.ui.tool.model
 
 import android.content.Context
-import com.phongkaster.kanso.data.edit.edit.DrawableStickerPictures
+import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.FilterLut
@@ -21,6 +21,6 @@ import com.phongkaster.kanso.data.edit.edit.FilterLut
 fun editProcessorFor(context: Context): (EditSettings) -> EditProcessor {
     val appContext = context.applicationContext
     val filters = FilterLut.fromAssets { path -> appContext.assets.open(path) }
-    val stickers = DrawableStickerPictures(appContext)
-    return { wanted -> EditProcessor(wanted, filters, stickers) }
+    val layers = AppLayerPictures(appContext)
+    return { wanted -> EditProcessor(wanted, filters, layers) }
 }

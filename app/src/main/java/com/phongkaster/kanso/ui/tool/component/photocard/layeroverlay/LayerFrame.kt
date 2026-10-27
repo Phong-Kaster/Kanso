@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay
+package com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -68,7 +68,7 @@ import kotlin.math.roundToInt
  * @param onResizeEnd the handle's finger lifted after at least one resize.
  */
 @Composable
-fun StickerFrame(
+fun LayerFrame(
     centreX: Float,
     centreY: Float,
     widthPx: Float,
@@ -86,7 +86,7 @@ fun StickerFrame(
 ) {
     val outline = MaterialTheme.colorScheme.primary
     val strokePx = with(LocalDensity.current) { 2.dp.toPx() }
-    val halfButtonPx = with(LocalDensity.current) { (STICKER_BUTTON_TARGET / 2).roundToPx() }
+    val halfButtonPx = with(LocalDensity.current) { (LAYER_BUTTON_TARGET / 2).roundToPx() }
 
     // The handle's own gesture reads the latest values through these, so it never goes stale.
     val latestOrigin by rememberUpdatedState(overlayOrigin)
@@ -121,31 +121,31 @@ fun StickerFrame(
             )
         }
 
-        StickerCornerButton(
+        LayerCornerButton(
             iconRes = R.drawable.ic_close_circle,
             description = stringResource(R.string.sticker_frame_delete),
-            tag = STICKER_DELETE_TAG,
+            tag = LAYER_DELETE_TAG,
             modifier = placeAt(SIDE_START, SIDE_START),
             onClick = onDelete,
         )
-        StickerCornerButton(
+        LayerCornerButton(
             iconRes = R.drawable.ic_duplicate,
             description = stringResource(R.string.sticker_frame_duplicate),
-            tag = STICKER_DUPLICATE_TAG,
+            tag = LAYER_DUPLICATE_TAG,
             modifier = placeAt(SIDE_END, SIDE_START),
             onClick = onDuplicate,
         )
-        StickerCornerButton(
+        LayerCornerButton(
             iconRes = R.drawable.ic_flip,
             description = stringResource(R.string.sticker_frame_flip),
-            tag = STICKER_FLIP_TAG,
+            tag = LAYER_FLIP_TAG,
             modifier = placeAt(SIDE_START, SIDE_END),
             onClick = onFlip,
         )
-        StickerCornerButton(
+        LayerCornerButton(
             iconRes = R.drawable.ic_resize_circle,
             description = stringResource(R.string.sticker_frame_resize),
-            tag = STICKER_RESIZE_TAG,
+            tag = LAYER_RESIZE_TAG,
             modifier = placeAt(SIDE_END, SIDE_END),
             gestures = Modifier
                 .onGloballyPositioned { handleCoordinates = it }
@@ -211,7 +211,7 @@ private fun SampleStickerFrame(degrees: Float) {
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clipToBounds(),
                 ) {
-                    StickerFrame(
+                    LayerFrame(
                         centreX = 120.dp.toPx(),
                         centreY = 120.dp.toPx(),
                         widthPx = 120.dp.toPx(),

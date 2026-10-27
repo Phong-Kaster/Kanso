@@ -54,15 +54,15 @@ data class EditSettings(
      */
     val filterIntensity: Float = 1f,
     /**
-     * The stickers on the photo, oldest first: a later one is drawn on top of an earlier one. At
-     * most [MAX_STICKERS]. Which one is selected is not kept here (see [Sticker]).
+     * The layers on the photo, oldest first: a later one is drawn on top of an earlier one. At
+     * most [MAX_LAYERS]. Which one is selected is not kept here (see [Layer]).
      */
-    val stickers: List<Sticker> = emptyList(),
+    val layers: List<Layer> = emptyList(),
 ) {
 
-    /** True while the photo holds fewer than [MAX_STICKERS] stickers, so another may be added. */
-    val canAddSticker: Boolean
-        get() = stickers.size < MAX_STICKERS
+    /** True while the photo holds fewer than [MAX_LAYERS] layers, so another may be added. */
+    val canAddLayer: Boolean
+        get() = layers.size < MAX_LAYERS
     /** True when at least one of the four colour sliders is away from its middle. */
     val hasColourChange: Boolean
         get() = brightness != MIDDLE || contrast != MIDDLE || saturation != MIDDLE || warmth != MIDDLE
@@ -95,7 +95,7 @@ data class EditSettings(
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
         EditTool.ADJUST -> !hasColourChange
         EditTool.FILTERS -> !hasFilter
-        EditTool.STICKERS -> stickers.isEmpty()
+        EditTool.STICKERS -> layers.isEmpty()
     }
 
     /**
@@ -123,7 +123,7 @@ data class EditSettings(
         /** The highest value of a colour slider. */
         const val MAX = 1f
 
-        /** The most stickers one photo may hold. */
-        const val MAX_STICKERS = 20
+        /** The most layers one photo may hold. */
+        const val MAX_LAYERS = 20
     }
 }

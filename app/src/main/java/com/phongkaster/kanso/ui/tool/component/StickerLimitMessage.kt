@@ -30,7 +30,7 @@ const val STICKER_LIMIT_MESSAGE_TAG = "sticker-limit-message"
 internal const val STICKER_LIMIT_MESSAGE_MILLIS = 2500L
 
 /**
- * A short-lived card on the photo saying a photo holds at most 20 stickers.
+ * A short-lived card on the photo saying a photo holds at most 20 layers.
  *
  * While [visible] is true it shows the message in the theme's error-container colours, like
  * the photo card's `FailureMessage`, and after [STICKER_LIMIT_MESSAGE_MILLIS] calls [onShown] so the owner of the

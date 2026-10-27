@@ -1,15 +1,16 @@
 package com.phongkaster.kanso.tool.edit
 
 import com.phongkaster.kanso.data.edit.edit.EditSettings
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
-import com.phongkaster.kanso.data.edit.edit.StickerMapping.Point
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
+import com.phongkaster.kanso.data.edit.edit.LayerMapping.Point
+import com.phongkaster.kanso.data.edit.edit.pictureId
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 /**
- * Checks, on the plain JVM, that [StickerMapping] is exactly its own inverse (DoD 17): a point of
+ * Checks, on the plain JVM, that [LayerMapping] is exactly its own inverse (DoD 17): a point of
  * the picture the person sees, taken to the original photo and back, lands where it started, for
  * every combination of the four quarter turns, the four flips (none, horizontal, vertical, both)
  * and two crops (the whole photo, and an off-centre piece). It also checks that angles, mirror
@@ -43,7 +44,7 @@ class StickerMappingTest {
     }
 
     /** A mapping for [settings] on the 400 x 300 photo. */
-    private fun mappingFor(settings: EditSettings) = StickerMapping(PHOTO_WIDTH, PHOTO_HEIGHT, settings)
+    private fun mappingFor(settings: EditSettings) = LayerMapping(PHOTO_WIDTH, PHOTO_HEIGHT, settings)
 
     /** A description of [settings] for a failure message. */
     private fun describe(s: EditSettings) =
@@ -146,8 +147,8 @@ class StickerMappingTest {
     /**
      * A new sticker sits at the middle of the shown picture and is a third of its width: for an
      * off-centre crop turned a quarter turn (and for every other combination too), mapping its
-     * centre back through [StickerMapping.originalToShown] gives (0.5, 0.5), and its width through
-     * [StickerMapping.originalWidthToShown] gives one third. It stands upright and not mirrored as
+     * centre back through [LayerMapping.originalToShown] gives (0.5, 0.5), and its width through
+     * [LayerMapping.originalWidthToShown] gives one third. It stands upright and not mirrored as
      * seen: its stored angle and mirror flag map back to 0 and false.
      */
     @Test
@@ -160,7 +161,7 @@ class StickerMappingTest {
     /** Checks the centred sticker of [settings]; [label] names the case in a failure. */
     private fun check(settings: EditSettings, label: String) {
         val mapping = mappingFor(settings)
-        val sticker = mapping.centredSticker(9L, "img_sticker_apple")
+        val sticker = mapping.centredPicture(9L, "img_sticker_apple")
         assertEquals(label, 9L, sticker.key)
         assertEquals(label, "img_sticker_apple", sticker.pictureId)
         assertSamePoint(label, Point(0.5f, 0.5f), mapping.originalToShown(Point(sticker.centreX, sticker.centreY)))

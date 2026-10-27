@@ -6,19 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerCategory
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
-import com.phongkaster.kanso.data.edit.RenderedPhotoStore
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
@@ -138,7 +138,7 @@ class ToolViewModel(
             // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
             // to the newly decoded original now; everything else the screen draws by itself.
             if (tool == Tool.EDIT && photo != null &&
-                (session.settings.hasFilter || session.settings.stickers.isNotEmpty())
+                (session.settings.hasFilter || session.settings.layers.isNotEmpty())
             ) {
                 requestPreview()
             }
@@ -295,9 +295,9 @@ class ToolViewModel(
             publishSession(session.undo())
             // Undoing an "add sticker" removes that sticker: a selection pointing at it would
             // name a sticker that no longer exists, so it is cleared.
-            val selected = mutableState.value.selectedStickerKey
-            if (selected != null && session.settings.stickers.none { it.key == selected }) {
-                mutableState.update { it.copy(selectedStickerKey = null) }
+            val selected = mutableState.value.selectedLayerKey
+            if (selected != null && session.settings.layers.none { it.key == selected }) {
+                mutableState.update { it.copy(selectedLayerKey = null) }
             }
             requestPreview()
             return
@@ -331,12 +331,12 @@ class ToolViewModel(
         mutableState.update {
             it.copy(
                 openTool = if (closing) null else tool,
-                selectedStickerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedStickerKey,
-                touchedStickerKey = null,
+                selectedLayerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedLayerKey,
+                touchedLayerKey = null,
             )
         }
         // A gesture cut short by the sheet changing never commits: let the sticker rejoin the copy.
-        if (current.touchedStickerKey != null) requestPreview()
+        if (current.touchedLayerKey != null) requestPreview()
     }
 
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
@@ -371,7 +371,7 @@ class ToolViewModel(
     /** How far a duplicated sticker sits from the first, as a fraction of the shown picture's width. */
     private val DUPLICATE_OFFSET = 0.04f
 
-    /** The person tapped the category chip [category]: its stickers fill the sheet's grid. */
+    /** The person tapped the category chip [category]: its layers fill the sheet's grid. */
     fun chooseStickerCategory(category: StickerCategory) {
         mutableState.update { it.copy(stickerCategory = category) }
     }
@@ -389,22 +389,22 @@ class ToolViewModel(
         val current = mutableState.value
         if (current.comparing || current.finishing) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        if (!session.settings.canAddSticker) {
+        if (!session.settings.canAddLayer) {
             mutableState.update { it.copy(stickerLimitShown = true) }
             return
         }
         // The mapping turns "the middle of what is shown" into fractions of the original photo,
-        // which is what a Sticker stores.
-        val mapping = StickerMapping(original.width, original.height, session.settings)
+        // which is what a Layer stores.
+        val mapping = LayerMapping(original.width, original.height, session.settings)
         val key = nextStickerKey++
         this.processorFor = processorFor
-        publishSession(session.addSticker(mapping.centredSticker(key, sticker.pictureId)))
-        mutableState.update { it.copy(selectedStickerKey = key) }
+        publishSession(session.addLayer(mapping.centredPicture(key, sticker.pictureId)))
+        mutableState.update { it.copy(selectedLayerKey = key) }
         requestPreview()
     }
 
     /** True while the Stickers sheet is open and nothing (Compare, Done) has made it inert. */
-    private fun stickerEditingOpen(): Boolean {
+    private fun layerEditingOpen(): Boolean {
         val current = mutableState.value
         return tool == Tool.EDIT && current.openTool == EditTool.STICKERS &&
             !current.comparing && !current.finishing
@@ -415,38 +415,38 @@ class ToolViewModel(
      * an action: the settings and the undo history stay as they are. A key that names no sticker
      * selects none. Ignored unless the Stickers sheet is open and not inert.
      */
-    fun selectSticker(key: Long?) {
-        if (!stickerEditingOpen()) return
-        val known = key != null && session.settings.stickers.any { it.key == key }
-        mutableState.update { it.copy(selectedStickerKey = if (known) key else null) }
+    fun selectLayer(key: Long?) {
+        if (!layerEditingOpen()) return
+        val known = key != null && session.settings.layers.any { it.key == key }
+        mutableState.update { it.copy(selectedLayerKey = if (known) key else null) }
     }
 
     /**
      * Copies the sticker [key] as one action (one Undo step): same picture, width, turn and
      * mirror, moved 4 percent of the SHOWN picture's width right and down, then selected. The
-     * offset is worked out on the shown picture and carried back through [StickerMapping], so a
+     * offset is worked out on the shown picture and carried back through [LayerMapping], so a
      * turned or flipped photo still moves the copy right and down as the person sees it. At the
      * limit nothing changes and the limit message is asked for, as in [addSticker].
      */
-    fun duplicateSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen()) return
+    fun duplicateLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen()) return
         val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        val source = session.settings.stickers.firstOrNull { it.key == key } ?: return
-        if (!session.settings.canAddSticker) {
+        val source = session.settings.layers.firstOrNull { it.key == key } ?: return
+        if (!session.settings.canAddLayer) {
             mutableState.update { it.copy(stickerLimitShown = true) }
             return
         }
         val settings = session.settings
-        val mapping = StickerMapping(original.width, original.height, settings)
+        val mapping = LayerMapping(original.width, original.height, settings)
         // The shown picture's size in pixels: the crop, with width and height swapped by a quarter turn.
         val cropW = (settings.crop.right - settings.crop.left).coerceAtLeast(0.01f) * original.width
         val cropH = (settings.crop.bottom - settings.crop.top).coerceAtLeast(0.01f) * original.height
         val turned = settings.quarterTurns % 2 != 0
         val shownW = if (turned) cropH else cropW
         val shownH = if (turned) cropW else cropH
-        val shownCentre = mapping.originalToShown(StickerMapping.Point(source.centreX, source.centreY))
+        val shownCentre = mapping.originalToShown(LayerMapping.Point(source.centreX, source.centreY))
         val moved = mapping.shownToOriginal(
-            StickerMapping.Point(
+            LayerMapping.Point(
                 shownCentre.x + DUPLICATE_OFFSET,
                 // The same distance in pixels as sideways, as a fraction of the height.
                 shownCentre.y + DUPLICATE_OFFSET * shownW / shownH,
@@ -455,45 +455,45 @@ class ToolViewModel(
         val newKey = nextStickerKey++
         this.processorFor = processorFor
         publishSession(
-            session.duplicateSticker(key, newKey, moved.x - source.centreX, moved.y - source.centreY),
+            session.duplicateLayer(key, newKey, moved.x - source.centreX, moved.y - source.centreY),
         )
-        mutableState.update { it.copy(selectedStickerKey = newKey) }
+        mutableState.update { it.copy(selectedLayerKey = newKey) }
         requestPreview()
     }
 
     /** Takes the sticker [key] off the photo as one action; nothing is selected afterwards. */
-    fun deleteSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+    fun deleteLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || session.settings.layers.none { it.key == key }) return
         this.processorFor = processorFor
-        publishSession(session.deleteSticker(key))
-        mutableState.update { it.copy(selectedStickerKey = null) }
+        publishSession(session.deleteLayer(key))
+        mutableState.update { it.copy(selectedLayerKey = null) }
         requestPreview()
     }
 
     /** Mirrors the sticker [key] as one action; flipping twice returns the original settings. */
-    fun flipSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+    fun flipLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || session.settings.layers.none { it.key == key }) return
         this.processorFor = processorFor
-        publishSession(session.flipSticker(key))
+        publishSession(session.flipLayer(key))
         requestPreview()
     }
 
     /**
-     * A move, pinch, turn or resize is under way and the stickers now are [list]: the photo shows
+     * A move, pinch, turn or resize is under way and the layers now are [list]: the photo shows
      * it at once, but no undo entry is made until [commitSettings] (the last finger up).
      */
-    fun previewStickers(list: List<Sticker>, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen()) return
+    fun previewLayers(list: List<Layer>, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen()) return
         // The first change of a gesture names the touched sticker: the one that differs from the
         // session's list. It is set BEFORE the preview is asked for, so that request already
         // leaves it out. Later changes of the same gesture keep it, so the request key of the
-        // untouched stickers never moves during a drag and nothing is re-rendered.
-        if (mutableState.value.touchedStickerKey == null) {
-            val before = session.settings.stickers
+        // untouched layers never moves during a drag and nothing is re-rendered.
+        if (mutableState.value.touchedLayerKey == null) {
+            val before = session.settings.layers
             val changed = list.firstOrNull { it !in before }
-            if (changed != null) mutableState.update { it.copy(touchedStickerKey = changed.key) }
+            if (changed != null) mutableState.update { it.copy(touchedLayerKey = changed.key) }
         }
-        previewSettings(session.settings.copy(stickers = list), processorFor)
+        previewSettings(session.settings.copy(layers = list), processorFor)
     }
 
     /** The limit message has been shown long enough: hides it again. */
@@ -509,7 +509,7 @@ class ToolViewModel(
         if (mutableState.value.comparing || mutableState.value.finishing) return
         stickersSnapshot = null
         // Clear the touched key BEFORE asking for a preview, so the request includes that sticker.
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
+        mutableState.update { it.copy(openTool = null, selectedLayerKey = null, touchedLayerKey = null) }
         requestPreview()
     }
 
@@ -518,14 +518,14 @@ class ToolViewModel(
      * snapshot taken at opening (settings and undo steps, so Undo is exactly as it was), closes the
      * sheet and clears the selection. The photo is drawn from the settings, so it follows at once
      * (the Edit screen's `edited` stays null; only a filter preview is asked for again).
-     * Nothing happens while Done renders (it is drawing the current stickers) or while comparing.
+     * Nothing happens while Done renders (it is drawing the current layers) or while comparing.
      */
     fun cancelStickers() {
         if (mutableState.value.comparing || mutableState.value.finishing) return
         val snapshot = stickersSnapshot
         stickersSnapshot = null
         // Clear the touched key first: a gesture cancelled by this close never reaches its commit.
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
+        mutableState.update { it.copy(openTool = null, selectedLayerKey = null, touchedLayerKey = null) }
         if (snapshot != null) {
             publishSession(snapshot)
         }
@@ -600,7 +600,7 @@ class ToolViewModel(
     fun commitSettings() {
         // The last finger is up: no sticker is touched any more, so the next preview request
         // includes the one that was (it joins the filtered copy).
-        mutableState.update { it.copy(touchedStickerKey = null) }
+        mutableState.update { it.copy(touchedLayerKey = null) }
         publishSession(session.commit())
         if (processorFor != null) requestPreview()
     }
@@ -662,20 +662,20 @@ class ToolViewModel(
     /**
      * Makes [new] the current session and shows its settings and whether Undo can be used. The
      * selection is pruned here, on every settings change: a selected key that is no longer one of
-     * the stickers (the add was undone, the sticker deleted) becomes none.
+     * the layers (the add was undone, the sticker deleted) becomes none.
      */
     private fun publishSession(new: EditSession) {
         session = new
         mutableState.update { state ->
-            val selected = state.selectedStickerKey
-            val stillThere = selected != null && new.settings.stickers.any { it.key == selected }
-            val touched = state.touchedStickerKey
-            val touchedStillThere = touched != null && new.settings.stickers.any { it.key == touched }
+            val selected = state.selectedLayerKey
+            val stillThere = selected != null && new.settings.layers.any { it.key == selected }
+            val touched = state.touchedLayerKey
+            val touchedStillThere = touched != null && new.settings.layers.any { it.key == touched }
             state.copy(
                 settings = new.settings,
                 canUndo = new.canUndo,
-                selectedStickerKey = if (stillThere) selected else null,
-                touchedStickerKey = if (touchedStillThere) touched else null,
+                selectedLayerKey = if (stillThere) selected else null,
+                touchedLayerKey = if (touchedStillThere) touched else null,
             )
         }
     }
@@ -712,13 +712,13 @@ class ToolViewModel(
 
     /**
      * What a preview request is made of: the filter and its strength (none and 0 without a
-     * filter) and the stickers drawn into the small copy, never the one under a finger. Two
+     * filter) and the layers drawn into the small copy, never the one under a finger. Two
      * requests with an equal key would give the same picture, so the second is not rendered.
      */
     private data class PreviewKey(
         val filter: FilterPreset,
         val intensity: Float,
-        val stickers: List<Sticker>,
+        val layers: List<Layer>,
     )
 
     /** The key last asked for, so an unchanged request is not rendered again. */
@@ -742,21 +742,21 @@ class ToolViewModel(
     private fun requestPreview() {
         // The sticker under a finger is not part of the request: the screen draws it live, and
         // leaving it out is what keeps the request the same for the whole of a drag.
-        val touched = mutableState.value.touchedStickerKey
+        val touched = mutableState.value.touchedLayerKey
         val full = session.settings
-        val settings = full.copy(stickers = full.stickers.filter { it.key != touched })
-        if (!settings.hasFilter && settings.stickers.isEmpty()) {
+        val settings = full.copy(layers = full.layers.filter { it.key != touched })
+        if (!settings.hasFilter && settings.layers.isEmpty()) {
             lastPreviewKey = null
             mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        // A slider, turn or crop leaves the filter and the stickers as they were: the preview is
+        // A slider, turn or crop leaves the filter and the layers as they were: the preview is
         // still right, so no render is repeated (it would only cost memory and a redraw during a
-        // drag). The key is the filter, its strength and the untouched stickers.
+        // drag). The key is the filter, its strength and the untouched layers.
         val key = PreviewKey(
             filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
             intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
-            stickers = settings.stickers,
+            layers = settings.layers,
         )
         if (key == lastPreviewKey) return
         lastPreviewKey = key
@@ -797,15 +797,15 @@ class ToolViewModel(
             null
         }
         val now = session.settings
-        // Same filter still chosen (or still none, with stickers): show this frame even when the
+        // Same filter still chosen (or still none, with layers): show this frame even when the
         // intensity has moved on since, so a drag keeps changing the photo; the newer request is
         // already queued and replaces it. A failed render shows the plain photo rather than the
         // previous filter's look.
         val stillWanted = if (requested.hasFilter) {
             now.hasFilter && now.filter == requested.filter
         } else {
-            val touched = mutableState.value.touchedStickerKey
-            !now.hasFilter && now.stickers.any { it.key != touched }
+            val touched = mutableState.value.touchedLayerKey
+            !now.hasFilter && now.layers.any { it.key != touched }
         }
         if (stillWanted) {
             mutableState.update { it.copy(filterPreview = rendered) }
@@ -886,8 +886,8 @@ class ToolViewModel(
      * the edit again. The edit itself is never touched, so nothing is lost by comparing.
      */
     fun setComparing(on: Boolean) {
-        val hadTouched = mutableState.value.touchedStickerKey != null
-        mutableState.update { it.copy(comparing = on, touchedStickerKey = null) }
+        val hadTouched = mutableState.value.touchedLayerKey != null
+        mutableState.update { it.copy(comparing = on, touchedLayerKey = null) }
         // A gesture cancelled by Compare never commits, so the sticker rejoins the filtered copy.
         if (hadTouched) requestPreview()
     }

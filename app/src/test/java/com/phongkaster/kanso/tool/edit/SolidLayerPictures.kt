@@ -1,10 +1,11 @@
 package com.phongkaster.kanso.tool.edit
 
 import android.graphics.Bitmap
-import com.phongkaster.kanso.data.edit.edit.StickerPictures
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerPictures
 
 /**
- * A fake [StickerPictures] for the processor tests: it makes its pictures out of nothing, so no
+ * A fake [LayerPictures] for the processor tests: it makes its pictures out of nothing, so no
  * sticker file is needed.
  *
  * Every id gives a square picture [widthPx] wide and tall in [colour], except:
@@ -16,14 +17,15 @@ import com.phongkaster.kanso.data.edit.edit.StickerPictures
  * The picture is exactly as wide as the processor asked, so a sticker is drawn at scale 1. Every
  * request is written to [requestedWidths], so a test can see how wide a picture was asked for.
  */
-class SolidStickerPictures(private val colour: Int = SOLID) : StickerPictures {
+class SolidLayerPictures(private val colour: Int = SOLID) : LayerPictures {
 
     /** The widths asked for so far, in order. */
     val requestedWidths = mutableListOf<Int>()
 
-    /** Builds the picture for [pictureId] at [widthPx] x [widthPx] pixels. */
-    override fun picture(pictureId: String, widthPx: Int): Bitmap? {
+    /** Builds the picture for [content] at [widthPx] x [widthPx] pixels. */
+    override fun picture(content: LayerContent, widthPx: Int): Bitmap? {
         requestedWidths += widthPx
+        val pictureId = (content as? LayerContent.Picture)?.pictureId
         val data = IntArray(widthPx * widthPx) { index ->
             val x = index % widthPx
             val y = index / widthPx

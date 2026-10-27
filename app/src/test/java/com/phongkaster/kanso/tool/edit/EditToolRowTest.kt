@@ -38,26 +38,27 @@ import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
-import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
-import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
-import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
+import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolDotTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editRatioTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
-import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolDotTag
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editRatioTag
-import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -71,7 +72,6 @@ import org.koin.core.context.stopKoin
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.abs
 
 /**
  * Checks on Android 15 the Edit screen's row of tools under the photo (DoD 2):
@@ -307,7 +307,7 @@ class EditToolRowTest {
         val first = StickerCatalog.inCategory(StickerCategory.FOOD).first()
         compose.onNodeWithTag(stickerTileTag(first.pictureId)).performClick()
         compose.waitForIdle()
-        assertEquals(1, viewModel.state.value.settings.stickers.size)
+        assertEquals(1, viewModel.state.value.settings.layers.size)
         compose.onNodeWithTag(STICKERS_CONFIRM_TAG).performClick()
         compose.waitForIdle()
         assertNull(viewModel.state.value.openTool)
@@ -316,7 +316,7 @@ class EditToolRowTest {
         compose.runOnIdle { viewModel.undo() }
         shadowOf(Looper.getMainLooper()).idle()
         compose.waitForIdle()
-        assertEquals(0, viewModel.state.value.settings.stickers.size)
+        assertEquals(0, viewModel.state.value.settings.layers.size)
         compose.onNodeWithTag(editToolDotTag(EditTool.STICKERS), useUnmergedTree = true).assertDoesNotExist()
     }
 

@@ -30,12 +30,12 @@ import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DELETE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_DUPLICATE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_FLIP_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.STICKER_RESIZE_TAG
-import com.phongkaster.kanso.ui.tool.component.photocard.stickeroverlay.stickerNodeTag
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DELETE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_DUPLICATE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_FLIP_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_RESIZE_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.layerNodeTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.abs
@@ -54,7 +54,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Proves Compare hides the stickers (Run 10, DoD 14, Android 15): with the Stickers panel open
+ * Proves Compare hides the layers (Run 10, DoD 14, Android 15): with the Stickers panel open
  * and one opaque sticker selected, Compare on shows the original photo's own pixel where the
  * sticker lies, draws no sticker, no frame and no corner button, and disables the grid's tiles;
  * Compare off brings the sticker, the frame and the tiles back. Pixels are read by drawing the
@@ -99,29 +99,29 @@ class StickerOverlayTest {
         val opaque = opaqueSticker()
         viewModel.addSticker(opaque, processorFor)
         compose.waitForIdle()
-        val key = viewModel.state.value.selectedStickerKey
+        val key = viewModel.state.value.selectedLayerKey
         assertNotNull("the added sticker was not selected", key)
         val tileTag = stickerTileTag(StickerCatalog.inCategory(viewModel.state.value.stickerCategory).first().pictureId)
         pollPixel(centre.x, centre.y, { "an opaque sticker left the photo's pixel as it was: $it" }) { distance(original, it) > TOLERANCE }
-        compose.onNodeWithTag(stickerNodeTag(key!!)).assertExists()
+        compose.onNodeWithTag(layerNodeTag(key!!)).assertExists()
         cornerTags.forEach { compose.onNodeWithTag(it).assertExists() }
         compose.onNodeWithTag(tileTag).assertIsEnabled()
 
         viewModel.setComparing(true)
         compose.waitForIdle()
         pollPixel(centre.x, centre.y, { "Compare shows $it, not the original $original" }) { distance(original, it) <= TOLERANCE }
-        compose.onAllNodesWithTag(stickerNodeTag(key)).assertCountEquals(0)
-        compose.onAllNodesWithTag(STICKER_OVERLAY_TAG).assertCountEquals(0)
+        compose.onAllNodesWithTag(layerNodeTag(key)).assertCountEquals(0)
+        compose.onAllNodesWithTag(LAYER_OVERLAY_TAG).assertCountEquals(0)
         cornerTags.forEach { compose.onAllNodesWithTag(it).assertCountEquals(0) }
         compose.onNodeWithTag(tileTag).assertIsNotEnabled()
         compose.onNodeWithTag(tileTag).performClick()
         compose.waitForIdle()
-        assertEquals("a disabled tile added a sticker", 1, viewModel.state.value.settings.stickers.size)
+        assertEquals("a disabled tile added a sticker", 1, viewModel.state.value.settings.layers.size)
 
         viewModel.setComparing(false)
         compose.waitForIdle()
         pollPixel(centre.x, centre.y, { "the sticker did not come back: $it" }) { distance(original, it) > TOLERANCE }
-        compose.onNodeWithTag(stickerNodeTag(key)).assertExists()
+        compose.onNodeWithTag(layerNodeTag(key)).assertExists()
         cornerTags.forEach { compose.onNodeWithTag(it).assertExists() }
         compose.onNodeWithTag(tileTag).assertIsEnabled()
     }
@@ -129,7 +129,7 @@ class StickerOverlayTest {
     // --- Helpers -----------------------------------------------------------------------------
 
     /** The four corner buttons' tags. */
-    private val cornerTags = listOf(STICKER_DELETE_TAG, STICKER_DUPLICATE_TAG, STICKER_FLIP_TAG, STICKER_RESIZE_TAG)
+    private val cornerTags = listOf(LAYER_DELETE_TAG, LAYER_DUPLICATE_TAG, LAYER_FLIP_TAG, LAYER_RESIZE_TAG)
 
     /** The colour of the one screen pixel at ([x], [y]) in the Compose root, read from a drawn bitmap. */
     private fun pixelAt(x: Float, y: Float): Color =
