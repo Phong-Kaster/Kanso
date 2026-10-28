@@ -24,7 +24,8 @@ Beautify does two things to every face in the photo, in this order:
    slider (0 to 100, starting at 0) sets how much of it you see.
 
 The screen is laid out like the Edit screen: the photo fills everything down to a bottom bar that
-holds a row of tools (**Smooth**, **Face width**) and, above it, Edit's fixed-height panel area,
+holds a row of tools on two levels, as in Meitu (**Face** and **Smooth** on top; **Face** opens
+its own row, **Width** then **Back**), and, above it, Edit's fixed-height panel area,
 which shows the open tool's slider on a rounded surface (or "Pick a tool to start editing"). The
 bar never changes height, so the photo does not jump when a tool opens. **Letting go of a slider applies** both
 values, as Meitu does when the finger lifts.
@@ -58,13 +59,17 @@ Limits, from the code:
 - Reach it from the third **carousel banner** on Home ("Smooth, natural skin", or **Try now**), or
   the **Beautify** shortcut, then pick a photo (or take one with the gallery's camera button).
 - Wait a moment for the zoom onto the face (none happens if no face is found).
-- Tap **Face width** or **Smooth** in the row to open its slider and drag it: the photo changes
+- The top row shows **Face** and **Smooth**. Tap **Face** to swap the row for Face's tools: **Width**
+  on the left (its slider opens at once) and **Back** pinned at the right end; Back returns to the
+  top row. Body joins the top row, and Lift and Temple join Face's row, once they are built.
+- Tap **Width** or **Smooth** to open its slider and drag it: the photo changes
   **live while you drag**, as in Meitu, drawn on the graphics chip. Let go and Beautify renders the
   photo from the original at full quality **quietly in the background**: no progress ring, and the
   sliders stay usable, so you can keep adjusting; a newer release replaces an older render. Done
   shows its small spinner and waits until the render is ready, and so does Undo. Tap the open tool
   again to close its slider.
-- A tool whose slider is off its default carries a small dot, as on the Edit screen.
+- A tool whose slider is off its default carries a small dot, as on the Edit screen, and so does
+  its group (Face) in the top row. Sliders keep their values while you move between the rows.
 - Double-tap the photo to see all of it, and again to zoom back onto the face.
 - **Undo** takes back the whole slider session at once. **Done** opens the Result screen with the
   result, where **Save** writes it to `Pictures/Kanso` and **Share** sends it; Back from Result
@@ -117,12 +122,21 @@ flowchart TD
 1. **The panel.**
    [`ui/tool/component/toolpanel/beautifypanel/BeautifyPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifyPanel.kt)
    is the screen's bottom bar (`ToolContent` puts the Beautify panel in the `Scaffold`'s `bottomBar`
-   and lets the photo card fill the body, as on Edit). It draws a row of [`BeautifyTool`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyTool.kt)
-   entries with the Edit screen's own `EditToolEntry`, and above it, in Edit's own panel area
+   and lets the photo card fill the body, as on Edit). Its row is
+   [`BeautifyToolRow`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifyToolRow.kt),
+   on two levels: the top row is
+   [`BeautifyEntry.TOP_ROW`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyEntry.kt)
+   (the [`BeautifyGroup`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyGroup.kt)
+   Face, then the [`BeautifyTool`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyTool.kt)
+   Smooth); tapping Face shows Face's tools (every `BeautifyTool` whose `group` is `FACE`) in a
+   `LazyRow` on the left and Back pinned at the right end behind a divider, as Edit pins Compare,
+   and opens the group's first tool. The rows slide sideways with `AnimatedContent`. A new face
+   tool joins the group by naming it in `BeautifyTool`. Every entry is the Edit screen's own
+   `EditToolEntry`; Face's icon (`ic_face_group.xml`) is drawn for Kanso. Above the row, in Edit's own panel area
    (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
    right end (width -100..100, smoothing
-   0..100). The open tool and both values are kept with `rememberSaveable` (they survive a
+   0..100). The open group, the open tool and both values are kept with `rememberSaveable` (they survive a
    rotation). Every move calls `onPreview(strength, width)` (step 7) and the slider's
    `onValueChangeFinished` (the finger lifts) calls `onApply(strength, width)`. Face width's icon, `res/drawable/ic_face_width.xml`, is drawn for
    Kanso; Smooth uses `ic_face_retouching_natural`.
@@ -270,7 +284,9 @@ stay as they were.
   the largest face; no face or a failing model gives no focus.
 - [`tool/beautify/BeautifyToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/beautify/BeautifyToolTest.kt):
   through the real screen, no face changes nothing and shows the message; tapping a tool opens its
-  slider; letting go of either slider hands over its value with the other at its default.
+  slider; Face opens its own row with Width's slider ready and Back; Back returns to the top row
+  keeping the values; letting go of either slider hands over its value with the other at its
+  default.
 - [`tool/face/FaceWidthTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceWidthTest.kt):
   on a made-up oval face, 0 gives no pushes, positive pulls inward, negative pushes outward, both
   sides mirror, values beyond 1 clamp, the moves scale with the face.

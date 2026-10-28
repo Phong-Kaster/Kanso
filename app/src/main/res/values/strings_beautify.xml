@@ -9,8 +9,13 @@
     <!-- Beautify panel: the name of the Smooth tool in the row of tools, under its icon. Must never
          equal the tool's name, the screen's title. -->
     <string name="beautify_tool_smooth">Smooth</string>
-    <!-- Beautify panel: the name of the Face width tool in the row of tools, and the label of its
-         slider, how much wider (negative) or narrower (positive) each face becomes. Also what screen
-         readers call the slider. -->
+    <!-- Beautify panel: the label of the face width slider, how much wider (negative) or narrower
+         (positive) each face becomes. Also what screen readers call the slider. -->
     <string name="beautify_width_label">Face width</string>
+    <!-- Beautify panel: the name of the Face group in the top row of tools, under its icon; tapping
+         it shows the face tools (Width...). Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_group_face">Face</string>
+    <!-- Beautify panel: the name of the Width tool in the Face group's row, under its icon (the
+         group already says it is about the face). -->
+    <string name="beautify_tool_width">Width</string>
 </resources>

@@ -28,7 +28,10 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_STRENGTH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WIDTH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.beautifyGroupTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.beautifyToolTag
+import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
 import com.phongkaster.kanso.ui.tool.model.BeautifyTool
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
@@ -134,6 +137,47 @@ class BeautifyToolTest {
 
         compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG).assertExists()
         compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertDoesNotExist()
+    }
+
+    /**
+     * The top row shows Face and Smooth; tapping Face swaps it for Face's row (Width, Back) and
+     * opens Width's slider at once.
+     */
+    @Test
+    fun face_opens_its_own_row_with_width_ready() {
+        showPanel()
+
+        compose.onNodeWithTag(beautifyGroupTag(BeautifyGroup.FACE)).assertExists()
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.SMOOTH)).assertExists()
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.FACE_WIDTH)).assertDoesNotExist()
+        tap(beautifyGroupTag(BeautifyGroup.FACE))
+
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.FACE_WIDTH)).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_BACK_TAG).assertExists()
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.SMOOTH)).assertDoesNotExist()
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertExists()
+    }
+
+    /** Back returns to the top row and closes the slider; the width set inside Face is kept. */
+    @Test
+    fun back_returns_to_the_top_row_keeping_the_values() {
+        val applied = showPanel()
+        open(BeautifyTool.FACE_WIDTH)
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.4f) }
+        compose.waitForIdle()
+
+        tap(BEAUTIFY_BACK_TAG)
+        compose.onNodeWithTag(beautifyGroupTag(BeautifyGroup.FACE)).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertDoesNotExist()
+        open(BeautifyTool.SMOOTH)
+        compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.3f) }
+        compose.waitForIdle()
+
+        val (strength, width) = applied.last()
+        assertEquals(0.3f, strength, 0.01f)
+        assertEquals(0.4f, width, 0.01f)
     }
 
     /** Letting go of the smoothing slider at 0.25 applies 0.25 with the face width still 0. */
@@ -258,9 +302,22 @@ class BeautifyToolTest {
         return applied
     }
 
-    /** Taps [tool]'s entry in the panel's row, which opens its slider. */
+    /**
+     * Opens [tool]'s slider as a person would: a tool in a group is reached by tapping the group in
+     * the top row (which opens the group's first tool at once), any other tool by tapping it.
+     */
     private fun open(tool: BeautifyTool) {
-        compose.onNodeWithTag(beautifyToolTag(tool)).performSemanticsAction(SemanticsActions.OnClick)
+        val group = tool.group
+        if (group != null) {
+            tap(beautifyGroupTag(group))
+            if (group.tools.first() == tool) return
+        }
+        tap(beautifyToolTag(tool))
+    }
+
+    /** Taps the node tagged [tag] and lets the screen settle. */
+    private fun tap(tag: String) {
+        compose.onNodeWithTag(tag).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
     }
 
