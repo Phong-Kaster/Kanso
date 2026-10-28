@@ -28,12 +28,12 @@ import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.components.photocard.LIVE_PREVIEW_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.stickeroverlay.STICKER_OVERLAY_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.stickeroverlay.stickerNodeTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerTileTag
-import com.phongkaster.kanso.ui.tool.editProcessorFor
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.photocard.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_OVERLAY_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.layerNodeTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
@@ -51,23 +51,23 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks on Android 15 that Compare shows the untouched original with no stickers on it, and that
+ * Checks on Android 15 that Compare shows the untouched original with no layers on it, and that
  * the sticker controls do nothing while it is on (Run 10, DoD 14).
  *
- * On the real tool screen, with the Stickers sheet open and two opaque stickers added (the first
+ * On the real tool screen, with the Stickers sheet open and two opaque layers added (the first
  * landing in the middle of the photo), Compare is switched on and the test checks that:
  *
- * - the pixel at the stickers' place is the original photo's own pixel (read before any sticker
- *   existed), the live picture (which carries the filtered copy with the stickers baked in) is not
- *   drawn, and neither is the stickers' overlay;
+ * - the pixel at the layers' place is the original photo's own pixel (read before any sticker
+ *   existed), the live picture (which carries the filtered copy with the layers baked in) is not
+ *   drawn, and neither is the layers' overlay;
  * - the grid's tiles are disabled and a tap on one adds nothing;
  * - the ViewModel refuses every sticker action: a drag step, selecting, duplicating, flipping and
  *   deleting change neither the settings nor the selection;
  *
- * and that with Compare off the stickers are back (the pixel is no longer the original's) and the
+ * and that with Compare off the layers are back (the pixel is no longer the original's) and the
  * tiles are enabled again.
  *
- * The stickers reach the live picture through a copy drawn on a background thread, so the pixel
+ * The layers reach the live picture through a copy drawn on a background thread, so the pixel
  * waits are loops that keep the main thread's queue running. Pixels are read by drawing the
  * activity's content view into a bitmap (`sampleScreen`), never with `captureToImage`.
  */
@@ -93,22 +93,22 @@ class StickerCompareTest {
         stopKoin()
     }
 
-    /** See the class comment: Compare on, then off, with two stickers on the photo. */
+    /** See the class comment: Compare on, then off, with two layers on the photo. */
     @Test
     fun compare_shows_the_original_without_stickers_and_the_sticker_controls_do_nothing() {
         val viewModel = showEdit()
-        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
-        val original = pixelAt(centre.x, centre.y)
-
+        // The Stickers sheet makes the photo shorter, so the photo is measured once it is open.
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
+        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
+        val original = pixelAt(centre.x, centre.y)
         val opaque = opaqueSticker()
         viewModel.addSticker(opaque, processorFor)
         viewModel.addSticker(opaque, processorFor)
         compose.waitForIdle()
-        val stickers = viewModel.state.value.settings.stickers
-        assertEquals(2, stickers.size)
-        val selected = viewModel.state.value.selectedStickerKey
+        val layers = viewModel.state.value.settings.layers
+        assertEquals(2, layers.size)
+        val selected = viewModel.state.value.selectedLayerKey
         assertNotNull("the added sticker was not selected", selected)
         val tileTag = stickerTileTag(StickerCatalog.inCategory(viewModel.state.value.stickerCategory).first().pictureId)
 
@@ -122,29 +122,29 @@ class StickerCompareTest {
         val comparing = pixelAt(centre.x, centre.y)
         assertTrue("Compare shows $comparing, not the original $original", distance(original, comparing) <= TOLERANCE)
         compose.onAllNodesWithTag(LIVE_PREVIEW_TAG, useUnmergedTree = true).assertCountEquals(0)
-        compose.onAllNodesWithTag(STICKER_OVERLAY_TAG).assertCountEquals(0)
-        stickers.forEach { compose.onAllNodesWithTag(stickerNodeTag(it.key)).assertCountEquals(0) }
+        compose.onAllNodesWithTag(LAYER_OVERLAY_TAG).assertCountEquals(0)
+        layers.forEach { compose.onAllNodesWithTag(layerNodeTag(it.key)).assertCountEquals(0) }
 
         // The controls do nothing: the tiles are disabled and a tap adds nothing...
         compose.onNodeWithTag(tileTag).assertIsNotEnabled()
         compose.onNodeWithTag(tileTag).performClick()
         compose.waitForIdle()
-        assertEquals("a disabled tile added a sticker", 2, viewModel.state.value.settings.stickers.size)
+        assertEquals("a disabled tile added a sticker", 2, viewModel.state.value.settings.layers.size)
 
         // ...and the ViewModel refuses each sticker action.
         val before = viewModel.state.value
-        val target = stickers.first().key
-        viewModel.previewStickers(stickers.map { it.copy(centreX = 0.1f) }, processorFor)
-        viewModel.selectSticker(null)
-        viewModel.duplicateSticker(target, processorFor)
-        viewModel.flipSticker(target, processorFor)
-        viewModel.deleteSticker(target, processorFor)
+        val target = layers.first().key
+        viewModel.previewLayers(layers.map { it.copy(centreX = 0.1f) }, processorFor)
+        viewModel.selectLayer(null)
+        viewModel.duplicateLayer(target, processorFor)
+        viewModel.flipLayer(target, processorFor)
+        viewModel.deleteLayer(target, processorFor)
         compose.waitForIdle()
         val after = viewModel.state.value
         assertEquals("a sticker action changed the settings while comparing", before.settings, after.settings)
-        assertEquals("a sticker action changed the selection while comparing", before.selectedStickerKey, after.selectedStickerKey)
+        assertEquals("a sticker action changed the selection while comparing", before.selectedLayerKey, after.selectedLayerKey)
         assertEquals(before.canUndo, after.canUndo)
-        assertNull("a drag step touched a sticker while comparing", after.touchedStickerKey)
+        assertNull("a drag step touched a sticker while comparing", after.touchedLayerKey)
 
         viewModel.setComparing(false)
         waitUntil("the stickers to come back") { distance(original, pixelAt(centre.x, centre.y)) > TOLERANCE }

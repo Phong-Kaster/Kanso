@@ -82,10 +82,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
-import com.phongkaster.kanso.ui.common.RoundBackButton
-import com.phongkaster.kanso.ui.permission.AccessRefusedPanel
-import com.phongkaster.kanso.ui.permission.PermissionGate
-import com.phongkaster.kanso.ui.permission.openAppDetailsSettings
+import com.phongkaster.kanso.ui.component.RoundBackButton
+import com.phongkaster.kanso.ui.component.permission.AccessRefusedPanel
+import com.phongkaster.kanso.ui.component.permission.PermissionGate
+import com.phongkaster.kanso.ui.component.permission.openAppDetailsSettings
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlinx.coroutines.awaitCancellation
 import java.io.File

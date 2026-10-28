@@ -29,7 +29,7 @@ import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.home.HOME_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
 import com.phongkaster.kanso.ui.myedits.myEditsTileTag
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import com.phongkaster.kanso.ui.result.RESULT_PHOTO_TAG
 import com.phongkaster.kanso.ui.result.RESULT_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG

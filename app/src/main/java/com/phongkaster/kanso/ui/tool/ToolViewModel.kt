@@ -1,27 +1,35 @@
 package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
+import android.graphics.Typeface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
+import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.data.edit.edit.StickerCategory
-import com.phongkaster.kanso.data.edit.edit.StickerMapping
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
-import com.phongkaster.kanso.data.edit.RenderedPhotoStore
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerMapping
+import com.phongkaster.kanso.data.edit.edit.LayerSize
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
+import com.phongkaster.kanso.data.edit.edit.TextAlignment
+import com.phongkaster.kanso.data.edit.edit.TextFont
+import com.phongkaster.kanso.data.edit.edit.TextLayerLayout
 import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +78,9 @@ import kotlinx.coroutines.withContext
  *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
  *
  * [registry] finds the processor built for this screen's tool, for [runRegistered].
+ * [textLayout] measures a text layer's words, so a text keeps its letter size while the person
+ * types or changes its font (the app passes the one with the bundled fonts; the default, the
+ * phone's typeface for every font, is enough for a test).
  * [workDispatcher] is the background thread pool that shrinks a large photo and runs the edits,
  * so neither ever runs on the main thread; tests can pass their own.
  */
@@ -81,6 +92,7 @@ class ToolViewModel(
     private val registry: ProcessorRegistry = ProcessorRegistry(),
     private val store: RenderedPhotoStore = RenderedPhotoStore(),
     private val workDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val textLayout: TextLayerLayout = TextLayerLayout { Typeface.DEFAULT },
 ) : ViewModel() {
 
     /**
@@ -136,7 +148,7 @@ class ToolViewModel(
             // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
             // to the newly decoded original now; everything else the screen draws by itself.
             if (tool == Tool.EDIT && photo != null &&
-                (session.settings.hasFilter || session.settings.stickers.isNotEmpty())
+                (session.settings.hasFilter || session.settings.layers.isNotEmpty())
             ) {
                 requestPreview()
             }
@@ -288,14 +300,16 @@ class ToolViewModel(
     fun undo() {
         if (mutableState.value.comparing || mutableState.value.finishing) return
         if (tool == Tool.EDIT) {
-            // A drag still under way counts as an action of its own, so it is settled first.
+            // Words being typed are one action of their own (an empty new text is no action at
+            // all), so they are settled first, like a drag still under way.
+            settleText()
             if (!session.commit().canUndo) return
             publishSession(session.undo())
             // Undoing an "add sticker" removes that sticker: a selection pointing at it would
             // name a sticker that no longer exists, so it is cleared.
-            val selected = mutableState.value.selectedStickerKey
-            if (selected != null && session.settings.stickers.none { it.key == selected }) {
-                mutableState.update { it.copy(selectedStickerKey = null) }
+            val selected = mutableState.value.selectedLayerKey
+            if (selected != null && session.settings.layers.none { it.key == selected }) {
+                mutableState.update { it.copy(selectedLayerKey = null) }
             }
             requestPreview()
             return
@@ -312,30 +326,40 @@ class ToolViewModel(
     /**
      * Opens the sheet of the Edit screen's [tool] under the photo, closing any other one, since
      * only one sheet is open at a time. Tapping the tool whose sheet is already open closes it
-     * again, so the row's entries work as toggles.
+     * again, so the row's entries work as toggles. Opening the Text sheet this way adds a new,
+     * empty text in the middle of the photo and opens the keyboard for it (see [startText]).
      */
     fun openTool(tool: EditTool) {
         val current = mutableState.value
         val closing = current.openTool == tool
-        if (current.openTool == EditTool.STICKERS) {
-            // Leaving the Stickers sheet by another door (its own tool tapped again, or another
-            // tool chosen) keeps what was done, like its Confirm button.
-            stickersSnapshot = null
-        } else if (tool == EditTool.STICKERS) {
-            // Opening Stickers: remember the whole session (settings AND undo steps) so Cancel
-            // can put everything back exactly as it is now.
-            stickersSnapshot = session.commit()
+        if (current.openTool.isLayerSheet()) {
+            // Leaving a layer sheet by another door (its own tool tapped again, or another tool
+            // chosen) keeps what was done, like its Confirm button; an empty text is dropped.
+            settleText()
+            sheetSnapshot = null
+        }
+        if (!closing && tool.isLayerSheet()) {
+            // Opening a layer sheet: remember the whole session (settings AND undo steps) so
+            // Cancel can put everything back exactly as it is now.
+            publishSession(session.commit())
+            sheetSnapshot = session
         }
         mutableState.update {
             it.copy(
                 openTool = if (closing) null else tool,
-                selectedStickerKey = if (current.openTool == EditTool.STICKERS) null else it.selectedStickerKey,
-                touchedStickerKey = null,
+                selectedLayerKey = if (current.openTool.isLayerSheet()) null else it.selectedLayerKey,
+                touchedLayerKey = null,
+                textEditing = false,
             )
         }
-        // A gesture cut short by the sheet changing never commits: let the sticker rejoin the copy.
-        if (current.touchedStickerKey != null) requestPreview()
+        // A gesture cut short by the sheet changing never commits: let the layer rejoin the copy.
+        if (current.touchedLayerKey != null) requestPreview()
+        // The Text sheet opened from the row, with no text selected: a new text waits for words.
+        if (!closing && tool == EditTool.TEXT) startText()
     }
+
+    /** True for the two sheets that place layers on the photo: Stickers and Text. */
+    private fun EditTool?.isLayerSheet(): Boolean = this == EditTool.STICKERS || this == EditTool.TEXT
 
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
     fun chooseAdjustSlider(slider: AdjustSlider) {
@@ -343,12 +367,12 @@ class ToolViewModel(
     }
 
     /**
-     * Closes the open tool sheet, if any, leaving the photo and the row of tools. Closing the
-     * Stickers sheet this way keeps its changes, exactly like its Confirm button.
+     * Closes the open tool sheet, if any, leaving the photo and the row of tools. Closing a layer
+     * sheet (Stickers, Text) this way keeps its changes, exactly like its Confirm button.
      */
     fun closeTool() {
-        if (mutableState.value.openTool == EditTool.STICKERS) {
-            confirmStickers()
+        if (mutableState.value.openTool.isLayerSheet()) {
+            confirmLayers()
             return
         }
         mutableState.update { it.copy(openTool = null) }
@@ -357,11 +381,11 @@ class ToolViewModel(
     // --- The Stickers sheet --------------------------------------------------------------------------
 
     /**
-     * The session as it was when the Stickers sheet opened, or null while that sheet is closed.
-     * [cancelStickers] puts it back, so a Cancel throws away every sticker added, moved, flipped
-     * or deleted since, along with the undo steps they made.
+     * The session as it was when a layer sheet (Stickers or Text) opened, or null while neither is
+     * open. [cancelLayers] puts it back, so a Cancel throws away every layer added, moved, typed,
+     * flipped or deleted since, along with the undo steps they made.
      */
-    private var stickersSnapshot: EditSession? = null
+    private var sheetSnapshot: EditSession? = null
 
     /** The key the next added sticker gets; it only grows, so a key is never used twice. */
     private var nextStickerKey = 1L
@@ -369,7 +393,7 @@ class ToolViewModel(
     /** How far a duplicated sticker sits from the first, as a fraction of the shown picture's width. */
     private val DUPLICATE_OFFSET = 0.04f
 
-    /** The person tapped the category chip [category]: its stickers fill the sheet's grid. */
+    /** The person tapped the category chip [category]: its layers fill the sheet's grid. */
     fun chooseStickerCategory(category: StickerCategory) {
         mutableState.update { it.copy(stickerCategory = category) }
     }
@@ -380,71 +404,114 @@ class ToolViewModel(
      *
      * [processorFor] is the recipe that draws settings, with the sticker pictures in it (see
      * [editProcessorFor]); it also becomes the recipe Done renders with. At the limit nothing
-     * changes (no settings, no undo step) and [ToolUiState.stickerLimitShown] asks the screen for
+     * changes (no settings, no undo step) and [ToolUiState.layerLimitShown] asks the screen for
      * its message. Nothing happens before the photo is decoded, or while comparing.
      */
     fun addSticker(sticker: CatalogSticker, processorFor: (EditSettings) -> ToolProcessor) {
         val current = mutableState.value
         if (current.comparing || current.finishing) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        if (!session.settings.canAddSticker) {
-            mutableState.update { it.copy(stickerLimitShown = true) }
+        if (!session.settings.canAddLayer) {
+            mutableState.update { it.copy(layerLimitShown = true) }
             return
         }
         // The mapping turns "the middle of what is shown" into fractions of the original photo,
-        // which is what a Sticker stores.
-        val mapping = StickerMapping(original.width, original.height, session.settings)
+        // which is what a Layer stores.
+        val mapping = LayerMapping(original.width, original.height, session.settings)
         val key = nextStickerKey++
         this.processorFor = processorFor
-        publishSession(session.addSticker(mapping.centredSticker(key, sticker.pictureId)))
-        mutableState.update { it.copy(selectedStickerKey = key) }
+        publishSession(session.addLayer(mapping.centredPicture(key, sticker.pictureId)))
+        mutableState.update { it.copy(selectedLayerKey = key) }
         requestPreview()
     }
 
-    /** True while the Stickers sheet is open and nothing (Compare, Done) has made it inert. */
-    private fun stickerEditingOpen(): Boolean {
+    /** True while a layer sheet (Stickers, Text) is open and nothing (Compare, Done) made it inert. */
+    private fun layerEditingOpen(): Boolean {
         val current = mutableState.value
-        return tool == Tool.EDIT && current.openTool == EditTool.STICKERS &&
+        return tool == Tool.EDIT && current.openTool.isLayerSheet() &&
             !current.comparing && !current.finishing
     }
 
     /**
-     * Selects the sticker with [key], or none for null (a touch on empty photo). Selecting is not
-     * an action: the settings and the undo history stay as they are. A key that names no sticker
-     * selects none. Ignored unless the Stickers sheet is open and not inert.
+     * True while the layers on the photo answer touches: on the Edit screen with any sheet open
+     * but Crop (the cropper replaces the photo then), or none, and nothing (Compare, Done) inert.
      */
-    fun selectSticker(key: Long?) {
-        if (!stickerEditingOpen()) return
-        val known = key != null && session.settings.stickers.any { it.key == key }
-        mutableState.update { it.copy(selectedStickerKey = if (known) key else null) }
+    private fun layersTouchable(): Boolean {
+        val current = mutableState.value
+        return tool == Tool.EDIT && current.openTool != EditTool.CROP &&
+            !current.comparing && !current.finishing
+    }
+
+    /**
+     * Closes the open sheet, keeping its changes like its Confirm, and opens the layer [sheet]
+     * with a fresh snapshot for its Cancel. Used when a touched layer is of the other kind.
+     */
+    private fun switchToSheet(sheet: EditTool) {
+        settleText()
+        publishSession(session.commit())
+        sheetSnapshot = session
+        mutableState.update { it.copy(openTool = sheet, selectedLayerKey = null, textEditing = false) }
+    }
+
+    /**
+     * Selects the layer with [key], or none for null (a touch on empty photo), and brings it to
+     * the front. Selecting alone changes nothing else; bringing a layer forward is a change of the
+     * layer order, previewed here and made one undo step by the gesture's [commitSettings]. A key
+     * that names no layer selects none.
+     *
+     * A layer can be touched with any sheet open but Crop (whose cropper hides them), or with none:
+     * touching one opens the sheet of its kind (Stickers for a sticker, Text for a text) if it is
+     * not open yet, and the sheet that closes keeps its changes, like its Confirm (ADR-005).
+     * Ignored while comparing or while Done renders.
+     */
+    fun selectLayer(key: Long?) {
+        if (!layersTouchable()) return
+        val previous = mutableState.value.selectedLayerKey
+        // Leaving a text settles it: its words become one undo step, or an empty one is dropped.
+        if (previous != null && previous != key) settleText()
+        val chosen = session.settings.layers.firstOrNull { it.key == key }
+        // A layer opens the sheet of its own kind; the sheet it leaves keeps its changes.
+        if (chosen != null) {
+            val sheet = if (chosen.content is LayerContent.Text) EditTool.TEXT else EditTool.STICKERS
+            if (mutableState.value.openTool != sheet) switchToSheet(sheet)
+        }
+        mutableState.update { it.copy(selectedLayerKey = chosen?.key, textEditing = false) }
+        val layers = session.settings.layers
+        // A selected layer comes to the front (the end of the list is drawn last, on top). The
+        // move is previewed, not committed: the gesture that selected it commits once its finger
+        // lifts, so a tap and the drag that may follow are one undo step together.
+        if (chosen != null && layers.last().key != chosen.key) {
+            publishSession(session.preview(session.settings.copy(layers = layers - chosen + chosen)))
+            requestPreview()
+        }
     }
 
     /**
      * Copies the sticker [key] as one action (one Undo step): same picture, width, turn and
      * mirror, moved 4 percent of the SHOWN picture's width right and down, then selected. The
-     * offset is worked out on the shown picture and carried back through [StickerMapping], so a
+     * offset is worked out on the shown picture and carried back through [LayerMapping], so a
      * turned or flipped photo still moves the copy right and down as the person sees it. At the
      * limit nothing changes and the limit message is asked for, as in [addSticker].
      */
-    fun duplicateSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen()) return
+    fun duplicateLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen()) return
         val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
-        val source = session.settings.stickers.firstOrNull { it.key == key } ?: return
-        if (!session.settings.canAddSticker) {
-            mutableState.update { it.copy(stickerLimitShown = true) }
+        val source = session.settings.layers.firstOrNull { it.key == key } ?: return
+        if (!session.settings.canAddLayer) {
+            mutableState.update { it.copy(layerLimitShown = true) }
             return
         }
         val settings = session.settings
-        val mapping = StickerMapping(original.width, original.height, settings)
+        val mapping = LayerMapping(original.width, original.height, settings)
         // The shown picture's size in pixels: the crop, with width and height swapped by a quarter turn.
         val cropW = (settings.crop.right - settings.crop.left).coerceAtLeast(0.01f) * original.width
         val cropH = (settings.crop.bottom - settings.crop.top).coerceAtLeast(0.01f) * original.height
         val turned = settings.quarterTurns % 2 != 0
         val shownW = if (turned) cropH else cropW
         val shownH = if (turned) cropW else cropH
-        val shownCentre = mapping.originalToShown(StickerMapping.Point(source.centreX, source.centreY))
+        val shownCentre = mapping.originalToShown(LayerMapping.Point(source.centreX, source.centreY))
         val moved = mapping.shownToOriginal(
-            StickerMapping.Point(
+            LayerMapping.Point(
                 shownCentre.x + DUPLICATE_OFFSET,
                 // The same distance in pixels as sideways, as a fraction of the height.
                 shownCentre.y + DUPLICATE_OFFSET * shownW / shownH,
@@ -453,61 +520,65 @@ class ToolViewModel(
         val newKey = nextStickerKey++
         this.processorFor = processorFor
         publishSession(
-            session.duplicateSticker(key, newKey, moved.x - source.centreX, moved.y - source.centreY),
+            session.duplicateLayer(key, newKey, moved.x - source.centreX, moved.y - source.centreY),
         )
-        mutableState.update { it.copy(selectedStickerKey = newKey) }
+        mutableState.update { it.copy(selectedLayerKey = newKey) }
         requestPreview()
     }
 
     /** Takes the sticker [key] off the photo as one action; nothing is selected afterwards. */
-    fun deleteSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+    fun deleteLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || session.settings.layers.none { it.key == key }) return
         this.processorFor = processorFor
-        publishSession(session.deleteSticker(key))
-        mutableState.update { it.copy(selectedStickerKey = null) }
+        publishSession(session.deleteLayer(key))
+        mutableState.update { it.copy(selectedLayerKey = null) }
         requestPreview()
     }
 
     /** Mirrors the sticker [key] as one action; flipping twice returns the original settings. */
-    fun flipSticker(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen() || session.settings.stickers.none { it.key == key }) return
+    fun flipLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || session.settings.layers.none { it.key == key }) return
         this.processorFor = processorFor
-        publishSession(session.flipSticker(key))
+        publishSession(session.flipLayer(key))
         requestPreview()
     }
 
     /**
-     * A move, pinch, turn or resize is under way and the stickers now are [list]: the photo shows
+     * A move, pinch, turn or resize is under way and the layers now are [list]: the photo shows
      * it at once, but no undo entry is made until [commitSettings] (the last finger up).
      */
-    fun previewStickers(list: List<Sticker>, processorFor: (EditSettings) -> ToolProcessor) {
-        if (!stickerEditingOpen()) return
+    fun previewLayers(list: List<Layer>, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layersTouchable()) return
         // The first change of a gesture names the touched sticker: the one that differs from the
         // session's list. It is set BEFORE the preview is asked for, so that request already
         // leaves it out. Later changes of the same gesture keep it, so the request key of the
-        // untouched stickers never moves during a drag and nothing is re-rendered.
-        if (mutableState.value.touchedStickerKey == null) {
-            val before = session.settings.stickers
+        // untouched layers never moves during a drag and nothing is re-rendered.
+        if (mutableState.value.touchedLayerKey == null) {
+            val before = session.settings.layers
             val changed = list.firstOrNull { it !in before }
-            if (changed != null) mutableState.update { it.copy(touchedStickerKey = changed.key) }
+            if (changed != null) mutableState.update { it.copy(touchedLayerKey = changed.key) }
         }
-        previewSettings(session.settings.copy(stickers = list), processorFor)
+        previewSettings(session.settings.copy(layers = list), processorFor)
     }
 
     /** The limit message has been shown long enough: hides it again. */
-    fun onStickerLimitMessageShown() {
-        mutableState.update { it.copy(stickerLimitShown = false) }
+    fun onLayerLimitMessageShown() {
+        mutableState.update { it.copy(layerLimitShown = false) }
     }
 
     /**
      * The sheet's tick: keeps every change, closes the sheet and forgets the snapshot. Nothing
      * happens while Done renders or while comparing, when the sheet's controls are inert.
      */
-    fun confirmStickers() {
+    fun confirmLayers() {
         if (mutableState.value.comparing || mutableState.value.finishing) return
-        stickersSnapshot = null
-        // Clear the touched key BEFORE asking for a preview, so the request includes that sticker.
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
+        // Words being typed become their undo step; an empty text is dropped.
+        settleText()
+        sheetSnapshot = null
+        // Clear the touched key BEFORE asking for a preview, so the request includes that layer.
+        mutableState.update {
+            it.copy(openTool = null, selectedLayerKey = null, touchedLayerKey = null, textEditing = false)
+        }
         requestPreview()
     }
 
@@ -516,19 +587,253 @@ class ToolViewModel(
      * snapshot taken at opening (settings and undo steps, so Undo is exactly as it was), closes the
      * sheet and clears the selection. The photo is drawn from the settings, so it follows at once
      * (the Edit screen's `edited` stays null; only a filter preview is asked for again).
-     * Nothing happens while Done renders (it is drawing the current stickers) or while comparing.
+     * Nothing happens while Done renders (it is drawing the current layers) or while comparing.
      */
-    fun cancelStickers() {
+    fun cancelLayers() {
         if (mutableState.value.comparing || mutableState.value.finishing) return
-        val snapshot = stickersSnapshot
-        stickersSnapshot = null
+        val snapshot = sheetSnapshot
+        sheetSnapshot = null
         // Clear the touched key first: a gesture cancelled by this close never reaches its commit.
-        mutableState.update { it.copy(openTool = null, selectedStickerKey = null, touchedStickerKey = null) }
+        mutableState.update {
+            it.copy(openTool = null, selectedLayerKey = null, touchedLayerKey = null, textEditing = false)
+        }
         if (snapshot != null) {
             publishSession(snapshot)
         }
         requestPreview()
     }
+
+    // --- The Text sheet ----------------------------------------------------------------------------
+
+    /**
+     * Puts a new, empty text in the middle of the picture the person SEES (upright, at the
+     * starting size, white, the phone's font, centred), selects it and opens the keyboard
+     * ([ToolUiState.textEditing]). The text is only previewed, never committed: until it has
+     * words it is not an action, so an empty text that is then dropped ([settleText]) leaves no
+     * undo step, and the words typed into it later make ONE step together with its adding.
+     *
+     * At the layer limit nothing is added and the limit message is asked for. Nothing happens
+     * before the photo is decoded, or while comparing or rendering.
+     */
+    private fun startText() {
+        val current = mutableState.value
+        if (current.comparing || current.finishing) return
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        if (!session.settings.canAddLayer) {
+            mutableState.update { it.copy(layerLimitShown = true) }
+            return
+        }
+        val aspect = original.width.toFloat() / original.height
+        val content = LayerContent.Text(
+            text = "",
+            colorArgb = TEXT_DEFAULT_COLOUR,
+            font = TextFont.NONE,
+            alignment = TextAlignment.CENTRE,
+            wrapEms = LayerSize.textWrapEms(aspect),
+        )
+        val block = textLayout.measure(content, LayerContent.Text.PLACEHOLDER)
+        val mapping = LayerMapping(original.width, original.height, session.settings)
+        val layer = mapping.centredPicture(nextStickerKey++, "").copy(
+            content = content,
+            width = LayerSize.textWidth(LayerSize.TEXT_DEFAULT, block.widthEms, aspect),
+        )
+        publishSession(session.commit().preview(session.settings.copy(layers = session.settings.layers + layer)))
+        mutableState.update { it.copy(selectedLayerKey = layer.key, textEditing = true) }
+        requestPreview()
+    }
+
+    /**
+     * The words of the selected text are now [words] (cut to [LayerContent.Text.MAX_LENGTH]
+     * characters). The text keeps its letter size: its width follows its new longest line. While
+     * the person types, each change is only previewed; the whole run of typing becomes one undo
+     * step when it is settled (the keyboard closes, another layer is touched, the sheet closes).
+     * With no text selected, typing starts a new text first. Ignored unless the Text sheet is open.
+     */
+    fun typeText(words: String, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || mutableState.value.openTool != EditTool.TEXT) return
+        if (selectedText() == null) startText()
+        val layer = selectedText() ?: return
+        val content = layer.content as LayerContent.Text
+        this.processorFor = processorFor
+        val changed = reflowed(layer, content.copy(text = words.take(LayerContent.Text.MAX_LENGTH)))
+        publishSession(session.preview(session.settings.withLayer(changed)))
+        mutableState.update { it.copy(textEditing = true) }
+        requestPreview()
+    }
+
+    /** The selected text gets the font [font], keeping its letter size, as one action. */
+    fun chooseTextFont(font: TextFont, processorFor: (EditSettings) -> ToolProcessor) =
+        editSelectedText(processorFor) { layer, content -> reflowed(layer, content.copy(font = font)) }
+
+    /** The selected text's lines move to the next alignment (centre, left, right), as one action. */
+    fun cycleTextAlignment(processorFor: (EditSettings) -> ToolProcessor) =
+        editSelectedText(processorFor) { layer, content ->
+            layer.copy(content = content.copy(alignment = content.alignment.next()))
+        }
+
+    /**
+     * The selected text's letters take the colour [argb] (made opaque). [preview] is true while
+     * the custom picker is being dragged: the photo follows without an undo step, and the drag
+     * ends with [commitSettings]. A preset swatch is one action.
+     */
+    fun chooseTextColour(argb: Int, processorFor: (EditSettings) -> ToolProcessor, preview: Boolean = false) {
+        val opaque = argb or OPAQUE_ALPHA
+        if (!preview) {
+            editSelectedText(processorFor) { layer, content -> layer.copy(content = content.copy(colorArgb = opaque)) }
+            return
+        }
+        if (!layerEditingOpen()) return
+        val layer = selectedText() ?: return
+        val content = layer.content as LayerContent.Text
+        this.processorFor = processorFor
+        publishSession(session.preview(session.settings.withLayer(layer.copy(content = content.copy(colorArgb = opaque)))))
+        requestPreview()
+    }
+
+    /**
+     * The size slider of a layer sheet moved to [size] (1 to 100, see [LayerSize]) for the
+     * selected layer: a sticker's width follows directly, a text's through its measured block, so
+     * its letters take the height the number stands for. Previewed only; the slider's release
+     * ([commitSettings]) makes the drag one undo step.
+     */
+    fun previewLayerSize(size: Float, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen()) return
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        val key = mutableState.value.selectedLayerKey ?: return
+        val layer = session.settings.layers.firstOrNull { it.key == key } ?: return
+        val width = when (val content = layer.content) {
+            is LayerContent.Picture -> LayerSize.pictureWidth(size)
+            is LayerContent.Text -> LayerSize.textWidth(
+                size,
+                textLayout.measure(content, wordsOrPlaceholder(content)).widthEms,
+                original.width.toFloat() / original.height,
+            )
+        }
+        this.processorFor = processorFor
+        publishSession(session.preview(session.settings.withLayer(layer.copy(width = width))))
+        requestPreview()
+    }
+
+    /**
+     * The opacity slider of a layer sheet moved to [opacity] (0.1 to 1) for the selected layer.
+     * Previewed only; the slider's release ([commitSettings]) makes the drag one undo step.
+     */
+    fun previewLayerOpacity(opacity: Float, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen()) return
+        val key = mutableState.value.selectedLayerKey ?: return
+        val layer = session.settings.layers.firstOrNull { it.key == key } ?: return
+        this.processorFor = processorFor
+        val kept = opacity.coerceIn(Layer.MIN_OPACITY, 1f)
+        publishSession(session.preview(session.settings.withLayer(layer.copy(opacity = kept))))
+        requestPreview()
+    }
+
+    /**
+     * The size slider's number for the selected layer (see [LayerSize]), or null with none
+     * selected. The sheets show it; a text's number needs its words measured, so it is worked out
+     * here, with the same measure the slider's changes use.
+     */
+    fun selectedLayerSize(): Float? {
+        val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return null
+        val key = mutableState.value.selectedLayerKey ?: return null
+        val layer = session.settings.layers.firstOrNull { it.key == key } ?: return null
+        return when (val content = layer.content) {
+            is LayerContent.Picture -> LayerSize.ofPicture(layer.width)
+            is LayerContent.Text -> LayerSize.ofText(
+                layer.width,
+                textLayout.measure(content, wordsOrPlaceholder(content)).widthEms,
+                original.width.toFloat() / original.height,
+            )
+        }
+    }
+
+    /**
+     * The keyboard of the Text sheet opened ([on] true: the text area got the focus, or the
+     * frame's edit button asks for it) or closed. Closing it settles the words typed (one undo
+     * step, or nothing for an empty text, which is dropped).
+     */
+    fun setTextEditing(on: Boolean) {
+        if (on) {
+            if (!layerEditingOpen() || mutableState.value.openTool != EditTool.TEXT) return
+            mutableState.update { it.copy(textEditing = true) }
+            return
+        }
+        if (!mutableState.value.textEditing) return
+        mutableState.update { it.copy(textEditing = false) }
+        settleText()
+    }
+
+    /**
+     * The edit button on the frame of the text [key]: selects it and opens the keyboard on its
+     * words. Ignored for a layer that is not a text.
+     */
+    fun editText(key: Long) {
+        if (session.settings.layers.firstOrNull { it.key == key }?.content !is LayerContent.Text) return
+        selectLayer(key)
+        setTextEditing(true)
+    }
+
+    /**
+     * Ends a run of typing: an EMPTY selected text (no letters) is taken off the photo, then
+     * whatever was previewed becomes one undo step (nothing at all for an empty text that was
+     * only ever previewed). Safe to call at any time; with nothing to settle it changes nothing.
+     */
+    private fun settleText() {
+        val blank = selectedText()?.takeIf { (it.content as LayerContent.Text).isBlank }
+        if (blank != null) {
+            publishSession(session.preview(session.settings.copy(layers = session.settings.layers - blank)))
+            mutableState.update { it.copy(selectedLayerKey = null) }
+        }
+        val hadPending = session.pending != null
+        publishSession(session.commit())
+        if (blank != null || hadPending) requestPreview()
+    }
+
+    /** The selected layer when it is a text, or null. */
+    private fun selectedText(): Layer? {
+        val key = mutableState.value.selectedLayerKey ?: return null
+        return session.settings.layers.firstOrNull { it.key == key && it.content is LayerContent.Text }
+    }
+
+    /**
+     * One action on the selected text (a font, an alignment, a preset colour): [edit] makes the
+     * changed layer. A text with no words yet is only previewed, so its adding and this change
+     * stay one undo step (or none, if it is dropped empty); otherwise words still being typed
+     * become their own step first and this change is one more.
+     */
+    private fun editSelectedText(
+        processorFor: (EditSettings) -> ToolProcessor,
+        edit: (Layer, LayerContent.Text) -> Layer,
+    ) {
+        if (!layerEditingOpen()) return
+        val layer = selectedText() ?: return
+        val content = layer.content as LayerContent.Text
+        this.processorFor = processorFor
+        val changed = session.settings.withLayer(edit(layer, content))
+        publishSession(if (content.isBlank) session.preview(changed) else session.change(changed))
+        requestPreview()
+    }
+
+    /**
+     * [layer] with the text [content], its width changed so the letters keep their size: the
+     * width scales with the block's width, measured (with the placeholder for an empty text)
+     * before and after.
+     */
+    private fun reflowed(layer: Layer, content: LayerContent.Text): Layer {
+        val before = layer.content as LayerContent.Text
+        val old = textLayout.measure(before, wordsOrPlaceholder(before))
+        val new = textLayout.measure(content, wordsOrPlaceholder(content))
+        val width = if (old.widthEms > 0f) layer.width * new.widthEms / old.widthEms else layer.width
+        return layer.copy(content = content, width = width)
+    }
+
+    /** A text's words, or the placeholder that gives an empty text its frame. */
+    private fun wordsOrPlaceholder(content: LayerContent.Text): String =
+        content.text.ifBlank { LayerContent.Text.PLACEHOLDER }
+
+    /** These settings with [layer] in place of the layer that has the same key. */
+    private fun EditSettings.withLayer(layer: Layer): EditSettings =
+        copy(layers = layers.map { if (it.key == layer.key) layer else it })
 
     // --- The Edit screen's session ---------------------------------------------------------------
 
@@ -598,7 +903,7 @@ class ToolViewModel(
     fun commitSettings() {
         // The last finger is up: no sticker is touched any more, so the next preview request
         // includes the one that was (it joins the filtered copy).
-        mutableState.update { it.copy(touchedStickerKey = null) }
+        mutableState.update { it.copy(touchedLayerKey = null) }
         publishSession(session.commit())
         if (processorFor != null) requestPreview()
     }
@@ -626,11 +931,11 @@ class ToolViewModel(
      */
     fun onBackPressed(): Boolean {
         val current = mutableState.value
-        if (current.openTool == EditTool.STICKERS) {
-            // Back from the Stickers sheet is its Cancel: the sticker changes are thrown away.
+        if (current.openTool.isLayerSheet()) {
+            // Back from a layer sheet is its Cancel: the sheet's changes are thrown away.
             // While Done renders or while comparing the sheet is inert, so Back is consumed
             // (the screen stays) but cancels nothing.
-            if (!current.comparing && !current.finishing) cancelStickers()
+            if (!current.comparing && !current.finishing) cancelLayers()
             return true
         }
         if (current.openTool != null) {
@@ -660,20 +965,20 @@ class ToolViewModel(
     /**
      * Makes [new] the current session and shows its settings and whether Undo can be used. The
      * selection is pruned here, on every settings change: a selected key that is no longer one of
-     * the stickers (the add was undone, the sticker deleted) becomes none.
+     * the layers (the add was undone, the sticker deleted) becomes none.
      */
     private fun publishSession(new: EditSession) {
         session = new
         mutableState.update { state ->
-            val selected = state.selectedStickerKey
-            val stillThere = selected != null && new.settings.stickers.any { it.key == selected }
-            val touched = state.touchedStickerKey
-            val touchedStillThere = touched != null && new.settings.stickers.any { it.key == touched }
+            val selected = state.selectedLayerKey
+            val stillThere = selected != null && new.settings.layers.any { it.key == selected }
+            val touched = state.touchedLayerKey
+            val touchedStillThere = touched != null && new.settings.layers.any { it.key == touched }
             state.copy(
                 settings = new.settings,
                 canUndo = new.canUndo,
-                selectedStickerKey = if (stillThere) selected else null,
-                touchedStickerKey = if (touchedStillThere) touched else null,
+                selectedLayerKey = if (stillThere) selected else null,
+                touchedLayerKey = if (touchedStillThere) touched else null,
             )
         }
     }
@@ -710,13 +1015,13 @@ class ToolViewModel(
 
     /**
      * What a preview request is made of: the filter and its strength (none and 0 without a
-     * filter) and the stickers drawn into the small copy, never the one under a finger. Two
+     * filter) and the layers drawn into the small copy, never the one under a finger. Two
      * requests with an equal key would give the same picture, so the second is not rendered.
      */
     private data class PreviewKey(
         val filter: FilterPreset,
         val intensity: Float,
-        val stickers: List<Sticker>,
+        val layers: List<Layer>,
     )
 
     /** The key last asked for, so an unchanged request is not rendered again. */
@@ -740,21 +1045,21 @@ class ToolViewModel(
     private fun requestPreview() {
         // The sticker under a finger is not part of the request: the screen draws it live, and
         // leaving it out is what keeps the request the same for the whole of a drag.
-        val touched = mutableState.value.touchedStickerKey
+        val touched = mutableState.value.touchedLayerKey
         val full = session.settings
-        val settings = full.copy(stickers = full.stickers.filter { it.key != touched })
-        if (!settings.hasFilter && settings.stickers.isEmpty()) {
+        val settings = full.copy(layers = full.layers.filter { it.key != touched })
+        if (!settings.hasFilter && settings.layers.isEmpty()) {
             lastPreviewKey = null
             mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        // A slider, turn or crop leaves the filter and the stickers as they were: the preview is
+        // A slider, turn or crop leaves the filter and the layers as they were: the preview is
         // still right, so no render is repeated (it would only cost memory and a redraw during a
-        // drag). The key is the filter, its strength and the untouched stickers.
+        // drag). The key is the filter, its strength and the untouched layers.
         val key = PreviewKey(
             filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
             intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
-            stickers = settings.stickers,
+            layers = settings.layers,
         )
         if (key == lastPreviewKey) return
         lastPreviewKey = key
@@ -795,15 +1100,15 @@ class ToolViewModel(
             null
         }
         val now = session.settings
-        // Same filter still chosen (or still none, with stickers): show this frame even when the
+        // Same filter still chosen (or still none, with layers): show this frame even when the
         // intensity has moved on since, so a drag keeps changing the photo; the newer request is
         // already queued and replaces it. A failed render shows the plain photo rather than the
         // previous filter's look.
         val stillWanted = if (requested.hasFilter) {
             now.hasFilter && now.filter == requested.filter
         } else {
-            val touched = mutableState.value.touchedStickerKey
-            !now.hasFilter && now.stickers.any { it.key != touched }
+            val touched = mutableState.value.touchedLayerKey
+            !now.hasFilter && now.layers.any { it.key != touched }
         }
         if (stillWanted) {
             mutableState.update { it.copy(filterPreview = rendered) }
@@ -884,8 +1189,8 @@ class ToolViewModel(
      * the edit again. The edit itself is never touched, so nothing is lost by comparing.
      */
     fun setComparing(on: Boolean) {
-        val hadTouched = mutableState.value.touchedStickerKey != null
-        mutableState.update { it.copy(comparing = on, touchedStickerKey = null) }
+        val hadTouched = mutableState.value.touchedLayerKey != null
+        mutableState.update { it.copy(comparing = on, touchedLayerKey = null) }
         // A gesture cancelled by Compare never commits, so the sticker rejoins the filtered copy.
         if (hadTouched) requestPreview()
     }
@@ -979,6 +1284,15 @@ class ToolViewModel(
     private fun handOver(picture: Bitmap, originalUri: String? = null) {
         store.put(picture, originalUri)
         doneChannel.trySend(Unit)
+    }
+
+    /** The colours a new text starts with. */
+    private companion object {
+        /** A new text's letters: white, which reads on most photos. */
+        const val TEXT_DEFAULT_COLOUR = 0xFFFFFFFF.toInt()
+
+        /** The alpha bits of an ARGB number, set to make a colour opaque. */
+        const val OPAQUE_ALPHA = 0xFF000000.toInt()
     }
 
     /** Reports to the probe that this ViewModel has been cleared. */

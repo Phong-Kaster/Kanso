@@ -81,17 +81,17 @@ data class EditSession(
 
     /**
      * Puts [sticker] on top of the others, as one action. When the photo already holds
-     * [EditSettings.MAX_STICKERS] stickers nothing is added and the session is returned as it is
+     * [EditSettings.MAX_LAYERS] layers nothing is added and the session is returned as it is
      * (no undo entry).
      */
-    fun addSticker(sticker: Sticker): EditSession {
-        if (!settings.canAddSticker) return this
-        return change(settings.copy(stickers = settings.stickers + sticker))
+    fun addLayer(layer: Layer): EditSession {
+        if (!settings.canAddLayer) return this
+        return change(settings.copy(layers = settings.layers + layer))
     }
 
     /** Takes the sticker with [key] off the photo, as one action; an unknown key changes nothing. */
-    fun deleteSticker(key: Long): EditSession =
-        change(settings.copy(stickers = settings.stickers.filter { it.key != key }))
+    fun deleteLayer(key: Long): EditSession =
+        change(settings.copy(layers = settings.layers.filter { it.key != key }))
 
     /**
      * Copies the sticker with [key] as one action: the copy has the key [newKey] (chosen by the
@@ -99,22 +99,22 @@ data class EditSession(
      * the original photo, so the copy does not hide the first) and goes on top. With no such
      * sticker, or a full photo, nothing happens and the session is returned as it is.
      */
-    fun duplicateSticker(key: Long, newKey: Long, offsetX: Float, offsetY: Float): EditSession {
-        if (!settings.canAddSticker) return this
-        val original = settings.stickers.firstOrNull { it.key == key } ?: return this
+    fun duplicateLayer(key: Long, newKey: Long, offsetX: Float, offsetY: Float): EditSession {
+        if (!settings.canAddLayer) return this
+        val original = settings.layers.firstOrNull { it.key == key } ?: return this
         val copy = original.copy(
             key = newKey,
             centreX = original.centreX + offsetX,
             centreY = original.centreY + offsetY,
         )
-        return change(settings.copy(stickers = settings.stickers + copy))
+        return change(settings.copy(layers = settings.layers + copy))
     }
 
     /** Mirrors the sticker with [key] left to right (or back), as one action. */
-    fun flipSticker(key: Long): EditSession =
+    fun flipLayer(key: Long): EditSession =
         change(
             settings.copy(
-                stickers = settings.stickers.map { if (it.key == key) it.copy(mirrored = !it.mirrored) else it },
+                layers = settings.layers.map { if (it.key == key) it.copy(mirrored = !it.mirrored) else it },
             ),
         )
 

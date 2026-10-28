@@ -43,12 +43,12 @@ class FilterPreviewRenderer(
 ) {
 
     /**
-     * Returns [source] with the stickers of [settings] drawn on it and then the filter of
+     * Returns [source] with the layers of [settings] drawn on it and then the filter of
      * [settings] at its intensity applied, as a new bitmap the same size as [source], or null when
      * [settings] has neither a filter nor a sticker to draw (the preview then shows [source]
      * itself) or when the work failed (a look-up image that cannot be read, or no memory left).
      *
-     * The sticker whose key is [touchedStickerKey] (the one under a finger) is not drawn: the
+     * The sticker whose key is [touchedLayerKey] (the one under a finger) is not drawn: the
      * screen draws it live, so it joins this picture only when the finger lifts.
      *
      * Everything else in [settings] (crop, turns, flips, colour sliders) is deliberately left out:
@@ -57,19 +57,19 @@ class FilterPreviewRenderer(
      * The work runs on a background thread. A cancelled call (a newer setting replaced it) stops
      * with a CancellationException, as coroutines expect, rather than returning null.
      */
-    suspend fun render(settings: EditSettings, touchedStickerKey: Long? = null): Bitmap? {
+    suspend fun render(settings: EditSettings, touchedLayerKey: Long? = null): Bitmap? {
         // The sticker under a finger is left out: the screen draws it live on top instead.
-        val stickers = settings.stickers.filter { it.key != touchedStickerKey }
+        val layers = settings.layers.filter { it.key != touchedLayerKey }
         // Nothing to bake in: no filter and no sticker, so the preview shows [source] itself.
-        if (!settings.hasFilter && stickers.isEmpty()) return null
-        // Only the filter, its strength and the stickers: every other setting stays at its
-        // neutral default. The processor draws stickers BEFORE the filter (as Done does), so a
+        if (!settings.hasFilter && layers.isEmpty()) return null
+        // Only the filter, its strength and the layers: every other setting stays at its
+        // neutral default. The processor draws layers BEFORE the filter (as Done does), so a
         // sticker under a filter comes out filtered, and the whole photo is kept (no crop), so
-        // the stickers keep their place as fractions of the original.
+        // the layers keep their place as fractions of the original.
         val filterOnly = EditSettings(
             filter = settings.filter,
             filterIntensity = settings.filterIntensity,
-            stickers = stickers,
+            layers = layers,
         )
         return withContext(Dispatchers.Default) {
             try {

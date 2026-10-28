@@ -8,9 +8,9 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -30,11 +30,11 @@ import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKERS_GRID_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.STICKER_CHIPS_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerChipTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.stickerspanel.stickerTileTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_GRID_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKER_CHIPS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerChipTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals

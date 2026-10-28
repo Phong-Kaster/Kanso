@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, filters and stickers
+# Edit: crop, rotate, adjust, filters, stickers and text
 
 [Back to README](../../README.md)
 
@@ -6,6 +6,25 @@ Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
 shares (opening the photo, the top bar, failures, Done) are on [The tool screen](tool-screen.md);
 what happens after Done is on [Saving, the Result screen and Share](saving-and-share.md).
+
+> **Run 11 (ADR-005): layers and Text.** A sticker is now a **layer** (`data/edit/edit/Layer.kt`,
+> content `LayerContent.Picture`), and the sixth tool, **Text**, adds layers of the text kind. The
+> sections below were written for Run 10 and still say "sticker", `Sticker`, `StickerOverlay` and
+> `ui/tool/components/`; the code now names them `Layer`, `LayerOverlay` (in
+> `ui/tool/component/photocard/layeroverlay/`), `LayerMapping`, `LayerPictures` and
+> `ui/tool/component/`. What changed in behaviour since Run 10:
+>
+> - Every layer has an opacity (10–100%) and both layer sheets have Size and Opacity sliders.
+> - A layer sheet is 320 dp tall, so the photo is a little shorter while one is open.
+> - Touching a layer with any sheet but Crop open (or none) selects it, brings it to the front and
+>   opens the sheet of its kind.
+> - The frame's corners are the same on every layer: delete top-left, duplicate bottom-left, resize
+>   bottom-right; top-right mirrors a sticker and edits a text.
+> - The 20-item limit counts stickers and texts together.
+>
+> The Text tool is traced end to end in the README,
+> [section 3.4](../../README.md#34-text), and the shared layer machinery in
+> [section 3.2](../../README.md#32-layers-what-stickers-and-text-share).
 
 ---
 

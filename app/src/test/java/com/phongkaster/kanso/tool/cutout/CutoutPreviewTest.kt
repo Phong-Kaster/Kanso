@@ -21,10 +21,10 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import com.phongkaster.kanso.ui.tool.components.CUTOUT_CHECKERBOARD_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.CUTOUT_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.components.CheckerboardTileColours
-import com.phongkaster.kanso.ui.tool.components.toolpanel.CutoutPanel
+import com.phongkaster.kanso.ui.tool.component.CUTOUT_CHECKERBOARD_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.CUTOUT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.CheckerboardTileColours
+import com.phongkaster.kanso.ui.tool.component.toolpanel.CutoutPanel
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent

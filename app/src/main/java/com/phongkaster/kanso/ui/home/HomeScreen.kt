@@ -79,9 +79,9 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.media.Photo
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.common.ProvideSkeletonPulse
-import com.phongkaster.kanso.ui.common.RoundIconButton
-import com.phongkaster.kanso.ui.common.SkeletonBlock
+import com.phongkaster.kanso.ui.component.ProvideSkeletonPulse
+import com.phongkaster.kanso.ui.component.RoundIconButton
+import com.phongkaster.kanso.ui.component.SkeletonBlock
 import com.phongkaster.kanso.ui.gallery.PhotoThumbnail
 import com.phongkaster.kanso.ui.myedits.savedAtText
 import com.phongkaster.kanso.ui.theme.KansoTheme

@@ -32,7 +32,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
-import com.phongkaster.kanso.ui.common.BACKDROP_BLUR_RADIUS
+import com.phongkaster.kanso.ui.component.BACKDROP_BLUR_RADIUS
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG

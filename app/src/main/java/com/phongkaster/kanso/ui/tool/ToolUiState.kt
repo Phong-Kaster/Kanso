@@ -6,6 +6,7 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.navigation.Tool
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 
 /**
  * Everything the tool screen shows at one moment, as one snapshot. What a UiState is, and why
@@ -110,7 +111,7 @@ data class ToolUiState(
      * The key of the sticker just added and still selected on the photo, or null when none is.
      * It is cleared when the Stickers sheet closes.
      */
-    val selectedStickerKey: Long? = null,
+    val selectedLayerKey: Long? = null,
     /**
      * The key of the sticker a finger is moving, pinching, turning or resizing right now, or null
      * when no gesture is under way. It is set when the gesture's first change arrives and cleared
@@ -118,12 +119,19 @@ data class ToolUiState(
      * following the finger every frame, and the small filtered copy is rendered without it; when
      * the finger lifts the sticker joins the filtered copy.
      */
-    val touchedStickerKey: Long? = null,
+    val touchedLayerKey: Long? = null,
     /**
-     * True for a moment after the person tried to add a sticker beyond the limit: the screen shows
-     * the "20 stickers at most" message, then calls the ViewModel to clear this flag.
+     * True for a moment after the person tried to add a sticker or a text beyond the limit: the
+     * screen shows the "20 stickers and texts at most" message, then calls the ViewModel to clear
+     * this flag.
      */
-    val stickerLimitShown: Boolean = false,
+    val layerLimitShown: Boolean = false,
+    /**
+     * True while the Text sheet's text area has the keyboard: the sheet then shows only the text
+     * area above the keyboard (its font, colour and slider rows come back when it closes), and
+     * every letter typed is previewed on the photo without an undo step until the keyboard closes.
+     */
+    val textEditing: Boolean = false,
 ) {
 
     /**

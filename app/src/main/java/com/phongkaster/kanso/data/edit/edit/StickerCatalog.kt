@@ -9,7 +9,7 @@ import com.phongkaster.kanso.R
  * Each entry names its drawable with an explicit `R.drawable.…` reference, never a lookup by
  * name at run time: the build then checks every picture exists, and the resource shrinker keeps
  * them. An entry's `pictureId` is the drawable's own name, which is also the text stored in a
- * [Sticker], so a saved photo's sticker can always be found again with [byId].
+ * [Layer], so a saved photo's sticker can always be found again with [byId].
  *
  * Only picture stickers are listed; the text, clock, date, location and weather stickers of the
  * app this was ported from are not part of Kanso.

@@ -37,26 +37,26 @@ import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
-import com.phongkaster.kanso.ui.tool.AdjustSlider
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editAdjustChipTag
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_COMPARE_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_INTENSITY_TAG
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.LIVE_PREVIEW_TAG
-import com.phongkaster.kanso.ui.tool.components.photocard.LivePreviewMatrix
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editAdjustChipTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_INTENSITY_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.LIVE_PREVIEW_TAG
+import com.phongkaster.kanso.ui.tool.component.photocard.LivePreviewMatrix
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
-import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editFilterTag
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.editRatioTag
-import com.phongkaster.kanso.ui.tool.components.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editRatioTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -236,8 +236,8 @@ class CompareTest {
     @Test
     fun compare_sits_in_the_tool_row_and_undo_beside_done() {
         val viewModel = showEdit(null)
-        // Stickers is left out: its sheet replaces the whole row (Compare included) while open.
-        (listOf<EditTool?>(null) + EditTool.entries.filter { it != EditTool.STICKERS }).forEach { open ->
+        // Stickers and Text are left out: a layer sheet replaces the whole row (Compare included).
+        (listOf<EditTool?>(null) + EditTool.entries.filter { it != EditTool.STICKERS && it != EditTool.TEXT }).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
             compose.waitForIdle()
             assertEquals(open, viewModel.state.value.openTool)

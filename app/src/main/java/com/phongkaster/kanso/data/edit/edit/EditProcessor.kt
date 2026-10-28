@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 
 /**
  * The Edit tool's processor: renders the WHOLE of [settings] onto a photo, in this order: the
- * stickers, crop, quarter turns, flips, the filter, then the four colour sliders. All of it is
+ * layers, crop, quarter turns, flips, the filter, then the four colour sliders. All of it is
  * plain Kotlin on the CPU, apart from each sticker, which is drawn with Android's `Canvas`.
  *
  * Every step works on the photo's pixels as one `IntArray` (one ARGB int per pixel, row after
@@ -50,7 +50,7 @@ import kotlin.math.roundToInt
 class EditProcessor(
     private val settings: EditSettings,
     private val filters: FilterLut.Source,
-    private val stickerPictures: StickerPictures = StickerPictures { _, _ -> null },
+    private val layerPictures: LayerPictures = LayerPictures { _, _ -> null },
 ) : ToolProcessor {
 
     /**
@@ -98,7 +98,7 @@ class EditProcessor(
         // Stickers are part of the photo, so they go in before the turns, flips, filter and
         // sliders, which then act on them too. Their place is a fraction of the ORIGINAL photo,
         // so a crop keeps only the part of a sticker inside the rectangle.
-        drawStickers(image, source.width, source.height, crop)
+        drawLayers(image, source.width, source.height, crop)
         onProgress(PROGRESS_CROPPED)
 
         // 2. and 3. Turn, then flip.
@@ -131,7 +131,7 @@ class EditProcessor(
 
     /**
      * Draws every sticker of [settings], oldest first, into the cropped [image]. [photoWidth] and
-     * [photoHeight] are the size of the whole (working-size) photo the stickers' fractions refer
+     * [photoHeight] are the size of the whole (working-size) photo the layers' fractions refer
      * to, and [crop] is where the kept rectangle sits in it, so a sticker is shifted by the
      * crop's corner.
      *
@@ -139,16 +139,16 @@ class EditProcessor(
      * inside the image, then its pixels are alpha-blended over the image's one row at a time
      * and that bitmap is recycled. So the extra memory is one bitmap the size of the visible part
      * of the sticker (at most the kept area, when a sticker covers all of it) plus one row of
-     * ints. The picture asked of [stickerPictures] is never wider than the photo's longest edge,
+     * ints. The picture asked of [layerPictures] is never wider than the photo's longest edge,
      * however big the sticker is: the `Matrix` stretches the rest, so an over-sized sticker cannot
-     * run the phone out of memory. The picture itself belongs to [stickerPictures] and is never
+     * run the phone out of memory. The picture itself belongs to [layerPictures] and is never
      * recycled here. The blend happens before the image is made opaque, so a soft edge mixes with
      * the photo.
      *
      * A sticker whose width, centre or turn is not a finite number (NaN or infinity) draws nothing.
      */
-    private fun drawStickers(image: Pixels, photoWidth: Int, photoHeight: Int, crop: Bounds) {
-        for (sticker in settings.stickers) {
+    private fun drawLayers(image: Pixels, photoWidth: Int, photoHeight: Int, crop: Bounds) {
+        for (sticker in settings.layers) {
             checkActive()
             if (!sticker.width.isFinite() || !sticker.centreX.isFinite() ||
                 !sticker.centreY.isFinite() || !sticker.degrees.isFinite()
@@ -160,7 +160,7 @@ class EditProcessor(
             // Ask for no more pixels than the photo's long side: bigger would only cost memory.
             val decodeWidth = minOf(targetWidth, maxOf(photoWidth, photoHeight).toFloat())
                 .roundToInt().coerceAtLeast(1)
-            val picture = stickerPictures.picture(sticker.pictureId, decodeWidth) ?: continue
+            val picture = layerPictures.picture(sticker.content, decodeWidth) ?: continue
             if (picture.width <= 0 || picture.height <= 0) continue
 
             // One uniform scale from the decoded picture to its size in working pixels.
@@ -199,6 +199,9 @@ class EditProcessor(
                 val paint = Paint().apply {
                     isFilterBitmap = !exact
                     isAntiAlias = !exact
+                    // The layer's opacity fades every pixel it lays down; the blend below then
+                    // mixes it with the photo like any other soft edge.
+                    alpha = opacityAlpha(sticker.opacity)
                 }
                 Canvas(box).drawBitmap(picture, matrix, paint)
 
@@ -213,6 +216,15 @@ class EditProcessor(
                 box.recycle()
             }
         }
+    }
+
+    /**
+     * A layer's [opacity] (0..1) as a paint alpha (0..255), kept within [Layer.MIN_OPACITY]..1 so
+     * a value out of range (or not a number) never hides a layer or overflows the paint.
+     */
+    private fun opacityAlpha(opacity: Float): Int {
+        val kept = if (opacity.isNaN()) 1f else opacity.coerceIn(Layer.MIN_OPACITY, 1f)
+        return (kept * OPAQUE_ALPHA).roundToInt()
     }
 
     /**
@@ -356,6 +368,9 @@ class EditProcessor(
 
         /** Float noise tolerated when sizing a sticker's bounding box, in pixels. */
         private const val BOX_EPSILON = 1e-3
+
+        /** A fully solid paint's alpha. */
+        private const val OPAQUE_ALPHA = 255f
 
         /** How close to 1 a sticker's scale must be to count as drawn 1:1. */
         private const val SCALE_EPSILON = 1e-4f

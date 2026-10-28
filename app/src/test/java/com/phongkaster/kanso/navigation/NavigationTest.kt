@@ -71,7 +71,7 @@ import com.phongkaster.kanso.ui.home.homeShortcutTag
 import com.phongkaster.kanso.ui.home.homeTryTag
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_EMPTY_TAG
 import com.phongkaster.kanso.ui.myedits.MY_EDITS_SCREEN_TAG
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import com.phongkaster.kanso.ui.settings.SETTINGS_SCREEN_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY

@@ -34,7 +34,7 @@ import com.phongkaster.kanso.ui.gallery.GALLERY_SETTINGS_BUTTON_TAG
 import com.phongkaster.kanso.ui.gallery.GALLERY_SHARE_MORE_TAG
 import com.phongkaster.kanso.ui.gallery.GalleryScreen
 import com.phongkaster.kanso.ui.gallery.GalleryViewModel
-import com.phongkaster.kanso.ui.permission.photoPermissionsFor
+import com.phongkaster.kanso.ui.component.permission.model.photoPermissionsFor
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

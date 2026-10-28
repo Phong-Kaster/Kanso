@@ -52,17 +52,21 @@ import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import com.phongkaster.kanso.ui.tool.components.DiscardChangesDialog
-import com.phongkaster.kanso.ui.tool.components.EditCropper
-import com.phongkaster.kanso.ui.tool.components.EditPhotoArea
-import com.phongkaster.kanso.ui.tool.components.editbottombar.EditBottomBar
-import com.phongkaster.kanso.ui.tool.components.photocard.PhotoCard
-import com.phongkaster.kanso.ui.tool.components.StickerLimitMessage
-import com.phongkaster.kanso.data.edit.edit.Sticker
-import com.phongkaster.kanso.ui.tool.components.toolpanel.ToolPanel
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanel
-import com.phongkaster.kanso.ui.tool.components.toolpanel.editpanel.EditPanelContent
-import com.phongkaster.kanso.ui.tool.components.topbar.ToolTopBar
+import com.phongkaster.kanso.ui.tool.component.DiscardChangesDialog
+import com.phongkaster.kanso.ui.tool.component.EditCropper
+import com.phongkaster.kanso.ui.tool.component.EditPhotoArea
+import com.phongkaster.kanso.ui.tool.component.editbottombar.EditBottomBar
+import com.phongkaster.kanso.ui.tool.component.photocard.PhotoCard
+import com.phongkaster.kanso.ui.tool.component.StickerLimitMessage
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
+import com.phongkaster.kanso.data.edit.edit.LayerSize
+import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.component.topbar.ToolTopBar
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TextPanel
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
 /** The test tag on the root of the tool screen. */
 const val TOOL_SCREEN_TAG = "tool-screen"
@@ -277,8 +281,8 @@ fun ToolScreen(
                     settings = state.settings,
                     enabled = !state.comparing && !state.finishing,
                     onCropFinished = { rect -> viewModel.commitCrop(rect, processorFor) },
-                    // The session's stickers stay visible on the photo being cropped.
-                    stickers = state.settings.stickers,
+                    // The session's layers stay visible on the photo being cropped.
+                    layers = state.settings.layers,
                 )
             }
         },
@@ -289,8 +293,33 @@ fun ToolScreen(
         // re-renders from the original photo.
         editSheet = { tool ->
             // Whatever recipe a panel offers, the screen's own (with sticker pictures) is the one
-            // the ViewModel keeps, so Done always draws the stickers.
-            if (tool == EditTool.STICKERS) {
+            // the ViewModel keeps, so Done always draws the layers.
+            if (tool == EditTool.TEXT) {
+                val selectedText = state.settings.layers.firstOrNull {
+                    it.key == state.selectedLayerKey && it.content is LayerContent.Text
+                }
+                // The size number of a text needs its words measured; the ViewModel does it with
+                // the same fonts it sizes texts with.
+                val size = remember(state.settings, state.selectedLayerKey) { viewModel.selectedLayerSize() }
+                TextPanel(
+                    selected = selectedText,
+                    size = size ?: LayerSize.TEXT_DEFAULT,
+                    editing = state.textEditing,
+                    enabled = !state.comparing && !state.finishing,
+                    onWords = { viewModel.typeText(it, processorFor) },
+                    onEditingChange = viewModel::setTextEditing,
+                    onAlignment = { viewModel.cycleTextAlignment(processorFor) },
+                    onFont = { viewModel.chooseTextFont(it, processorFor) },
+                    onColour = { viewModel.chooseTextColour(it, processorFor) },
+                    onCustomColour = { viewModel.chooseTextColour(it, processorFor, preview = true) },
+                    onCustomColourDone = viewModel::commitSettings,
+                    onSize = { viewModel.previewLayerSize(it, processorFor) },
+                    onOpacity = { viewModel.previewLayerOpacity(it, processorFor) },
+                    onSliderDone = viewModel::commitSettings,
+                    onCancel = viewModel::cancelLayers,
+                    onConfirm = viewModel::confirmLayers,
+                )
+            } else if (tool == EditTool.STICKERS) {
                 EditPanel(
                     openTool = tool,
                     settings = state.settings,
@@ -302,8 +331,9 @@ fun ToolScreen(
                     stickerCategory = state.stickerCategory,
                     onStickerCategoryChosen = viewModel::chooseStickerCategory,
                     onStickerChosen = { viewModel.addSticker(it, processorFor) },
-                    onStickersCancel = viewModel::cancelStickers,
-                    onStickersConfirm = viewModel::confirmStickers,
+                    onStickersCancel = viewModel::cancelLayers,
+                    onStickersConfirm = viewModel::confirmLayers,
+                    selectedLayerKey = state.selectedLayerKey,
                 )
             } else {
                 ToolPanel(
@@ -319,13 +349,14 @@ fun ToolScreen(
                 )
             }
         },
-        onStickerLimitShown = viewModel::onStickerLimitMessageShown,
-        onStickerSelect = viewModel::selectSticker,
-        onStickerPreview = { list -> viewModel.previewStickers(list, processorFor) },
-        onStickerCommit = viewModel::commitSettings,
-        onStickerDelete = { viewModel.deleteSticker(it, processorFor) },
-        onStickerDuplicate = { viewModel.duplicateSticker(it, processorFor) },
-        onStickerFlip = { viewModel.flipSticker(it, processorFor) },
+        onStickerLimitShown = viewModel::onLayerLimitMessageShown,
+        onLayerSelect = viewModel::selectLayer,
+        onLayerPreview = { list -> viewModel.previewLayers(list, processorFor) },
+        onLayerCommit = viewModel::commitSettings,
+        onLayerDelete = { viewModel.deleteLayer(it, processorFor) },
+        onLayerDuplicate = { viewModel.duplicateLayer(it, processorFor) },
+        onLayerFlip = { viewModel.flipLayer(it, processorFor) },
+        onLayerEdit = viewModel::editText,
     )
 
     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
@@ -386,8 +417,9 @@ fun ToolScreen(
  * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
  * row tapped. The other four tools never call these three.
  *
- * The `onSticker...` callbacks are the sticker overlay's events (select, a gesture's new list, the
- * gesture's end, delete, duplicate, flip), handed on to the photo card; only Edit uses them.
+ * The `onLayer...` callbacks are the layer overlay's events (select, a gesture's new list, the
+ * gesture's end, delete, duplicate, a sticker's flip, a text's edit), handed on to the photo card;
+ * only Edit uses them.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -405,12 +437,13 @@ fun ToolContent(
     editSheet: @Composable (EditTool) -> Unit = {},
     editCropper: (@Composable () -> Unit)? = null,
     onStickerLimitShown: () -> Unit = {},
-    onStickerSelect: (Long?) -> Unit = {},
-    onStickerPreview: (List<Sticker>) -> Unit = {},
-    onStickerCommit: () -> Unit = {},
-    onStickerDelete: (Long) -> Unit = {},
-    onStickerDuplicate: (Long) -> Unit = {},
-    onStickerFlip: (Long) -> Unit = {},
+    onLayerSelect: (Long?) -> Unit = {},
+    onLayerPreview: (List<Layer>) -> Unit = {},
+    onLayerCommit: () -> Unit = {},
+    onLayerDelete: (Long) -> Unit = {},
+    onLayerDuplicate: (Long) -> Unit = {},
+    onLayerFlip: (Long) -> Unit = {},
+    onLayerEdit: (Long) -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
     Scaffold(
@@ -476,17 +509,18 @@ fun ToolContent(
                             onReplace = onReplace,
                             onDismissFailure = onDismissFailure,
                             showReplace = false,
-                            onStickerSelect = onStickerSelect,
-                            onStickerPreview = onStickerPreview,
-                            onStickerCommit = onStickerCommit,
-                            onStickerDelete = onStickerDelete,
-                            onStickerDuplicate = onStickerDuplicate,
-                            onStickerFlip = onStickerFlip,
+                            onLayerSelect = onLayerSelect,
+                            onLayerPreview = onLayerPreview,
+                            onLayerCommit = onLayerCommit,
+                            onLayerDelete = onLayerDelete,
+                            onLayerDuplicate = onLayerDuplicate,
+                            onLayerFlip = onLayerFlip,
+                            onLayerEdit = onLayerEdit,
                             modifier = Modifier.fillMaxSize(),
                         )
                         // The "20 stickers at most" card, a moment on the photo's top edge.
                         StickerLimitMessage(
-                            visible = state.stickerLimitShown,
+                            visible = state.layerLimitShown,
                             onShown = onStickerLimitShown,
                             modifier = Modifier.align(Alignment.TopCenter),
                         )

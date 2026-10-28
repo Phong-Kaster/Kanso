@@ -1,46 +1,61 @@
 # Kanso
 
-*Kanso (簡素) — Japanese for simplicity: leaving out what is not needed.*
+*Kanso (簡素): Japanese for simplicity, leaving out what is not needed.*
 
-Kanso is an Android photo editor with a simple, offline design: no ads, no analytics, no sign-in.
-The manifest removes the `INTERNET` and `ACCESS_NETWORK_STATE` permissions that the engine
-libraries would otherwise merge in (`app/src/main/AndroidManifest.xml`). Every model it uses ships
-inside the app; nothing is downloaded. A photo only leaves the phone when you send it to another
-app with Share.
+Kanso is an offline Android photo editor. It has no ads, no analytics, no accounts and no network
+access: the manifest removes the `INTERNET` and `ACCESS_NETWORK_STATE` permissions that the engine
+libraries would otherwise merge in (`app/src/main/AndroidManifest.xml`). Every model, filter, sticker
+and font ships inside the app; nothing is downloaded. A photo leaves the phone only when you send it
+to another app with Share.
 
-This README describes **what the code on branch `loop/kanso-stickers` actually does**. It is
-not a roadmap. It is the index: each feature below links to its own page in
-[`docs/features/`](docs/features/), which explains what the feature is, how to use it, how it works
-step by step with file paths, which tests cover it, and what is still open.
+This document describes **what the code on branch `feat/text-layers` does today**. It is not a
+roadmap. Each feature links to its own page in [`docs/features/`](docs/features/) for the full
+detail, and every design decision of weight has a record in [`docs/adr/`](docs/adr/).
 
-> **Current state.** The app works from start to end: Home, a photo gallery for each tool, the
-> camera, a screen for each of the five editing tools, a Done button that opens a Result screen
-> with Share, Save (into `Pictures/Kanso`) and Go home, the My edits tab and Settings. All five tools edit the photo. Edit draws
-> its crop, turns, flips and sliders live as Compose draws (a filter on a 640 px copy) and renders in plain Kotlin at Done; Remove background, Enhance, Retouch and Artistic call the image engine's bundled on-device
-> models (`libs/localml.aar`, through `core/localml`) and OpenCV. On the Android emulator (API 34,
-> x86_64), on 2026-10-14, all five ran with no crash and each saved its result into
-> `Pictures/Kanso` (Remove background as PNG, the others as JPEG); the camera, My edits, the photo
-> viewer and Settings were also driven with no crash. That emulator run came before Run 9 rebuilt
-> the Edit screen (row of tools, live preview, cropper, Result screen). Nothing has yet been checked
-> on the owner's phone, a Galaxy A13.
+> **Status.** The app works from start to end: Home, a photo gallery for each tool, the camera, a
+> screen for each of the five editing tools, a Done button that opens a Result screen (Share, Save
+> into `Pictures/Kanso`, Go home), the My edits tab and Settings. The JVM test suite (Robolectric
+> and Compose UI tests) passes. On the owner's Galaxy A13 (2026-10-28) the Stickers sheet and the
+> Text sheet were driven by hand: adding a text, typing with the keyboard up (only the text area
+> shows), and the rows and sliders coming back when the keyboard closes. The other tools were last
+> run on an emulator (API 34, x86_64, 2026-10-14), before Run 9 rebuilt the Edit screen.
 
 ---
 
-## Features
+## Table of contents
+
+1. [Features](#1-features)
+2. [Editing features at a glance](#2-editing-features-at-a-glance)
+3. [How each editing feature works](#3-how-each-editing-feature-works)
+   - [3.1 The Edit screen](#31-the-edit-screen)
+   - [3.2 Layers: what stickers and text share](#32-layers-what-stickers-and-text-share)
+   - [3.3 Stickers](#33-stickers)
+   - [3.4 Text](#34-text)
+   - [3.5 Remove background, Enhance, Retouch and Artistic](#35-remove-background-enhance-retouch-and-artistic)
+4. [Architecture](#4-architecture)
+5. [Privacy and permissions](#5-privacy-and-permissions)
+6. [Building and testing](#6-building-and-testing)
+7. [Project layout and origins](#7-project-layout-and-origins)
+8. [Decision records](#8-decision-records)
+9. [Third-party licences](#9-third-party-licences)
+
+---
+
+## 1. Features
 
 ### Editing tools
 
-Every tool opens on its own screen with the same frame: Back, the tool's name, Undo and Done at the top right, the photo in
-a card with a Replace chip (not on Edit), and the tool's controls. There is no Save bar: Done renders and opens Result.
-[The tool screen](docs/features/tool-screen.md) explains that shared part: decoding, the working
-size, progress, Undo, failures and Done.
+Every tool opens on its own screen with the same frame: Back, the tool's name, Undo and Done at
+the top right, the photo in a card, and the tool's controls. Done renders the result and opens the
+Result screen. [The tool screen](docs/features/tool-screen.md) explains the shared parts: decoding,
+the working size, progress, Undo, failures and Done.
 
-| Feature | What it does | Saved as |
+| Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | A row of Crop, Rotate, Adjust, Filters and Stickers with Compare pinned at its right (Undo is in the top bar), and inside each sheet every feature (crop shape, turn, flip, Adjust slider, filter) is an icon with its title below it, in the bottom bar, each opening a sheet in a fixed-height area just above the row (the photo never changes size): crop with draggable handles, pinch zoom, Original (back to the whole photo), Free, 1:1, 4:3, 3:4, 16:9, 9:16 shapes; quarter turns and flips; brightness, contrast, saturation, warmth (one slider at a time, picked by tiles); one of seven filters (choosing one replaces the other) with an intensity; up to 20 of 60 bundled stickers placed, moved, pinched, turned, mirrored, duplicated and deleted on the photo. The photo is a live preview; Done renders it once in plain Kotlin. Undo is in the top bar beside Done; Compare is pinned at the right of the tool row. | JPEG quality 95, at most 2000 px (Done with no control used: the original file) |
+| [Edit](docs/features/edit.md) | Six tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers and typed texts together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 95, at most 2000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
-| [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model, and brightens it if it is dark; hold a control to compare with the original. | JPEG, at most 2048 px |
-| [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths each face with OpenCV's edge-preserving bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
+| [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
+| [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths them with OpenCV's bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
 | [Artistic](docs/features/artistic.md) | Repaints the photo in one of four styles (Warm wash, Cool wash, Mosaic, Ink) with the bundled Inception v3 style-transfer models, mixed by a strength slider. | JPEG, at most 1024 px |
 
 ### Getting a photo
@@ -54,327 +69,328 @@ size, progress, Undo, failures and Done.
 
 | Feature | What it does |
 |---|---|
-| [Saving, the Result screen and Share](docs/features/saving-and-share.md) | Done hands the rendered picture to the Result screen through `RenderedPhotoStore` (nothing is written); Result's Save is the only gallery write, a new file in `Pictures/Kanso` (the original is never changed); Share writes a copy under the cache's `shared/` folder (PNG if the bitmap has an alpha channel, else JPEG quality 95) and sends it through FileProvider and Android's share sheet with a one-off read grant. After a process kill Result shows "Nothing to show". |
-| [My edits and the photo viewer](docs/features/my-edits.md) | A tab listing everything Kanso saved, newest first; a tapped photo opens in a viewer with Share and Edit. |
+| [Result, Save and Share](docs/features/saving-and-share.md) | Done hands the rendered picture to the Result screen in memory (`RenderedPhotoStore`). Save is the only gallery write: a new file in `Pictures/Kanso`; the original is never changed. Share writes a copy into the cache's `shared/` folder and sends it through FileProvider with a one-off read grant. |
+| [My edits and the photo viewer](docs/features/my-edits.md) | A tab listing everything Kanso saved, newest first; a photo opens in a viewer with Share and Edit. |
 
 ### Around the app
 
 | Feature | What it does |
 |---|---|
-| [Home](docs/features/home.md) | The carousel of the four AI tools, five round tool shortcuts, the Recent edits strip, and the floating tab bar with its Camera button. |
-| [Settings: theme mode, theme colour and text size](docs/features/settings-and-theme.md) | A menu of three settings, each on its own screen: light, dark or system; Kanso blue, wallpaper colours (Android 12+) or an exact custom colour; Kanso's own text size (the phone's font size is ignored). Applied at once and kept across restarts. |
-| [Launcher icon](docs/features/launcher-icon.md) | An enso ring around a lens: in Google's four colours on white for Kanso blue, in white on the closest of eight other background colours for any other theme colour. |
+| [Home](docs/features/home.md) | A carousel of the four AI tools, five round tool shortcuts, the Recent edits strip and a floating tab bar with its Camera button. |
+| [Settings](docs/features/settings-and-theme.md) | Theme mode (light, dark, system), theme colour (Kanso blue, wallpaper on Android 12+, or any custom colour from an HSV picker) and Kanso's own text size. Applied at once and kept across restarts. |
+| [Launcher icon](docs/features/launcher-icon.md) | An enso ring around a lens, in the colour closest to the chosen theme colour. |
 
 ---
 
-## Editing features
+## 2. Editing features at a glance
 
-The real state of each editing feature, as the code is. "Works" means the code path is complete
-from the control to the saved file; none of them has yet been checked on the owner's Galaxy A13.
+"Works" means the path is complete in code from the control to the saved file and covered by the
+JVM tests. None of these has been checked on the owner's Galaxy A13.
 
 | Feature | State | Notes |
 |---|---|---|
-| Edit: Crop | Works | Cropper from `core/imagecrop` on the original photo: handles, drag, pinch; Free or a fixed shape (locked); one finished gesture is one Undo step. |
+| Edit: Crop | Works | `core/imagecrop`'s cropper on the original photo: handles, drag, pinch; Free or a locked shape. One finished gesture is one Undo step. |
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
-| Edit: Adjust | Works | Brightness, contrast, saturation, warmth, as four icon-over-title tiles over one slider for the chosen tile (the chosen one is kept in `ToolUiState.adjustSlider`, so reopening Adjust shows it again); the photo follows the finger live, and a slider stays where it is let go. |
-| Edit: Filters | Works | None or one of seven filters, with an intensity; choosing a filter replaces the one before. Previewed on a 640 px copy. |
-| Edit: Stickers | Works | The fifth tool (decision record: [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md)); none of it has been checked on the owner's Galaxy A13. Its sheet (tabs Food 17, Mood 17, Quote 6, Emoji 20; 60 bundled pictures; a cross and a tick) adds a sticker at the middle of the picture you see, selected, one Undo step per tap, at most 20 (a 21st tap shows "A photo can hold 20 stickers at most"). The cross, or system Back, throws the sheet's changes away; the tick keeps them. The stickers are drawn on the photo on screen and, while the sheet is open, can be selected by putting a finger on one (frame with four corner buttons: delete, duplicate, mirror, and a handle that resizes and turns), dragged with one finger, pinched and twisted with two; each add, delete, duplicate, mirror and whole gesture is one Undo step. Done draws the stickers into the saved photo (first step of `EditProcessor`), so the crop, turns, flips, filter and sliders apply to them. The live preview shows them with the filter and the sliders, except the sticker under your finger, which shows the sliders but no filter until you let go; the cropper shows them; Compare shows the photo without them. |
-| Edit: Undo and Compare | Works | Undo is an icon over its title in the top bar beside Done; Compare is pinned at the right of the tool row, behind a divider. Undo goes back one action at a time (no redo); Compare shows the original while it is on and disables the row, the sheet, the cropper and Undo (not Done). While the Stickers sheet is open it takes the place of the row, Compare included, so Compare is out of reach until the sheet closes; Undo stays in the top bar. |
+| Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
+| Edit: Filters | Works | None or one of seven filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
+| Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
+| Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, three alignments, wrapping lines. Each text is a **layer**. |
+| Edit: Layers (stickers and text) | Works | Up to 20 in total. Select by touch (from any sheet but Crop), move with one finger, pinch and twist with two, resize and turn with the corner handle; size (1–100) and opacity (10–100%) sliders in both sheets; a selected layer comes to the front. Drawn into the photo before the crop, so crop, turns, flips, filter and sliders all act on it ([ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md), [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)). |
+| Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
 | Retouch | Works | Face landmarks plus OpenCV bilateral smoothing, with a strength slider. |
 | Artistic | Works | Four styles from the Inception v3 style-transfer models, with a strength slider. |
-| Done and Result (Share, Save, Go home) | Works | Done hands the picture to Result; Save is the only gallery write. |
+| Done and Result | Works | Done hands the picture to Result; Save is the only gallery write. |
 
-The old Edit panel is gone since Run 9: sliders no longer return to the middle after each change,
-the free crop no longer uses two Width and Height sliders, and filters no longer stack.
+**Known limits.**
 
-## How each editing feature works
+- The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28)
+  Crop to Stickers and Compare are in view and Text is hidden past the right edge until the row is
+  swiped left. This replaces the old rule
+  that every tool fits without scrolling (DoD 2), which held for five tools.
+- An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
+  `.jpg` (a known defect, not fixed yet).
 
-Paths are under `app/src/main/java/com/phongkaster/kanso/` unless they start with `core/` or
-`libs/`. Each feature page in [`docs/features/`](docs/features/) has the full detail; Edit is traced
-here end to end, with diagrams on [its page](docs/features/edit.md).
+---
 
-### Edit
+## 3. How each editing feature works
+
+Paths are under `app/src/main/java/com/phongkaster/kanso/` unless they start with `core/`, `libs/`
+or `app/src/main/res/`.
+
+### 3.1 The Edit screen
 
 1. **Screen and ViewModel.** `navigation/KansoNavHost.kt` shows the `ToolPhoto(tool, photoUri)` key
-   (`navigation/ToolPhoto.kt`) with `ui/tool/ToolScreen.kt` and a `ui/tool/ToolViewModel.kt`, which
-   exposes one
-   `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit layout is
-   `ui/tool/components/editbottombar/EditBottomBar.kt`: the row of tools (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) is the `Scaffold`'s
-   `bottomBar` (`EditBottomBar`), and a tapped tool's sheet appears just above the row, as in Adobe
-   Lightroom; the photo (`EditPhotoArea`) fills the space between the top bar and the bottom bar.
-   The sheet area is one fixed height (136 dp) open or not, so the photo never changes size;
-   with no tool open it shows "Pick a tool to start editing". Every tool fits it: Adjust shows four
-   sub-tool chips and one slider (`ui/tool/AdjustSlider.kt`); very large text scrolls inside it.
-   The sheet is a plain `Surface` cross-faded with `AnimatedContent`, not a `ModalBottomSheet`,
-   so the row of tools, with Compare pinned at its right
-   (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`), stays usable (the Stickers
-   sheet replaces the row while it is open; Undo stays in the top bar). The sheets' controls are
-   `ui/tool/components/toolpanel/editpanel/EditPanel.kt`.
+   with `ui/tool/ToolScreen.kt` and `ui/tool/ToolViewModel.kt`, which exposes one
+   `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit layout is a `Scaffold` whose
+   `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
+   (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
+   so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 136 dp sheet area
+   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust and Filters, which never changes height.
+   The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
+   bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.
+   A **layer sheet** (Stickers or Text) takes the row's place instead and is 320 dp tall, so the
+   photo gets a little shorter while one is open; while the Text keyboard is up it shrinks to the
+   text area and the bar rides on the keyboard (`WindowInsets.ime` in `EditBottomBar`, with
+   `android:windowSoftInputMode="adjustResize"` on `MainActivity`).
 2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
    (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the
    original for the whole visit; the photo's file is never changed.
-3. **The session.** All changes are one immutable `EditSettings`
-   (`data/edit/edit/EditSettings.kt`) inside an `EditSession` (`data/edit/edit/EditSession.kt`)
-   with its undo stack. A chip, turn or flip calls `changeSettings`, a crop shape
-   `chooseCropRatio`, a finished cropper gesture `commitCrop`, a slider `previewSettings` while it
-   moves and `commitSettings` when let go (the whole drag is one Undo step). The cropper,
-   `ui/tool/components/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview`
-   (`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`) and its `CropState`;
-   it shows the decoded photo with the stickers drawn into a copy of it (if copying the photo runs
-   out of memory, the photo without stickers), un-turned,
-   un-flipped and unfiltered, because the crop is kept as
-   fractions of the original and the render crops before it turns. When the last finger lifts, a
-   rectangle that moved by more than a tenth of a percent becomes one `commitCrop`. All of this,
-   and the row and the sheets, runs on the main thread as Compose draws; the only pixels it
-   computes are the sticker bake (step 10): a copy of the photo with each sticker picture drawn on it.
-4. **Live preview.** `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) draws the original on a
+3. **The session.** Every change is one immutable `EditSettings` (`data/edit/edit/EditSettings.kt`)
+   inside an `EditSession` (`data/edit/edit/EditSession.kt`) with its undo stack. `change` is one
+   action (a chip, a turn, a finished crop); `preview` follows a finger or a typing run without an
+   undo entry; `commit` makes the whole run one entry. Undo stores settings, never pixels. The
+   cropper, `ui/tool/component/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview` and shows
+   the original with the layers baked into a copy of it, un-turned and unfiltered, because the crop
+   is kept as fractions of the original.
+4. **Live preview.** `ui/tool/component/photocard/LivePreviewImage.kt` draws the original on a
    Compose `Canvas` every frame: crop, quarter turns, flips, and the four sliders as one
-   `ColorFilter.colorMatrix` from `data/edit/edit/EditColourMatrix.kt`. A filter is the one part
-   computed on the CPU: the ViewModel sends filter changes through a conflated `Channel`, and
-   `data/edit/edit/FilterPreviewRenderer.kt` renders the filter, its intensity and every sticker
-   except the one being touched on a copy of the original at most 640 px, on
-   `Dispatchers.Default`, which the canvas then draws in place of the original. It also renders
-   when there is no filter but there are stickers. The ViewModel asks for it, among other places, from
-   `addSticker`, `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`,
-   `confirmStickers` and `cancelStickers` (also `changeSettings`, `previewSettings`,
-   `chooseCropRatio`, `undo`, `load`, `openTool` and `setComparing`).
-5. **Done.** `ToolViewModel.done` shows a spinner in Done, disables the row, the sheet and the
-   cropper, and renders the whole current settings once from the decoded original (at most twice
-   the screen's longest edge), shrunk to at most 2000 px (`WorkingSize.EDIT` in
-   `data/edit/WorkingSize.kt`), with `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, on
-   the pixels as one `IntArray`: stickers (drawn first, cut by the crop, then turned, flipped,
-   filtered and coloured with the photo; the settings hold up to 20, each add, delete, duplicate,
-   flip or whole drag is one Undo step; the Stickers sheet adds them, see "Stickers" below),
-   crop, quarter turns, flips, the filter (look-ups from
-   `data/edit/edit/FilterLut.kt` and `data/edit/edit/FilterPreset.kt`, images bundled in
-   `libs/imageprocessor.aar` and `libs/editimage.aar`, read from the app's assets with no
-   download), the colour matrix, then every pixel made opaque, giving a new `ARGB_8888` bitmap
-   with `setHasAlpha(false)`. If no Edit control was used yet, there is nothing to render and the
-   decoded original is handed over at once, with the photo's Uri. The picture goes into
-   `data/edit/RenderedPhotoStore.kt` (a Koin single holding one bitmap) and the `Result` key
-   (`navigation/Result.kt`) is pushed above Edit; Back from Result returns to the session intact.
-6. **Result.** `ui/result/ResultViewModel.kt` reads the store once; `ui/result/ResultScreen.kt`
-   offers Share, Save and Go home. **Save** is the only gallery write:
-   `data/photo/MediaStorePhotoSaver.kt`, on `Dispatchers.IO`, writes a new JPEG at quality 95, at
-   the rendered size, named `Kanso_<yyyyMMdd_HHmmss>.jpg` (with `_1`, `_2`, ... added when that
-   name is taken), into `Pictures/Kanso` (an untouched photo is saved from its own file: its bytes
-   copied unchanged, or re-encoded upright as a JPEG when it carries an EXIF turn; a turned photo
-   too large to turn in memory is copied as it is with its tag kept, and Result shows the "kept
-   orientation" message). An untouched photo's save is always named `.jpg` and typed
-   `image/jpeg`, whatever its own format, so an untouched PNG, WebP or HEIC photo copied byte for
-   byte keeps its own format inside a file named `.jpg` (a known defect, not fixed yet). A picture
-   is saved once; the button then reads "Saved". On Android 8.1 and 9 the
-   storage-write permission is asked first. **Share** (`ui/result/SharePhoto.kt`) writes a copy of
-   the picture on screen under the cache's `shared/` folder (JPEG quality 95 for an opaque picture,
-   which every Edit render is), on `Dispatchers.IO`, and sends it through FileProvider with a
-   one-off read grant. **Go home** clears the back stack to Home and ends the session; leaving
-   Result clears the store.
+   `ColorFilter.colorMatrix` (`data/edit/edit/EditColourMatrix.kt`). The CPU part is
+   `data/edit/edit/FilterPreviewRenderer.kt`: the filter, its intensity and every layer except the
+   one under a finger, rendered with the real `EditProcessor` on a copy of the original at most
+   640 px (`PREVIEW_EDGE`), on `Dispatchers.Default`. The ViewModel sends requests through a
+   conflated `Channel`, so only the newest one is rendered, and skips a request equal to the last.
+5. **Done.** `ToolViewModel.done` shows a spinner in Done and renders the current settings once
+   from the decoded original, shrunk to at most 2000 px (`WorkingSize.EDIT`), with
+   `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, in this order: **layers**, crop,
+   quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar` and
+   `libs/editimage.aar`, read from the assets), colour matrix, then every pixel made opaque. If no
+   Edit control was ever used, the decoded original is handed over unchanged with its Uri. The
+   picture goes into `data/edit/RenderedPhotoStore.kt` and the `Result` key is pushed above Edit;
+   Back from Result returns to the session intact.
+6. **Result.** `ui/result/ResultScreen.kt` offers Share, Save and Go home. Save
+   (`data/photo/MediaStorePhotoSaver.kt`, `Dispatchers.IO`) writes a new JPEG at quality 95 named
+   `Kanso_<yyyyMMdd_HHmmss>.jpg` into `Pictures/Kanso`. Share (`ui/result/SharePhoto.kt`) writes a
+   copy under the cache's `shared/` folder and sends it through FileProvider.
 7. **On failure.** A Done render that runs out of memory ("This photo is too large to edit on this
-   phone...") or fails in any other way, such as a filter image that cannot be read ("Something
-   went wrong and the edit was not made..."), shows its message at the top of the photo card, hands nothing over and keeps every setting and
-   Undo step. The failure stays in the state until a tap on the message or the next Done
-   (changing a setting, Undo and closing a sheet leave it in place). With the Crop sheet open the
-   cropper replaces the photo card, so at first no message is visible (the spinner stops and Done
-   can be tapped again); the message appears as soon as the photo card is shown again, when the
-   Crop sheet is closed, or at once when Compare is turned on (Compare shows the photo card in
-   place of the cropper). A failed filter preview silently leaves
-   `filterPreview` empty: the card draws the original photo, with no filter and no resting
-   stickers on screen (Done's saved result is unaffected). A photo that cannot be decoded shows "This photo cannot be opened. Go
-   back and pick another one." A failed Save says "The photo could not be saved. Try again."; a
-   refused storage permission says nothing was saved. After a process kill, Result shows "Nothing
-   to show" and Edit reopens on the photo with no changes (the session lived only in memory).
+   phone…") or fails otherwise shows its message at the top of the photo card, hands nothing over
+   and keeps every setting and Undo step. A failed filter preview leaves the preview empty: the card
+   draws the original without the filter or the resting layers; Done is unaffected. After a process
+   kill, Result shows "Nothing to show" and Edit reopens with no changes.
 
-### Edit: Stickers
+### 3.2 Layers: what stickers and text share
 
-1. **Screen.** The row has five tools (Crop, Rotate, Adjust, Filters, Stickers). Tapping Stickers
-   (`ToolViewModel.openTool`) opens a sheet that takes the row's place in `EditBottomBar`
-   (`ui/tool/components/editbottombar/EditBottomBar.kt`), as tall as the row plus the fixed sheet
-   area, so the photo keeps its size; none of the five entries is on screen while it is open.
-   `ui/tool/ToolScreen.kt` fills the sheet with `EditPanel`
-   (`ui/tool/components/toolpanel/editpanel/EditPanel.kt`), which draws `StickersPanel`
-   (`ui/tool/components/toolpanel/editpanel/stickerspanel/StickersPanel.kt`): a top bar with a cross
-   and a tick (`StickersSheetTopBar.kt`), a `LazyRow` of category chips (`StickerCategoryChips.kt`)
-   and a three-column `LazyVerticalGrid` of tiles (`StickerTile.kt`). Opening it takes a snapshot of
-   the whole session (settings and Undo steps) in `ToolViewModel`.
-2. **The list.** `data/edit/edit/StickerCatalog.kt` lists 60 bundled pictures, each an explicit
-   `R.drawable.img_sticker_*` webp in `app/src/main/res/drawable/`: Food 17, Mood 17, Quote 6,
-   Emoji 20 (`StickerCategory.kt`, `CatalogSticker.kt`). Nothing is downloaded.
-3. **Adding.** A tile tap calls `ToolViewModel.addSticker`, on the main thread. It uses
-   `data/edit/edit/StickerMapping.kt` to turn the middle of the picture you SEE (after the crop,
-   quarter turns and flips) into fractions of the original photo, and `EditSession.addSticker`
-   puts a `Sticker` there (a third of the shown width, upright, key from a counter) on top of the
-   others: one Undo step, and the new sticker is `selectedStickerKey`. At 20 stickers nothing
-   changes and `stickerLimitShown` makes `StickerLimitMessage`
-   (`ui/tool/components/StickerLimitMessage.kt`) show "A photo can hold 20 stickers at most"
-   (`stickers_limit_message` in `res/values/strings_stickers.xml`) for about 2.5 seconds. Taps are
-   ignored while Compare is on or Done renders.
-4. **Keep or throw away.** The tick (`confirmStickers`) keeps everything and closes the sheet. The cross and the system Back (`cancelStickers`,
-   reached by `onBackPressed`) put the session back to the snapshot, settings and Undo steps, so
-   Undo is as it was, and clear the selection. While Compare is on or Done renders, the tick, the
-   cross and Back do nothing (Back is consumed, so the screen stays): Done draws the stickers as
-   they were when it was tapped. Undoing the step that added the selected sticker clears the
-   selection.
-5. **Drawing.** Done draws the saved photo's stickers: `data/edit/edit/EditProcessor.kt` (first step,
-   `Dispatchers.Default`) decodes each picture with `data/edit/edit/DrawableStickerPictures.kt`
-   (`BitmapFactory`, `inSampleSize`, nothing cached) and blends it into the cropped pixels, so the
-   saved JPEG (quality 95, `Pictures/Kanso`) holds them. The one recipe from settings to processor,
-   `editProcessorFor(context)` in `ui/tool/EditProcessorFactory.kt`, is used by the sheets, the
-   sticker taps and Done, and passed through the cropper to `commitCrop`. The cropper draws its own
-   stickers with a `DrawableStickerPictures`, so a sticker never disappears in one of them.
-6. **On the photo.** `PhotoCard.kt` puts a `StickerOverlay`
-   (`ui/tool/components/photocard/stickeroverlay/StickerOverlay.kt`) over the live picture, inside
-   the same box (frame, buttons and touches; the pictures come from the live preview, see 9), so
-   stickers show with any tool open, but not while Compare is on. A newer sticker
-   lies on top of an older one. Touches work only while the Stickers sheet is open, Compare is off
-   and Done is not running (`ToolViewModel.stickerEditingOpen`); otherwise the stickers are only
-   drawn. One handler (`StickerGestures.kt`, raw pointer input on the main thread) finds the
-   topmost sticker under the finger on its turned rectangle: a finger put down on it calls
-   `selectSticker` (so a drag selects too), a touch on empty photo selects none. One finger drags the sticker by the finger's move; two fingers
-   scale it by the ratio of their distance and turn it by the change of their angle, with no
-   damping (during the gesture, width kept between 5 and 100 percent of the shown width, `StickerGeometry.kt`; a later tighter crop can push it past 100). Each
-   move calls `previewStickers`, which shows the new list at once and makes no Undo entry; the
-   last finger up calls `commitSettings`, so a whole drag or pinch is one Undo step.
-7. **The frame.** The selected sticker gets `StickerFrame.kt`: an outline that turns with it and
-   four corner buttons (`StickerCornerButton.kt`): top-left deletes (`deleteSticker`, nothing
-   selected afterwards), top-right duplicates (`duplicateSticker`: the copy sits 4 percent of the
-   shown width to the right and down as the person sees it, and is selected; at 20 the limit
-   message shows), bottom-left mirrors (`flipSticker`), bottom-right is a handle that resizes and
-   turns the sticker about its centre together, keeping its shape; a whole handle pull is one
-   Undo step. Delete, duplicate and mirror are one Undo step each; selecting is not.
-8. **Selection.** It lives in `ToolUiState.selectedStickerKey`, not in the edit settings. It is
-   pruned in `publishSession` whenever its sticker is gone (Undo, delete), and closing the sheet
-   by the tick or the cross selects none.
-9. **Filter and sliders on stickers, live.** The overlay no longer draws sticker pictures (it keeps
-   the frame, corner buttons and touch areas). Instead the small preview copy carries them:
-   `FilterPreviewRenderer.render(requested)`
-   (`data/edit/edit/FilterPreviewRenderer.kt`); `ToolViewModel.requestPreview` first leaves the
-   touched sticker out of the settings it passes, so the renderer draws every other sticker into the
-   small copy before the filter, so the filter and Intensity act on them; it renders even with no
-   filter when stickers exist, and gives nothing when there is no filter and nothing to draw.
-   `ToolViewModel` keys the preview request on filter, intensity and the untouched stickers.
-   The first `previewStickers` that changes a sticker sets `ToolUiState.touchedStickerKey`; that
-   sticker is left out of the small copy and `LivePreviewImage`
-   (`ui/tool/components/photocard/LivePreviewImage.kt`) draws it inside the same crop, turn and
-   flip, clipped to the photo, with the colour sliders' matrix but no filter, so it follows the
-   finger. `commitSettings` (finger up), the tick or cross, `openTool` and `setComparing` clear the key
-   (`publishSession` clears it only when that sticker is gone) and
-   the sticker joins the filtered copy: one small re-render at the start of a gesture and one at
-   its end, none during the drag. The cropper (`ui/tool/components/EditCropper.kt`,
-   `withStickersDrawn`) bakes the stickers into a copy of the original photo with the same
-   mirror, turn and scale as `EditProcessor`, so they show while you crop. Compare shows the
-   untouched photo with no stickers.
-10. **Order, cost, input, output, failure.** Why stickers go first is in
-    [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md). The accepted cost: while a
-    finger moves a sticker, that one sticker shows no filter, because a filter is computed on a
-    640 px copy and cannot follow a finger; it joins the filtered copy on finger up. Done and
-    the preview can also differ slightly in detail (640 px against up to 2000 px). Input: the
-    original photo, shrunk to at most 2000 px, and the settings' `Sticker` list (picture id,
-    centre, width, turn and mirror, as fractions of the original photo). Output: one opaque
-    `ARGB_8888` bitmap, saved by Result as a JPEG at quality 95 in `Pictures/Kanso`. Threading:
-    Done's render on `Dispatchers.Default` (each picture asked for at no more than the photo's
-    longest edge, though the decoded bitmap can be wider because the decoder picks a
-    power-of-two sample size; blended in through one bitmap of the visible part of the sticker,
-    so an over-sized sticker cannot run the phone out of memory), the small preview copy on
-    `Dispatchers.Default`, everything else (panel, gestures, selection) on the main thread,
-    including the decode of the touched sticker's picture (`PhotoCard.kt`) and the cropper's
-    sticker bake (`EditCropper.kt`), which run inside composition. A
-    picture that cannot be decoded (including running out of memory while decoding that one
-    picture), or a sticker with a non-finite number, is skipped in Done without an error; running
-    out of memory elsewhere in the render gives the usual "too large to edit" message and
-    keeps every setting and Undo step. The 20-sticker limit is `EditSettings.MAX_STICKERS`.
-    The pictures are copies of the ones in `reference/pinity-stickers/res/drawable/`; none is
-    downloaded.
+A **layer** is anything placed on the photo: a catalogue sticker or a typed text. Both kinds share
+one model, one list and every piece of machinery below; only how their pixels are made differs
+([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)).
 
-### Remove background, Enhance, Retouch and Artistic
+1. **The model.** `data/edit/edit/Layer.kt`: a key, a `LayerContent`, a centre, a width, a turn in
+   degrees, a mirror flag and an opacity (default 1, never below `Layer.MIN_OPACITY` = 0.1). The
+   centre and width are fractions of the **original** photo, before any crop, turn or flip, so a
+   layer belongs to the photo. `LayerContent` (`data/edit/edit/LayerContent.kt`) is a sealed
+   interface with two kinds: `Picture(pictureId)` and `Text(text, colorArgb, font, alignment,
+   wrapEms)`. `EditSettings.layers` holds them oldest first, at most `EditSettings.MAX_LAYERS` = 20
+   in total; a 21st add shows "A photo can hold 20 stickers and texts at most" for 2.5 s
+   (`ui/tool/component/StickerLimitMessage.kt`).
+2. **One source of pixels.** Everything that draws a layer asks `LayerPictures.picture(content,
+   widthPx)` (`data/edit/edit/LayerPictures.kt`) for a bitmap about that wide. The app's
+   implementation, `data/edit/edit/AppLayerPictures.kt`, decodes a sticker's drawable with
+   `BitmapFactory` and `inSampleSize`, or draws a text with `TextLayerLayout` (see 3.4). The one
+   recipe from settings to processor is `editProcessorFor(context)` in
+   `ui/tool/model/EditProcessorFactory.kt`, shared by the sheets, the preview renderer, the cropper
+   and Done.
+3. **On the photo.** `ui/tool/component/photocard/PhotoCard.kt` lays a `LayerOverlay`
+   (`photocard/layeroverlay/LayerOverlay.kt`) over the live picture. It draws no pixels of its own
+   (they come from the preview), only one invisible node per layer at its place (`LayerPlace.kt`),
+   the selected layer's frame, and, for a text with no letters yet, a faint "Your text". Its shape
+   per layer (height over width) comes from `rememberLayerAspect` (`LayerImage.kt`). The mapping
+   between the shown picture and the original's fractions is `data/edit/edit/LayerMapping.kt`,
+   which knows the crop, turns and flips; the geometry is plain functions in `LayerGeometry.kt`.
+4. **Touch.** One handler on the whole overlay (`LayerGestures.kt`, raw pointer input on the main
+   thread) finds the topmost layer under the finger on its turned rectangle. Layers answer touches
+   with any sheet open except Crop (the cropper replaces the photo then), or with none, while
+   Compare is off and Done is idle. Touching a layer selects it (`ToolViewModel.selectLayer`),
+   **brings it to the front** of the list, and opens the sheet of its kind if that sheet is not
+   open; the sheet it leaves keeps its changes, like its ✓. One finger drags; two fingers scale by
+   the ratio of their distance and turn by the change of their angle (the width kept between 5 and
+   100 percent of the shown width). Each move calls `previewLayers` (shown at once, no undo entry);
+   the last finger up calls `commitSettings`, so a whole gesture, the move to the front included,
+   is one Undo step.
+5. **The frame.** `LayerFrame.kt` draws an outline that turns with the layer and four corner
+   buttons (`LayerCornerButton.kt`), in the same places on both kinds: top-left **✕ delete**,
+   bottom-left **⧉ duplicate** (the copy sits 4 percent of the shown width right and down, and is
+   selected), bottom-right **⤡ resize and turn** (a whole pull is one Undo step), and top-right the
+   kind's own button: **⇋ mirror** for a sticker, **✏️ edit** (open the keyboard) for a text.
+6. **Sliders.** Both sheets show `LayerSliders` (`ui/tool/component/toolpanel/editpanel/LayerSliders.kt`)
+   under their top bar: **Size** 1–100 and **Opacity** 10–100%, greyed out while nothing is
+   selected. `data/edit/edit/LayerSize.kt` turns the size number into a width: for a sticker it is
+   the width in percent of the photo's width; for a text it is the letter height, from 1 percent
+   (size 1) to 50 percent (size 100) of the photo's height. A pinch changes the same width, so the
+   slider follows the fingers. A slider drag is previewed and becomes one Undo step on release.
+7. **The sheet's ✕ and ✓.** Opening a layer sheet takes a snapshot of the whole session (settings
+   and Undo steps). ✓ (`confirmLayers`), closing the sheet any other way, or switching to the other
+   layer sheet keeps everything. ✕ and the system Back (`cancelLayers`) put the snapshot back.
+8. **Drawing into the photo.** `EditProcessor.drawLayers` runs first in Done's render. For each
+   layer it asks for its picture at no more than the photo's longest edge, then draws it with a
+   `Matrix` (scale, mirror, turn, move) into a bitmap only as big as the visible part of the layer,
+   with the layer's opacity as the paint's alpha, and blends that into the cropped pixels one row at
+   a time. So the crop cuts a layer, the turns and flips carry it, and the filter and sliders colour
+   it. A layer whose picture cannot be made, or whose numbers are not finite, is skipped without an
+   error.
+9. **The cost, accepted in ADR-004.** While a finger moves a layer, that layer is drawn by
+   `LivePreviewImage` itself (with the sliders and its opacity, but no filter) so it can follow the
+   finger; it joins the filtered copy when the finger lifts. The preview and Done can differ
+   slightly in detail (640 px against up to 2000 px).
+
+### 3.3 Stickers
+
+1. **Screen.** Tapping Stickers (`ToolViewModel.openTool`) opens its sheet in place of the row.
+   `ToolScreen.kt` fills it with `EditPanel`, which draws
+   `ui/tool/component/toolpanel/editpanel/stickerspanel/StickersPanel.kt`: the shared top bar
+   (`editpanel/LayerSheetTopBar.kt`), the size and opacity sliders, a row of category chips
+   (`StickerCategoryChips.kt`) and a three-column `LazyVerticalGrid` of tiles (`StickerTile.kt`).
+2. **The catalogue.** `data/edit/edit/StickerCatalog.kt` lists 60 bundled pictures, each an explicit
+   `R.drawable.img_sticker_*` webp: Food 17, Mood 17, Quote 6, Emoji 20. Nothing is downloaded.
+3. **Adding.** A tile tap calls `ToolViewModel.addSticker` on the main thread: `LayerMapping`
+   turns the middle of the picture you see into fractions of the original, and
+   `EditSession.addLayer` puts a `Picture` layer there (a third of the shown width, upright), on
+   top, selected: one Undo step. Taps are ignored while Compare is on or Done renders.
+4. **Mirror.** The frame's top-right button calls `flipLayer`: one Undo step.
+5. **Input and output.** Input: the original photo shrunk to at most 2000 px and the
+   `Picture` layers (picture id, centre, width, turn, mirror, opacity). Each picture is decoded at no
+   more than the photo's longest edge (`AppLayerPictures`, nothing cached). Output: the saved JPEG at
+   quality 95 in `Pictures/Kanso`.
+
+### 3.4 Text
+
+1. **Screen.** Text is the sixth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
+   it opens the Text sheet in place of the row; `ToolScreen.kt` fills it with
+   `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`, from top to bottom: the shared
+   top bar (✕, "Text", ✓); the text area with its alignment button (`TextInputRow.kt`); the font row
+   (`TextFontRow.kt`); the colour row (`TextColourRow.kt`); the size and opacity sliders.
+2. **A new text.** Opening the sheet from the row with no text selected calls
+   `ToolViewModel.startText`: a new, empty `Text` layer in the middle of the picture you see, white,
+   in the phone's font, centred, at size 20, selected, with the keyboard asked for
+   (`ToolUiState.textEditing`). It is only *previewed*: until it has letters it is not an action.
+   Typing with no text selected starts one the same way. At 20 layers nothing is added and the limit
+   message shows.
+3. **Typing.** The text area keeps its own `TextFieldValue` (so the cursor never jumps) and hands
+   each new string to `typeText`, which cuts it at 200 characters (`LayerContent.Text.MAX_LENGTH`),
+   keeps the letter size (the width scales with the measured block's width) and previews it. While
+   the keyboard is up, the sheet shows only the text area; the font row, colour row and sliders come
+   back when it goes down. Enter makes a new line.
+4. **One undo step per typing run.** The run is settled (`settleText`) when the keyboard closes,
+   another layer is touched, the sheet closes or switches, or Undo is tapped: the adding and all
+   the letters become **one** Undo step. A text that is still empty (no letters, or only spaces) is
+   taken off the photo instead, leaving no Undo step.
+5. **Fonts.** "None" is the phone's default typeface (no file). Five fonts are bundled in
+   `app/src/main/res/font/` (about 772 KB in total), each checked against its character map to draw
+   every Vietnamese letter (ă, â, đ, ê, ô, ơ, ư with all five tone marks): Be Vietnam Pro Bold,
+   Playfair Display, Dancing Script Bold, Patrick Hand and Space Mono (`data/edit/edit/TextFont.kt`).
+   Each chip shows "Aa" in its own font. A chip is one Undo step and keeps the letter size.
+6. **Colours.** Twelve ready circles (`ui/tool/model/TextSwatch.kt`: white, black, red, orange,
+   yellow, green, teal, blue, purple, pink, brown, grey), one Undo step each, and a rainbow circle
+   that swaps the sheet's rows for `TextColourPane.kt`: the same HSV picker as Settings → Theme
+   colour (`ui/component/CustomColourPicker.kt`, from `core/colorpicker`, transparency bar hidden).
+   The text changes colour live while you drag; the pane's back arrow makes the whole drag one Undo
+   step. A colour is stored as an opaque ARGB number.
+7. **Alignment.** The button beside the text area cycles centre → left → right
+   (`TextAlignment.next()`), one Undo step each.
+8. **Layout and drawing.** `data/edit/edit/TextLayerLayout.kt` lays the words out with Android's
+   `StaticLayout` at a fixed reference letter height (100 px) and the text's wrap width, then scales
+   the result to the width asked for, with a margin of 0.15 letter heights so swashes and accents are
+   never cut. The wrap width (`wrapEms`) is set once, when the text is added, so that at size 20 a
+   line wraps at 80 percent of the photo's width (`LayerSize.textWrapEms`); because it is counted in
+   letter heights, a bigger or smaller text keeps the same lines and the same shape, and a pinch
+   scales it like a picture. The alignment never changes the block's size. A render never exceeds
+   about 4 million pixels (a larger one is drawn smaller and stretched by the caller) and returns
+   nothing on running out of memory. Measurements are cached (32 entries); typefaces are loaded once
+   with `ResourcesCompat.getFont`, falling back to the default typeface if a font cannot be loaded.
+9. **Threads.** Measuring runs on the main thread (ViewModel and overlay); the text's pixels are made
+   on `Dispatchers.Default` by the preview renderer and Done, and on the main thread for the text
+   under a finger (`PhotoCard.kt`, 1024 px wide) and the cropper's bake.
+10. **Input and output.** Input: the words, colour, font, alignment and wrap width of each `Text`
+    layer, plus the layer's place, width, turn and opacity. Output: the letters drawn into the saved
+    JPEG at quality 95 in `Pictures/Kanso`, filtered and coloured with the photo like any layer. The
+    "Your text" placeholder is drawn only by the overlay and never reaches the saved photo.
+
+### 3.5 Remove background, Enhance, Retouch and Artistic
 
 These four share one path in `ui/tool/ToolViewModel.kt`: `apply` shrinks the photo to the tool's
 working size (`data/edit/WorkingSize.kt`: Remove background and Retouch 2000 px, Enhance 512 px,
 Artistic 1024 px) and runs its `ToolProcessor` on `Dispatchers.Default`; the result becomes the
-shown photo. Each tool's processor is the one
-`di/AppModule.kt` puts in `data/edit/ProcessorRegistry.kt`. Remove background and Enhance run on
-the photo as shown; Retouch and Artistic always run from the original with the strength (and
-style) set, so their results do not stack. Undo: a run on the shown photo (Remove background,
-Enhance) keeps the photo from before it for Undo. A Retouch or Artistic run keeps the photo from
-before it only when the last result did not also come from such a run from the original; a repeat
-run (another strength or style) replaces that result without an Undo step of its own, so Undo goes
-back past the whole series to what was shown before it. A failure shows a message on the
-photo card and leaves the photo as it was. Done hands the shown photo to Result at once.
+shown photo. Remove background and Enhance run on the photo as shown; Retouch and Artistic always run
+from the original with the chosen strength (and style), so their results never stack, and a repeat
+run replaces the last result without an Undo step of its own. A failure shows a message on the photo
+card and leaves the photo as it was. Done hands the shown photo to Result at once.
 
-- **Remove background**: `data/edit/cutout/CutoutProcessor.kt`, calling
-  `data/edit/cutout/EngineSegmenter.kt`; saved as PNG with transparency.
-  [Details](docs/features/remove-background.md).
-- **Enhance**: `data/edit/enhance/EnhanceProcessor.kt`, calling
-  `data/edit/enhance/EngineUpscaler.kt` and `data/edit/enhance/AutoLighting.kt`; saved as JPEG.
-  [Details](docs/features/enhance.md).
-- **Retouch**: `data/edit/retouch/RetouchProcessor.kt`, calling
-  `data/edit/retouch/EngineFaceFinder.kt` and `data/edit/retouch/EngineSkinSmoother.kt`; saved as
-  JPEG. [Details](docs/features/retouch.md).
-- **Artistic**: `data/edit/artistic/ArtisticProcessor.kt`, calling
-  `data/edit/artistic/EngineStylizer.kt`; saved as JPEG. [Details](docs/features/artistic.md).
+| Tool | Processor | Engine wrapper | Details |
+|---|---|---|---|
+| Remove background | `data/edit/cutout/CutoutProcessor.kt` | `data/edit/cutout/EngineSegmenter.kt` | [page](docs/features/remove-background.md) |
+| Enhance | `data/edit/enhance/EnhanceProcessor.kt` | `EngineUpscaler.kt`, `AutoLighting.kt` | [page](docs/features/enhance.md) |
+| Retouch | `data/edit/retouch/RetouchProcessor.kt` | `EngineFaceFinder.kt`, `EngineSkinSmoother.kt` | [page](docs/features/retouch.md) |
+| Artistic | `data/edit/artistic/ArtisticProcessor.kt` | `EngineStylizer.kt` | [page](docs/features/artistic.md) |
 
 ---
 
-## Architecture
+## 4. Architecture
 
 Paths are under `app/src/main/java/com/phongkaster/kanso/`.
 
-- **One activity** (`MainActivity`) in a task of its own, drawn entirely with Jetpack Compose. The
+- **One activity** (`MainActivity`), drawn entirely with Jetpack Compose, in a task of its own. The
   launcher's entries open `LauncherActivity`, which starts `MainActivity` and closes, so switching
-  the icon colour never closes the app (see [Launcher icon](docs/features/launcher-icon.md)).
-  `KansoApplication` starts Koin with `di/AppModule.kt`.
+  the icon colour never closes the app. `KansoApplication` starts Koin with `di/AppModule.kt`.
 - **Navigation 3** (`navigation/KansoNavHost.kt`): one saved back stack of `@Serializable` keys:
-  `Home`, `MyEdits`, `Settings` (the tabs), `ThemeModeSettings`, `ThemeColourSettings`, `TextSizeSettings` (the three setting screens), `Gallery(tool)`, `Camera(tool)`, `ToolPhoto(tool, uri)`,
-  `Result`, `EditedPhoto(uri)`. Each entry gets its own `ViewModelStore`, so a ViewModel
-  survives rotation and is cleared when its screen is popped. The tabs live in `KansoTabShell`,
-  under a floating tab bar.
-- **State:** every screen has one ViewModel exposing one immutable `UiState` as a `StateFlow` (the
-  pattern is explained on `ui/home/HomeUiState.kt`); one-off events use a `Channel`. Each screen is
-  split into a stateful composable and a stateless `…Content` composable with light and dark
-  previews.
-- **Editing:** every tool runs through one interface, `data/edit/ToolProcessor.kt`. Each engine
-  call sits in one wrapper file (`Engine*.kt`) behind a small interface, so everything else is
-  tested on the computer with fakes; the engine is native code and cannot load there.
-- **Data:** `PhotoSource` and `SavedPhotoSource` (MediaStore reads), `PhotoLoader` (decode),
-  `PhotoSaver` (write), `RenderedPhotoStore` (the hand-off from Done to Result), `SettingsRepository` (Preferences DataStore at
-  `files/datastore/settings.preferences_pb`).
-- **UI:** Jetpack Compose with Material 3 1.5 (Expressive components and motion), Coil for
-  thumbnails, MaterialKolor for colour schemes built from a seed colour.
-- **SDK levels:** `minSdk 27`, `targetSdk 36`, `compileSdk 37`, NDK `27.0.12077973`. Debug builds
-  keep the `x86_64`, `arm64-v8a` and `armeabi-v7a` ABIs.
+  `Home`, `MyEdits`, `Settings` (the tabs), `ThemeModeSettings`, `ThemeColourSettings`,
+  `TextSizeSettings`, `Gallery(tool)`, `Camera(tool)`, `ToolPhoto(tool, uri)`, `Result` and
+  `EditedPhoto(uri)`. Each entry gets its own `ViewModelStore`.
+- **State.** Every screen has one ViewModel exposing one immutable `UiState` as a `StateFlow`;
+  one-off events use a `Channel`. Each screen is a stateful composable plus a stateless `…Content`
+  composable with light and dark previews. A screen's package holds the screen file, its ViewModel
+  and UiState, a `component/` folder for every composable it draws, and a `model/` folder for its
+  own types.
+- **Editing.** Every tool runs through one interface, `data/edit/ToolProcessor.kt`. Each engine call
+  sits in one wrapper file (`Engine*.kt`) behind a small interface, so everything else is tested on
+  the computer with fakes.
+- **Data.** `PhotoSource` and `SavedPhotoSource` (MediaStore reads), `PhotoLoader` (decode),
+  `PhotoSaver` (write), `RenderedPhotoStore` (the hand-off from Done to Result) and
+  `SettingsRepository` (Preferences DataStore).
+- **UI.** Jetpack Compose with Material 3 1.5 (Expressive components and motion), Coil for
+  thumbnails, MaterialKolor for colour schemes from a seed colour.
+- **SDK levels.** `minSdk 27`, `targetSdk 36`, `compileSdk 37`. Debug builds keep the `x86_64`,
+  `arm64-v8a` and `armeabi-v7a` ABIs (the owner's phone is 32-bit).
 
 ### The image engine: what each tool calls
 
-`app/build.gradle.kts` depends on every engine module and on `:opencv`, so all of them, with their
-native libraries and bundled assets, are packed into the APK. Only these files of `app/` call them:
-
-| Tool | Wrapper file in `app/` | Engine class | Model or library (all bundled) |
+| Tool | Wrapper in `app/` | Engine class | Model or library (all bundled) |
 |---|---|---|---|
-| Edit | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), and six curve strips in `filter_materials/map/` (`libs/editimage.aar`): 1977map.png, kelvinMap.png, nashvilleMap.png, waldenMap.png, hudsonMap.png and amaroMap.png |
-| Edit (Crop) | `ui/tool/components/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`, package `com.mr0xf00.easycrop`) | none: Compose drawing and touch handling |
-| Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` (its library ships the model) |
+| Edit (filters) | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`) and six curve strips in `filter_materials/map/` (`libs/editimage.aar`) |
+| Edit (crop) | `ui/tool/component/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`) | none |
+| Edit (text) | `data/edit/edit/TextLayerLayout.kt` | Android `StaticLayout` | five OFL fonts in `app/src/main/res/font/` |
+| Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` |
 | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |
-| Retouch | `data/edit/retouch/EngineFaceFinder.kt` | `DetectFaceLandmarkUC` (with `UnifyPoint` from `core/common`) | `face_landmarker.task` |
-| Retouch | `data/edit/retouch/EngineSkinSmoother.kt` | OpenCV `Imgproc.bilateralFilter` | OpenCV, no model |
-| Artistic | `data/edit/artistic/EngineStylizer.kt` | `StylePredictInceptionV3UC`, `StyleTransferInceptionV3BlendUC` | `image_stylization_inceptionv3_dr_predict.tflite`, `image_stylization_inceptionv3_dr_transfer.tflite` |
+| Retouch | `data/edit/retouch/EngineFaceFinder.kt`, `EngineSkinSmoother.kt` | `DetectFaceLandmarkUC`, OpenCV `Imgproc.bilateralFilter` | `face_landmarker.task` |
+| Artistic | `data/edit/artistic/EngineStylizer.kt` | `StylePredictInceptionV3UC`, `StyleTransferInceptionV3BlendUC` | two Inception v3 stylization `.tflite` models |
 
-Outside editing, `data/media/MediaStorePhotoSource.kt` uses `core/gallery`'s `MediaRepository`,
-and `ui/settings/SettingsScreen.kt` uses `core/colorpicker`'s `HSVColorPicker`. The `.tflite` and
-`.task` models sit in the assets of `libs/localml.aar`, which also holds
-`hifill_inpaint_512_int8.tflite` and `magic_touch.tflite`; those two are packed in the APK but never
-called. The AARs ship no source, so each feature page describes what Kanso passes in and what it
-does with the answer.
+Outside editing, `data/media/MediaStorePhotoSource.kt` uses `core/gallery`'s `MediaRepository`, and
+`ui/component/CustomColourPicker.kt` wraps `core/colorpicker`'s `HSVColorPicker` (used by Settings
+and the Text sheet). `libs/localml.aar` also packs `hifill_inpaint_512_int8.tflite` and
+`magic_touch.tflite`, which are never called.
 
 ---
 
-## Building and testing
+## 5. Privacy and permissions
+
+- **No network.** `INTERNET` and `ACCESS_NETWORK_STATE` are removed from the merged manifest. No
+  model, filter, sticker or font is downloaded.
+- **No ads, no analytics, no accounts.**
+- **Photos.** Kanso reads the phone's photos through MediaStore with the photo permission (partial
+  access on Android 14+ is handled), writes only new files into `Pictures/Kanso` when you tap Save
+  (asking for the storage-write permission on Android 8.1 and 9), and never changes an original.
+- **Camera.** Photos taken in Kanso go to its private storage until you keep and save them.
+- **Sharing.** A shared picture is a copy in the cache's `shared/` folder, sent with a one-off read
+  grant through FileProvider.
+
+---
+
+## 6. Building and testing
 
 Build with Gradle from the repository root:
 
 ```bash
-./gradlew :app:assembleDebug          # build the debug APK
-./gradlew :app:testDebugUnitTest      # JVM tests (Robolectric, Compose UI test)
+./gradlew :app:assembleDebug          # the debug APK
+./gradlew :app:testDebugUnitTest      # JVM tests (Robolectric, Compose UI tests)
 ./gradlew :app:verifyRoborazziDebug   # screenshot tests against the recorded images
 ./gradlew :app:lintDebug              # Android lint
 ```
@@ -385,28 +401,55 @@ All of them together:
 ./gradlew cleanTestDebugUnitTest testDebugUnitTest verifyRoborazziDebug lintDebug assembleDebug --continue
 ```
 
-The tests live in `app/src/test/` (more than 100 test classes, plus 79 recorded
-pictures in `app/src/test/screenshots/`, numbered 1 to 82 with 7, 8 and 9 unused; pictures 69
-to 82 are the tool row with Stickers (69, 70), the Stickers sheet's Food, Mood, Quote and Emoji
-tabs (71 to 78), a selected sticker (79, 80), and stickers under a crop and a filter (81, 82), in
-light and dark, from `StickerScreenshotTest.kt`). They cover the screens, navigation, every tool's
-processor with fakes, saving, Share, the camera (through a fake `CameraController`), settings,
-previews and screenshots. They need no device. The `Engine*.kt` wrappers are native code and are
-only exercised on a device or emulator. Each feature page lists its own tests.
+The tests live in `app/src/test/`: more than 100 test classes and 79 recorded screenshots in
+`app/src/test/screenshots/`. They cover the screens, navigation, every tool's processor with fakes,
+saving, Share, the camera (through a fake `CameraController`), settings, previews and screenshots,
+and need no device. The layer and text work is covered by `StickerFrameTest`, `StickerSelectionTest`,
+`EditProcessorStickerTest`, `LayerSizeTest`, `TextToolTest` (the ViewModel's text rules),
+`TextLayerLayoutTest` (layout, Vietnamese in every font, a text drawn into the photo) and
+`TextSheetTest` (the sheet on the real screen). The `Engine*.kt` wrappers are native code and run
+only on a device or an emulator.
 
 ---
 
-## Where the code comes from
+## 7. Project layout and origins
 
 | Path | What it is |
 |---|---|
-| `app/` | The Kanso app, written by Foreman. |
-| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. Four of them (`editimage`, `imageprocessor`, `localml`, `overlaybrush`) wrap prebuilt libraries and have no source of their own. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, and reads filter images from `core/editimage` and `core/imageprocessor`. The Edit screen's Crop uses `core/imagecrop`'s cropper (handles, drag, pinch; `ui/tool/components/EditCropper.kt`); `core/overlaybrush` is built in but not called. |
-| `libs/` | Those prebuilt libraries (AARs), plus two TensorFlow Lite AARs. `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. No build file references `tensorflow-lite.aar`. |
+| `app/` | The Kanso app, written by [Foreman](https://github.com/Phong-Kaster/Foreman), one goal at a time. |
+| `core/` | The image engine's modules, imported from Retica at commit `9d227a8`. The app calls `core/gallery`, `core/colorpicker` and `core/localml`, uses one type of `core/common`, reads filter images from `core/editimage` and `core/imageprocessor`, and uses `core/imagecrop`'s cropper. `core/overlaybrush` is built in but not called. |
+| `libs/` | Prebuilt engine libraries (AARs) and two TensorFlow Lite AARs; `tensorflow-lite-select-tf-ops.aar` is used by `core/localml`. |
 | `opencv/` | The OpenCV Android SDK module the engine depends on. |
-| `reference/retica-app/` | Retica's original app code, **read-only**: how the engine's use cases are called. It is not built, and nothing in Kanso imports it. |
-| `reference/pinity-stickers/` | Pinity's sticker code (`java/`) and its 60 sticker pictures (`res/drawable/`), **read-only**: what the Stickers tool was ported from. It is not built, and nothing in Kanso imports it; the app's pictures are copies in `app/src/main/res/drawable/`. |
-| `docs/features/` | One page per feature (linked above). |
-| `docs/adr/` | The architecture decisions behind Kanso: [ADR-001](docs/adr/ADR-001-kanso-is-a-material-3-expressive-app-blue-by-default-with-one-editor.md), [ADR-002](docs/adr/ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md), [ADR-003](docs/adr/ADR-003-edit-has-one-session-and-done-opens-a-result-screen.md), [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md). |
+| `reference/` | Retica's original app and Pinity's sticker code, **read-only**: never built or imported. The 60 sticker pictures in `app/src/main/res/drawable/` are copies from `reference/pinity-stickers/`. |
+| `docs/features/` | One page per feature. |
+| `docs/adr/` | The decision records (below). |
+| `CONTEXT.md` | The glossary: the words this code uses and what each one means here. |
 
-The app itself is written by [Foreman](https://github.com/Phong-Kaster/Foreman), one goal at a time.
+---
+
+## 8. Decision records
+
+| Record | Decision |
+|---|---|
+| [ADR-001](docs/adr/ADR-001-kanso-is-a-material-3-expressive-app-blue-by-default-with-one-editor.md) | Kanso is a Material 3 Expressive app, blue by default, with one editor. |
+| [ADR-002](docs/adr/ADR-002-kanso-has-one-screen-per-tool-and-a-floating-tab-bar.md) | One screen per tool and a floating tab bar. |
+| [ADR-003](docs/adr/ADR-003-edit-has-one-session-and-done-opens-a-result-screen.md) | Edit has one session; Done opens a Result screen. |
+| [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md) | A sticker is part of the photo: it is drawn first, so everything else acts on it. |
+| [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md) | Stickers and text are layers: one list, one gesture handler, two kinds of picture. |
+
+---
+
+## 9. Third-party licences
+
+The five bundled fonts are under the SIL Open Font License 1.1; each licence text ships in
+`app/src/main/assets/licenses/fonts/`:
+
+| Font | File | Licence |
+|---|---|---|
+| Be Vietnam Pro Bold | `res/font/be_vietnam_pro_bold.ttf` | `be_vietnam_pro_bold-OFL.txt` |
+| Playfair Display Regular | `res/font/playfair_display_regular.ttf` | `playfair_display_regular-OFL.txt` |
+| Dancing Script Bold | `res/font/dancing_script.ttf` | `dancing_script-OFL.txt` |
+| Patrick Hand Regular | `res/font/patrick_hand_regular.ttf` | `patrick_hand_regular-OFL.txt` |
+| Space Mono Regular | `res/font/space_mono_regular.ttf` | `space_mono_regular-OFL.txt` |
+
+The engine modules, OpenCV and the sticker pictures keep the licences of their own sources.
