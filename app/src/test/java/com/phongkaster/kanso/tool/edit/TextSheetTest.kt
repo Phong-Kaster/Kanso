@@ -12,6 +12,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
+import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.LayerContent
@@ -82,15 +85,25 @@ class TextSheetTest {
         stopKoin()
     }
 
-    /** While the keyboard is asked for, only the text area shows; typing puts the words on the photo. */
+    /**
+     * Bug found on the Galaxy A13: with the keyboard asked for but not on screen, the sheet filled
+     * the whole screen and hid its rows. Now the rows stay until a keyboard really shows, the sheet
+     * is never taller than its 320 dp, the photo stays in sight above it, and typing still puts the
+     * words on the photo. (Robolectric shows no keyboard, which is exactly that case.)
+     */
     @Test
-    fun while_typing_only_the_text_area_shows() {
+    fun without_a_keyboard_on_screen_the_sheet_keeps_its_rows_and_size() {
         val viewModel = openText()
         assertTrue(viewModel.state.value.textEditing)
         compose.onNodeWithTag(TEXT_FIELD_TAG).assertExists()
         listOf(TEXT_FONTS_TAG, TEXT_COLOURS_TAG, LAYER_SIZE_TAG, LAYER_OPACITY_TAG, LAYER_SHEET_CONFIRM_TAG).forEach {
-            compose.onAllNodesWithTag(it).assertCountEquals(0)
+            compose.onNodeWithTag(it).assertExists()
         }
+        val sheet = compose.onNodeWithTag(EDIT_SHEET_TAG).fetchSemanticsNode().boundsInRoot
+        val photo = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
+        val maxSheet = with(compose.density) { 320.dp.toPx() }
+        assertTrue("the sheet is ${sheet.height} px tall, more than 320 dp", sheet.height <= maxSheet + 1f)
+        assertTrue("the photo is hidden (${photo.height} px)", photo.height > maxSheet)
 
         compose.onNodeWithTag(TEXT_FIELD_TAG).performTextInput("Xin chào")
         compose.waitForIdle()

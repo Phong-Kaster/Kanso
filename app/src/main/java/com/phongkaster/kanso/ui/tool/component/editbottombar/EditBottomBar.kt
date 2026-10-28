@@ -2,18 +2,21 @@ package com.phongkaster.kanso.ui.tool.component.editbottombar
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -85,6 +88,7 @@ private val LAYER_SHEET_HEIGHT = 320.dp
  * Compare is on, or Done is rendering, the ViewModel ignores the sheet's Cancel, Confirm and the
  * system Back, so the sheet cannot change what Done is drawing.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EditBottomBar(
     state: ToolUiState,
@@ -114,19 +118,27 @@ fun EditBottomBar(
             val sheetText = stringResource(R.string.edit_layout_sheet)
             val density = LocalDensity.current
             val rowHeight = if (rowHeightPx > 0) with(density) { rowHeightPx.toDp() } else DEFAULT_ROW_HEIGHT
-            val compact = state.openTool == EditTool.TEXT && state.textEditing
+            // Compact only while the keyboard is really on screen: a keyboard that was asked for
+            // but never came (or was hidden by the system) must not leave the sheet without its
+            // rows. Compact means "as tall as the text area": the sheet wraps its content then,
+            // and must never fill the bar's whole height (the screen).
+            val compact = state.openTool == EditTool.TEXT && state.textEditing && WindowInsets.isImeVisible
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
                     .then(
-                        if (compact) Modifier else Modifier.height(maxOf(LAYER_SHEET_HEIGHT, SHEET_AREA_HEIGHT + rowHeight)),
+                        if (compact) {
+                            Modifier.wrapContentHeight()
+                        } else {
+                            Modifier.height(maxOf(LAYER_SHEET_HEIGHT, SHEET_AREA_HEIGHT + rowHeight))
+                        },
                     )
                     .padding(bottom = 8.dp),
             ) {
                 Surface(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .then(if (compact) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                         .testTag(EDIT_SHEET_TAG)
                         .semantics { contentDescription = sheetText },
                     shape = MaterialTheme.shapes.extraLarge,

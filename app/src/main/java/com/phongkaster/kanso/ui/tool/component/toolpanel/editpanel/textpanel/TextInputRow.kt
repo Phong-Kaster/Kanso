@@ -27,6 +27,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -91,13 +92,21 @@ internal fun TextInputRow(
     }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val latestOnEditingChange by rememberUpdatedState(onEditingChange)
     var focused by remember { mutableStateOf(false) }
 
     LaunchedEffect(
         editing,
         block = {
-            if (editing && !focused) focusRequester.requestFocus() else if (!editing && focused) focusManager.clearFocus()
+            if (editing) {
+                // The focus alone does not always bring the keyboard up (a Samsung keyboard may
+                // wait for a tap), so it is asked for as well.
+                if (!focused) focusRequester.requestFocus()
+                keyboard?.show()
+            } else if (focused) {
+                focusManager.clearFocus()
+            }
         },
     )
 

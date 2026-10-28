@@ -4,6 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,7 +49,7 @@ const val TEXT_PANEL_TAG = "text-panel"
  *    rows for the colour picker ([TextColourPane]) until its back arrow is tapped;
  * 5. the size and opacity sliders ([LayerSliders]); [size] is the selected text's size number.
  *
- * **While the keyboard is up** ([editing]) only the text area is shown, so the keyboard and the
+ * **While the keyboard is up** ([editing], and the keyboard really on screen) only the text area is shown, so the keyboard and the
  * sheet leave the photo in sight and the words appear on it as they are typed; the other rows come
  * back when the keyboard goes down.
  *
@@ -58,6 +61,7 @@ const val TEXT_PANEL_TAG = "text-panel"
  * sliders moving and [onSliderDone] their release. The one thing it remembers is whether the
  * colour picker is open, a view of the sheet that no other part of the screen needs.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TextPanel(
     selected: Layer?,
@@ -81,11 +85,14 @@ internal fun TextPanel(
     val text = selected?.content as? LayerContent.Text
     val canEdit = enabled && text != null
     var picking by rememberSaveable { mutableStateOf(false) }
+    // The rows hide only while the keyboard is really on screen, not merely asked for: if it never
+    // comes (or the system hides it), the font row, colours and sliders stay in reach.
+    val keyboardUp = editing && WindowInsets.isImeVisible
     Column(
         modifier = modifier.fillMaxWidth().testTag(TEXT_PANEL_TAG),
         verticalArrangement = Arrangement.spacedBy(4.dp),
         content = {
-            if (picking && !editing && text != null) {
+            if (picking && !keyboardUp && text != null) {
                 TextColourPane(
                     startArgb = text.colorArgb,
                     onColour = onCustomColour,
@@ -97,7 +104,7 @@ internal fun TextPanel(
                 return@Column
             }
             AnimatedVisibility(
-                visible = !editing,
+                visible = !keyboardUp,
                 content = {
                     LayerSheetTopBar(
                         title = stringResource(R.string.text_tool_label),
@@ -120,7 +127,7 @@ internal fun TextPanel(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             AnimatedVisibility(
-                visible = !editing,
+                visible = !keyboardUp,
                 content = {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
