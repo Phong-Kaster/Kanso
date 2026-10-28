@@ -341,16 +341,16 @@ class ThemeFollowTest {
         checkEditor(ThemeMode.Dark, Tool.ENHANCE)
     }
 
-    /** The Retouch screen with a ready photo in light mode. */
+    /** The Beautify screen with a ready photo in light mode. */
     @Test
-    fun tool_screen_retouch_follows_the_light_theme() {
-        checkEditor(ThemeMode.Light, Tool.RETOUCH)
+    fun tool_screen_beautify_follows_the_light_theme() {
+        checkEditor(ThemeMode.Light, Tool.BEAUTIFY)
     }
 
-    /** The Retouch screen with a ready photo in dark mode. */
+    /** The Beautify screen with a ready photo in dark mode. */
     @Test
-    fun tool_screen_retouch_follows_the_dark_theme() {
-        checkEditor(ThemeMode.Dark, Tool.RETOUCH)
+    fun tool_screen_beautify_follows_the_dark_theme() {
+        checkEditor(ThemeMode.Dark, Tool.BEAUTIFY)
     }
 
     /** The Artistic screen with a ready photo in light mode. */
@@ -1199,7 +1199,7 @@ class ThemeFollowTest {
 
         /** Home's two groups of tools, as `HomeViewModel` builds them. */
         val HOME_STATE = HomeUiState(
-            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             shortcutTools = Tool.entries,
         )
 

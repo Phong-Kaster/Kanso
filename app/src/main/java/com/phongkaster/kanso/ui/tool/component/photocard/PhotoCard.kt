@@ -43,7 +43,7 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.component.BlurredBackdrop
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import com.phongkaster.kanso.ui.tool.RETOUCH_NO_FACE_TAG
+import com.phongkaster.kanso.ui.tool.BEAUTIFY_NO_FACE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
@@ -53,6 +53,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.Checkerboard
 import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LayerOverlay
+import com.phongkaster.kanso.ui.tool.model.PhotoZoom
 
 /**
  * The large rounded card holding the photo for [state], full width, with the "Replace" chip
@@ -117,8 +118,11 @@ internal fun PhotoCard(
                 ToolUiState.PhotoState.Loading -> PhotoLoadingIndicator()
                 is ToolUiState.PhotoState.Ready -> {
                     // The edited photo when there is one, else the decoded original; while Compare
-                    // is on, always the original, so the person sees what they started from.
-                    val shown = if (state.comparing) current.bitmap else state.edited ?: current.bitmap
+                    // is on, always the original, so the person sees what they started from. While a
+                    // slider is dragged (a live look), the original, which PhotoView draws through
+                    // the live look on the graphics chip.
+                    val live = state.livePreview.takeIf(predicate = { !state.comparing })
+                    val shown = if (state.comparing || live != null) current.bitmap else state.edited ?: current.bitmap
                     // Compose draws an ImageBitmap; wrapping the Android Bitmap is cheap, and
                     // remember keeps the wrapper between redraws.
                     val image = remember(shown) { shown.asImageBitmap() }
@@ -198,7 +202,9 @@ internal fun PhotoCard(
                             }
                         }
                     } else {
-                        PhotoView(image = image, photoUri = state.photoUri)
+                        // On a face tool, zoom in on the face once it is found (see ToolUiState.faceFocus).
+                        val zoom = state.faceFocus?.let(block = { PhotoZoom.toward(it) }) ?: PhotoZoom.NONE
+                        PhotoView(image = image, photoUri = state.photoUri, zoom = zoom, live = live)
                     }
                 }
                 ToolUiState.PhotoState.Unreadable -> Text(
@@ -221,10 +227,10 @@ internal fun PhotoCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 state.failure?.let { failure ->
-                    // The no-face message also sits in a node of its own, tagged for Retouch, the
+                    // The no-face message also sits in a node of its own, tagged for Beautify, the
                     // one tool that can fail this way; its card keeps the common failure tag.
                     Box(
-                        if (failure == EditFailure.NoFace) Modifier.testTag(RETOUCH_NO_FACE_TAG) else Modifier,
+                        if (failure == EditFailure.NoFace) Modifier.testTag(BEAUTIFY_NO_FACE_TAG) else Modifier,
                     ) {
                         FailureMessage(
                             text = stringResource(failureMessageRes(failure)),
@@ -281,7 +287,7 @@ private fun PhotoCardPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         PhotoCard(
             state = ToolUiState(
-                tool = Tool.RETOUCH,
+                tool = Tool.BEAUTIFY,
                 photoUri = SAMPLE_PHOTO_URI,
                 photo = ToolUiState.PhotoState.Ready(samplePhoto()),
             ),

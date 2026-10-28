@@ -30,8 +30,8 @@ enum class Tool(@StringRes val labelRes: Int, @DrawableRes val iconRes: Int) {
     /** Automatic quality improvement. */
     ENHANCE(R.string.tool_enhance, R.drawable.ic_auto_fix_high),
 
-    /** Face and skin retouching. */
-    RETOUCH(R.string.tool_retouch, R.drawable.ic_face_retouching_natural),
+    /** Face and skin beautifying. */
+    BEAUTIFY(R.string.tool_beautify, R.drawable.ic_face_retouching_natural),
 
     /** Artistic filters and styles. */
     ARTISTIC(R.string.tool_artistic, R.drawable.ic_brush),

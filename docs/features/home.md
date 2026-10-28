@@ -14,9 +14,9 @@ Home is the first screen. In one scrolling column it shows:
 1. the title **Kanso** and the greeting "What will you edit today?";
 2. a **carousel** of four banners, one per AI tool, each with its name, a line about it and a
    **Try now** button: Remove background ("Cut out the subject"), Enhance ("Sharper, brighter
-   photos"), Retouch ("Smooth, natural skin"), Artistic ("Paint it in a new style"), with page dots
+   photos"), Beautify ("Smooth, natural skin"), Artistic ("Paint it in a new style"), with page dots
    under it;
-3. a row of **five round shortcuts**: Edit, Remove background, Enhance, Retouch, Artistic, so every
+3. a row of **five round shortcuts**: Edit, Remove background, Enhance, Beautify, Artistic, so every
    tool is one tap away without swiping;
 4. the **Recent edits** strip: the newest ten photos Kanso saved, as cards you can swipe sideways,
    with a round arrow that opens My edits.
@@ -61,7 +61,7 @@ flowchart TD
    rotation and process death). Home is never popped: Back on Home finishes the activity.
 2. **The state.** [`ui/home/HomeViewModel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/home/HomeViewModel.kt)
    holds one [`HomeUiState`](../../app/src/main/java/com/phongkaster/kanso/ui/home/HomeUiState.kt):
-   `carouselTools = [REMOVE_BACKGROUND, ENHANCE, RETOUCH, ARTISTIC]`, `shortcutTools =
+   `carouselTools = [REMOVE_BACKGROUND, ENHANCE, BEAUTIFY, ARTISTIC]`, `shortcutTools =
    Tool.entries` (all five, in the enum's order), the recent photos and whether they are loading.
    `HomeUiState.kt` is also where the app explains what a UiState is.
 3. **Recent edits.** [`ui/home/HomeScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/home/HomeScreen.kt)

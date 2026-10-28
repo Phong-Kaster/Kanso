@@ -16,7 +16,7 @@ internal fun EmptyPanel(tool: Tool, modifier: Modifier) {
         Tool.EDIT -> Box(modifier.testTag(EDIT_PANEL_TAG))
         Tool.REMOVE_BACKGROUND -> Box(modifier.testTag(CUTOUT_PANEL_TAG))
         Tool.ENHANCE -> Box(modifier.testTag(ENHANCE_PANEL_TAG))
-        Tool.RETOUCH -> Box(modifier.testTag(RETOUCH_PANEL_TAG))
+        Tool.BEAUTIFY -> Box(modifier.testTag(BEAUTIFY_PANEL_TAG))
         Tool.ARTISTIC -> Box(modifier.testTag(ARTISTIC_PANEL_TAG))
     }
 }

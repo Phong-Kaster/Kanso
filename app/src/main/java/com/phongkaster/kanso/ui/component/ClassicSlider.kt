@@ -24,6 +24,8 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import kotlin.math.max
+import kotlin.math.min
 
 /** The diameter of [ClassicSlider]'s round thumb. */
 private val CLASSIC_THUMB_SIZE = 20.dp
@@ -50,6 +52,10 @@ private const val DISABLED_ALPHA = 0.38f
  * The coloured part and the thumb use the theme's `primary`; the rest of the track and the dots
  * on it use `primary` at 24% opacity, as Material 2 did, and the dots on the coloured part use
  * `onPrimary`, so they stay visible.
+ *
+ * A **two-sided** slider (a [valueRange] that runs through 0, such as -1..1) is coloured from 0 to
+ * the thumb instead of from the left end, with a short upright mark at 0, so it reads
+ * -100 ··· 0 ··· +100 and sits empty at its default of 0 (see [originFraction]).
  */
 @Composable
 fun ClassicSlider(
@@ -95,15 +101,25 @@ fun ClassicSlider(
                 val dotRadius = 1.dp.toPx()
                 val inset = CLASSIC_THUMB_SIZE.toPx() / 2f
                 val centreY = size.height / 2f
-                val thumbX = inset + state.coercedValueAsFraction * (size.width - 2 * inset)
-                // The whole track, then the part up to the thumb over it.
+                val length = size.width - 2 * inset
+                val thumbX = inset + state.coercedValueAsFraction * length
+                // Where the coloured part starts: the left end, or 0 on a range that runs through 0.
+                val originX = inset + originFraction(valueRange) * length
+                val fromX = min(originX, thumbX)
+                val toX = max(originX, thumbX)
+                // The whole track, then the coloured part between the origin and the thumb over it.
                 drawLine(inactive, Offset(inset, centreY), Offset(size.width - inset, centreY), trackHeight, StrokeCap.Round)
-                drawLine(primary, Offset(inset, centreY), Offset(thumbX, centreY), trackHeight, StrokeCap.Round)
+                drawLine(primary, Offset(fromX, centreY), Offset(toX, centreY), trackHeight, StrokeCap.Round)
+                // On a two-sided slider a short upright mark shows where 0, "no change", is.
+                if (originX > inset) {
+                    val tickHalf = CENTRE_TICK_HEIGHT.toPx() / 2f
+                    drawLine(primary, Offset(originX, centreY - tickHalf), Offset(originX, centreY + tickHalf), 2.dp.toPx(), StrokeCap.Round)
+                }
                 // One dot per stop, the two ends included; a continuous slider (no steps) has none.
                 if (state.steps > 0) {
                     for (i in 0..state.steps + 1) {
-                        val x = inset + i / (state.steps + 1f) * (size.width - 2 * inset)
-                        drawCircle(if (x <= thumbX) onPrimary else primary, dotRadius, Offset(x, centreY))
+                        val x = inset + i / (state.steps + 1f) * length
+                        drawCircle(if (x in fromX..toX) onPrimary else primary, dotRadius, Offset(x, centreY))
                     }
                 }
             }
@@ -111,7 +127,22 @@ fun ClassicSlider(
     )
 }
 
-/** The slider in light and in dark: a continuous one at 40% and a stepped one at 50%. */
+/**
+ * Where, as a fraction of the track from its left end, the coloured part starts for [range]: 0 (the
+ * left end) for a one-sided range such as 0..1, and the position of 0 for a range that runs
+ * through it, such as -1..1, whose middle means "no change". There the coloured part grows from 0
+ * toward the thumb, left or right, so a slider at 0 shows no colour at all.
+ */
+private fun originFraction(range: ClosedFloatingPointRange<Float>): Float =
+    if (range.start < 0f && range.endInclusive > 0f) -range.start / (range.endInclusive - range.start) else 0f
+
+/** The height of the upright mark at 0 on a two-sided slider. */
+private val CENTRE_TICK_HEIGHT = 12.dp
+
+/**
+ * The slider in light and in dark: a continuous one at 40%, a stepped one at 50%, and two-sided
+ * ones (-1..1) at 0, at 0.5 and at -0.6.
+ */
 @PreviewLightDark
 @Composable
 private fun ClassicSliderPreview() {
@@ -121,6 +152,9 @@ private fun ClassicSliderPreview() {
                 androidx.compose.foundation.layout.Column {
                     ClassicSlider(value = 0.4f, onValueChange = {})
                     ClassicSlider(value = 0.5f, onValueChange = {}, steps = 4)
+                    ClassicSlider(value = 0f, onValueChange = {}, valueRange = -1f..1f)
+                    ClassicSlider(value = 0.5f, onValueChange = {}, valueRange = -1f..1f)
+                    ClassicSlider(value = -0.6f, onValueChange = {}, valueRange = -1f..1f)
                 }
             }
         }

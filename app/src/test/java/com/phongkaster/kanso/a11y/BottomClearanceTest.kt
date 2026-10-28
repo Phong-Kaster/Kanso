@@ -505,7 +505,7 @@ class BottomClearanceTest {
     /** The screens, insets, photos and numbers the tests share. */
     private companion object {
         /** The tool whose Done is pressed to reach the Result screen (Run 9, T-006: was Save). */
-        val DONE_TOOL = Tool.RETOUCH
+        val DONE_TOOL = Tool.BEAUTIFY
 
         /** How many photos Kanso has saved: My edits' 40th tile is the last. */
         const val EDIT_COUNT = 40

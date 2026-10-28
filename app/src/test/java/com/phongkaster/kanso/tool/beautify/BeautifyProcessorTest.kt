@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.tool.retouch
+package com.phongkaster.kanso.tool.beautify
 
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -7,7 +7,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.WorkingSize
-import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
+import com.phongkaster.kanso.data.edit.face.FaceWidth
+import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
+import com.phongkaster.kanso.tool.face.SampleFace
 import kotlin.math.max
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
@@ -16,6 +18,8 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,7 +27,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * DoD 10, 17 and 22 for Retouch: [RetouchProcessor] with a fake face finder ([FakeFaceFinder],
+ * DoD 10, 17 and 22 for Beautify: [BeautifyProcessor] with a fake face finder ([FakeFaceFinder],
  * which "finds" the centre of the photo) and a fake smoother ([FakeSkinSmoother], a box blur) in
  * place of the engine, which cannot load on the JVM. The photo is a noisy 200 x 200 grey patch,
  * so smoothing shows up as a drop in the pixels' variance. Pixels are read straight from the
@@ -32,13 +36,13 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35])
-class RetouchProcessorTest {
+class BeautifyProcessorTest {
 
     /** Strength 0 gives back a new bitmap equal to the input, pixel for pixel. */
     @Test
     fun strength_zero_leaves_every_pixel_as_it_was() {
         val photo = noisyPatch()
-        val result = retouch(photo, strength = 0f)
+        val result = beautify(photo, strength = 0f)
 
         assertNotSame("the result must be a new bitmap", photo, result)
         assertArrayEquals(pixels(photo), pixels(result))
@@ -52,7 +56,7 @@ class RetouchProcessorTest {
     fun strength_one_smooths_the_face_and_nothing_else() {
         val photo = noisyPatch()
         val face = FakeFaceFinder.centre(photo)
-        val result = retouch(photo, strength = 1f)
+        val result = beautify(photo, strength = 1f)
 
         val before = variance(photo, face)
         val after = variance(result, face)
@@ -73,8 +77,8 @@ class RetouchProcessorTest {
         val photo = noisyPatch()
         val face = FakeFaceFinder.centre(photo)
         val none = variance(photo, face)
-        val full = variance(retouch(photo, strength = 1f), face)
-        val half = variance(retouch(photo, strength = 0.5f), face)
+        val full = variance(beautify(photo, strength = 1f), face)
+        val half = variance(beautify(photo, strength = 0.5f), face)
 
         assertTrue("half $half is not between full $full and none $none", half > full && half < none)
     }
@@ -86,7 +90,7 @@ class RetouchProcessorTest {
         val before = pixels(photo)
         val smoother = FakeSkinSmoother()
 
-        val result = runBlocking { RetouchProcessor(FakeFaceFinder.none(), smoother).process(photo) {} }
+        val result = runBlocking { BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), smoother).process(photo) {} }
 
         assertEquals(EditResult.Failed(EditFailure.NoFace), result)
         assertTrue("the smoother must not run without a face", smoother.received.isEmpty())
@@ -98,10 +102,10 @@ class RetouchProcessorTest {
     fun the_input_is_not_changed_and_the_result_is_opaque() {
         val photo = noisyPatch()
         val before = pixels(photo)
-        val result = retouch(photo, strength = 1f)
+        val result = beautify(photo, strength = 1f)
 
         assertArrayEquals(before, pixels(photo))
-        assertFalse("a retouched photo is opaque, so Save writes a JPEG", result.hasAlpha())
+        assertFalse("a beautified photo is opaque, so Save writes a JPEG", result.hasAlpha())
     }
 
     /**
@@ -116,13 +120,13 @@ class RetouchProcessorTest {
         val huge = Bitmap.createBitmap(6000, 4000, Bitmap.Config.RGB_565)
         huge.eraseColor(Color.rgb(128, 128, 128))
 
-        val result = runBlocking { RetouchProcessor(finder, smoother).process(huge) {} }
+        val result = runBlocking { BeautifyProcessor(finder, FakeLandmarkFinder(), smoother).process(huge) {} }
         huge.recycle()
 
         for ((name, sizes) in listOf("finder" to finder.received, "smoother" to smoother.received)) {
             assertEquals("the $name ran ${sizes.size} times", 1, sizes.size)
             val (width, height) = sizes.single()
-            assertTrue("the $name got $width x $height, over the cap", max(width, height) <= WorkingSize.RETOUCH)
+            assertTrue("the $name got $width x $height, over the cap", max(width, height) <= WorkingSize.BEAUTIFY)
             assertEquals(6000f / 4000f, width.toFloat() / height, 0.01f)
         }
         val bitmap = (result as EditResult.Edited).bitmap
@@ -133,7 +137,7 @@ class RetouchProcessorTest {
     @Test
     fun out_of_memory_in_the_finder_is_reported() {
         val result = runBlocking {
-            RetouchProcessor(FakeFaceFinder(failure = OutOfMemoryError("fake")), FakeSkinSmoother())
+            BeautifyProcessor(FakeFaceFinder(failure = OutOfMemoryError("fake")), FakeLandmarkFinder(), FakeSkinSmoother())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.OutOfMemory), result)
@@ -143,7 +147,7 @@ class RetouchProcessorTest {
     @Test
     fun out_of_memory_in_the_smoother_is_reported() {
         val result = runBlocking {
-            RetouchProcessor(FakeFaceFinder(), FakeSkinSmoother(failure = OutOfMemoryError("fake")))
+            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = OutOfMemoryError("fake")))
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.OutOfMemory), result)
@@ -153,7 +157,7 @@ class RetouchProcessorTest {
     @Test
     fun a_finder_error_is_reported_as_model_unavailable() {
         val result = runBlocking {
-            RetouchProcessor(FakeFaceFinder(failure = IllegalStateException("fake")), FakeSkinSmoother())
+            BeautifyProcessor(FakeFaceFinder(failure = IllegalStateException("fake")), FakeLandmarkFinder(), FakeSkinSmoother())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.ModelUnavailable), result)
@@ -163,7 +167,7 @@ class RetouchProcessorTest {
     @Test
     fun a_smoother_error_is_reported_as_model_unavailable() {
         val result = runBlocking {
-            RetouchProcessor(FakeFaceFinder(), FakeSkinSmoother(failure = IllegalStateException("fake")))
+            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = IllegalStateException("fake")))
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.ModelUnavailable), result)
@@ -176,7 +180,7 @@ class RetouchProcessorTest {
         var returned: EditResult? = null
         runBlocking {
             try {
-                returned = RetouchProcessor(FakeFaceFinder(failure = CancellationException("left")), FakeSkinSmoother())
+                returned = BeautifyProcessor(FakeFaceFinder(failure = CancellationException("left")), FakeLandmarkFinder(), FakeSkinSmoother())
                     .process(noisyPatch()) {}
             } catch (cancelled: CancellationException) {
                 caught = cancelled
@@ -192,7 +196,7 @@ class RetouchProcessorTest {
         val seen = mutableListOf<Float>()
         val twoFaces = FakeFaceFinder(facesFor = { listOf(Rect(0, 0, 60, 60), Rect(100, 100, 180, 180)) })
 
-        runBlocking { RetouchProcessor(twoFaces, FakeSkinSmoother()).process(noisyPatch()) { seen += it } }
+        runBlocking { BeautifyProcessor(twoFaces, FakeLandmarkFinder(), FakeSkinSmoother()).process(noisyPatch()) { seen += it } }
 
         assertTrue("no progress was reported", seen.isNotEmpty())
         seen.forEach { assertTrue("progress $it is outside 0..1", it in 0f..1f) }
@@ -200,11 +204,156 @@ class RetouchProcessorTest {
         assertEquals(1f, seen.last(), 0f)
     }
 
+    /** Face width 0 never asks for landmarks: smoothing alone does not load the face mesh. */
+    @Test
+    fun width_zero_never_looks_for_landmarks() {
+        val landmarks = FakeLandmarkFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+
+        runBlocking { processor.process(noisyPatch()) {} }
+
+        assertTrue("the landmark finder ran ${landmarks.received.size} times", landmarks.received.isEmpty())
+    }
+
+    /** A face width with no face found fails with "no face" and leaves the photo as it was. */
+    @Test
+    fun width_with_no_face_is_reported() {
+        val photo = noisyPatch()
+        val before = pixels(photo)
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
+        processor.width = 1f
+
+        val result = runBlocking { processor.process(photo) {} }
+
+        assertEquals(EditResult.Failed(EditFailure.NoFace), result)
+        assertArrayEquals(before, pixels(photo))
+    }
+
+    /**
+     * With smoothing off, a face width changes the pixels along the face's outline and leaves the
+     * corners of the photo, far from any push, exactly as they were.
+     */
+    @Test
+    fun width_reshapes_the_outline_only() {
+        val photo = noisyPatch()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        processor.strength = 0f
+        processor.width = 1f
+
+        val result = (runBlocking { processor.process(photo) {} } as EditResult.Edited).bitmap
+
+        val original = pixels(photo)
+        val edited = pixels(result)
+        val changed = original.indices.count(predicate = { original[it] != edited[it] })
+        assertTrue("only $changed pixels changed", changed > 0)
+        assertEquals(photo.getPixel(0, 0), result.getPixel(0, 0))
+        assertEquals(photo.getPixel(SIZE - 1, SIZE - 1), result.getPixel(SIZE - 1, SIZE - 1))
+    }
+
+    /**
+     * The face focus is the largest face's box, as fractions of the photo: of a small face and a
+     * large one, the large one wins.
+     */
+    @Test
+    fun the_focus_is_the_largest_face() {
+        val photo = noisyPatch()
+        val small = SampleFace.oval(centerX = 40f, centerY = 40f, halfWidth = 10f, halfHeight = 14f)
+        val large = SampleFace.oval(centerX = 120f, centerY = 120f, halfWidth = 40f, halfHeight = 50f)
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(facesFor = { listOf(small, large) }), FakeSkinSmoother())
+
+        val focus = runBlocking { processor.findFocus(photo) }!!
+
+        // The large oval runs from 80 to 160 across and 70 to 170 down, on a 200-pixel photo.
+        assertEquals(0.4f, focus.left, 0.01f)
+        assertEquals(0.8f, focus.right, 0.01f)
+        assertEquals(0.35f, focus.top, 0.01f)
+        assertEquals(0.85f, focus.bottom, 0.01f)
+    }
+
+    /** No face gives no focus, and neither does a model that fails: the zoom never breaks the tool. */
+    @Test
+    fun no_face_or_a_failing_model_gives_no_focus() {
+        val failing = FakeLandmarkFinder(facesFor = { throw IllegalStateException("fake") })
+
+        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother()).findFocus(noisyPatch()) })
+        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother()).findFocus(noisyPatch()) })
+    }
+
+    /** A live look at width 0 and no smoothing moves nothing and lays nothing on top. */
+    @Test
+    fun a_live_look_at_rest_changes_nothing() {
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        processor.strength = 0f
+        processor.width = 0f
+
+        val look = runBlocking { processor.livePreview(noisyPatch()) }!!
+
+        assertTrue(look.pushes.isEmpty())
+        assertNull(look.smoothed)
+    }
+
+    /**
+     * A live look with a width carries the same pushes the full render uses, opposite ones for
+     * the opposite width, and two looks on the same photo look for landmarks only once.
+     */
+    @Test
+    fun live_looks_carry_the_pushes_and_find_the_face_once() {
+        val photo = noisyPatch()
+        val landmarks = FakeLandmarkFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+        processor.strength = 0f
+        processor.width = 1f
+
+        val narrower = runBlocking { processor.livePreview(photo) }!!
+        processor.width = -1f
+        val wider = runBlocking { processor.livePreview(photo) }!!
+
+        assertEquals(FaceWidth.pushesFor(FakeLandmarkFinder.centre(photo), 1f), narrower.pushes)
+        assertEquals(-narrower.pushes.first().moveX, wider.pushes.first().moveX, 0.001f)
+        assertEquals(1, landmarks.received.size)
+    }
+
+    /**
+     * With smoothing on, a live look carries the photo smoothed inside the face only, made once:
+     * a second look hands back the very same copy, only its opacity changes.
+     */
+    @Test
+    fun a_live_look_smooths_inside_the_face_once() {
+        val photo = noisyPatch()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        processor.width = 0f
+        processor.strength = 1f
+
+        val first = runBlocking { processor.livePreview(photo) }!!
+        processor.strength = 0.4f
+        val second = runBlocking { processor.livePreview(photo) }!!
+
+        val smoothed = first.smoothed!!
+        val centre = Rect(70, 70, 130, 130)
+        assertTrue(variance(smoothed, centre) < 0.6 * variance(photo, centre))
+        assertEquals(photo.getPixel(0, 0), smoothed.getPixel(0, 0))
+        assertSame(smoothed, second.smoothed)
+        assertEquals(0.4f, second.smoothing, 0f)
+    }
+
+    /** No face, or a failing model, gives no live look instead of an error. */
+    @Test
+    fun no_face_or_a_failing_model_gives_no_live_look() {
+        val failing = FakeLandmarkFinder(facesFor = { throw IllegalStateException("fake") })
+        val none = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
+        val broken = BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother())
+        none.width = 1f
+        broken.width = 1f
+
+        assertNull(runBlocking { none.livePreview(noisyPatch()) })
+        assertNull(runBlocking { broken.livePreview(noisyPatch()) })
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
-    /** Runs Retouch at [strength] on [photo] with the centre-face finder and returns the result. */
-    private fun retouch(photo: Bitmap, strength: Float): Bitmap {
-        val processor = RetouchProcessor(FakeFaceFinder(), FakeSkinSmoother())
+    /** Runs Beautify at [strength] on [photo] with the centre-face finder and returns the result. */
+    private fun beautify(photo: Bitmap, strength: Float): Bitmap {
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
         processor.strength = strength
         val result = runBlocking { processor.process(photo) {} }
         return (result as EditResult.Edited).bitmap

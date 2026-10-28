@@ -176,16 +176,16 @@ class OverPhotoContrastTest {
         checkToolScreen(ThemeMode.Dark, Tool.ENHANCE)
     }
 
-    /** The Retouch screen in light mode. */
+    /** The Beautify screen in light mode. */
     @Test
-    fun tool_screen_retouch_reads_over_white_and_black_photos_in_light() {
-        checkToolScreen(ThemeMode.Light, Tool.RETOUCH)
+    fun tool_screen_beautify_reads_over_white_and_black_photos_in_light() {
+        checkToolScreen(ThemeMode.Light, Tool.BEAUTIFY)
     }
 
-    /** The Retouch screen in dark mode. */
+    /** The Beautify screen in dark mode. */
     @Test
-    fun tool_screen_retouch_reads_over_white_and_black_photos_in_dark() {
-        checkToolScreen(ThemeMode.Dark, Tool.RETOUCH)
+    fun tool_screen_beautify_reads_over_white_and_black_photos_in_dark() {
+        checkToolScreen(ThemeMode.Dark, Tool.BEAUTIFY)
     }
 
     /** The Artistic screen in light mode. */

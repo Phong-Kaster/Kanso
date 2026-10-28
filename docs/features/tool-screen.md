@@ -2,7 +2,7 @@
 
 [Back to README](../../README.md)
 
-Edit, Remove background, Enhance, Retouch and Artistic each open on a screen of their own, but all
+Edit, Remove background, Enhance, Beautify and Artistic each open on a screen of their own, but all
 five are drawn by one screen and driven by one ViewModel. This page explains that shared part once:
 how a photo gets onto the screen, how an edit runs, how progress, Undo, Replace and failures work,
 and how **Done** hands the finished picture to the [Result screen](saving-and-share.md), where it is
@@ -104,7 +104,7 @@ flowchart TD
 ### 1. Opening the screen
 
 - The five tools are the enum [`navigation/Tool.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/Tool.kt):
-  `EDIT`, `REMOVE_BACKGROUND`, `ENHANCE`, `RETOUCH`, `ARTISTIC`. Each has only a label and an icon.
+  `EDIT`, `REMOVE_BACKGROUND`, `ENHANCE`, `BEAUTIFY`, `ARTISTIC`. Each has only a label and an icon.
 - A tool screen is the navigation key `ToolPhoto(tool, photoUri)`
   ([`navigation/ToolPhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/navigation/ToolPhoto.kt)).
   The photo travels as the text of its `content://` (gallery) or `file://` (camera) Uri. The key is
@@ -117,7 +117,7 @@ flowchart TD
 - [`di/AppModule.kt`](../../app/src/main/java/com/phongkaster/kanso/di/AppModule.kt) builds the
   ViewModel with `PhotoLoader`, a cleared-probe, the `ProcessorRegistry` and the
   `RenderedPhotoStore`; it is given no saver. The registry is one app-wide object holding the
-  processor of Remove background, Enhance, Retouch and Artistic, each built on its engine wrapper.
+  processor of Remove background, Enhance, Beautify and Artistic, each built on its engine wrapper.
   Edit has no registry entry: its panel hands the ViewModel a recipe that turns the current
   settings into a processor, used for the filter preview and the final render (see [Edit](edit.md)).
 
@@ -145,7 +145,7 @@ runs the four registered tools the same way, through the
 [`data/edit/ToolProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/ToolProcessor.kt)
 interface: `suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult`.
 
-- A panel asks for the tool's registered processor (`runRegistered`). Retouch and Artistic set
+- A panel asks for the tool's registered processor (`runRegistered`). Beautify and Artistic set
   their strength and style on it just before it runs, and only when no edit is running. Edit never
   takes this path: `apply` does nothing on the Edit screen (its changes are settings, drawn live,
   and rendered in full only at Done).
@@ -153,7 +153,7 @@ interface: `suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): Edi
   there is no photo. Otherwise it sets `Processing.Running(0)` and launches a coroutine that, on
   `Dispatchers.Default`:
   1. picks its input: the photo as now shown (the last edit, or the original) for Remove
-     background and Enhance; the untouched original for Retouch and Artistic (`fromOriginal`);
+     background and Enhance; the untouched original for Beautify and Artistic (`fromOriginal`);
   2. shrinks it to the tool's working size with `WorkingSize.fit`
      ([`data/edit/WorkingSize.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt)):
 
@@ -162,18 +162,18 @@ interface: `suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): Edi
      | Edit (the render at Done) | 2000 px |
      | Remove background | 2000 px |
      | Enhance | 512 px (the result is up to 4 times larger) |
-     | Retouch | 2000 px |
+     | Beautify | 2000 px |
      | Artistic | 1024 px |
 
      `fit` keeps the shape, filters while scaling, and makes no copy when the photo already fits.
-     For Retouch and Artistic the shrunk original is made once and reused, so Artistic's model
+     For Beautify and Artistic the shrunk original is made once and reused, so Artistic's model
      cache can recognise the same input;
   3. runs the processor, which moves its own heavy work to a background thread too.
 - Progress values from 0 to 1 update the ring. A value that arrives after the edit has ended is
   ignored.
 - On `EditResult.Edited` the result becomes the shown photo (`edited` in
   [`ui/tool/ToolUiState.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolUiState.kt))
-  and the photo shown before is pushed on the Undo history. A Retouch or Artistic re-run directly
+  and the photo shown before is pushed on the Undo history. A Beautify or Artistic re-run directly
   after another one replaces that result without adding an Undo step, so Undo takes back the whole
   slider session at once.
 - On `EditResult.Failed` the photo and the history stay as they were and the failure's message is
@@ -216,7 +216,7 @@ person on the tool screen.
   while an edit runs or while an earlier Done is still working. It asks for no permission and
   writes nothing to storage on any Android version.
 - `ToolViewModel.done()` decides the picture to hand over:
-  - **Remove background, Enhance, Retouch, Artistic:** the picture shown now, at once. With an
+  - **Remove background, Enhance, Beautify, Artistic:** the picture shown now, at once. With an
     edit, the last edited bitmap. With no edit, or every edit undone, the decoded original, handed
     over together with its own Uri, so that Save on Result copies the original file instead of
     re-encoding the screen-sized copy.

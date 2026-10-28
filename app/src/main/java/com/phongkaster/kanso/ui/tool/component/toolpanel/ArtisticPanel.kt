@@ -99,7 +99,7 @@ fun ArtisticPanel(
         SliderWithValue(
             value = strength,
             onValueChange = onStrengthChange,
-            valueText = stringResource(R.string.retouch_strength_value, (strength * 100).roundToInt()),
+            valueText = stringResource(R.string.beautify_strength_value, (strength * 100).roundToInt()),
             valueRange = 0f..1f,
             enabled = enabled,
             sliderModifier = Modifier

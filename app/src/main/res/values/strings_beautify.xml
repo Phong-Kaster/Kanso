@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Beautify panel: the label of the strength slider, how much the skin is smoothed. Also what
+         screen readers call the slider. Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_strength_label">Smoothing</string>
+    <!-- A slider's current strength as a percentage, next to its label, for example "70%" (the
+         Artistic panel's intensity). -->
+    <string name="beautify_strength_value">%1$d%%</string>
+    <!-- Beautify panel: the name of the Smooth tool in the row of tools, under its icon. Must never
+         equal the tool's name, the screen's title. -->
+    <string name="beautify_tool_smooth">Smooth</string>
+    <!-- Beautify panel: the name of the Face width tool in the row of tools, and the label of its
+         slider, how much wider (negative) or narrower (positive) each face becomes. Also what screen
+         readers call the slider. -->
+    <string name="beautify_width_label">Face width</string>
+</resources>

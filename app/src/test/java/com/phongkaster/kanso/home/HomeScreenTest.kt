@@ -431,7 +431,7 @@ class HomeScreenTest {
         when (tool) {
             Tool.REMOVE_BACKGROUND -> R.string.home_hero_description_remove_background
             Tool.ENHANCE -> R.string.home_hero_description_enhance
-            Tool.RETOUCH -> R.string.home_hero_description_retouch
+            Tool.BEAUTIFY -> R.string.home_hero_description_beautify
             Tool.ARTISTIC -> R.string.home_hero_description_artistic
             Tool.EDIT -> error("Edit has no banner")
         },
@@ -456,7 +456,7 @@ class HomeScreenTest {
     /** Values and matchers the tests share. */
     private companion object {
         /** The four AI tools, in the order the carousel shows their banners. */
-        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
 
         /** The solid colour of the recent cards' stand-in pictures: a soft indigo. */
         const val STAND_IN_COLOUR = 0xFF5C6BC0

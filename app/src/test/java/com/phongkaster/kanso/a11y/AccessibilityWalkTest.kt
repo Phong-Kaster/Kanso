@@ -365,10 +365,10 @@ class AccessibilityWalkTest {
         walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
-    /** The Retouch screen with a ready photo. */
+    /** The Beautify screen with a ready photo. */
     @Test
-    fun tool_screen_retouch_ready() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
+    fun tool_screen_beautify_ready() {
+        walkToolScreen(Tool.BEAUTIFY, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)))
     }
 
     /** The Artistic screen with a ready photo. */
@@ -395,10 +395,10 @@ class AccessibilityWalkTest {
         walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Unreadable)
     }
 
-    /** The Retouch screen when the photo cannot be opened. */
+    /** The Beautify screen when the photo cannot be opened. */
     @Test
-    fun tool_screen_retouch_unreadable() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Unreadable)
+    fun tool_screen_beautify_unreadable() {
+        walkToolScreen(Tool.BEAUTIFY, ToolUiState.PhotoState.Unreadable)
     }
 
     /** The Artistic screen when the photo cannot be opened. */
@@ -428,10 +428,10 @@ class AccessibilityWalkTest {
         walkToolScreen(Tool.ENHANCE, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
-    /** The Retouch screen while a save runs. */
+    /** The Beautify screen while a save runs. */
     @Test
-    fun tool_screen_retouch_saving() {
-        walkToolScreen(Tool.RETOUCH, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
+    fun tool_screen_beautify_saving() {
+        walkToolScreen(Tool.BEAUTIFY, ToolUiState.PhotoState.Ready(ToolFixtures.gradient(600, 400)), finishing = true)
     }
 
     /** The Artistic screen while a save runs. */
@@ -1007,7 +1007,7 @@ class AccessibilityWalkTest {
 
         /** Home's carousel tools and shortcut tools, as `HomeViewModel` builds them, with no recent photo. */
         val HOME_STATE = HomeUiState(
-            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             shortcutTools = Tool.entries,
             recentPhotos = emptyList(),
             recentLoading = false,
@@ -1018,13 +1018,13 @@ class AccessibilityWalkTest {
             get() = HOME_STATE.copy(recentPhotos = photos().take(5))
 
         /** The tools the five "ready" tool screen tests walk, one each. */
-        val TOOLS_WALKED_READY = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val TOOLS_WALKED_READY = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
 
         /** The tools the five "unreadable" tool screen tests walk, one each. */
-        val TOOLS_WALKED_UNREADABLE = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val TOOLS_WALKED_UNREADABLE = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
 
         /** The tools the five "saving" tool screen tests walk, one each. */
-        val TOOLS_WALKED_SAVING = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val TOOLS_WALKED_SAVING = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
 
         /** A camera that is open and ready, with its flash on auto and a second lens. */
         val READY_CAMERA = CameraState(

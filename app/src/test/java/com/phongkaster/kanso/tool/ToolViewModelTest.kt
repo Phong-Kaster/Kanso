@@ -60,7 +60,7 @@ import org.robolectric.annotation.Config
  *
  * Run 9 (T-002) makes the Edit screen a real editor: its settings are one object rendered from the
  * original every time, so the stacking `apply` path and its picture history now belong to the
- * other tools only. The Run 8 editing tests therefore run on Retouch (whose working size, 2000,
+ * other tools only. The Run 8 editing tests therefore run on Beautify (whose working size, 2000,
  * keeps the 600 x 400 test photo as the same object), and new tests cover the Edit session: the
  * newest settings win over a render still running, Back closes a sheet or asks to discard, and
  * Save writes the rendered settings or, with none, the original. Undo across the Edit sheets is
@@ -438,7 +438,7 @@ class ToolViewModelTest {
      */
     @Test
     fun open_tool_opens_toggles_and_switches_the_sheet_and_close_tool_closes_it() {
-        // Run 9: the default tool of loadedViewModel is now Retouch; the sheets are Edit's.
+        // Run 9: the default tool of loadedViewModel is now Beautify; the sheets are Edit's.
         val viewModel = loadedViewModel(ToolFixtures.gradient(600, 400), tool = Tool.EDIT)
         assertNull(viewModel.state.value.openTool)
 
@@ -472,8 +472,8 @@ class ToolViewModelTest {
         val original = ToolFixtures.gradient(600, 400)
         val result = ToolFixtures.gradient(300, 200)
         // Run 9: `apply` is the other tools' path (the Edit screen ignores it), so this runs on
-        // Retouch, the default tool of loadedViewModel, and registers Retouch's processor.
-        val registry = ProcessorRegistry(mapOf(Tool.RETOUCH to FakeProcessor { _, _ -> EditResult.Edited(result) }))
+        // Beautify, the default tool of loadedViewModel, and registers Beautify's processor.
+        val registry = ProcessorRegistry(mapOf(Tool.BEAUTIFY to FakeProcessor { _, _ -> EditResult.Edited(result) }))
         val viewModel = loadedViewModel(original, registry = registry)
         val first = ToolFixtures.twoHalves(300, 200)
         val edit = FakeProcessor { _, _ -> EditResult.Edited(first) }
@@ -757,14 +757,14 @@ class ToolViewModelTest {
      * Builds the ViewModel on [tool] for [photo] through a [FakePhotoLoader], loads the photo and
      * checks it is shown, so an edit can run on it at once.
      *
-     * Run 9: the default tool is Retouch, not Edit. The Run 8 tests that use the default drive the
+     * Run 9: the default tool is Beautify, not Edit. The Run 8 tests that use the default drive the
      * stacking `apply` path, which the Edit screen no longer takes (it renders its settings from
-     * the original instead); Retouch still does, at a working size that keeps the test photo whole.
+     * the original instead); Beautify still does, at a working size that keeps the test photo whole.
      */
     private fun loadedViewModel(
         photo: Bitmap,
         store: RenderedPhotoStore = RenderedPhotoStore(),
-        tool: Tool = Tool.RETOUCH,
+        tool: Tool = Tool.BEAUTIFY,
         registry: ProcessorRegistry = ProcessorRegistry(),
     ): ToolViewModel {
         val viewModel = toolViewModel(FakePhotoLoader(app, photo), store, tool, registry)

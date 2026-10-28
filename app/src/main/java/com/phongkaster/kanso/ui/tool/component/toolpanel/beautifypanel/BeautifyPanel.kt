@@ -1,0 +1,212 @@
+package com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel
+
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
+import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.settings.ThemeMode
+import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EditToolEntry
+import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.model.BeautifyTool
+
+/** Test tag of the Beautify panel's smoothing slider, shown while Smooth is open. */
+const val BEAUTIFY_STRENGTH_TAG = "beautify-strength"
+
+/** Test tag of the Beautify panel's face width slider, shown while Face width is open. */
+const val BEAUTIFY_WIDTH_TAG = "beautify-width"
+
+/** Returns the test tag of [tool]'s entry in the Beautify panel's row, such as `beautify-tool-SMOOTH`. */
+fun beautifyToolTag(tool: BeautifyTool): String = "beautify-tool-${tool.name}"
+
+/**
+ * The Beautify tool's controls, shown in the options strip under the photo, laid out like the Edit
+ * screen: a row of tools (Smooth, Face width), each an icon over its name, and above it the slider
+ * of the tool that is open.
+ *
+ * **Laid out as the Edit screen's bottom bar.** The screen puts this panel in its `Scaffold`'s
+ * bottom bar, so the photo gets all the height above it. Like Edit's bar it is the lowest thing on
+ * screen (the screen keeps it clear of the navigation bar and the gesture area): the row of tools
+ * at the very bottom, and above it Edit's own fixed-height panel area ([EditSheet]), which shows the open tool's
+ * slider on a rounded surface, or "Pick a tool to start editing" while none is open. The bar never
+ * changes height, so the photo never jumps when a tool opens.
+ *
+ * - Tapping a tool opens its slider; tapping the open tool closes it. The open tool is highlighted
+ *   and the panel area cross-fades to its slider with `AnimatedContent` (Compose's own animation
+ *   API).
+ * - **Smooth** is a 0..100 slider (0, no smoothing, by default); **Face width** a -100..+100
+ *   slider (0, the face as it is, by default; negative is wider, positive narrower, as in Meitu), drawn
+ *   two-sided: coloured from 0 toward the thumb.
+ * - **Live while dragging, as in Meitu.** Every move of a slider calls [onPreview] with both
+ *   values, and the screen shows a quick frame of the edit on the photo as shown, so the face
+ *   follows the finger. Letting go calls [onApply] with both values, and the photo is redone from
+ *   the original at full quality (several seconds on a phone), which then replaces the frame.
+ * - A tool whose value is not its default carries the Edit row's small dot, so the person sees
+ *   which ones hold a change.
+ *
+ * The entries are the Edit screen's own ([EditToolEntry]) and each slider is a [BeautifySlider]
+ * (its name on a line of its own, the slider the panel's full width under it), so both screens
+ * look and behave alike. The open tool and both values are the panel's own state, kept with
+ * `rememberSaveable`, so they survive a rotation. [enabled] false (while an edit runs) switches
+ * every control off.
+ */
+@Composable
+fun BeautifyPanel(
+    onApply: (strength: Float, width: Float) -> Unit,
+    onPreview: (strength: Float, width: Float) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    // `by` reads and writes each state's value directly; a change redraws the panel.
+    var openTool by rememberSaveable(init = { mutableStateOf<BeautifyTool?>(null) })
+    var strength by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_STRENGTH) })
+    var width by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_WIDTH) })
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            // The screen's bottom bar keeps it clear of the navigation bar and the gesture area.
+            .testTag(BEAUTIFY_PANEL_TAG),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = {
+            // Edit's panel area: the open tool's slider on a rounded surface, or the hint.
+            EditSheet(
+                openTool = openTool,
+                modifier = Modifier.padding(horizontal = 16.dp),
+                sheet = { tool ->
+                    when (tool) {
+                        BeautifyTool.SMOOTH -> BeautifySlider(
+                            label = R.string.beautify_strength_label,
+                            value = strength,
+                            onValueChange = {
+                                strength = it.coerceIn(0f, 1f)
+                                onPreview(strength, width)
+                            },
+                            onValueChangeFinished = { onApply(strength, width) },
+                            tag = BEAUTIFY_STRENGTH_TAG,
+                            enabled = enabled,
+                            valueRange = 0f..1f,
+                        )
+                        BeautifyTool.FACE_WIDTH -> BeautifySlider(
+                            label = R.string.beautify_width_label,
+                            value = width,
+                            onValueChange = {
+                                width = it.coerceIn(-1f, 1f)
+                                onPreview(strength, width)
+                            },
+                            onValueChangeFinished = { onApply(strength, width) },
+                            tag = BEAUTIFY_WIDTH_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
+                    }
+                },
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                // The same 4 dp around the entries as Edit's row of tools.
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                content = {
+                    BeautifyTool.entries.forEach(
+                        action = { tool ->
+                            EditToolEntry(
+                                icon = toolIcon(tool),
+                                title = toolName(tool),
+                                modifier = Modifier.widthIn(min = ENTRY_MIN_WIDTH).testTag(beautifyToolTag(tool)),
+                                enabled = enabled,
+                                highlighted = tool == openTool,
+                                changed = when (tool) {
+                                    BeautifyTool.SMOOTH -> strength != DEFAULT_STRENGTH
+                                    BeautifyTool.FACE_WIDTH -> width != DEFAULT_WIDTH
+                                },
+                                dotTag = "beautify-tool-dot-${tool.name}",
+                                tap = {
+                                    Modifier.selectable(
+                                        selected = tool == openTool,
+                                        enabled = enabled,
+                                        role = Role.Tab,
+                                        onClick = { openTool = if (openTool == tool) null else tool },
+                                    )
+                                },
+                            )
+                        },
+                    )
+                },
+            )
+        },
+    )
+}
+
+/** The Material Symbols drawable shown for [tool] in the row (Face width's is drawn for Kanso). */
+@DrawableRes
+private fun toolIcon(tool: BeautifyTool): Int = when (tool) {
+    BeautifyTool.SMOOTH -> R.drawable.ic_face_retouching_natural
+    BeautifyTool.FACE_WIDTH -> R.drawable.ic_face_width
+}
+
+/** The string resource naming [tool] under its icon. */
+@StringRes
+private fun toolName(tool: BeautifyTool): Int = when (tool) {
+    BeautifyTool.SMOOTH -> R.string.beautify_tool_smooth
+    BeautifyTool.FACE_WIDTH -> R.string.beautify_width_label
+}
+
+/** The smoothing slider's starting value: no smoothing, so Face width alone changes only the shape. */
+private const val DEFAULT_STRENGTH = 0f
+
+/** The face width slider's starting value: the face as it is. */
+private const val DEFAULT_WIDTH = 0f
+
+/** The narrowest an entry gets; "Face width" makes its own entry wider. */
+private val ENTRY_MIN_WIDTH = 72.dp
+
+/**
+ * The Beautify panel with no tool open, in light and in dark. The outer Box fills the preview
+ * first, because KansoTheme would otherwise stretch its single child to the whole screen.
+ */
+@PreviewLightDark
+@Composable
+private fun BeautifyPanelPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Box(Modifier.fillMaxSize()) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                BeautifyPanel(onApply = { _, _ -> }, onPreview = { _, _ -> })
+            }
+        }
+    }
+}
+
+/** The Beautify panel switched off, as while an edit runs, in light and in dark. */
+@PreviewLightDark
+@Composable
+private fun BeautifyPanelDisabledPreview() {
+    KansoTheme(themeMode = ThemeMode.System) {
+        Box(Modifier.fillMaxSize()) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                BeautifyPanel(onApply = { _, _ -> }, onPreview = { _, _ -> }, enabled = false)
+            }
+        }
+    }
+}

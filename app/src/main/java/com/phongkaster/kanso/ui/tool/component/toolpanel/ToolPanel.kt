@@ -25,6 +25,7 @@ import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.enhancepanel.EnhancePanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 
 /** Test tag of the Edit tool's controls, in the options strip under the photo. */
 const val EDIT_PANEL_TAG = "edit-panel"
@@ -35,8 +36,8 @@ const val CUTOUT_PANEL_TAG = "cutout-panel"
 /** Test tag of the Enhance tool's controls, in the options strip under the photo. */
 const val ENHANCE_PANEL_TAG = "enhance-panel"
 
-/** Test tag of the Retouch tool's controls, in the options strip under the photo. */
-const val RETOUCH_PANEL_TAG = "retouch-panel"
+/** Test tag of the Beautify tool's controls, in the options strip under the photo. */
+const val BEAUTIFY_PANEL_TAG = "beautify-panel"
 
 /** Test tag of the Artistic tool's controls, in the options strip under the photo. */
 const val ARTISTIC_PANEL_TAG = "artistic-panel"
@@ -47,8 +48,9 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * Each tool has its own panel, picked here by a `when` over the tool. A `when` on an enum must
  * name every case, so a new tool cannot be added without deciding what its panel is. The Edit sheets' four
  * `onEdit...` callbacks go to the ViewModel's settings session; [onRun] runs the one the registry holds for the
- * tool (Remove background, Enhance). [onRetouch] and [onStylize] run Retouch and Artistic with
- * the strength (and style) the person set, all through the ViewModel; [state]
+ * tool (Remove background, Enhance). [onBeautify] and [onStylize] run Beautify and Artistic with
+ * the strength (and face width, or style) the person set, all through the ViewModel;
+ * [onBeautifyPreview] asks for a live frame while a Beautify slider is dragged; [state]
  * gives the panel the photos and whether an edit is running. With the defaults a preview or test
  * gets the panel without any edit behind it.
  *
@@ -65,7 +67,8 @@ fun ToolPanel(
     modifier: Modifier = Modifier,
     state: ToolUiState? = null,
     onRun: () -> Unit = {},
-    onRetouch: (strength: Float) -> Unit = {},
+    onBeautify: (strength: Float, width: Float) -> Unit = { _, _ -> },
+    onBeautifyPreview: (strength: Float, width: Float) -> Unit = { _, _ -> },
     onStylize: (style: ArtisticStyle, strength: Float) -> Unit = { _, _ -> },
     openTool: EditTool? = null,
     enabled: Boolean = true,
@@ -113,7 +116,7 @@ fun ToolPanel(
             enhanced = state.edited,
             modifier = modifier,
         )
-        Tool.RETOUCH -> RetouchPanel(onApply = onRetouch, modifier = modifier, enabled = idle)
+        Tool.BEAUTIFY -> BeautifyPanel(onApply = onBeautify, onPreview = onBeautifyPreview, modifier = modifier, enabled = idle)
         Tool.ARTISTIC -> ArtisticPanelHost(onApply = onStylize, modifier = modifier, enabled = idle)
     }
 }

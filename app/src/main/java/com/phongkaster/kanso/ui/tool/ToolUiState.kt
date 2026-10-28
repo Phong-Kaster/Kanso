@@ -2,9 +2,11 @@ package com.phongkaster.kanso.ui.tool
 
 import android.graphics.Bitmap
 import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.LivePreview
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
+import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 
@@ -132,6 +134,26 @@ data class ToolUiState(
      * every letter typed is previewed on the photo without an undo step until the keyboard closes.
      */
     val textEditing: Boolean = false,
+    /**
+     * Where the largest face is in the photo, found once after the photo is decoded, on a face
+     * tool's screen (Beautify) only; null before that, on every other tool, and when no face was
+     * found. The photo card zooms in on it, so a Face width change is easy to see.
+     */
+    val faceFocus: FaceFocus? = null,
+    /**
+     * A live look of a slider tool's edit (Beautify) while its slider is dragged: a recipe the card
+     * draws on the graphics chip over the photo as shown (see [LivePreview]); null when there is
+     * none. While it is set the card draws the original photo through it instead of [edited], so
+     * the photo follows the finger. The quiet render that starts when the finger lifts replaces it
+     * when it ends (unless the person dragged again), and Undo clears it.
+     */
+    val livePreview: LivePreview? = null,
+    /**
+     * True while a slider tool's full-quality render runs quietly in the background after a
+     * slider was let go (see `ToolViewModel.renderRegistered`): no progress ring and the sliders
+     * stay usable, but Done shows its small spinner and waits, and Undo waits too.
+     */
+    val rendering: Boolean = false,
 ) {
 
     /**

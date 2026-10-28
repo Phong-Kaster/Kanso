@@ -146,18 +146,18 @@ class ToolScreenshotTest {
         capture("46_tool_cutout_dark.png")
     }
 
-    /** Picture 47: Retouch with its strength slider, light. */
+    /** Picture 47: Beautify with its strength slider, light. */
     @Test
-    fun tool_retouch_light() {
-        showTool(Tool.RETOUCH, ThemeMode.Light)
-        capture("47_tool_retouch_light.png")
+    fun tool_beautify_light() {
+        showTool(Tool.BEAUTIFY, ThemeMode.Light)
+        capture("47_tool_beautify_light.png")
     }
 
-    /** Picture 48: Retouch with its strength slider, dark. */
+    /** Picture 48: Beautify with its strength slider, dark. */
     @Test
-    fun tool_retouch_dark() {
-        showTool(Tool.RETOUCH, ThemeMode.Dark)
-        capture("48_tool_retouch_dark.png")
+    fun tool_beautify_dark() {
+        showTool(Tool.BEAUTIFY, ThemeMode.Dark)
+        capture("48_tool_beautify_dark.png")
     }
 
     /** Picture 49: Artistic with its styles and strength slider, light. */

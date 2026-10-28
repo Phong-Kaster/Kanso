@@ -11,9 +11,10 @@ import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
 import com.phongkaster.kanso.data.edit.edit.TextLayerLayout
 import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
 import com.phongkaster.kanso.data.edit.enhance.EnhanceProcessor
-import com.phongkaster.kanso.data.edit.retouch.EngineFaceFinder
-import com.phongkaster.kanso.data.edit.retouch.EngineSkinSmoother
-import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
+import com.phongkaster.kanso.data.edit.face.EngineLandmarkFinder
+import com.phongkaster.kanso.data.edit.beautify.LandmarkFaceFinder
+import com.phongkaster.kanso.data.edit.beautify.EngineSkinSmoother
+import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
 import com.phongkaster.kanso.data.media.MediaStorePhotoSource
 import com.phongkaster.kanso.data.media.MediaStoreSavedPhotoSource
 import com.phongkaster.kanso.data.media.PhotoSource
@@ -97,7 +98,17 @@ val appModule = module {
             mapOf(
                 Tool.REMOVE_BACKGROUND to CutoutProcessor(EngineSegmenter()),
                 Tool.ENHANCE to EnhanceProcessor(EngineUpscaler(androidContext())),
-                Tool.RETOUCH to RetouchProcessor(EngineFaceFinder(androidContext()), EngineSkinSmoother()),
+                // One face model for the whole tool: the smoothing boxes come from the same
+                // landmarks as Face width (LandmarkFaceFinder explains why).
+                Tool.BEAUTIFY to EngineLandmarkFinder(androidContext()).let(
+                    block = { landmarks ->
+                        BeautifyProcessor(
+                            finder = LandmarkFaceFinder(landmarks),
+                            landmarks = landmarks,
+                            smoother = EngineSkinSmoother(),
+                        )
+                    },
+                ),
                 Tool.ARTISTIC to ArtisticProcessor(EngineStylizer(androidContext())),
             ),
         )

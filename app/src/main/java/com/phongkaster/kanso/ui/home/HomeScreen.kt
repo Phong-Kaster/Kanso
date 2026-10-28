@@ -99,16 +99,16 @@ const val HOME_CAROUSEL_DOTS_TAG = "home-carousel-dots"
 const val HOME_SHORTCUTS_TAG = "home-shortcuts"
 
 /**
- * Returns the test tag of [tool]'s banner in the carousel, such as `home-banner-RETOUCH`. Tests
+ * Returns the test tag of [tool]'s banner in the carousel, such as `home-banner-BEAUTIFY`. Tests
  * find a banner by its tag, never by its text: a tool's name is on Home twice (its banner and its
  * shortcut's name).
  */
 fun homeBannerTag(tool: Tool): String = "home-banner-${tool.name}"
 
-/** Returns the test tag of the large icon on [tool]'s banner, such as `home-banner-RETOUCH-icon`. */
+/** Returns the test tag of the large icon on [tool]'s banner, such as `home-banner-BEAUTIFY-icon`. */
 fun homeBannerIconTag(tool: Tool): String = "${homeBannerTag(tool)}-icon"
 
-/** Returns the test tag of the "Try now" button on [tool]'s banner, such as `home-try-RETOUCH`. */
+/** Returns the test tag of the "Try now" button on [tool]'s banner, such as `home-try-BEAUTIFY`. */
 fun homeTryTag(tool: Tool): String = "home-try-${tool.name}"
 
 /** Returns the test tag of the page dot at [index] under the carousel (0 is the first banner). */
@@ -567,7 +567,7 @@ private fun bannerColors(index: Int): CardColors {
 private fun bannerDescriptionRes(tool: Tool): Int? = when (tool) {
     Tool.REMOVE_BACKGROUND -> R.string.home_hero_description_remove_background
     Tool.ENHANCE -> R.string.home_hero_description_enhance
-    Tool.RETOUCH -> R.string.home_hero_description_retouch
+    Tool.BEAUTIFY -> R.string.home_hero_description_beautify
     Tool.ARTISTIC -> R.string.home_hero_description_artistic
     Tool.EDIT -> null
 }
@@ -580,7 +580,7 @@ private fun bannerDescriptionRes(tool: Tool): Int? = when (tool) {
  * The card is a `Card` given an `onClick`: a Material container that draws its colour in its
  * shape and makes its whole area tappable. A tappable card merges what is inside it into one node
  * for screen readers (the name and the description), except the button, which has its own click
- * and so stays a separate node. The button's spoken name says which tool it tries ("Try Retouch
+ * and so stays a separate node. The button's spoken name says which tool it tries ("Try Beautify
  * now"), so the four buttons do not all sound the same.
  *
  * The button passes `shapes =`: Material 3 Expressive's buttons take a pair of shapes, one at
@@ -1037,8 +1037,8 @@ private fun SampleRecentCard(photo: Photo, modifier: Modifier = Modifier) {
  */
 private val sampleHomeState by lazy {
     HomeUiState(
-        carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
-        shortcutTools = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+        carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
+        shortcutTools = listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
         recentPhotos = sampleRecentPhotos,
         recentLoading = false,
     )

@@ -1,8 +1,8 @@
-package com.phongkaster.kanso.tool.retouch
+package com.phongkaster.kanso.tool.beautify
 
 import android.graphics.Bitmap
 import android.graphics.Rect
-import com.phongkaster.kanso.data.edit.retouch.SkinSmoother
+import com.phongkaster.kanso.data.edit.beautify.SkinSmoother
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**

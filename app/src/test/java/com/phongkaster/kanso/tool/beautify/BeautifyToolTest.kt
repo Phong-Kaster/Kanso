@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.tool.retouch
+package com.phongkaster.kanso.tool.beautify
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -19,15 +19,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
-import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
+import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
-import com.phongkaster.kanso.ui.tool.component.toolpanel.RETOUCH_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.RETOUCH_RUN_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.RETOUCH_STRENGTH_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.RetouchPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_STRENGTH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WIDTH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.beautifyToolTag
+import com.phongkaster.kanso.ui.tool.model.BeautifyTool
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -47,12 +49,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * DoD 10 on the Retouch screen, on Android 15: a photo with no face says so and nothing changes.
+ * DoD 10 on the Beautify screen, on Android 15: a photo with no face says so and nothing changes.
  *
  * The test draws the tool screen's stateless part, `ToolContent`, for a real [ToolViewModel] whose
- * registry holds a real [RetouchProcessor] built on a fake finder that never finds a face, with
- * the real [RetouchPanel] in the panel slot. Tapping "Smooth skin" runs the processor through the
- * ViewModel, as the app does. Afterwards:
+ * registry holds a real [BeautifyProcessor] built on a fake finder that never finds a face, with
+ * the real [BeautifyPanel] in the panel slot. Opening Smooth and letting go of its slider runs the
+ * processor through the ViewModel, as the app does. Afterwards:
  *
  * - the ViewModel's failure is "no face", the shown photo is still the original (no `edited`
  *   bitmap, its pixels as decoded) and there is nothing to undo, so Save would save the original,
@@ -60,8 +62,8 @@ import org.robolectric.annotation.GraphicsMode
  * - the message `tool_failed_no_face` is on screen inside the node tagged [NO_FACE_TAG]. The tool
  *   screen wraps the failure card in that tag for this failure (wired with the screen itself).
  *
- * Two more tests check the panel alone: Apply hands over full strength by default and the
- * slider's strength once it has been moved.
+ * Three more tests check the panel alone: tapping a tool opens its slider, and letting go of
+ * either slider hands over its value with the other one at its default.
  *
  * The photo is decoded before the screen is drawn, so the loading indicator (which animates
  * forever) is never on screen.
@@ -69,7 +71,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "w411dp-h891dp-xxhdpi")
-class RetouchToolTest {
+class BeautifyToolTest {
 
     /** Starts an empty activity to host the screen. */
     @get:Rule
@@ -99,8 +101,8 @@ class RetouchToolTest {
 
         val state = viewModel.state.value
         assertEquals(EditFailure.NoFace, state.failure)
-        assertNull("no edit may be shown after a failed Retouch", state.edited)
-        assertFalse("a failed Retouch leaves nothing to undo", state.canUndo)
+        assertNull("no edit may be shown after a failed Beautify", state.edited)
+        assertFalse("a failed Beautify leaves nothing to undo", state.canUndo)
         val shown = (state.photo as ToolUiState.PhotoState.Ready).bitmap
         assertArrayEquals("the shown photo must be the original", before, pixels(shown))
     }
@@ -121,46 +123,64 @@ class RetouchToolTest {
         assertTrue("\"$message\" is not shown inside $NO_FACE_TAG", found)
     }
 
-    /** Apply with the slider untouched hands over full strength, 1. */
+    /** No slider shows until a tool is tapped; tapping Smooth shows the smoothing slider only. */
     @Test
-    fun apply_hands_over_full_strength_by_default() {
-        val applied = showPanel()
+    fun tapping_a_tool_opens_its_slider() {
+        showPanel()
 
-        compose.onNodeWithTag(RETOUCH_RUN_TAG).performSemanticsAction(SemanticsActions.OnClick)
-        compose.waitForIdle()
+        compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertDoesNotExist()
+        open(BeautifyTool.SMOOTH)
 
-        assertEquals(listOf(1f), applied)
+        compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertDoesNotExist()
     }
 
-    /** Apply after the slider is moved to 0.25 hands over 0.25. */
+    /** Letting go of the smoothing slider at 0.25 applies 0.25 with the face width still 0. */
     @Test
-    fun apply_hands_over_the_slider_strength() {
+    fun releasing_the_smoothing_slider_applies_it() {
         val applied = showPanel()
 
-        compose.onNodeWithTag(RETOUCH_STRENGTH_TAG)
+        open(BeautifyTool.SMOOTH)
+        compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.25f) }
-        compose.onNodeWithTag(RETOUCH_RUN_TAG).performSemanticsAction(SemanticsActions.OnClick)
         compose.waitForIdle()
 
-        assertEquals(1, applied.size)
-        assertEquals(0.25f, applied.single(), 0.01f)
+        val (strength, width) = applied.single()
+        assertEquals(0.25f, strength, 0.01f)
+        assertEquals(0f, width, 0f)
+    }
+
+    /** Letting go of the face width slider at -0.5 applies -0.5 with no smoothing. */
+    @Test
+    fun releasing_the_width_slider_applies_it() {
+        val applied = showPanel()
+
+        open(BeautifyTool.FACE_WIDTH)
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(-0.5f) }
+        compose.waitForIdle()
+
+        val (strength, width) = applied.single()
+        assertEquals(0f, strength, 0f)
+        assertEquals(-0.5f, width, 0.01f)
     }
 
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
-     * Builds the Retouch screen's ViewModel on [photo], with a registry holding a Retouch
+     * Builds the Beautify screen's ViewModel on [photo], with a registry holding a Beautify
      * processor whose finder finds no face, decodes the photo, and draws `ToolContent` with the
-     * Retouch panel in its slot. Returns the ViewModel.
+     * Beautify panel in its slot. Returns the ViewModel.
      */
     private fun show(photo: Bitmap): ToolViewModel {
-        val processor = RetouchProcessor(FakeFaceFinder.none(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), FakeSkinSmoother())
         val viewModel = ToolViewModel(
-            Tool.RETOUCH,
+            Tool.BEAUTIFY,
             PHOTO_URI,
             FakePhotoLoader(context, photo),
             ViewModelClearedProbe(),
-            registry = ProcessorRegistry(mapOf(Tool.RETOUCH to processor)),
+            registry = ProcessorRegistry(mapOf(Tool.BEAUTIFY to processor)),
             workDispatcher = Dispatchers.Unconfined,
         )
         // The fake loader answers at once; idling the main thread lets the result land.
@@ -176,12 +196,24 @@ class RetouchToolTest {
                     onBack = {},
                     onDone = {},
                     panel = {
-                        RetouchPanel(
-                            onApply = { strength ->
-                                // A slider tool runs from the untouched photo with its strength set first.
-                                viewModel.runRegistered(fromOriginal = true) { registered ->
-                                    (registered as RetouchProcessor).strength = strength
-                                }
+                        BeautifyPanel(
+                            onApply = { strength, width ->
+                                // A slider let go renders quietly from the untouched photo, as the app does.
+                                viewModel.renderRegistered(
+                                    configure = { registered ->
+                                        (registered as BeautifyProcessor).strength = strength
+                                        registered.width = width
+                                    },
+                                )
+                            },
+                            // While dragging, a live frame with the same values, as the app does.
+                            onPreview = { strength, width ->
+                                viewModel.previewRegistered(
+                                    configure = { registered ->
+                                        (registered as BeautifyProcessor).strength = strength
+                                        registered.width = width
+                                    },
+                                )
                             },
                         )
                     },
@@ -194,28 +226,42 @@ class RetouchToolTest {
         return viewModel
     }
 
-    /** Taps "Smooth skin" and waits (at most 5 s of real time) until the run has ended in a failure. */
+    /**
+     * Opens Smooth, lets go of its slider at half strength (which runs Beautify) and waits (at most
+     * 5 s of real time) until the run has ended in a failure.
+     */
     private fun tapSmoothAndWait(viewModel: ToolViewModel) {
-        compose.onNodeWithTag(RETOUCH_RUN_TAG).performSemanticsAction(SemanticsActions.OnClick)
+        open(BeautifyTool.SMOOTH)
+        compose.onNodeWithTag(BEAUTIFY_STRENGTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.5f) }
         compose.waitUntil(timeoutMillis = 5_000) {
             // The processor works on a real background thread; its result comes back through the
             // main looper, which a Robolectric test must let run itself.
             shadowOf(Looper.getMainLooper()).idle()
             val state = viewModel.state.value
-            state.failure != null && state.processing is ToolUiState.Processing.Idle
+            state.failure != null && !state.rendering
         }
     }
 
-    /** Draws the Retouch panel alone and returns the list every Apply's strength is added to. */
-    private fun showPanel(): MutableList<Float> {
-        val applied = mutableListOf<Float>()
+    /**
+     * Draws the Beautify panel alone and returns the list every apply's (strength, width) is added
+     * to.
+     */
+    private fun showPanel(): MutableList<Pair<Float, Float>> {
+        val applied = mutableListOf<Pair<Float, Float>>()
         compose.setContent {
             MaterialTheme {
-                RetouchPanel(onApply = { applied += it })
+                BeautifyPanel(onApply = { strength, width -> applied += strength to width }, onPreview = { _, _ -> })
             }
         }
-        compose.onNodeWithTag(RETOUCH_PANEL_TAG).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_PANEL_TAG).assertExists()
         return applied
+    }
+
+    /** Taps [tool]'s entry in the panel's row, which opens its slider. */
+    private fun open(tool: BeautifyTool) {
+        compose.onNodeWithTag(beautifyToolTag(tool)).performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitForIdle()
     }
 
     /** Every pixel of [bitmap], row after row. */
@@ -231,6 +277,6 @@ class RetouchToolTest {
         const val PHOTO_URI = "content://media/external/images/media/42"
 
         /** The tag of the node around the "no face" message on the tool screen (DoD 10). */
-        const val NO_FACE_TAG = "retouch-no-face"
+        const val NO_FACE_TAG = "beautify-no-face"
     }
 }

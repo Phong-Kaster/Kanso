@@ -1,4 +1,4 @@
-package com.phongkaster.kanso.data.edit.retouch
+package com.phongkaster.kanso.data.edit.beautify
 
 import android.graphics.Bitmap
 import android.graphics.Rect
@@ -19,7 +19,7 @@ import org.opencv.core.Rect as CvRect
  * Why not the engine's GL beauty shader (`CompositeBeautyProgram` in `core/imageprocessor`): it
  * draws through OpenGL and so must run on a thread that owns a GL context, which a background
  * coroutine does not; OpenCV runs on any thread. OpenCV's native library is packed in the app
- * (`opencv/`), so nothing is downloaded. This file and [EngineFaceFinder] are the only Retouch
+ * (`opencv/`), so nothing is downloaded. This file and `data/edit/face/EngineLandmarkFinder.kt` are the only Beautify
  * files that name engine classes; they never run in a JVM test, where fakes stand in.
  */
 class EngineSkinSmoother : SkinSmoother {
@@ -27,7 +27,7 @@ class EngineSkinSmoother : SkinSmoother {
     /**
      * Returns a copy of [photo] whose pixels inside [face] went through the bilateral filter.
      * Throws `IllegalStateException` when OpenCV's native library will not load, which
-     * [RetouchProcessor] reports as the model being unavailable.
+     * [BeautifyProcessor] reports as the model being unavailable.
      *
      * OpenCV keeps a picture in a `Mat` (a matrix of pixels) whose memory lives in native code,
      * outside Java's garbage collector, so every Mat made here is released in `finally`.

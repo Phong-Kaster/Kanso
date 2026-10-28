@@ -73,20 +73,20 @@ import org.robolectric.annotation.Config
  * gallery of the same tool, whichever way the tool screen was opened, and the photo picked there
  * opens in the same tool.
  *
- * - (a) Home's carousel swiped to Retouch's banner, "Try now", photo 1, Replace: the gallery titled
- *   "Retouch: choose a photo" is on top, with no tool screen left; photo 2 there opens the Retouch
+ * - (a) Home's carousel swiped to Beautify's banner, "Try now", photo 1, Replace: the gallery titled
+ *   "Beautify: choose a photo" is on top, with no tool screen left; photo 2 there opens the Beautify
  *   screen on photo 2; Replace once more, and one Back from the gallery reaches Home.
  * - (b) Home's newest recent photo (`home-recent-0`) opens the Edit screen, which has no Replace;
  *   one Back reaches Home.
  * - (c) The Camera button, shutter, Keep: the Edit screen, with no Replace; one Back reaches Home.
  * - (d) My edits, a tile, the viewer's "Edit": the Edit screen, with no Replace; Back shows the
  *   photo screen (the viewer) again, and another Back shows My edits.
- * - Two taps on Replace (on the Retouch screen) before the screen can change open one gallery,
+ * - Two taps on Replace (on the Beautify screen) before the screen can change open one gallery,
  *   not two.
  *
  * Run 9 (A-007): Replace was removed from the Edit screen only; (b), (c) and (d) reach nothing
  * but Edit, so they now check that Replace is absent there and where Back leads instead, and the
- * double tap moved to Retouch.
+ * double tap moved to Beautify.
  *
  * A test cannot read the app's back stack, so its shape is read from what is on screen and from
  * where Back leads. Photo and camera access are granted, and the photo library, the saved photos,
@@ -113,35 +113,35 @@ class ReplaceNavigationTest {
     }
 
     /**
-     * Case (a): Retouch's "Try now" in the carousel, photo 1, Replace: the Retouch gallery is on
-     * top; photo 2 gives the Retouch screen on photo 2; Replace again, and one Back reaches Home.
+     * Case (a): Beautify's "Try now" in the carousel, photo 1, Replace: the Beautify gallery is on
+     * top; photo 2 gives the Beautify screen on photo 2; Replace again, and one Back reaches Home.
      */
     @Test
-    fun replace_on_the_retouch_screen_returns_to_the_retouch_gallery() {
+    fun replace_on_the_beautify_screen_returns_to_the_beautify_gallery() {
         // Photo 1 is the newest, so it is the first cell of the gallery; photo 2 the second.
         val (photo1, photo2) = galleryPhotos
         launchWithFakes { scenario ->
-            bringRetouchBannerToFront()
+            bringBeautifyBannerToFront()
             // The banner's own click handler, as a screen reader's double tap would call it: the
             // carousel sits in Home's scrolling column, where a touch could land on the tab bar.
-            compose.onNodeWithTag(homeTryTag(Tool.RETOUCH)).performSemanticsAction(SemanticsActions.OnClick)
-            waitForGallery(Tool.RETOUCH, photo1.id)
+            compose.onNodeWithTag(homeTryTag(Tool.BEAUTIFY)).performSemanticsAction(SemanticsActions.OnClick)
+            waitForGallery(Tool.BEAUTIFY, photo1.id)
             compose.onNodeWithTag(galleryPhotoTag(photo1.id)).performClick()
-            waitForToolScreenOn(Tool.RETOUCH, photo1.uri)
+            waitForToolScreenOn(Tool.BEAUTIFY, photo1.uri)
 
-            // Replace: back to the Retouch gallery, the tool screen gone.
+            // Replace: back to the Beautify gallery, the tool screen gone.
             compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
-            waitForGallery(Tool.RETOUCH, photo2.id)
+            waitForGallery(Tool.BEAUTIFY, photo2.id)
             assertEquals(0, count(TOOL_SCREEN_TAG))
             assertEquals(1, count(GALLERY_SCREEN_TAG))
 
             // The photo picked there opens in the same tool.
             compose.onNodeWithTag(galleryPhotoTag(photo2.id)).performClick()
-            waitForToolScreenOn(Tool.RETOUCH, photo2.uri)
+            waitForToolScreenOn(Tool.BEAUTIFY, photo2.uri)
 
             // Replace again, then one Back from the gallery reaches Home.
             compose.onNodeWithTag(TOOL_REPLACE_TAG).performClick()
-            waitForGallery(Tool.RETOUCH, photo1.id)
+            waitForGallery(Tool.BEAUTIFY, photo1.id)
             assertOneBackReachesHome(scenario)
         }
     }
@@ -153,7 +153,7 @@ class ReplaceNavigationTest {
      * Run 9 (A-007): the Edit screen no longer has a Replace chip, and a recent photo only ever
      * opens Edit, so this case can no longer reach Replace. It now proves the route still opens
      * the Edit screen on the right photo, that Replace is gone from it, and that Back from it
-     * reaches Home; Replace itself stays proven on Retouch by case (a) and the double tap.
+     * reaches Home; Replace itself stays proven on Beautify by case (a) and the double tap.
      */
     @Test
     fun a_recent_photo_opens_the_edit_screen_without_replace_and_back_reaches_home() {
@@ -175,7 +175,7 @@ class ReplaceNavigationTest {
      *
      * Run 9 (A-007): the Edit screen no longer has a Replace chip and a kept shot only ever opens
      * Edit, so this case now proves the route, that Replace is gone, and that Back skips the
-     * camera; Replace itself stays proven on Retouch by case (a) and the double tap.
+     * camera; Replace itself stays proven on Beautify by case (a) and the double tap.
      */
     @Test
     fun the_camera_opens_the_edit_screen_without_replace_and_back_reaches_home() {
@@ -253,18 +253,18 @@ class ReplaceNavigationTest {
      * tap leaves this test green.
      *
      * Run 9 (A-007): the Edit screen has no Replace any more, so the double tap is made on the
-     * Retouch screen, reached from Retouch's "Try now" and the gallery's first photo, as in case
+     * Beautify screen, reached from Beautify's "Try now" and the gallery's first photo, as in case
      * (a); what it proves is unchanged.
      */
     @Test
     fun a_double_tap_on_replace_opens_one_gallery() {
         val photo1 = galleryPhotos.first()
         launchWithFakes { scenario ->
-            bringRetouchBannerToFront()
-            compose.onNodeWithTag(homeTryTag(Tool.RETOUCH)).performSemanticsAction(SemanticsActions.OnClick)
-            waitForGallery(Tool.RETOUCH, photo1.id)
+            bringBeautifyBannerToFront()
+            compose.onNodeWithTag(homeTryTag(Tool.BEAUTIFY)).performSemanticsAction(SemanticsActions.OnClick)
+            waitForGallery(Tool.BEAUTIFY, photo1.id)
             compose.onNodeWithTag(galleryPhotoTag(photo1.id)).performClick()
-            waitForToolScreenOn(Tool.RETOUCH, photo1.uri)
+            waitForToolScreenOn(Tool.BEAUTIFY, photo1.uri)
 
             val replace = compose.onNodeWithTag(TOOL_REPLACE_TAG).fetchSemanticsNode()
             val click = checkNotNull(replace.config.getOrNull(SemanticsActions.OnClick)?.action) {
@@ -275,7 +275,7 @@ class ReplaceNavigationTest {
                 click()
             }
 
-            waitForGallery(Tool.RETOUCH, photo1.id)
+            waitForGallery(Tool.BEAUTIFY, photo1.id)
             compose.waitForIdle()
             assertEquals("A double tap on Replace must open one gallery", 1, count(GALLERY_SCREEN_TAG))
             assertOneBackReachesHome(scenario)
@@ -303,18 +303,18 @@ class ReplaceNavigationTest {
     }
 
     /**
-     * Swipes Home's carousel to the left, as a finger would, until Retouch's banner (the third,
+     * Swipes Home's carousel to the left, as a finger would, until Beautify's banner (the third,
      * so two swipes from the first) is in front: its "Try now" wholly inside the carousel. Each
      * swipe moves exactly one banner (the carousel's single-advance fling). Two more swipes are
      * allowed in case one of the first two did not register, then the test fails.
      */
-    private fun bringRetouchBannerToFront() {
+    private fun bringBeautifyBannerToFront() {
         waitForHome(compose)
         waitFor { count(HOME_CAROUSEL_TAG) > 0 }
         compose.onNodeWithTag(HOME_CAROUSEL_TAG).performScrollTo()
-        repeat(RETOUCH_SWIPES) { swipeCarouselLeft() }
-        repeat(SPARE_SWIPES) { if (!retouchTryNowInFront()) swipeCarouselLeft() }
-        assertTrue("Retouch's banner should be in front after swiping", retouchTryNowInFront())
+        repeat(BEAUTIFY_SWIPES) { swipeCarouselLeft() }
+        repeat(SPARE_SWIPES) { if (!beautifyTryNowInFront()) swipeCarouselLeft() }
+        assertTrue("Beautify's banner should be in front after swiping", beautifyTryNowInFront())
     }
 
     /** Swipes Home's carousel one banner to the left and lets it settle. */
@@ -327,11 +327,11 @@ class ReplaceNavigationTest {
     }
 
     /**
-     * Tells whether Retouch's "Try now" is composed and lies wholly inside the carousel, from its
+     * Tells whether Beautify's "Try now" is composed and lies wholly inside the carousel, from its
      * laid-out position and size (`positionInRoot`, which is not clipped to what is visible).
      */
-    private fun retouchTryNowInFront(): Boolean {
-        val tryNow = compose.onAllNodesWithTag(homeTryTag(Tool.RETOUCH)).fetchSemanticsNodes().singleOrNull()
+    private fun beautifyTryNowInFront(): Boolean {
+        val tryNow = compose.onAllNodesWithTag(homeTryTag(Tool.BEAUTIFY)).fetchSemanticsNodes().singleOrNull()
             ?: return false
         val carousel = compose.onNodeWithTag(HOME_CAROUSEL_TAG).fetchSemanticsNode()
         val left = tryNow.positionInRoot.x
@@ -414,8 +414,8 @@ class ReplaceNavigationTest {
 
     /** The photos and numbers the tests share. */
     private companion object {
-        /** Left swipes from the first banner to Retouch's, the third. */
-        const val RETOUCH_SWIPES = 2
+        /** Left swipes from the first banner to Beautify's, the third. */
+        const val BEAUTIFY_SWIPES = 2
 
         /** Extra swipes allowed if one did not register. */
         const val SPARE_SWIPES = 2
