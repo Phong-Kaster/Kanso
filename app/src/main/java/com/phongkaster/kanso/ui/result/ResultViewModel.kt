@@ -107,7 +107,7 @@ class ResultViewModel(
 
     /**
      * Saves the rendered picture into `Pictures/Kanso` as a new file, in the background: a PNG
-     * when it has see-through pixels, else a JPEG at quality 95 (see `PhotoSaver.save`). This is
+     * when it has see-through pixels, else a JPEG at quality 100 (see `PhotoSaver.save`). This is
      * the only place the Result screen writes to the gallery.
      *
      * Nothing happens in the viewer, without a picture, while a save is running (so one tap never

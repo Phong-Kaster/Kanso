@@ -38,7 +38,7 @@ const val DEFAULT_SCAN_TIMEOUT_MILLIS = 5_000L
 const val SHARE_CACHE_FOLDER = "shared"
 
 /** The JPEG quality of a shared picture, the same as a saved one. */
-const val SHARE_JPEG_QUALITY = 95
+const val SHARE_JPEG_QUALITY = 100
 
 /**
  * The end of the FileProvider's authority, the name other apps use to reach it; the full authority

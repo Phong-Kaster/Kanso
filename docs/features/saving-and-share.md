@@ -25,14 +25,14 @@ opened a screen named `Saved`; Run 9 replaced both with Done and Result.
 | **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`, or `.png` for a picture with an alpha channel; `_1`, `_2`, ... when the name is taken. An existing file is never overwritten. |
 | **Edited photo** | The picture Done handed over, at its size, never scaled back up or turned: a **JPEG at quality 95** when opaque, a lossless **PNG** when it has an alpha channel (a Remove background cut-out). |
 | **Untouched photo** (no edit on Remove background, Enhance, Retouch or Artistic, or every edit undone there; no change at all on Edit) | A copy of the original file, byte for byte; or, if it has an EXIF rotation, a fresh JPEG at quality 95, turned upright, with no EXIF block. |
-| **Shared copy** | A file in the app's cache, `shared/Kanso_<milliseconds>.jpg` (JPEG quality 95) or `.png` (with alpha), at the picture's size; the copy from the previous share is deleted first. |
+| **Shared copy** | A file in the app's cache, `shared/Kanso_<milliseconds>.jpg` (JPEG quality 100) or `.png` (with alpha), at the picture's size; the copy from the previous share is deleted first. |
 | **Original** | Opened only for reading. Never changed. |
 
 Limits, from the code:
 
 - An edited photo is saved at the tool's working size (2000 px for Edit, Remove background and
   Retouch, up to 2048 px for Enhance, 1024 px for Artistic), never at the original's full size.
-- On Edit, any change, even one undone later, makes Done render the settings at 2000 px, so the
+- On Edit, any change, even one undone later, makes Done render the settings at up to 3000 px, so the
   saved file is that render, not a copy of the original.
 - One picture per Done can be saved once: after a successful save, Save reads "Saved" and is
   switched off. Back to the tool and Done again hands over a new picture that can be saved again.
@@ -132,7 +132,7 @@ on `Dispatchers.IO`:
 
 1. **Choosing the content.**
    - `save(bitmap)` (an edited picture): `saveFormatFor(bitmap)` picks PNG when `bitmap.hasAlpha()`,
-     else JPEG at quality 95 (`EDITED_JPEG_QUALITY`); extension and MIME type follow. The bitmap is
+     else JPEG at quality 100 (`EDITED_JPEG_QUALITY`); extension and MIME type follow. The bitmap is
      compressed as it is and never recycled (the screen still shows it).
    - `save(uri)` (an untouched photo): `prepare` reads the EXIF orientation
      ([`data/photo/UprightJpeg.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/UprightJpeg.kt),
@@ -170,7 +170,7 @@ picture shared is the one in the state at the tap.
 
 1. `shareableBitmapUri` (on `Dispatchers.IO`): deletes any earlier copy in the cache folder
    `shared/` (`SHARE_CACHE_FOLDER`), then writes the picture there as `Kanso_<milliseconds>.png`
-   when it has alpha, else `.jpg` at quality 95 (`SHARE_JPEG_QUALITY`), at its own size. A failed
+   when it has alpha, else `.jpg` at quality 100 (`SHARE_JPEG_QUALITY`), at its own size. A failed
    write gives null and the share sheet does not open.
 2. `fileProviderUri` turns the file into a `content://` Uri through AndroidX `FileProvider`, with
    the authority `<applicationId>.fileprovider` (`SHARE_AUTHORITY_SUFFIX`; the `provider` in

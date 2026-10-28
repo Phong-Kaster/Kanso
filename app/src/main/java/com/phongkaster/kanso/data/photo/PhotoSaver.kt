@@ -26,7 +26,7 @@ interface PhotoSaver {
     /**
      * Saves [bitmap], the edited picture, exactly as it is (same width and height, no scaling)
      * and says how it went: a PNG when the bitmap has an alpha channel (`bitmap.hasAlpha()`, as
-     * a cut-out does), else a JPEG at quality 95. The file's extension and type follow that
+     * a cut-out does), else a JPEG at quality 100. The file's extension and type follow that
      * format. It does its work off the main thread, never changes the original photo, never
      * recycles [bitmap], and never throws for a full disk; a failed save leaves no file behind.
      */
