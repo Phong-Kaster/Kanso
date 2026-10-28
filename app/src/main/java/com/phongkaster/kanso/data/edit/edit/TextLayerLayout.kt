@@ -3,6 +3,7 @@ package com.phongkaster.kanso.data.edit.edit
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.Layout
@@ -31,6 +32,11 @@ import kotlin.math.sqrt
  *
  * A thin margin ([PADDING_EMS]) surrounds the lines, so the swash of a script letter or an accent
  * above a capital is never cut off at the block's edge.
+ *
+ * **A box behind the words.** When the content has a [LayerContent.Text.boxArgb] (the Background
+ * row of the Text or Date sheet), a rounded box in that colour fills the whole block behind the lines, and
+ * the margin is wider ([BOX_PADDING_X_EMS] across, [BOX_PADDING_Y_EMS] down) so the words do not
+ * touch the box's edge. The box is part of the block, so it is measured, moved and scaled with it.
  *
  * [typefaceOf] gives the Android typeface of a [TextFont]; [forApp] builds one that loads the
  * bundled fonts from the app's resources.
@@ -64,8 +70,8 @@ class TextLayerLayout(private val typefaceOf: (TextFont) -> Typeface) {
         synchronized(blocks) { blocks[key]?.let { return it } }
         val layout = layout(content, words)
         val block = Block(
-            widthEms = (layout.width + 2 * PADDING_PX) / REFERENCE_PX,
-            heightEms = (layout.height + 2 * PADDING_PX) / REFERENCE_PX,
+            widthEms = (layout.width + 2 * paddingX(content)) / REFERENCE_PX,
+            heightEms = (layout.height + 2 * paddingY(content)) / REFERENCE_PX,
         )
         synchronized(blocks) { blocks[key] = block }
         return block
@@ -99,7 +105,18 @@ class TextLayerLayout(private val typefaceOf: (TextFont) -> Typeface) {
             val canvas = Canvas(bitmap)
             // One uniform scale from the reference layout to the bitmap, after the margin.
             canvas.scale(w / (block.widthEms * REFERENCE_PX), h / (block.heightEms * REFERENCE_PX))
-            canvas.translate(PADDING_PX, PADDING_PX)
+            content.boxArgb?.let { box ->
+                // The box fills the whole block, behind the lines; its own alpha is faded too
+                // (worked out before `apply`, where `alpha` would mean the paint's own).
+                val boxAlpha = (Color.alpha(box) * alpha.coerceIn(0f, 1f)).roundToInt()
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = box
+                    this.alpha = boxAlpha
+                }
+                val radius = BOX_RADIUS_EMS * REFERENCE_PX
+                canvas.drawRoundRect(0f, 0f, block.widthEms * REFERENCE_PX, block.heightEms * REFERENCE_PX, radius, radius, paint)
+            }
+            canvas.translate(paddingX(content), paddingY(content))
             layout.paint.alpha = (alpha.coerceIn(0f, 1f) * 255f).roundToInt()
             layout.draw(canvas)
             bitmap
@@ -136,6 +153,14 @@ class TextLayerLayout(private val typefaceOf: (TextFont) -> Typeface) {
             .build()
     }
 
+    /** The margin across the lines, in reference pixels: wider around a box. */
+    private fun paddingX(content: LayerContent.Text): Float =
+        if (content.boxArgb != null) BOX_PADDING_X_EMS * REFERENCE_PX else PADDING_PX
+
+    /** The margin above and below the lines, in reference pixels: wider around a box. */
+    private fun paddingY(content: LayerContent.Text): Float =
+        if (content.boxArgb != null) BOX_PADDING_Y_EMS * REFERENCE_PX else PADDING_PX
+
     /** The reference size, the app's own layout, and the limits. */
     companion object {
         /** The letter height (text size) the words are always laid out at, in pixels. */
@@ -146,6 +171,15 @@ class TextLayerLayout(private val typefaceOf: (TextFont) -> Typeface) {
 
         /** The margin in pixels at the reference size. */
         private const val PADDING_PX = PADDING_EMS * REFERENCE_PX
+
+        /** The margin left and right of the words inside a box, in letter heights. */
+        const val BOX_PADDING_X_EMS = 0.4f
+
+        /** The margin above and below the words inside a box, in letter heights. */
+        const val BOX_PADDING_Y_EMS = 0.2f
+
+        /** How round a box's corners are, in letter heights. */
+        const val BOX_RADIUS_EMS = 0.3f
 
         /** The most pixels one rendered text may have (about 2000 x 2000). */
         private const val MAX_PIXELS = 4_000_000f

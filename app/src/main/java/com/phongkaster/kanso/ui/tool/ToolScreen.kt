@@ -65,8 +65,19 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
 import com.phongkaster.kanso.ui.tool.component.topbar.ToolTopBar
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.datepanel.DatePanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TextPanel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
+import java.time.LocalDateTime
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
 
 /** The test tag on the root of the tool screen. */
 const val TOOL_SCREEN_TAG = "tool-screen"
@@ -313,6 +324,38 @@ fun ToolScreen(
                     onColour = { viewModel.chooseTextColour(it, processorFor) },
                     onCustomColour = { viewModel.chooseTextColour(it, processorFor, preview = true) },
                     onCustomColourDone = viewModel::commitSettings,
+                    onBackground = { viewModel.chooseTextBackground(it, processorFor) },
+                    onCustomBackground = { viewModel.chooseTextBackground(it, processorFor, preview = true) },
+                    onCustomBackgroundDone = viewModel::commitSettings,
+                    onSize = { viewModel.previewLayerSize(it, processorFor) },
+                    onOpacity = { viewModel.previewLayerOpacity(it, processorFor) },
+                    onSliderDone = viewModel::commitSettings,
+                    onCancel = viewModel::cancelLayers,
+                    onConfirm = viewModel::confirmLayers,
+                )
+            } else if (tool == EditTool.DATE) {
+                val selectedDate = state.settings.layers.firstOrNull {
+                    it.key == state.selectedLayerKey && it.content is LayerContent.Date
+                }
+                // A date's size number needs its words measured, like a text's.
+                val size = remember(state.settings, state.selectedLayerKey) { viewModel.selectedLayerSize() }
+                // The ViewModel sets the next moment to now when the sheet opens; this stand-in
+                // only covers a frame drawn before that (remember is never called conditionally).
+                val standIn = remember { LocalDateTime.now() }
+                DatePanel(
+                    selected = selectedDate,
+                    nextMoment = state.dateMoment ?: standIn,
+                    size = size ?: LayerSize.TEXT_DEFAULT,
+                    enabled = !state.comparing && !state.finishing,
+                    onMoment = { viewModel.chooseDateMoment(it, processorFor) },
+                    onFormat = { viewModel.chooseDateFormat(it, processorFor) },
+                    onFont = { viewModel.chooseDateFont(it, processorFor) },
+                    onColour = { viewModel.chooseDateColour(it, processorFor) },
+                    onCustomColour = { viewModel.chooseDateColour(it, processorFor, preview = true) },
+                    onCustomColourDone = viewModel::commitSettings,
+                    onBackground = { viewModel.chooseDateBackground(it, processorFor) },
+                    onCustomBackground = { viewModel.chooseDateBackground(it, processorFor, preview = true) },
+                    onCustomBackgroundDone = viewModel::commitSettings,
                     onSize = { viewModel.previewLayerSize(it, processorFor) },
                     onOpacity = { viewModel.previewLayerOpacity(it, processorFor) },
                     onSliderDone = viewModel::commitSettings,
@@ -357,6 +400,7 @@ fun ToolScreen(
         onLayerDuplicate = { viewModel.duplicateLayer(it, processorFor) },
         onLayerFlip = { viewModel.flipLayer(it, processorFor) },
         onLayerEdit = viewModel::editText,
+        onLayerTap = { viewModel.tapLayer(it, processorFor) },
     )
 
     // The Edit screen only: Back first closes an open sheet, then (with changes) asks before
@@ -410,18 +454,20 @@ fun ToolScreen(
  * [EditBottomBar]: the row of four tools (Crop, Rotate, Adjust, Filters) at the very bottom, and
  * the open tool's panel appearing just above it; Undo and Compare are the last two entries of that
  * same row. The body is [EditPhotoArea]: the photo card
- * (without the "Replace" chip) filling all the space between the top bar and the bottom bar, so it
- * shrinks while a panel is open. [editSheet] is the slot for that panel's controls; it is given
+ * (without the "Replace" chip) filling all the space between the top bar and the bottom bar. The
+ * bar keeps one height whatever sheet is open, and the photo is sized from that resting height, so
+ * the photo never changes size, not even while the Text keyboard lifts the bar over it. [editSheet] is the slot for that panel's controls; it is given
  * the open tool, so one lambda serves all four. [panel] is not used on Edit. The Undo control
  * moves from the top bar into the row; [onCompare] is called with the Compare switch's new value,
  * and while it is on the card shows the untouched original photo. [onOpenTool] is a tool in the
  * row tapped. The other four tools never call these three.
  *
  * The `onLayer...` callbacks are the layer overlay's events (select, a gesture's new list, the
- * gesture's end, delete, duplicate, a sticker's flip, a text's edit), handed on to the photo card;
+ * gesture's end, delete, duplicate, a sticker's flip, a text's edit, a tap on the selected layer),
+ * handed on to the photo card;
  * only Edit uses them.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ToolContent(
     state: ToolUiState,
@@ -444,8 +490,14 @@ fun ToolContent(
     onLayerDuplicate: (Long) -> Unit = {},
     onLayerFlip: (Long) -> Unit = {},
     onLayerEdit: (Long) -> Unit = {},
+    onLayerTap: (Long) -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
+    // The Edit bottom bar's height with the keyboard down, in pixels (0 until measured). The photo
+    // is sized from this, not from the bar's height now, so when the Text keyboard pushes the bar
+    // up, the bar slides over the photo instead of shrinking it: the photo never changes size.
+    var restingBarPx by remember { mutableIntStateOf(0) }
+    val keyboardUp by rememberUpdatedState(WindowInsets.isImeVisible)
     Scaffold(
         modifier = modifier
             .testTag(TOOL_SCREEN_TAG)
@@ -475,6 +527,7 @@ fun ToolContent(
                     state = state,
                     onOpenTool = onOpenTool,
                     onCompare = onCompare,
+                    modifier = Modifier.onSizeChanged { if (!keyboardUp) restingBarPx = it.height },
                     sheet = { tool ->
                         // The same options-strip tag as the other tools' panels carry, so the open
                         // tool's controls are found in the same place on every tool screen.
@@ -498,6 +551,21 @@ fun ToolContent(
             .padding(innerPadding)
             .consumeWindowInsets(innerPadding)
         if (isEdit) {
+            // The bottom edge comes from the bar's resting height (see restingBarPx), so the photo
+            // keeps its size while the keyboard is up; until the bar is measured, innerPadding's.
+            val density = LocalDensity.current
+            val layoutDirection = LocalLayoutDirection.current
+            val bottom = if (restingBarPx > 0) with(density) { restingBarPx.toDp() } else innerPadding.calculateBottomPadding()
+            val fixed = PaddingValues(
+                start = innerPadding.calculateStartPadding(layoutDirection),
+                top = innerPadding.calculateTopPadding(),
+                end = innerPadding.calculateEndPadding(layoutDirection),
+                bottom = bottom,
+            )
+            val editModifier = Modifier
+                .fillMaxSize()
+                .padding(fixed)
+                .consumeWindowInsets(fixed)
             // The bottom bar already keeps clear of the navigation bar and the gesture area, so the
             // photo only needs a small gap above it.
             EditPhotoArea(
@@ -516,6 +584,7 @@ fun ToolContent(
                             onLayerDuplicate = onLayerDuplicate,
                             onLayerFlip = onLayerFlip,
                             onLayerEdit = onLayerEdit,
+                            onLayerTap = onLayerTap,
                             modifier = Modifier.fillMaxSize(),
                         )
                         // The "20 stickers at most" card, a moment on the photo's top edge.
@@ -527,7 +596,7 @@ fun ToolContent(
                     }
                 },
                 cropper = editCropper,
-                modifier = insetModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                modifier = editModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         } else {
             // With no bottom bar, the tool's controls are the lowest thing on screen, so they keep

@@ -12,6 +12,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.DateFormat
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -43,6 +44,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 /**
  * Holds the state of a tool screen: [tool] working on the photo named by [photoUri].
@@ -83,6 +86,7 @@ import kotlinx.coroutines.withContext
  * phone's typeface for every font, is enough for a test).
  * [workDispatcher] is the background thread pool that shrinks a large photo and runs the edits,
  * so neither ever runs on the main thread; tests can pass their own.
+ * [clock] tells the time a new date layer starts at (the phone's clock; a test passes a fixed one).
  */
 class ToolViewModel(
     private val tool: Tool,
@@ -93,6 +97,7 @@ class ToolViewModel(
     private val store: RenderedPhotoStore = RenderedPhotoStore(),
     private val workDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val textLayout: TextLayerLayout = TextLayerLayout { Typeface.DEFAULT },
+    private val clock: () -> LocalDateTime = { LocalDateTime.now() },
 ) : ViewModel() {
 
     /**
@@ -327,7 +332,8 @@ class ToolViewModel(
      * Opens the sheet of the Edit screen's [tool] under the photo, closing any other one, since
      * only one sheet is open at a time. Tapping the tool whose sheet is already open closes it
      * again, so the row's entries work as toggles. Opening the Text sheet this way adds a new,
-     * empty text in the middle of the photo and opens the keyboard for it (see [startText]).
+     * empty text in the middle of the photo and opens the keyboard for it (see [startText]);
+     * opening the Date sheet sets the moment its next date gets to now ([ToolUiState.dateMoment]).
      */
     fun openTool(tool: EditTool) {
         val current = mutableState.value
@@ -350,6 +356,7 @@ class ToolViewModel(
                 selectedLayerKey = if (current.openTool.isLayerSheet()) null else it.selectedLayerKey,
                 touchedLayerKey = null,
                 textEditing = false,
+                dateMoment = if (!closing && tool == EditTool.DATE) now() else it.dateMoment,
             )
         }
         // A gesture cut short by the sheet changing never commits: let the layer rejoin the copy.
@@ -358,8 +365,9 @@ class ToolViewModel(
         if (!closing && tool == EditTool.TEXT) startText()
     }
 
-    /** True for the two sheets that place layers on the photo: Stickers and Text. */
-    private fun EditTool?.isLayerSheet(): Boolean = this == EditTool.STICKERS || this == EditTool.TEXT
+    /** True for the three sheets that place layers on the photo: Stickers, Text and Date. */
+    private fun EditTool?.isLayerSheet(): Boolean =
+        this == EditTool.STICKERS || this == EditTool.TEXT || this == EditTool.DATE
 
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
     fun chooseAdjustSlider(slider: AdjustSlider) {
@@ -416,7 +424,8 @@ class ToolViewModel(
             return
         }
         // The mapping turns "the middle of what is shown" into fractions of the original photo,
-        // which is what a Layer stores.
+        // which is what a Laye
+        // r stores.
         val mapping = LayerMapping(original.width, original.height, session.settings)
         val key = nextStickerKey++
         this.processorFor = processorFor
@@ -450,7 +459,14 @@ class ToolViewModel(
         settleText()
         publishSession(session.commit())
         sheetSnapshot = session
-        mutableState.update { it.copy(openTool = sheet, selectedLayerKey = null, textEditing = false) }
+        mutableState.update {
+            it.copy(
+                openTool = sheet,
+                selectedLayerKey = null,
+                textEditing = false,
+                dateMoment = if (sheet == EditTool.DATE) now() else it.dateMoment,
+            )
+        }
     }
 
     /**
@@ -460,7 +476,7 @@ class ToolViewModel(
      * that names no layer selects none.
      *
      * A layer can be touched with any sheet open but Crop (whose cropper hides them), or with none:
-     * touching one opens the sheet of its kind (Stickers for a sticker, Text for a text) if it is
+     * touching one opens the sheet of its kind (Stickers, Text or Date) if it is
      * not open yet, and the sheet that closes keeps its changes, like its Confirm (ADR-005).
      * Ignored while comparing or while Done renders.
      */
@@ -472,7 +488,11 @@ class ToolViewModel(
         val chosen = session.settings.layers.firstOrNull { it.key == key }
         // A layer opens the sheet of its own kind; the sheet it leaves keeps its changes.
         if (chosen != null) {
-            val sheet = if (chosen.content is LayerContent.Text) EditTool.TEXT else EditTool.STICKERS
+            val sheet = when (chosen.content) {
+                is LayerContent.Picture -> EditTool.STICKERS
+                is LayerContent.Text -> EditTool.TEXT
+                is LayerContent.Date -> EditTool.DATE
+            }
             if (mutableState.value.openTool != sheet) switchToSheet(sheet)
         }
         mutableState.update { it.copy(selectedLayerKey = chosen?.key, textEditing = false) }
@@ -691,9 +711,28 @@ class ToolViewModel(
     }
 
     /**
+     * The Text sheet's Background row: the selected text gets a box of colour [argb] behind its
+     * words (its alpha kept, so a box may be see-through), or none for null, keeping its letter
+     * size. A ready colour or None is one action; [preview] is true while the custom picker is
+     * dragged: the photo follows without an undo step, and the drag ends with [commitSettings].
+     */
+    fun chooseTextBackground(argb: Int?, processorFor: (EditSettings) -> ToolProcessor, preview: Boolean = false) {
+        if (!preview) {
+            editSelectedText(processorFor) { layer, content -> reflowed(layer, content.copy(boxArgb = argb)) }
+            return
+        }
+        if (!layerEditingOpen()) return
+        val layer = selectedText() ?: return
+        val content = layer.content as LayerContent.Text
+        this.processorFor = processorFor
+        publishSession(session.preview(session.settings.withLayer(reflowed(layer, content.copy(boxArgb = argb)))))
+        requestPreview()
+    }
+
+    /**
      * The size slider of a layer sheet moved to [size] (1 to 100, see [LayerSize]) for the
-     * selected layer: a sticker's width follows directly, a text's through its measured block, so
-     * its letters take the height the number stands for. Previewed only; the slider's release
+     * selected layer: a sticker's width follows directly, a text's or a date's through its
+     * measured block, so its letters take the height the number stands for. Previewed only; the slider's release
      * ([commitSettings]) makes the drag one undo step.
      */
     fun previewLayerSize(size: Float, processorFor: (EditSettings) -> ToolProcessor) {
@@ -706,6 +745,12 @@ class ToolViewModel(
             is LayerContent.Text -> LayerSize.textWidth(
                 size,
                 textLayout.measure(content, wordsOrPlaceholder(content)).widthEms,
+                original.width.toFloat() / original.height,
+            )
+            // A date's letters are sized like a text's (ADR-006).
+            is LayerContent.Date -> LayerSize.textWidth(
+                size,
+                textLayout.measure(content.asText()).widthEms,
                 original.width.toFloat() / original.height,
             )
         }
@@ -742,6 +787,11 @@ class ToolViewModel(
             is LayerContent.Text -> LayerSize.ofText(
                 layer.width,
                 textLayout.measure(content, wordsOrPlaceholder(content)).widthEms,
+                original.width.toFloat() / original.height,
+            )
+            is LayerContent.Date -> LayerSize.ofText(
+                layer.width,
+                textLayout.measure(content.asText()).widthEms,
                 original.width.toFloat() / original.height,
             )
         }
@@ -834,6 +884,135 @@ class ToolViewModel(
     /** These settings with [layer] in place of the layer that has the same key. */
     private fun EditSettings.withLayer(layer: Layer): EditSettings =
         copy(layers = layers.map { if (it.key == layer.key) layer else it })
+
+    // --- The Date sheet ----------------------------------------------------------------------------
+
+    /** Now, to the minute: the moment a new date gets until the person picks another. */
+    private fun now(): LocalDateTime = clock().truncatedTo(ChronoUnit.MINUTES)
+
+    /**
+     * The person tapped the Date sheet's chip for [format]. With a date selected, that date is
+     * written in this format instead, keeping its letter size, as one action. With none selected,
+     * a new date is added in this format (see [addDate]). Ignored unless the Date sheet is open.
+     */
+    fun chooseDateFormat(format: DateFormat, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || mutableState.value.openTool != EditTool.DATE) return
+        if (selectedDate() != null) {
+            editSelectedDate(processorFor, edit = { it.copy(format = format) })
+        } else {
+            addDate(format, processorFor)
+        }
+    }
+
+    /**
+     * Puts a new date, written in [format], in the middle of the picture the person SEES (upright,
+     * at the starting size, white, the phone's font), as one action (one Undo step), and selects
+     * it. Its moment is the sheet's [ToolUiState.dateMoment] (now, unless the pickers changed it).
+     * At the layer limit nothing is added and the limit message is asked for, as in [addSticker].
+     * Nothing happens before the photo is decoded.
+     */
+    private fun addDate(format: DateFormat, processorFor: (EditSettings) -> ToolProcessor) {
+        val current = mutableState.value
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        if (!session.settings.canAddLayer) {
+            mutableState.update { it.copy(layerLimitShown = true) }
+            return
+        }
+        val aspect = original.width.toFloat() / original.height
+        val content = LayerContent.Date(
+            moment = current.dateMoment ?: now(),
+            format = format,
+            colorArgb = TEXT_DEFAULT_COLOUR,
+            font = TextFont.NONE,
+        )
+        val block = textLayout.measure(content.asText())
+        val mapping = LayerMapping(original.width, original.height, session.settings)
+        val layer = mapping.centredPicture(nextStickerKey++, "").copy(
+            content = content,
+            width = LayerSize.textWidth(LayerSize.TEXT_DEFAULT, block.widthEms, aspect),
+        )
+        this.processorFor = processorFor
+        publishSession(session.addLayer(layer))
+        mutableState.update { it.copy(selectedLayerKey = layer.key) }
+        requestPreview()
+    }
+
+    /**
+     * The date or time picker gave [moment] (cut to the minute). With a date selected, that date
+     * shows it, as one action; with none, it becomes the moment the next added date gets, and the
+     * chips show it. Ignored unless the Date sheet is open.
+     */
+    fun chooseDateMoment(moment: LocalDateTime, processorFor: (EditSettings) -> ToolProcessor) {
+        if (!layerEditingOpen() || mutableState.value.openTool != EditTool.DATE) return
+        val minute = moment.truncatedTo(ChronoUnit.MINUTES)
+        if (selectedDate() != null) {
+            editSelectedDate(processorFor, edit = { it.copy(moment = minute) })
+        } else {
+            mutableState.update { it.copy(dateMoment = minute) }
+        }
+    }
+
+    /** The selected date gets the font [font], keeping its letter size, as one action. */
+    fun chooseDateFont(font: TextFont, processorFor: (EditSettings) -> ToolProcessor) =
+        editSelectedDate(processorFor, edit = { it.copy(font = font) })
+
+    /**
+     * The selected date's letters take the colour [argb] (made opaque). [preview] is true while
+     * the custom picker is being dragged: the photo follows without an undo step, and the drag
+     * ends with [commitSettings]. A preset swatch is one action.
+     */
+    fun chooseDateColour(argb: Int, processorFor: (EditSettings) -> ToolProcessor, preview: Boolean = false) =
+        editSelectedDate(processorFor, preview = preview, edit = { it.copy(colorArgb = argb or OPAQUE_ALPHA) })
+
+    /**
+     * The Date sheet's Background row: the selected date gets a box of colour [argb] behind its
+     * words (its alpha kept, so a box may be see-through), or none for null. A ready colour or
+     * None is one action; [preview] is true while the custom picker is dragged, ended by
+     * [commitSettings]. Its letters keep their size; the layer grows or shrinks by the box's margin.
+     */
+    fun chooseDateBackground(argb: Int?, processorFor: (EditSettings) -> ToolProcessor, preview: Boolean = false) =
+        editSelectedDate(processorFor, preview = preview, edit = { it.copy(boxArgb = argb) })
+
+    /**
+     * The person tapped the layer [key] while it was ALREADY selected (a tap that selects it is
+     * [selectLayer]'s). A date then moves to the next format, the first after the last, as one
+     * action, the way Instagram's date sticker does (ADR-006). A tap on any other kind of layer
+     * changes nothing.
+     */
+    fun tapLayer(key: Long, processorFor: (EditSettings) -> ToolProcessor) {
+        val date = selectedDate() ?: return
+        if (date.key != key) return
+        editSelectedDate(processorFor, edit = { it.copy(format = it.format.next()) })
+    }
+
+    /** The selected layer when it is a date, or null. */
+    private fun selectedDate(): Layer? {
+        val key = mutableState.value.selectedLayerKey ?: return null
+        return session.settings.layers.firstOrNull { it.key == key && it.content is LayerContent.Date }
+    }
+
+    /**
+     * One change of the selected date: [edit] makes its new content. The layer's width follows
+     * the new words, so the letters keep their size (a longer format makes a wider layer). It is
+     * one action, or only previewed when [preview] is true (the colour picker being dragged).
+     */
+    private fun editSelectedDate(
+        processorFor: (EditSettings) -> ToolProcessor,
+        preview: Boolean = false,
+        edit: (LayerContent.Date) -> LayerContent.Date,
+    ) {
+        if (!layerEditingOpen()) return
+        val layer = selectedDate() ?: return
+        val before = layer.content as LayerContent.Date
+        val after = edit(before)
+        val old = textLayout.measure(before.asText())
+        val new = textLayout.measure(after.asText())
+        val width = if (old.widthEms > 0f) layer.width * new.widthEms / old.widthEms else layer.width
+        val changed = session.settings.withLayer(layer.copy(content = after, width = width))
+        this.processorFor = processorFor
+        publishSession(if (preview) session.preview(changed) else session.change(changed))
+        requestPreview()
+    }
 
     // --- The Edit screen's session ---------------------------------------------------------------
 
@@ -1286,9 +1465,9 @@ class ToolViewModel(
         doneChannel.trySend(Unit)
     }
 
-    /** The colours a new text starts with. */
+    /** The colours a new text or date starts with. */
     private companion object {
-        /** A new text's letters: white, which reads on most photos. */
+        /** A new text's or date's letters: white, which reads on most photos. */
         const val TEXT_DEFAULT_COLOUR = 0xFFFFFFFF.toInt()
 
         /** The alpha bits of an ARGB number, set to make a colour opaque. */

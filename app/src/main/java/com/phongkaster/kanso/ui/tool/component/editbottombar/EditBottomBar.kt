@@ -51,13 +51,6 @@ private val SHEET_AREA_HEIGHT = 136.dp
 private val DEFAULT_ROW_HEIGHT = 72.dp
 
 /**
- * The height of a layer sheet (Stickers, Text), which takes the place of the row of tools. It is
- * taller than the panel area and the row together, to hold its top bar, the size and opacity
- * sliders and its own controls, so the photo above gets a little shorter while one is open.
- */
-private val LAYER_SHEET_HEIGHT = 320.dp
-
-/**
  * The Edit screen's bottom bar, the lowest thing on screen: one row of Crop, Rotate, Adjust,
  * Filters, Stickers, Text and Compare, and just above it the fixed-height panel area, which holds
  * the open tool's panel ([sheet]) or a hint when none is open; while Stickers or Text is open its
@@ -78,13 +71,15 @@ private val LAYER_SHEET_HEIGHT = 320.dp
  * open). While Compare is on, or Done is rendering, the row is disabled; the screen also passes
  * that flag to the panel's controls, which disable themselves.
  *
- * **A layer sheet replaces the row.** While Stickers or Text is open its sheet (which has its own
- * Cancel and Confirm) is shown instead of the row of tools, [LAYER_SHEET_HEIGHT] tall: taller than
- * the panel area and the row together, because it also holds the selected layer's size and
- * opacity sliders, so the photo gets a little shorter while it is open. While the Text sheet's
- * keyboard is up the sheet shrinks to its text area, and the whole bar rides on top of the
- * keyboard (the keyboard's inset is part of the bar's padding). The row's height is
- * measured with `onSizeChanged` while the row is on screen and remembered for that moment. While
+ * **A layer sheet replaces the row.** While Stickers, Text or Date is open its sheet (which has
+ * its own Cancel and Confirm) is shown instead of the row of tools, exactly as tall as the panel
+ * area and the row together, so the bar, and with it the photo, never changes size (the owner's
+ * decision, 2026-10-28). The sheet's top bar is pinned and its other rows scroll inside it. While
+ * the Text sheet's keyboard is up the sheet shrinks to its top bar and text area, and the whole bar
+ * rides on top of the keyboard (the keyboard's inset is part of the bar's padding), over the
+ * photo: the screen sizes the photo from the bar's height with the keyboard down, so the photo
+ * stays where it is. The row's height is measured with `onSizeChanged` while the row is on screen
+ * and remembered for that moment. While
  * Compare is on, or Done is rendering, the ViewModel ignores the sheet's Cancel, Confirm and the
  * system Back, so the sheet cannot change what Done is drawing.
  */
@@ -110,11 +105,12 @@ fun EditBottomBar(
             )
             .padding(bottom = 8.dp),
     ) {
-        val layerSheet = state.openTool == EditTool.STICKERS || state.openTool == EditTool.TEXT
+        val layerSheet = state.openTool == EditTool.STICKERS || state.openTool == EditTool.TEXT ||
+            state.openTool == EditTool.DATE
         if (layerSheet) {
-            // A layer sheet (Stickers, Text) takes the place of the row of tools. While the Text
-            // sheet's keyboard is up it is only as tall as its text area, so the photo stays in
-            // sight above the keyboard.
+            // A layer sheet (Stickers, Text, Date) takes the place of the row of tools, in the
+            // same height. While the Text sheet's keyboard is up it is only as tall as its top bar
+            // and text area, so as much of the photo as possible stays in sight above the keyboard.
             val sheetText = stringResource(R.string.edit_layout_sheet)
             val density = LocalDensity.current
             val rowHeight = if (rowHeightPx > 0) with(density) { rowHeightPx.toDp() } else DEFAULT_ROW_HEIGHT
@@ -131,7 +127,8 @@ fun EditBottomBar(
                         if (compact) {
                             Modifier.wrapContentHeight()
                         } else {
-                            Modifier.height(maxOf(LAYER_SHEET_HEIGHT, SHEET_AREA_HEIGHT + rowHeight))
+                            // Exactly the panel area and the row: the bar keeps one height.
+                            Modifier.height(SHEET_AREA_HEIGHT + rowHeight)
                         },
                     )
                     .padding(bottom = 8.dp),

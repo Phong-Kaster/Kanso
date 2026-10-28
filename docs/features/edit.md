@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, filters, stickers and text
+# Edit: crop, rotate, adjust, filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -15,7 +15,8 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > `ui/tool/component/`. What changed in behaviour since Run 10:
 >
 > - Every layer has an opacity (10–100%) and both layer sheets have Size and Opacity sliders.
-> - A layer sheet is 320 dp tall, so the photo is a little shorter while one is open.
+> - A layer sheet takes exactly the row's and sheet area's height, so the photo never changes size;
+>   its top bar is pinned and a row of tabs picks the one control shown under it (2026-10-28).
 > - Touching a layer with any sheet but Crop open (or none) selects it, brings it to the front and
 >   opens the sheet of its kind.
 > - The frame's corners are the same on every layer: delete top-left, duplicate bottom-left, resize
@@ -24,7 +25,13 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 >
 > The Text tool is traced end to end in the README,
 > [section 3.4](../../README.md#34-text), and the shared layer machinery in
-> [section 3.2](../../README.md#32-layers-what-stickers-and-text-share).
+> [section 3.2](../../README.md#32-layers-what-stickers-text-and-dates-share).
+>
+> **ADR-006: Date.** The seventh tool, **Date**, adds layers of the date kind
+> (`LayerContent.Date`): a moment and one of 20 English formats, styled with the Text sheet's fonts
+> and colours, with no mirror button (its top-right corner stays empty). A tap on the selected date
+> moves it to the next format. The 20-item limit now counts stickers, texts and dates together.
+> It is traced end to end in the README, [section 3.5](../../README.md#35-date).
 
 ---
 

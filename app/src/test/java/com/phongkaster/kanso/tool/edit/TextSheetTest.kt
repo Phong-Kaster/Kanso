@@ -57,6 +57,12 @@ import org.koin.core.context.stopKoin
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.layerTabTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_TABS_TAG
+import com.phongkaster.kanso.ui.tool.model.TextTab
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.textBackgroundTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TEXT_BACKGROUND_NONE_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CANCEL_TAG
 
 /**
  * Proves the Text sheet on the real Edit screen (Run 11, Android 15, 411 x 891 dp): the Text
@@ -87,22 +93,22 @@ class TextSheetTest {
 
     /**
      * Bug found on the Galaxy A13: with the keyboard asked for but not on screen, the sheet filled
-     * the whole screen and hid its rows. Now the rows stay until a keyboard really shows, the sheet
-     * is never taller than its 320 dp, the photo stays in sight above it, and typing still puts the
-     * words on the photo. (Robolectric shows no keyboard, which is exactly that case.)
+     * the whole screen and hid its rows. Now the tabs stay until a keyboard really shows, the sheet
+     * is never taller than the row and panel area it replaces (208 dp here), the photo stays in sight
+     * above it, and typing still puts the words on the photo. (Robolectric shows no keyboard, which
+     * is exactly that case.)
      */
     @Test
     fun without_a_keyboard_on_screen_the_sheet_keeps_its_rows_and_size() {
         val viewModel = openText()
         assertTrue(viewModel.state.value.textEditing)
         compose.onNodeWithTag(TEXT_FIELD_TAG).assertExists()
-        listOf(TEXT_FONTS_TAG, TEXT_COLOURS_TAG, LAYER_SIZE_TAG, LAYER_OPACITY_TAG, LAYER_SHEET_CONFIRM_TAG).forEach {
-            compose.onNodeWithTag(it).assertExists()
-        }
+        listOf(LAYER_TABS_TAG, LAYER_SHEET_CANCEL_TAG, LAYER_SHEET_CONFIRM_TAG).forEach { compose.onNodeWithTag(it).assertExists() }
+        TextTab.entries.forEach { compose.onNodeWithTag(layerTabTag(it)).assertExists() }
         val sheet = compose.onNodeWithTag(EDIT_SHEET_TAG).fetchSemanticsNode().boundsInRoot
         val photo = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
-        val maxSheet = with(compose.density) { 320.dp.toPx() }
-        assertTrue("the sheet is ${sheet.height} px tall, more than 320 dp", sheet.height <= maxSheet + 1f)
+        val maxSheet = with(compose.density) { 208.dp.toPx() }
+        assertTrue("the sheet is ${sheet.height} px tall, more than 208 dp", sheet.height <= maxSheet + 1f)
         assertTrue("the photo is hidden (${photo.height} px)", photo.height > maxSheet)
 
         compose.onNodeWithTag(TEXT_FIELD_TAG).performTextInput("Xin chào")
@@ -111,26 +117,42 @@ class TextSheetTest {
         assertEquals("Xin chào", text.text)
     }
 
-    /** With the keyboard down, the rows come back, and a font chip and a colour circle style the text. */
+    /**
+     * With the keyboard down, each tab shows its one control under the pinned top bar: the Font
+     * tab's chips, the Colour tab's circles and the Background tab's circles style the text.
+     */
     @Test
-    fun with_the_keyboard_down_the_rows_style_the_text() {
+    fun with_the_keyboard_down_each_tab_styles_the_text() {
         val viewModel = openText()
         compose.onNodeWithTag(TEXT_FIELD_TAG).performTextInput("Hello")
         viewModel.setTextEditing(false)
         compose.waitForIdle()
-        listOf(TEXT_FONTS_TAG, TEXT_COLOURS_TAG, LAYER_SIZE_TAG, LAYER_OPACITY_TAG, LAYER_SHEET_CONFIRM_TAG).forEach {
-            compose.onNodeWithTag(it).assertExists()
-        }
 
-        compose.onNodeWithTag(textFontTag(TextFont.PATRICK_HAND)).performScrollTo().performClick()
-        compose.onNodeWithTag(textSwatchTag(TextSwatch.BLUE)).performScrollTo().performClick()
+        compose.onNodeWithTag(layerTabTag(TextTab.FONT)).performScrollTo().performClick()
         compose.waitForIdle()
+        compose.onAllNodesWithTag(TEXT_FIELD_TAG).assertCountEquals(0)
+        compose.onNodeWithTag(textFontTag(TextFont.PATRICK_HAND)).performScrollTo().performClick()
+        compose.onNodeWithTag(layerTabTag(TextTab.COLOUR)).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithTag(TEXT_FONTS_TAG).assertCountEquals(0)
+        compose.onNodeWithTag(textSwatchTag(TextSwatch.BLUE)).performScrollTo().performClick()
+        compose.onNodeWithTag(layerTabTag(TextTab.BACKGROUND)).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(textBackgroundTag(TextSwatch.YELLOW)).performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).assertExists()
+
         val text = viewModel.state.value.settings.layers.single().content as LayerContent.Text
         assertEquals(TextFont.PATRICK_HAND, text.font)
         assertEquals(TextSwatch.BLUE.argb, text.colorArgb)
+        assertEquals(TextSwatch.YELLOW.argb, text.boxArgb)
+
+        compose.onNodeWithTag(TEXT_BACKGROUND_NONE_TAG).performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(null, (viewModel.state.value.settings.layers.single().content as LayerContent.Text).boxArgb)
     }
 
-    /** The rainbow circle swaps the rows for the colour picker; its back arrow brings them back. */
+    /** The Colour tab's rainbow circle swaps the tabs for the picker; its back arrow brings them back. */
     @Test
     fun the_rainbow_circle_opens_the_picker_in_the_sheet() {
         val viewModel = openText()
@@ -138,15 +160,20 @@ class TextSheetTest {
         viewModel.setTextEditing(false)
         compose.waitForIdle()
 
+        compose.onNodeWithTag(layerTabTag(TextTab.COLOUR)).performScrollTo().performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag(TEXT_CUSTOM_COLOUR_TAG).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(TEXT_COLOUR_PANE_TAG).assertExists()
-        compose.onAllNodesWithTag(TEXT_FONTS_TAG).assertCountEquals(0)
+        compose.onAllNodesWithTag(LAYER_TABS_TAG).assertCountEquals(0)
+        // The top bar stays pinned above the picker.
+        compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).assertExists()
 
         compose.onNodeWithTag(TEXT_COLOUR_BACK_TAG).performClick()
         compose.waitForIdle()
         compose.onAllNodesWithTag(TEXT_COLOUR_PANE_TAG).assertCountEquals(0)
-        compose.onNodeWithTag(TEXT_FONTS_TAG).assertExists()
+        compose.onNodeWithTag(LAYER_TABS_TAG).assertExists()
+        compose.onNodeWithTag(TEXT_COLOURS_TAG).assertExists()
     }
 
     /** A selected text's frame has delete, edit, duplicate and resize; there is no flip button. */

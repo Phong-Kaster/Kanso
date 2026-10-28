@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Date tool of the Edit screen: its entry in the row of tools and its sheet (ADR-006). -->
+    <string name="date_tool_label">Date</string>
+    <string name="date_sheet_cancel">Cancel and close Date</string>
+    <string name="date_sheet_confirm">Keep dates and close</string>
+    <!-- Spoken names of the two buttons that open the pickers; %1$s is the day or time shown. -->
+    <string name="date_pick_day">Change the day, now %1$s</string>
+    <string name="date_pick_time">Change the time, now %1$s</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Cancel</string>
+    <string name="date_tab_format">Format</string>
+    <string name="date_tab_moment">Day &amp; time</string>
+    <string name="date_formats_description">Formats. Tap one to add a date, or to rewrite the selected date.</string>
+</resources>

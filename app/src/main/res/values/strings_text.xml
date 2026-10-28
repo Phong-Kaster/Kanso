@@ -32,6 +32,12 @@
     <string name="text_colour_pink">Pink</string>
     <string name="text_colour_brown">Brown</string>
     <string name="text_colour_grey">Grey</string>
+    <!-- The Background row of the Text and Date sheets: a box behind the words. -->
+    <string name="text_background_title">Background</string>
+    <string name="text_background_none">No background</string>
+    <!-- %1$s is a colour's name, such as Red. -->
+    <string name="text_background_swatch">%1$s background</string>
+    <string name="text_background_custom">Any background colour, see-through too</string>
     <!-- Spoken name of the text frame's top-right button, which opens the keyboard. -->
     <string name="text_frame_edit">Edit text</string>
 </resources>

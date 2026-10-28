@@ -1,7 +1,7 @@
 package com.phongkaster.kanso.data.edit.edit
 
 /**
- * The six groups of controls the Edit screen offers, one per entry in the row of tools under the
+ * The seven groups of controls the Edit screen offers, one per entry in the row of tools under the
  * photo. Tapping an entry opens a sheet below the photo holding that group's controls; only one
  * sheet is open at a time.
  *
@@ -28,4 +28,7 @@ enum class EditTool {
 
     /** Words typed onto the photo in a chosen font and colour, then moved, resized and turned. */
     TEXT,
+
+    /** A date and time written onto the photo in a chosen format, font and colour (ADR-006). */
+    DATE,
 }

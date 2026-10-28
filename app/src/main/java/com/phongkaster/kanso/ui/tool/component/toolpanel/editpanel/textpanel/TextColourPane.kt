@@ -37,18 +37,22 @@ const val TEXT_COLOUR_PANE_TAG = "text-colour-pane"
 const val TEXT_COLOUR_BACK_TAG = "text-colour-back"
 
 /**
- * The Text sheet's colour picker, which takes the place of the sheet's rows while it is open, so
- * the photo stays in sight and the text changes colour live as the person drags. At the top, a
- * back arrow ([onBack]) and the title "Colour"; below, the same HSV picker as Settings → Theme
- * colour ([CustomColourPicker]), starting at [startArgb], scrolling inside the sheet when the
- * sheet is shorter than the picker. Every colour picked calls [onColour] with it, opaque.
+ * The Text and Date sheets' colour picker, which takes the place of the sheet's rows while it is
+ * open, so the photo stays in sight and the layer changes colour live as the person drags. At the
+ * top, a back arrow ([onBack]) and [title] ("Colour" for the letters, "Background" for the box);
+ * below, the same HSV picker as Settings → Theme colour ([CustomColourPicker]), starting at
+ * [startArgb], scrolling inside the sheet when the sheet is shorter than the picker. Every colour
+ * picked calls [onColour] with it: opaque for the letters, or with the transparency bar's alpha
+ * when [showAlpha] is true (the background box, which may be see-through).
  */
 @Composable
 internal fun TextColourPane(
+    title: String,
     startArgb: Int,
     onColour: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showAlpha: Boolean = false,
 ) {
     Column(
         modifier = modifier.fillMaxSize().testTag(TEXT_COLOUR_PANE_TAG),
@@ -69,7 +73,7 @@ internal fun TextColourPane(
                         },
                     )
                     Text(
-                        text = stringResource(R.string.text_colour_title),
+                        text = title,
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.semantics { heading() },
                     )
@@ -81,7 +85,11 @@ internal fun TextColourPane(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 content = {
-                    CustomColourPicker(seedArgb = startArgb, onColorChanged = { onColour(it.toArgb()) })
+                    CustomColourPicker(
+                        seedArgb = startArgb,
+                        onColorChanged = { onColour(it.toArgb()) },
+                        showAlpha = showAlpha,
+                    )
                 },
             )
         },
@@ -95,7 +103,9 @@ private fun TextColourPanePreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            content = { TextColourPane(startArgb = 0xFFE53935.toInt(), onColour = {}, onBack = {}) },
+            content = {
+                TextColourPane(title = stringResource(R.string.text_colour_title), startArgb = 0xFFE53935.toInt(), onColour = {}, onBack = {})
+            },
         )
     }
 }

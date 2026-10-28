@@ -28,10 +28,11 @@ detail, and every design decision of weight has a record in [`docs/adr/`](docs/a
 2. [Editing features at a glance](#2-editing-features-at-a-glance)
 3. [How each editing feature works](#3-how-each-editing-feature-works)
    - [3.1 The Edit screen](#31-the-edit-screen)
-   - [3.2 Layers: what stickers and text share](#32-layers-what-stickers-and-text-share)
+   - [3.2 Layers: what stickers, text and dates share](#32-layers-what-stickers-text-and-dates-share)
    - [3.3 Stickers](#33-stickers)
    - [3.4 Text](#34-text)
-   - [3.5 Remove background, Enhance, Retouch and Artistic](#35-remove-background-enhance-retouch-and-artistic)
+   - [3.5 Date](#35-date)
+   - [3.6 Remove background, Enhance, Retouch and Artistic](#36-remove-background-enhance-retouch-and-artistic)
 4. [Architecture](#4-architecture)
 5. [Privacy and permissions](#5-privacy-and-permissions)
 6. [Building and testing](#6-building-and-testing)
@@ -52,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Six tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers and typed texts together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 95, at most 2000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 95, at most 2000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths them with OpenCV's bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
@@ -94,8 +95,9 @@ JVM tests. None of these has been checked on the owner's Galaxy A13.
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
 | Edit: Filters | Works | None or one of seven filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
-| Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, three alignments, wrapping lines. Each text is a **layer**. |
-| Edit: Layers (stickers and text) | Works | Up to 20 in total. Select by touch (from any sheet but Crop), move with one finger, pinch and twist with two, resize and turn with the corner handle; size (1–100) and opacity (10–100%) sliders in both sheets; a selected layer comes to the front. Drawn into the photo before the crop, so crop, turns, flips, filter and sliders all act on it ([ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md), [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)). |
+| Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
+| Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
+| Edit: Layers (stickers, text and dates) | Works | Up to 20 in total. Select by touch (from any sheet but Crop), move with one finger, pinch and twist with two, resize and turn with the corner handle; Size (1–100) and Opacity (10–100%) tabs in all three layer sheets; a selected layer comes to the front. Drawn into the photo before the crop, so crop, turns, flips, filter and sliders all act on it ([ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md), [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)). |
 | Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
@@ -107,7 +109,8 @@ JVM tests. None of these has been checked on the owner's Galaxy A13.
 
 - The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28)
   Crop to Stickers and Compare are in view and Text is hidden past the right edge until the row is
-  swiped left. This replaces the old rule
+  swiped left; Date, added after Text, sits further right still (not yet checked on the phone).
+  This replaces the old rule
   that every tool fits without scrolling (DoD 2), which held for five tools.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
   `.jpg` (a known defect, not fixed yet).
@@ -130,10 +133,15 @@ or `app/src/main/res/`.
    (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust and Filters, which never changes height.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
    bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.
-   A **layer sheet** (Stickers or Text) takes the row's place instead and is 320 dp tall, so the
-   photo gets a little shorter while one is open; while the Text keyboard is up it shrinks to the
-   text area and the bar rides on the keyboard (`WindowInsets.ime` in `EditBottomBar`, with
-   `android:windowSoftInputMode="adjustResize"` on `MainActivity`).
+   A **layer sheet** (Stickers, Text or Date) takes the row's place instead, in exactly the height of
+   the row and the sheet area together, so **the photo never changes size or place** whatever is
+   open (the owner's decision, 2026-10-28). Its top bar (✕, title, ✓) is pinned; under it a row of
+   **tabs** (`editpanel/LayerTabRow.kt`, Material filter chips) picks the ONE control shown below,
+   which scrolls if taller than the room left. While the Text keyboard is up the sheet shrinks to its
+   top bar and text area and the bar rides on the keyboard (`WindowInsets.ime` in `EditBottomBar`,
+   with `android:windowSoftInputMode="adjustResize"` on `MainActivity`), **over** the photo:
+   `ToolContent` sizes the photo from the bar's height measured with the keyboard down
+   (`restingBarPx`), not from its height now.
 2. **Decode.** `ToolViewModel.load` decodes the photo upright on `Dispatchers.IO`
    (`data/photo/PhotoLoader.kt`), at most twice the screen's longest edge. That bitmap is the
    original for the whole visit; the photo's file is never changed.
@@ -169,24 +177,27 @@ or `app/src/main/res/`.
    draws the original without the filter or the resting layers; Done is unaffected. After a process
    kill, Result shows "Nothing to show" and Edit reopens with no changes.
 
-### 3.2 Layers: what stickers and text share
+### 3.2 Layers: what stickers, text and dates share
 
-A **layer** is anything placed on the photo: a catalogue sticker or a typed text. Both kinds share
-one model, one list and every piece of machinery below; only how their pixels are made differs
-([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)).
+A **layer** is anything placed on the photo: a catalogue sticker, a typed text or a date. All three
+kinds share one model, one list and every piece of machinery below; only how their pixels are made
+differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
+[ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)).
 
 1. **The model.** `data/edit/edit/Layer.kt`: a key, a `LayerContent`, a centre, a width, a turn in
    degrees, a mirror flag and an opacity (default 1, never below `Layer.MIN_OPACITY` = 0.1). The
    centre and width are fractions of the **original** photo, before any crop, turn or flip, so a
    layer belongs to the photo. `LayerContent` (`data/edit/edit/LayerContent.kt`) is a sealed
-   interface with two kinds: `Picture(pictureId)` and `Text(text, colorArgb, font, alignment,
-   wrapEms)`. `EditSettings.layers` holds them oldest first, at most `EditSettings.MAX_LAYERS` = 20
-   in total; a 21st add shows "A photo can hold 20 stickers and texts at most" for 2.5 s
+   interface with three kinds: `Picture(pictureId)`, `Text(text, colorArgb, font, alignment,
+   wrapEms)` and `Date(moment, format, colorArgb, font)`. `EditSettings.layers` holds them oldest
+   first, at most `EditSettings.MAX_LAYERS` = 20 in total; a 21st add shows "A photo can hold 20
+   stickers, texts and dates at most" for 2.5 s
    (`ui/tool/component/StickerLimitMessage.kt`).
 2. **One source of pixels.** Everything that draws a layer asks `LayerPictures.picture(content,
    widthPx)` (`data/edit/edit/LayerPictures.kt`) for a bitmap about that wide. The app's
    implementation, `data/edit/edit/AppLayerPictures.kt`, decodes a sticker's drawable with
-   `BitmapFactory` and `inSampleSize`, or draws a text with `TextLayerLayout` (see 3.4). The one
+   `BitmapFactory` and `inSampleSize`, or draws a text with `TextLayerLayout` (see 3.4); a date is
+   drawn as the one-line text of its words (see 3.5). The one
    recipe from settings to processor is `editProcessorFor(context)` in
    `ui/tool/model/EditProcessorFactory.kt`, shared by the sheets, the preview renderer, the cropper
    and Done.
@@ -206,20 +217,27 @@ one model, one list and every piece of machinery below; only how their pixels ar
    the ratio of their distance and turn by the change of their angle (the width kept between 5 and
    100 percent of the shown width). Each move calls `previewLayers` (shown at once, no undo entry);
    the last finger up calls `commitSettings`, so a whole gesture, the move to the front included,
-   is one Undo step.
+   is one Undo step. A one-finger touch that stays within the touch slop on the layer that was
+   **already** selected is a tap (`onTap`, then `ToolViewModel.tapLayer`), but only on a date
+   (`takesTaps`), which moves to its next format; on a sticker or a text a small move stays a small
+   move. The few pixels the finger wobbled are put back first (the place only, so a flip made
+   meanwhile is kept), so the tap leaves no move behind.
 5. **The frame.** `LayerFrame.kt` draws an outline that turns with the layer and four corner
-   buttons (`LayerCornerButton.kt`), in the same places on both kinds: top-left **✕ delete**,
+   buttons (`LayerCornerButton.kt`), in the same places on every kind: top-left **✕ delete**,
    bottom-left **⧉ duplicate** (the copy sits 4 percent of the shown width right and down, and is
    selected), bottom-right **⤡ resize and turn** (a whole pull is one Undo step), and top-right the
-   kind's own button: **⇋ mirror** for a sticker, **✏️ edit** (open the keyboard) for a text.
-6. **Sliders.** Both sheets show `LayerSliders` (`ui/tool/component/toolpanel/editpanel/LayerSliders.kt`)
-   under their top bar: **Size** 1–100 and **Opacity** 10–100%, greyed out while nothing is
-   selected. `data/edit/edit/LayerSize.kt` turns the size number into a width: for a sticker it is
-   the width in percent of the photo's width; for a text it is the letter height, from 1 percent
-   (size 1) to 50 percent (size 100) of the photo's height. A pinch changes the same width, so the
+   kind's own button: **⇋ mirror** for a sticker, **✏️ edit** (open the keyboard) for a text, and
+   nothing for a date (mirrored digits cannot be read; a touch there grasps the date itself).
+6. **Tabs and sliders.** Every layer sheet has a **Size** tab (`editpanel/LayerSizeSlider.kt`,
+   1–100) and an **Opacity** tab (`editpanel/LayerOpacitySlider.kt`, 10–100%). A tab that styles a
+   layer is greyed out while nothing is selected, and the sheet then shows its first tab; the chosen
+   tab stays while the sheet is open, also when another layer is selected (`ui/tool/model/StickersTab.kt`,
+   `TextTab.kt`, `DateTab.kt`). `data/edit/edit/LayerSize.kt` turns the size number into a width: for a sticker it is
+   the width in percent of the photo's width; for a text or a date it is the letter height, from 1
+   percent (size 1) to 50 percent (size 100) of the photo's height. A pinch changes the same width, so the
    slider follows the fingers. A slider drag is previewed and becomes one Undo step on release.
 7. **The sheet's ✕ and ✓.** Opening a layer sheet takes a snapshot of the whole session (settings
-   and Undo steps). ✓ (`confirmLayers`), closing the sheet any other way, or switching to the other
+   and Undo steps). ✓ (`confirmLayers`), closing the sheet any other way, or switching to another
    layer sheet keeps everything. ✕ and the system Back (`cancelLayers`) put the snapshot back.
 8. **Drawing into the photo.** `EditProcessor.drawLayers` runs first in Done's render. For each
    layer it asks for its picture at no more than the photo's longest edge, then draws it with a
@@ -237,9 +255,10 @@ one model, one list and every piece of machinery below; only how their pixels ar
 
 1. **Screen.** Tapping Stickers (`ToolViewModel.openTool`) opens its sheet in place of the row.
    `ToolScreen.kt` fills it with `EditPanel`, which draws
-   `ui/tool/component/toolpanel/editpanel/stickerspanel/StickersPanel.kt`: the shared top bar
-   (`editpanel/LayerSheetTopBar.kt`), the size and opacity sliders, a row of category chips
-   (`StickerCategoryChips.kt`) and a three-column `LazyVerticalGrid` of tiles (`StickerTile.kt`).
+   `ui/tool/component/toolpanel/editpanel/stickerspanel/StickersPanel.kt`: the pinned top bar
+   (`editpanel/LayerSheetTopBar.kt`), the tabs **Stickers | Size | Opacity**, and for Stickers a row
+   of category chips (`StickerCategoryChips.kt`) over a three-column `LazyVerticalGrid` of tiles
+   (`StickerTile.kt`) that fills the rest of the sheet and scrolls.
 2. **The catalogue.** `data/edit/edit/StickerCatalog.kt` lists 60 bundled pictures, each an explicit
    `R.drawable.img_sticker_*` webp: Food 17, Mood 17, Quote 6, Emoji 20. Nothing is downloaded.
 3. **Adding.** A tile tap calls `ToolViewModel.addSticker` on the main thread: `LayerMapping`
@@ -256,9 +275,12 @@ one model, one list and every piece of machinery below; only how their pixels ar
 
 1. **Screen.** Text is the sixth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
    it opens the Text sheet in place of the row; `ToolScreen.kt` fills it with
-   `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`, from top to bottom: the shared
-   top bar (✕, "Text", ✓); the text area with its alignment button (`TextInputRow.kt`); the font row
-   (`TextFontRow.kt`); the colour row (`TextColourRow.kt`); the size and opacity sliders.
+   `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`: the pinned top bar (✕, "Text",
+   ✓), the tabs **Text | Font | Size | Colour | Background | Opacity**, and the chosen tab's control:
+   the text area with its alignment button (`TextInputRow.kt`), the font chips (`TextFontRow.kt`),
+   the size slider, the letters' colours (`TextColourRow.kt`), the box's colours
+   (`TextBackgroundRow.kt`) or the opacity slider. It opens on the Text tab; the keyboard always
+   brings the Text tab back.
 2. **A new text.** Opening the sheet from the row with no text selected calls
    `ToolViewModel.startText`: a new, empty `Text` layer in the middle of the picture you see, white,
    in the phone's font, centred, at size 20, selected, with the keyboard asked for
@@ -268,8 +290,8 @@ one model, one list and every piece of machinery below; only how their pixels ar
 3. **Typing.** The text area keeps its own `TextFieldValue` (so the cursor never jumps) and hands
    each new string to `typeText`, which cuts it at 200 characters (`LayerContent.Text.MAX_LENGTH`),
    keeps the letter size (the width scales with the measured block's width) and previews it. While
-   the keyboard is up, the sheet shows only the text area; the font row, colour row and sliders come
-   back when it goes down. Enter makes a new line.
+   the keyboard is up, the sheet shows only its top bar and the text area; the tabs come back when it
+   goes down. Enter makes a new line.
 4. **One undo step per typing run.** The run is settled (`settleText`) when the keyboard closes,
    another layer is touched, the sheet closes or switches, or Undo is tapped: the adding and all
    the letters become **one** Undo step. A text that is still empty (no letters, or only spaces) is
@@ -281,10 +303,18 @@ one model, one list and every piece of machinery below; only how their pixels ar
    Each chip shows "Aa" in its own font. A chip is one Undo step and keeps the letter size.
 6. **Colours.** Twelve ready circles (`ui/tool/model/TextSwatch.kt`: white, black, red, orange,
    yellow, green, teal, blue, purple, pink, brown, grey), one Undo step each, and a rainbow circle
-   that swaps the sheet's rows for `TextColourPane.kt`: the same HSV picker as Settings → Theme
-   colour (`ui/component/CustomColourPicker.kt`, from `core/colorpicker`, transparency bar hidden).
-   The text changes colour live while you drag; the pane's back arrow makes the whole drag one Undo
-   step. A colour is stored as an opaque ARGB number.
+   that swaps the tabs and the control for `TextColourPane.kt` (the top bar stays): the same HSV
+   picker as Settings → Theme colour (`ui/component/CustomColourPicker.kt`, from `core/colorpicker`,
+   transparency bar hidden). The text changes colour live while you drag; the pane's back arrow makes
+   the whole drag one Undo step. A colour is stored as an opaque ARGB number.
+   **Background.** The Background tab (`TextBackgroundRow.kt`) offers a slashed **None** (no box,
+   the default), the same twelve colours as solid boxes, and a rainbow circle opening the picker
+   **with** its transparency bar, so a box can be any colour at any see-through strength
+   (`LayerContent.Text.boxArgb`, alpha kept; `ToolViewModel.chooseTextBackground`). Each choice is one
+   Undo step, a picker drag one step on its back arrow. The letters keep their own colour. A box
+   widens the block (margins of 0.4 letter heights across and 0.2 down instead of 0.15), so the
+   layer grows while its letters keep their size; `TextLayerLayout` fills the block with a rounded
+   box, corners 0.3 letter heights, behind the lines.
 7. **Alignment.** The button beside the text area cycles centre → left → right
    (`TextAlignment.next()`), one Undo step each.
 8. **Layout and drawing.** `data/edit/edit/TextLayerLayout.kt` lays the words out with Android's
@@ -300,12 +330,64 @@ one model, one list and every piece of machinery below; only how their pixels ar
 9. **Threads.** Measuring runs on the main thread (ViewModel and overlay); the text's pixels are made
    on `Dispatchers.Default` by the preview renderer and Done, and on the main thread for the text
    under a finger (`PhotoCard.kt`, 1024 px wide) and the cropper's bake.
-10. **Input and output.** Input: the words, colour, font, alignment and wrap width of each `Text`
-    layer, plus the layer's place, width, turn and opacity. Output: the letters drawn into the saved
+10. **Input and output.** Input: the words, colour, font, alignment, wrap width and box colour of
+    each `Text` layer, plus the layer's place, width, turn and opacity. Output: the letters drawn into the saved
     JPEG at quality 95 in `Pictures/Kanso`, filtered and coloured with the photo like any layer. The
     "Your text" placeholder is drawn only by the overlay and never reaches the saved photo.
 
-### 3.5 Remove background, Enhance, Retouch and Artistic
+### 3.5 Date
+
+1. **Screen.** Date is the seventh entry of the row (`EditTool.DATE`, icon `ic_calendar_today`).
+   Tapping it (`ToolViewModel.openTool`) sets `ToolUiState.dateMoment` to now, to the minute, and
+   opens the Date sheet in place of the row; it adds nothing yet. `ToolScreen.kt` fills the sheet
+   with `ui/tool/component/toolpanel/editpanel/datepanel/DatePanel.kt`: the pinned top bar (✕,
+   "Date", ✓), the tabs **Format | Day & time | Font | Size | Colour | Background | Opacity**, and the
+   chosen tab's control: the 20 format chips (`DateFormatRow.kt`), each written with the moment
+   shown; the day and time buttons (`datemomentrow/DateMomentRow.kt`); the Text sheet's own font,
+   colour and background rows (with their rainbow pickers); or a slider. It opens on Format; Format
+   and Day & time work with no date selected.
+2. **The model.** A `LayerContent.Date` keeps the **moment** (`java.time.LocalDateTime`: a date and
+   a time to the minute, no time zone) and the **format**, never the words: `Date.words` writes
+   them from the two each time the layer is drawn. Its letters' colour is an opaque ARGB number,
+   its font one of the six `TextFont`s, and its box (`boxArgb`) a colour with its alpha or none, as
+   for a text (see 3.4). There is no alignment (one line) and no mirror.
+3. **The formats.** `data/edit/edit/DateFormat.kt`, an enum in the chips' order, always in English
+   (`Locale.ENGLISH`): `Wed, 28 October 2026`, `Wednesday, 28th October`, `28 October 2026`,
+   `October 28, 2026`, `28 Oct 2026`, `28 Oct`, `October 2026`, `Wednesday`, `2026`, `28/10/2026`,
+   `28.10.26`, `2026-10-28`, `WED 28 OCT`, the film-camera stamp `'26 10 28`, then six with a time:
+   `14:30`, `2:30 PM`, `Wed, 28 Oct · 14:30`, `Wednesday · 2:30 PM`, `28/10/2026 14:30`,
+   `28 October 2026, 2:30 PM`. Each is a `DateTimeFormatter` pattern, except the ordinal one
+   (`28th`), written by hand.
+4. **Adding.** A chip tap with no date selected calls `ToolViewModel.chooseDateFormat`, which adds
+   (`addDate`) a `Date` layer with the sheet's moment and that format in the middle of the picture
+   you see: white, the phone's font, size 20, upright, selected, on top. One Undo step. At 20 layers
+   nothing is added and the limit message shows. Ignored while Compare is on or Done renders.
+5. **Changing a date.** With a date selected: a chip rewrites it in that format; the day picker
+   (Material `DatePickerDialog`, `datemomentrow/DateDayDialog.kt`, the time kept) and the time
+   picker (Material `TimePicker` in an `AlertDialog`, `datemomentrow/DateTimeDialog.kt`, the day
+   kept; 24-hour or 12-hour as the phone's clock is set) change its moment; a font chip or a ready
+   colour or a background (`chooseDateBackground`) restyles it. Each is one Undo step, and the width
+   follows the new words so the letters keep their size (`editSelectedDate`). A colour dragged in a
+   picker is previewed and becomes one Undo step when the pane's back arrow is tapped. With no date
+   selected, the pickers change only the moment the next date gets (`chooseDateMoment`), and the
+   styling tabs are greyed out.
+6. **Tap to cycle.** A tap on the selected date (see 3.2, touch) calls `tapLayer`, which moves it to
+   the next format, the first after the last: one Undo step per tap.
+7. **Layout and drawing.** `Date.asText()` turns the date into a one-line `Text` (its words,
+   colour, font and box, centred, with a wrap width of 1000 letter heights so no format ever wraps),
+   and every
+   measurement and drawing goes through `TextLayerLayout` exactly as for a text (see 3.4): the
+   overlay's shape (`LayerImage.kt`), the size slider (`LayerSize`), and the pixels from
+   `AppLayerPictures` for the preview renderer, the cropper and Done.
+8. **Threads.** As for a text: measuring on the main thread, the pixels on `Dispatchers.Default` for
+   the preview renderer and Done, on the main thread for the date under a finger and the cropper's
+   bake. Writing the words is plain Kotlin and cheap.
+9. **Input and output.** Input: the moment, format, colour, font and box of each `Date` layer, plus the
+   layer's place, width, turn and opacity; the time comes from the phone's clock only when the sheet
+   opens. Output: the words drawn into the saved JPEG at quality 95 in `Pictures/Kanso`, filtered and
+   coloured with the photo like any layer. Nothing is read from the photo's own date (EXIF).
+
+### 3.6 Remove background, Enhance, Retouch and Artistic
 
 These four share one path in `ui/tool/ToolViewModel.kt`: `apply` shrinks the photo to the tool's
 working size (`data/edit/WorkingSize.kt`: Remove background and Retouch 2000 px, Enhance 512 px,
@@ -436,6 +518,7 @@ only on a device or an emulator.
 | [ADR-003](docs/adr/ADR-003-edit-has-one-session-and-done-opens-a-result-screen.md) | Edit has one session; Done opens a Result screen. |
 | [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md) | A sticker is part of the photo: it is drawn first, so everything else acts on it. |
 | [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md) | Stickers and text are layers: one list, one gesture handler, two kinds of picture. |
+| [ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md) | A date is its own layer kind, not a text: it keeps its moment and format, so the pickers and tap-to-cycle work on it. |
 
 ---
 
