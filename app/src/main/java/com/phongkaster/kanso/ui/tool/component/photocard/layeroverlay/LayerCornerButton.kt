@@ -37,6 +37,9 @@ const val LAYER_FLIP_TAG = "layer-flip"
 /** Test tag of the resize and turn handle at the selected sticker's bottom-right corner. */
 const val LAYER_RESIZE_TAG = "layer-resize"
 
+/** Test tag of a selected text's edit button (top right), which opens the keyboard. */
+const val LAYER_EDIT_TAG = "layer-edit"
+
 /** The size of a corner button's touch target: the 48 dp the accessibility guidelines ask for. */
 val LAYER_BUTTON_TARGET = 48.dp
 

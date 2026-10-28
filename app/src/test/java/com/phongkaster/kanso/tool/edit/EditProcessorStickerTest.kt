@@ -76,6 +76,30 @@ class EditProcessorStickerTest {
         assertEquals(grey, edited.getPixel(10, 75))
     }
 
+    /**
+     * ADR-005: a layer's opacity fades it into the photo. At half opacity a solid red layer over
+     * the grey photo comes out half way between the two; at 1 it is exactly its own colour.
+     */
+    @Test
+    fun a_half_opaque_layer_is_blended_half_way_into_the_photo() {
+        val half = run(photo(100, 100), EditSettings(layers = listOf(sticker(0.5f, 0.5f, 0.4f).copy(opacity = 0.5f))))
+        // SOLID is (200, 50, 50) and the photo (100, 100, 100): half way is about (150, 75, 75).
+        assertClose(rgb(150, 75, 75), half.getPixel(50, 50), 2)
+        assertEquals(grey, half.getPixel(10, 10))
+
+        val solid = run(photo(100, 100), EditSettings(layers = listOf(sticker(0.5f, 0.5f, 0.4f).copy(opacity = 1f))))
+        assertEquals(SolidLayerPictures.SOLID, solid.getPixel(50, 50))
+    }
+
+    /** An opacity below the 10 percent floor (or not a number) is drawn at the floor, never hidden. */
+    @Test
+    fun an_opacity_below_the_floor_still_draws_the_layer_faintly() {
+        listOf(0f, -1f, Float.NaN).forEach { opacity ->
+            val edited = run(photo(100, 100), EditSettings(layers = listOf(sticker(0.5f, 0.5f, 0.4f).copy(opacity = opacity))))
+            assertTrue("opacity $opacity hid the layer", edited.getPixel(50, 50) != grey)
+        }
+    }
+
     /** A crop that leaves the sticker out leaves no sticker pixel. */
     @Test
     fun a_crop_that_excludes_a_sticker_shows_none_of_it() {

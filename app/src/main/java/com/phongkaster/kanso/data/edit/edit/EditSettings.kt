@@ -88,14 +88,16 @@ data class EditSettings(
      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
-     * - [EditTool.STICKERS]: no sticker is on the photo.
+     * - [EditTool.STICKERS]: no sticker is on the photo;
+     * - [EditTool.TEXT]: no text is on the photo.
      */
     fun isNeutral(tool: EditTool): Boolean = when (tool) {
         EditTool.CROP -> crop == CropRect.FULL
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
         EditTool.ADJUST -> !hasColourChange
         EditTool.FILTERS -> !hasFilter
-        EditTool.STICKERS -> layers.isEmpty()
+        EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
+        EditTool.TEXT -> layers.none { it.content is LayerContent.Text }
     }
 
     /**

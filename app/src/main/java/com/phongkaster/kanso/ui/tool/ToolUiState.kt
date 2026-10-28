@@ -121,10 +121,17 @@ data class ToolUiState(
      */
     val touchedLayerKey: Long? = null,
     /**
-     * True for a moment after the person tried to add a sticker beyond the limit: the screen shows
-     * the "20 stickers at most" message, then calls the ViewModel to clear this flag.
+     * True for a moment after the person tried to add a sticker or a text beyond the limit: the
+     * screen shows the "20 stickers and texts at most" message, then calls the ViewModel to clear
+     * this flag.
      */
-    val stickerLimitShown: Boolean = false,
+    val layerLimitShown: Boolean = false,
+    /**
+     * True while the Text sheet's text area has the keyboard: the sheet then shows only the text
+     * area above the keyboard (its font, colour and slider rows come back when it closes), and
+     * every letter typed is previewed on the photo without an undo step until the keyboard closes.
+     */
+    val textEditing: Boolean = false,
 ) {
 
     /**

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -47,9 +48,17 @@ private val SHEET_AREA_HEIGHT = 136.dp
 private val DEFAULT_ROW_HEIGHT = 72.dp
 
 /**
+ * The height of a layer sheet (Stickers, Text), which takes the place of the row of tools. It is
+ * taller than the panel area and the row together, to hold its top bar, the size and opacity
+ * sliders and its own controls, so the photo above gets a little shorter while one is open.
+ */
+private val LAYER_SHEET_HEIGHT = 320.dp
+
+/**
  * The Edit screen's bottom bar, the lowest thing on screen: one row of Crop, Rotate, Adjust,
- * Filters, Stickers and Compare, and just above it the fixed-height panel area, which holds the
- * open tool's panel ([sheet]) or a hint when none is open; while Stickers is open its sheet takes
+ * Filters, Stickers, Text and Compare, and just above it the fixed-height panel area, which holds
+ * the open tool's panel ([sheet]) or a hint when none is open; while Stickers or Text is open its
+ * sheet takes
  * the place of both (see below). It is passed to `Scaffold`'s `bottomBar` slot, so
  * the photo area above always ends where this bar begins, and since the bar never changes height
  * neither does the photo.
@@ -66,9 +75,12 @@ private val DEFAULT_ROW_HEIGHT = 72.dp
  * open). While Compare is on, or Done is rendering, the row is disabled; the screen also passes
  * that flag to the panel's controls, which disable themselves.
  *
- * **Stickers replaces the row.** While Stickers is open its sheet (which has its own Cancel and
- * Confirm) is shown instead of the row of tools, and is as tall as the panel area and the row
- * together, so the bar's total height, and the photo's, stay the same. The row's height is
+ * **A layer sheet replaces the row.** While Stickers or Text is open its sheet (which has its own
+ * Cancel and Confirm) is shown instead of the row of tools, [LAYER_SHEET_HEIGHT] tall: taller than
+ * the panel area and the row together, because it also holds the selected layer's size and
+ * opacity sliders, so the photo gets a little shorter while it is open. While the Text sheet's
+ * keyboard is up the sheet shrinks to its text area, and the whole bar rides on top of the
+ * keyboard (the keyboard's inset is part of the bar's padding). The row's height is
  * measured with `onSizeChanged` while the row is on screen and remembered for that moment. While
  * Compare is on, or Done is rendering, the ViewModel ignores the sheet's Cancel, Confirm and the
  * system Back, so the sheet cannot change what Done is drawing.
@@ -87,21 +99,29 @@ fun EditBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(
-                WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+                // The keyboard (Text sheet) counts too: while it is up the bar sits on top of it.
+                WindowInsets.navigationBars
+                    .union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom))
+                    .union(WindowInsets.ime),
             )
             .padding(bottom = 8.dp),
     ) {
-        if (state.openTool == EditTool.STICKERS) {
-            // The Stickers sheet takes the place of the row of tools. It is as tall as the fixed
-            // sheet area plus the row, so the bar, and with it the photo, keeps its size.
+        val layerSheet = state.openTool == EditTool.STICKERS || state.openTool == EditTool.TEXT
+        if (layerSheet) {
+            // A layer sheet (Stickers, Text) takes the place of the row of tools. While the Text
+            // sheet's keyboard is up it is only as tall as its text area, so the photo stays in
+            // sight above the keyboard.
             val sheetText = stringResource(R.string.edit_layout_sheet)
             val density = LocalDensity.current
             val rowHeight = if (rowHeightPx > 0) with(density) { rowHeightPx.toDp() } else DEFAULT_ROW_HEIGHT
+            val compact = state.openTool == EditTool.TEXT && state.textEditing
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .fillMaxWidth()
-                    .height(SHEET_AREA_HEIGHT + rowHeight)
+                    .then(
+                        if (compact) Modifier else Modifier.height(maxOf(LAYER_SHEET_HEIGHT, SHEET_AREA_HEIGHT + rowHeight)),
+                    )
                     .padding(bottom = 8.dp),
             ) {
                 Surface(
@@ -112,7 +132,7 @@ fun EditBottomBar(
                     shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
-                    sheet(EditTool.STICKERS)
+                    sheet(state.openTool ?: EditTool.STICKERS)
                 }
             }
         } else {
@@ -131,7 +151,7 @@ fun EditBottomBar(
                 // Compare is the way back from comparing, so only Done's render switches it off.
                 compareEnabled = !state.finishing,
                 onCompare = onCompare,
-                // Remember how tall the row is, to give the Stickers sheet the same height.
+                // Remember how tall the row is: a layer sheet is never shorter than the row and the panel area.
                 modifier = Modifier.onSizeChanged { rowHeightPx = it.height },
             )
         }

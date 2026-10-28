@@ -18,9 +18,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks on Android 15 the list of ready-made layers, [StickerCatalog] (DoD 3):
+ * Checks on Android 15 the list of ready-made stickers, [StickerCatalog] (DoD 3):
  *
- * - four categories in the order Food, Mood, Quote, Emoji holding 17, 17, 6 and 20 layers, 60 in
+ * - four categories in the order Food, Mood, Quote, Emoji holding 17, 17, 6 and 20 stickers, 60 in
  *   all;
  * - every sticker's picture id is unique and equals the name of its drawable resource;
  * - every drawable id exists (is not zero) and decodes to a real picture;
@@ -56,7 +56,7 @@ class StickerCatalogTest {
         )
     }
 
-    /** Food holds 17, Mood 17, Quote 6 and Emoji 20 layers: 60 in all. */
+    /** Food holds 17, Mood 17, Quote 6 and Emoji 20 stickers: 60 in all. */
     @Test
     fun the_categories_hold_17_17_6_and_20_stickers_60_in_all() {
         assertEquals(17, StickerCatalog.inCategory(StickerCategory.FOOD).size)
@@ -75,14 +75,14 @@ class StickerCatalogTest {
         )
     }
 
-    /** No two layers share a picture id. */
+    /** No two stickers share a picture id. */
     @Test
     fun every_picture_id_is_unique() {
         val ids = StickerCatalog.all.map { it.pictureId }
         assertEquals("a picture id is used twice", ids.size, ids.toSet().size)
     }
 
-    /** No two layers share a drawable, and every drawable id exists. */
+    /** No two stickers share a drawable, and every drawable id exists. */
     @Test
     fun every_drawable_id_exists_and_is_unique() {
         StickerCatalog.all.forEach { sticker ->

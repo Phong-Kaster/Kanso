@@ -36,7 +36,19 @@ data class Layer(
     val degrees: Float,
     /** True when the picture is mirrored left to right (before it is turned). */
     val mirrored: Boolean,
-)
+    /**
+     * How solid the layer is drawn, from [MIN_OPACITY] (faint) to 1 (fully solid, the default).
+     * It never reaches 0: a layer nobody can see could not be found to be selected or deleted.
+     */
+    val opacity: Float = 1f,
+) {
+
+    /** The limits of a layer's opacity. */
+    companion object {
+        /** The faintest a layer may be made: 10 percent. */
+        const val MIN_OPACITY = 0.1f
+    }
+}
 
 /** The catalogue picture's id when this layer is a sticker, or null when it is not one. */
 val Layer.pictureId: String?

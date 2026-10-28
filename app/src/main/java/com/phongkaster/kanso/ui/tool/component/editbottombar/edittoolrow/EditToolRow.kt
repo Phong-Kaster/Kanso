@@ -153,6 +153,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
     EditTool.ADJUST -> R.drawable.ic_tune
     EditTool.FILTERS -> R.drawable.ic_filter_vintage
     EditTool.STICKERS -> R.drawable.ic_stickers
+    EditTool.TEXT -> R.drawable.ic_text_fields
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -163,6 +164,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
     EditTool.ADJUST -> R.string.edit_layout_adjust
     EditTool.FILTERS -> R.string.edit_layout_filters
     EditTool.STICKERS -> R.string.stickers_tool_label
+    EditTool.TEXT -> R.string.text_tool_label
 }
 
 /**

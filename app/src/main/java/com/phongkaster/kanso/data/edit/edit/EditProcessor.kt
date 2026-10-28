@@ -199,6 +199,9 @@ class EditProcessor(
                 val paint = Paint().apply {
                     isFilterBitmap = !exact
                     isAntiAlias = !exact
+                    // The layer's opacity fades every pixel it lays down; the blend below then
+                    // mixes it with the photo like any other soft edge.
+                    alpha = opacityAlpha(sticker.opacity)
                 }
                 Canvas(box).drawBitmap(picture, matrix, paint)
 
@@ -213,6 +216,15 @@ class EditProcessor(
                 box.recycle()
             }
         }
+    }
+
+    /**
+     * A layer's [opacity] (0..1) as a paint alpha (0..255), kept within [Layer.MIN_OPACITY]..1 so
+     * a value out of range (or not a number) never hides a layer or overflows the paint.
+     */
+    private fun opacityAlpha(opacity: Float): Int {
+        val kept = if (opacity.isNaN()) 1f else opacity.coerceIn(Layer.MIN_OPACITY, 1f)
+        return (kept * OPAQUE_ALPHA).roundToInt()
     }
 
     /**
@@ -356,6 +368,9 @@ class EditProcessor(
 
         /** Float noise tolerated when sizing a sticker's bounding box, in pixels. */
         private const val BOX_EPSILON = 1e-3
+
+        /** A fully solid paint's alpha. */
+        private const val OPAQUE_ALPHA = 255f
 
         /** How close to 1 a sticker's scale must be to count as drawn 1:1. */
         private const val SCALE_EPSILON = 1e-4f

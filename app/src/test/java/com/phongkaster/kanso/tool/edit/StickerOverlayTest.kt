@@ -91,11 +91,11 @@ class StickerOverlayTest {
     @Test
     fun compare_hides_the_sticker_and_its_frame_and_disables_the_grid() {
         val viewModel = showEdit()
-        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
-        val original = pixelAt(centre.x, centre.y)
-
+        // The Stickers sheet makes the photo shorter, so the photo is measured once it is open.
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
+        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
+        val original = pixelAt(centre.x, centre.y)
         val opaque = opaqueSticker()
         viewModel.addSticker(opaque, processorFor)
         compose.waitForIdle()

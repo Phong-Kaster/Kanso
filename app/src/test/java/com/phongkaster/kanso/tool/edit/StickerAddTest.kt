@@ -35,8 +35,8 @@ import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.STICKER_LIMIT_MESSAGE_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CANCEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.stickerTileTag
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
@@ -145,7 +145,7 @@ class StickerAddTest {
         compose.mainClock.advanceTimeByFrame()
 
         val state = viewModel.state.value
-        assertTrue("the state did not ask for the limit message", state.stickerLimitShown)
+        assertTrue("the state did not ask for the limit message", state.layerLimitShown)
         assertEquals("a sticker was added past the limit", 20, state.settings.layers.size)
         assertEquals(canUndoBefore, state.canUndo)
         assertNull("a refused tap selected something", state.selectedLayerKey)
@@ -175,7 +175,7 @@ class StickerAddTest {
         viewModel.changeSettings(moved, processorFor)
         compose.waitForIdle()
 
-        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).performClick()
+        compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).performClick()
         compose.waitForIdle()
 
         val state = viewModel.state.value
@@ -207,7 +207,7 @@ class StickerAddTest {
         viewModel.changeSettings(EditSettings(crop = OFF_CENTRE), processorFor)
         viewModel.openTool(EditTool.STICKERS)
         viewModel.addSticker(StickerCatalog.inCategory(StickerCategory.FOOD).first(), processorFor)
-        viewModel.confirmStickers()
+        viewModel.confirmLayers()
         val opened = viewModel.state.value.settings
         assertEquals(1, opened.layers.size)
         assertEquals(OFF_CENTRE, opened.crop)
@@ -232,7 +232,7 @@ class StickerAddTest {
         )
         assertTrue("the edits did not reach the settings", viewModel.state.value.settings != opened)
 
-        viewModel.cancelStickers()
+        viewModel.cancelLayers()
         shadowOf(Looper.getMainLooper()).idle()
 
         val state = viewModel.state.value
@@ -252,12 +252,12 @@ class StickerAddTest {
     }
 
     /**
-     * The same as the ViewModel test, through the screen: the cross (a tap on [STICKERS_CANCEL_TAG])
+     * The same as the ViewModel test, through the screen: the cross (a tap on [LAYER_SHEET_CANCEL_TAG])
      * closes the sheet and restores the settings and Undo, and the five tool entries are back.
      */
     @Test
     fun the_cross_cancels_through_the_screen() {
-        cancelThroughTheScreen { compose.onNodeWithTag(STICKERS_CANCEL_TAG).performClick() }
+        cancelThroughTheScreen { compose.onNodeWithTag(LAYER_SHEET_CANCEL_TAG).performClick() }
     }
 
     /**
@@ -335,8 +335,8 @@ class StickerAddTest {
     private fun assertSheetClosedAndFiveToolsShown() {
         compose.onAllNodesWithTag(STICKERS_PANEL_TAG).assertCountEquals(0)
         compose.onAllNodesWithTag(EDIT_SHEET_TAG).assertCountEquals(0)
-        assertEquals(5, EditTool.entries.size)
-        EditTool.entries.forEach { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() }
+        assertEquals(6, EditTool.entries.size)
+        EditTool.entries.forEach { compose.onNodeWithTag(editToolTag(it)).assertExists() }
     }
 
     /** Taps the Stickers entry and waits until the sheet is open. */

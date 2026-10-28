@@ -97,11 +97,11 @@ class StickerCompareTest {
     @Test
     fun compare_shows_the_original_without_stickers_and_the_sticker_controls_do_nothing() {
         val viewModel = showEdit()
-        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
-        val original = pixelAt(centre.x, centre.y)
-
+        // The Stickers sheet makes the photo shorter, so the photo is measured once it is open.
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
+        val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center
+        val original = pixelAt(centre.x, centre.y)
         val opaque = opaqueSticker()
         viewModel.addSticker(opaque, processorFor)
         viewModel.addSticker(opaque, processorFor)

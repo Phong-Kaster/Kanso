@@ -60,7 +60,7 @@ import org.robolectric.annotation.GraphicsMode
  * - tapping each chip in turn marks it chosen (the chip reports `selected`, the others do not) and
  *   the ViewModel's category follows;
  * - scrolling through the whole grid, the tiles met (found by their tags) are exactly that
- *   category's layers: 17 food, 17 mood, 6 quote, 20 emoji.
+ *   category's stickers: 17 food, 17 mood, 6 quote, 20 emoji.
  *
  * The photo is decoded before the screen is drawn, so the loading indicator (which animates
  * forever) never appears.
@@ -137,7 +137,7 @@ class StickersPanelTest {
 
     /**
      * Scrolling through each category's whole grid, the sticker tiles met are exactly that
-     * category's layers, counted by tag: 17 food, 17 mood, 6 quote and 20 emoji.
+     * category's stickers, counted by tag: 17 food, 17 mood, 6 quote and 20 emoji.
      */
     @Test
     fun scrolling_the_grid_meets_every_sticker_of_the_category() {

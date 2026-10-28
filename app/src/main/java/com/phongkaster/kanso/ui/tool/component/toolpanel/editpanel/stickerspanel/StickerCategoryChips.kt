@@ -34,7 +34,7 @@ fun stickerChipTag(category: StickerCategory): String = "sticker-chip-${category
  * so light, dark and the user's theme colour all work. [FilterChip] also reports its `selected`
  * state to accessibility services and tests.
  *
- * @param selected the category whose layers are shown.
+ * @param selected the category whose stickers are shown.
  * @param onSelect called with the category the user taps.
  */
 @Composable

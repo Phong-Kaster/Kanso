@@ -39,8 +39,8 @@ import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CANCEL_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_CONFIRM_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CANCEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
 import com.phongkaster.kanso.R
@@ -114,7 +114,7 @@ class EditLayoutTest {
             moveTo(viewModel, open)
             val card = bounds(TOOL_CARD_TAG)
             // With Stickers open its sheet takes the row's place as the lowest thing on screen.
-            val row = if (open == EditTool.STICKERS) bounds(EDIT_SHEET_TAG) else bounds(EDIT_TOOL_ROW_TAG)
+            val row = if (open.isLayerSheet()) bounds(EDIT_SHEET_TAG) else bounds(EDIT_TOOL_ROW_TAG)
             val back = bounds(TOOL_BACK_TAG)
 
             // The row is the bottom bar: near the window's bottom edge, under everything else.
@@ -131,14 +131,20 @@ class EditLayoutTest {
                 assertTrue("card bottom ${card.bottom} below the panel $sheetTop, $open", card.bottom <= sheetTop + 0.5f)
                 assertTrue("card bottom ${card.bottom} far above the panel $sheetTop, $open", sheetTop - card.bottom <= dp(24f))
             }
-            card
+            open to card
         }
-        // The photo never changes size or place, whichever tool is open or none.
-        val first = cards.first()
-        cards.forEachIndexed { index, card ->
+        // The photo keeps its top and width whichever tool is open; it keeps its height too,
+        // except while a layer sheet (Stickers) is open: that sheet is taller, so the photo is
+        // shorter then (ADR-005).
+        val first = cards.first().second
+        cards.forEachIndexed { index, (open, card) ->
             assertEquals("card top in state $index", first.top, card.top, 0.5f)
-            assertEquals("card height in state $index", first.height, card.height, 0.5f)
             assertEquals("card width in state $index", first.width, card.width, 0.5f)
+            if (open.isLayerSheet()) {
+                assertTrue("card height in state $index not shorter", card.height < first.height)
+            } else {
+                assertEquals("card height in state $index", first.height, card.height, 0.5f)
+            }
         }
     }
 
@@ -159,8 +165,8 @@ class EditLayoutTest {
             val card = bounds(TOOL_CARD_TAG)
             val sheet = bounds(EDIT_SHEET_TAG)
 
-            if (tool == EditTool.STICKERS) {
-                // The Stickers sheet replaces the row, so there is no row to sit above; it is the
+            if (tool.isLayerSheet()) {
+                // A layer sheet replaces the row, so there is no row to sit above; it is the
                 // bottom bar itself, near the window's bottom edge.
                 compose.onAllNodesWithTag(EDIT_TOOL_ROW_TAG).assertCountEquals(0)
                 val rootHeight = compose.onRoot().fetchSemanticsNode().size.height.toFloat()
@@ -173,20 +179,26 @@ class EditLayoutTest {
             assertEquals("panel left edge, $tool", card.left, sheet.left, onePx)
             assertEquals("panel right edge, $tool", card.right, sheet.right, onePx)
             assertTrue("panel of $tool only ${sheet.height} px tall", sheet.height >= dp(48f))
-            assertEquals("photo height with $tool open", closedCard.height, card.height, 0.5f)
+            if (tool.isLayerSheet()) {
+                // A layer sheet is taller than the panel area and the row together (ADR-005).
+                assertTrue("photo not shorter with $tool open", card.height < closedCard.height)
+                assertTrue("$tool sheet only ${sheet.height} px tall", sheet.height >= dp(LAYER_SHEET_DP) - 1f)
+            } else {
+                assertEquals("photo height with $tool open", closedCard.height, card.height, 0.5f)
+            }
             compose.onAllNodes(hasTestTag(EDIT_PANEL_TAG) and hasAnyAncestor(hasTestTag(EDIT_SHEET_TAG)))
                 .assertCountEquals(1)
         }
     }
 
     /**
-     * DoD 41: tapping the Stickers entry opens a sheet that replaces the row of tools and leaves
-     * the photo area exactly as it was (same bounds before and after). While it is open none of
+     * DoD 41, amended by ADR-005: tapping the Stickers entry opens a sheet that replaces the row of
+     * tools; the photo keeps its left, top and width and gets shorter, as the sheet is 320 dp tall. While it is open none of
      * the five tool entries is on screen; the cross and the tick are displayed in the sheet's top
      * row, the cross left of the tick, each a 48 x 48 dp target with a content description.
      */
     @Test
-    fun the_stickers_sheet_replaces_the_row_and_leaves_the_photo_alone() {
+    fun the_stickers_sheet_replaces_the_row_and_the_photo_keeps_its_top_and_width() {
         val viewModel = showEdit()
         moveTo(viewModel, null)
         val before = bounds(TOOL_CARD_TAG)
@@ -200,17 +212,20 @@ class EditLayoutTest {
         assertEquals("photo left", before.left, after.left, 0.5f)
         assertEquals("photo top", before.top, after.top, 0.5f)
         assertEquals("photo width", before.width, after.width, 0.5f)
-        assertEquals("photo height", before.height, after.height, 0.5f)
+        // The sheet is taller than the row it replaces (it holds the size and opacity sliders),
+        // so the photo is shorter while it is open, and exactly as tall again once it closes.
+        assertTrue("photo height ${after.height} not shorter than ${before.height}", after.height < before.height)
+        assertTrue("sheet only ${bounds(EDIT_SHEET_TAG).height} px tall", bounds(EDIT_SHEET_TAG).height >= dp(LAYER_SHEET_DP) - 1f)
 
         EditTool.entries.forEach { compose.onAllNodesWithTag(editToolTag(it)).assertCountEquals(0) }
         compose.onAllNodesWithTag(EDIT_TOOL_ROW_TAG).assertCountEquals(0)
         compose.onNodeWithTag(STICKERS_PANEL_TAG).assertIsDisplayed()
 
-        compose.onNodeWithTag(STICKERS_CANCEL_TAG).assertIsDisplayed()
-        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(LAYER_SHEET_CANCEL_TAG).assertIsDisplayed()
+        compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).assertIsDisplayed()
         val sheet = bounds(EDIT_SHEET_TAG)
-        val cancel = bounds(STICKERS_CANCEL_TAG)
-        val confirm = bounds(STICKERS_CONFIRM_TAG)
+        val cancel = bounds(LAYER_SHEET_CANCEL_TAG)
+        val confirm = bounds(LAYER_SHEET_CONFIRM_TAG)
         assertTrue("cross $cancel is not left of tick $confirm", cancel.right <= confirm.left + 0.5f)
         assertEquals("cross and tick are not on one row", cancel.top, confirm.top, 0.5f)
         listOf(cancel, confirm).forEach { target ->
@@ -219,8 +234,8 @@ class EditLayoutTest {
             assertEquals("touch target width", dp(48f), target.width, 1f)
             assertEquals("touch target height", dp(48f), target.height, 1f)
         }
-        compose.onNodeWithTag(STICKERS_CANCEL_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_cancel)))
-        compose.onNodeWithTag(STICKERS_CONFIRM_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_confirm)))
+        compose.onNodeWithTag(LAYER_SHEET_CANCEL_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_cancel)))
+        compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).assert(hasContentDescription(context.getString(R.string.stickers_sheet_confirm)))
     }
 
     /**
@@ -298,8 +313,8 @@ class EditLayoutTest {
                                 onPreview = { _, _ -> },
                                 onCommit = {},
                                 onRatio = { _, _ -> },
-                                onStickersCancel = viewModel::cancelStickers,
-                                onStickersConfirm = viewModel::confirmStickers,
+                                onStickersCancel = viewModel::cancelLayers,
+                                onStickersConfirm = viewModel::confirmLayers,
                             )
                         } else {
                             ToolPanel(
@@ -333,6 +348,12 @@ class EditLayoutTest {
             viewModel.openTool(open)
         }
         compose.waitForIdle()
+        // Text opens with its keyboard up, which shrinks its sheet to the text area; the layout
+        // under test is the sheet with the keyboard down.
+        if (open == EditTool.TEXT) {
+            viewModel.setTextEditing(false)
+            compose.waitForIdle()
+        }
         assertEquals(open, viewModel.state.value.openTool)
     }
 
@@ -368,9 +389,15 @@ class EditLayoutTest {
     /** An opaque ARGB colour from its three channels. */
     private fun rgb(r: Int, g: Int, b: Int): Int = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
 
-    /** The made-up Uri of the fake photo. */
+    /** The made-up Uri of the fake photo and the layer sheet's height. */
     private companion object {
         /** A content Uri no real photo has; the fake loader ignores it. */
         const val PHOTO_URI = "content://media/external/images/media/42"
+
+        /** A layer sheet's (Stickers, Text) visible height: EditBottomBar's 320 dp less its 8 dp gap. */
+        const val LAYER_SHEET_DP = 312f
     }
+
+    /** True for the two sheets that take the row's place: Stickers and Text. */
+    private fun EditTool?.isLayerSheet(): Boolean = this == EditTool.STICKERS || this == EditTool.TEXT
 }

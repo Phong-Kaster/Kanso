@@ -61,6 +61,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:taskAffinity="com.phongkaster.kanso.main"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Kanso.Starting" />
 
         <!-- What every launcher entry opens: it starts MainActivity in MainActivity's own task

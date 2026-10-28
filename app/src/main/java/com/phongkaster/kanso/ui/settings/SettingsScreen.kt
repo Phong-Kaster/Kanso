@@ -3,7 +3,6 @@ package com.phongkaster.kanso.ui.settings
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,10 +59,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -73,7 +69,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
-import com.library.colorpicker.HSVColorPicker
+import com.phongkaster.kanso.ui.component.CustomColourPicker
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.TextScale
 import com.phongkaster.kanso.data.settings.ThemeColour
@@ -172,16 +168,6 @@ fun settingsRowIconBadgeTag(rowTag: String): String = "$rowTag-icon-badge"
  * unmerged tree.
  */
 fun settingsRowDescriptionTag(rowTag: String): String = "$rowTag-description"
-
-/**
- * The colour of the surface the picker sits on. The picker draws its text in fixed black, so
- * it always gets a white surface, which keeps that text readable in dark mode too.
- *
- * This card is the one place in Settings that paints a colour not taken from the theme: the
- * engine's picker cannot be changed (its source is not Kanso's to edit), so its card has to
- * match the picker instead of the theme.
- */
-private val PickerSurfaceColor = Color.White
 
 /** The space between the screen's left and right edges and the grouped containers. */
 internal val SCREEN_PADDING = 16.dp
@@ -667,51 +653,9 @@ internal fun ThemeColourChoice(
         CustomColourPicker(
             seedArgb = selected.seedArgb,
             onColorChanged = onCustomColourChanged,
-        )
-    }
-}
-
-/**
- * The engine's HSV colour picker, starting at the colour [seedArgb], on a white surface so its
- * fixed black text stays readable in light and dark mode. Every change calls [onColorChanged].
- */
-@Composable
-internal fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit) {
-    val focusManager = LocalFocusManager.current
-    // A Surface is a Material 3 container with its own background colour and shape. Its colour
-    // is fixed white on purpose, not taken from the theme (see PickerSurfaceColor). No content
-    // colour is set: the picker gives every piece of its own text an explicit colour and never
-    // reads the surrounding one, so the white card is the only fixed colour this screen needs.
-    Surface(
-        color = PickerSurfaceColor,
-        shape = MaterialTheme.shapes.largeIncreased,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = SCREEN_PADDING, vertical = 8.dp)
-            .testTag(CUSTOM_COLOUR_PICKER_TAG)
-            // Touching the picker while the hex box has the keyboard open: the first finger down
-            // anywhere on the card takes the focus away from the box, which closes the keyboard,
-            // so dragging the colour is never fought over by a typing session. It only watches
-            // (the Initial pass sees the touch before the picker does) and consumes nothing, so
-            // the picker still gets the touch.
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.changes.any { it.pressed && !it.previousPressed }) focusManager.clearFocus()
-                    }
-                }
-            },
-    ) {
-        // The picker remembers its own colour once it is shown, so [seedArgb] only sets where it
-        // starts; it does not jump back while the person drags. showAlpha = false hides the
-        // transparency bar and its percentage box: a theme colour is always fully opaque.
-        HSVColorPicker(
-            color = Color(seedArgb),
-            onColorChanged = onColorChanged,
-            modifier = Modifier.padding(16.dp),
-            showAlpha = false,
+            modifier = Modifier
+                .padding(horizontal = SCREEN_PADDING, vertical = 8.dp)
+                .testTag(CUSTOM_COLOUR_PICKER_TAG),
         )
     }
 }
@@ -1180,17 +1124,6 @@ private fun ThemeColourChoicePreview() {
                     onCustomColourChanged = {},
                 )
             }
-        }
-    }
-}
-
-/** The colour picker card on its own, in light and in dark. */
-@PreviewLightDark
-@Composable
-private fun CustomColourPickerPreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            CustomColourPicker(seedArgb = sampleCustomColour.seedArgb, onColorChanged = {})
         }
     }
 }

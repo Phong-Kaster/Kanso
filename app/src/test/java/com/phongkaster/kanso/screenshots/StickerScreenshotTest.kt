@@ -252,7 +252,7 @@ class StickerScreenshotTest {
      */
     private fun addStickerAndClosePanel(viewModel: ToolViewModel) {
         addSelectedSticker(viewModel)
-        viewModel.confirmStickers()
+        viewModel.confirmLayers()
         compose.waitForIdle()
         waitUntilStill()
     }
@@ -264,7 +264,7 @@ class StickerScreenshotTest {
      */
     private fun cropAndFilterWithSticker(viewModel: ToolViewModel) {
         addSelectedSticker(viewModel)
-        viewModel.confirmStickers()
+        viewModel.confirmLayers()
         compose.waitForIdle()
         val settings = viewModel.state.value.settings.copy(
             crop = EditSettings.CropRect(0.15f, 0.15f, 0.85f, 0.85f),

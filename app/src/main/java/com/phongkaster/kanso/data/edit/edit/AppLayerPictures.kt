@@ -6,7 +6,8 @@ import android.graphics.BitmapFactory
 
 /**
  * The app's [LayerPictures]: for a [LayerContent.Picture] it finds the sticker in [StickerCatalog]
- * and decodes its drawable file.
+ * and decodes its drawable file; for a [LayerContent.Text] it draws the words with the bundled
+ * fonts through [TextLayerLayout], at the width asked for, so the letters stay sharp at any size.
  *
  * Decoding with `inSampleSize` makes the bitmap smaller while it is read (the size is divided by
  * a power of two), which is much cheaper than decoding it whole and scaling it down; the
@@ -15,14 +16,18 @@ import android.graphics.BitmapFactory
  */
 class AppLayerPictures(private val context: Context) : LayerPictures {
 
+    /** The text layout with the app's fonts, made on first use. */
+    private val texts by lazy { TextLayerLayout.forApp(context) }
+
     /**
      * Returns the picture of [content] at [widthPx] wide or a little wider. A sticker is decoded
      * from its drawable (never narrower unless the file itself is narrower), as ARGB_8888 so
      * transparent edges stay transparent; null for an id the catalog does not know or a file that
-     * cannot be decoded.
+     * cannot be decoded. A text is drawn fresh at [widthPx]; null when it has no letters.
      */
     override fun picture(content: LayerContent, widthPx: Int): Bitmap? = when (content) {
         is LayerContent.Picture -> sticker(content.pictureId, widthPx)
+        is LayerContent.Text -> texts.render(content, widthPx)
     }
 
     /** Decodes the catalogue sticker [pictureId] at [widthPx] wide or a little wider. */

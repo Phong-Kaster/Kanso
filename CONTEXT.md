@@ -10,29 +10,33 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 its own `Camera` key).
 
 **EditTool** - One of the six groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`, `STICKERS`, `TEXT` (planned). Text is its own tool with its own sheet, not a
-section of the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`) and
-opens one sheet; only one sheet is open at a time (the Stickers sheet takes the row's place while
-open). Holds no strings or icons.
+`ADJUST`, `FILTERS`, `STICKERS`, `TEXT`. Text is its own tool with its own sheet, not a section of
+the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`) and
+opens one sheet; only one sheet is open at a time (a layer sheet, Stickers or Text, takes the row's
+place while open). Holds no strings or icons.
 `data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
 
-**Layer** (planned) - One thing placed on the photo in Edit, which the person can select, move,
+**Layer** - One thing placed on the photo in Edit, which the person can select, move,
 pinch and turn. A layer has one of two kinds: a *picture* (a **Sticker**, added by the Stickers
 tool) or *text* (added by the Text tool). All layers sit in one list, oldest first, so the stacking
 order runs across both kinds; selecting a layer brings it to the front. A photo holds at most 20 layers in total. Every layer, of either kind, has a size (1-100, relative to the
 photo) and an opacity (10-100%), each set by a slider in its tool's sheet; pinching a layer
-changes the same size. Like a sticker today, a layer is part of the photo (ADR-004): crop,
-turns, flips, filter and sliders act on it. *Not* a layer drawn over the finished picture (the
+changes the same size. A layer is part of the photo (ADR-004, ADR-005): crop, turns, flips,
+filter and sliders act on it. `data/edit/edit/Layer.kt`, `LayerContent.kt`. *Not* a layer drawn over the finished picture (the
 option ADR-004 rejected), and not Compose's `graphicsLayer`.
 
-**Sticker** - One ready-made picture placed on the photo in Edit (once Layer lands: a layer of the
-*picture* kind): an immutable value with a key,
-a picture id, a centre, a width (all fractions of the ORIGINAL photo), a turn in degrees and a
-mirrored flag. A photo holds at most 20 (`EditSettings.MAX_STICKERS`) in `EditSettings.stickers`.
-It is part of the photo: `EditProcessor` draws it first, so crop, turns, flips, filter and sliders
-act on it (see ADR-004). Which sticker is selected is screen state
-(`ToolUiState.selectedStickerKey`), not part of the sticker. `data/edit/edit/Sticker.kt`. *Not* an
-entry of the catalogue (a `CatalogSticker`), which is only a picture to choose.
+**Sticker** - One ready-made picture placed on the photo in Edit: a **Layer** of the *picture* kind
+(`LayerContent.Picture`, a catalogue picture id); its place, width, turn, mirror flag and opacity
+are the layer's. It counts towards the 20 layers (`EditSettings.MAX_LAYERS`) in
+`EditSettings.layers`. Which layer is selected is screen state (`ToolUiState.selectedLayerKey`),
+not part of the layer. *Not* an entry of the catalogue (a `CatalogSticker`), which is only a
+picture to choose.
+
+**Text (text layer)** - Words typed onto the photo in Edit: a **Layer** of the *text* kind
+(`LayerContent.Text`): the words (at most 200 characters), an opaque colour, a font (`TextFont`:
+the phone's own or one of five bundled), an alignment (`TextAlignment`) and a wrap width in
+letter heights. An empty text is never kept: it is dropped when it loses the selection. A run of
+typing is one Undo step. *Not* a sticker: it has its own tool and sheet (ADR-005).
 
 **Sticker catalogue (`StickerCatalog`)** - The 60 pictures the Stickers sheet offers, in four
 categories (Food 17, Mood 17, Quote 6, Emoji 20; `StickerCategory`), each a `CatalogSticker` with
@@ -62,7 +66,7 @@ tools' Undo steps back through a list of earlier pictures in `ToolViewModel`.
 
 **Preview (live preview)** - What the Edit screen draws while the person edits, with no full-size
 render:
-- `LivePreviewImage` (`ui/tool/components/photocard/LivePreviewImage.kt`) draws the photo with Compose every frame,
+- `LivePreviewImage` (`ui/tool/component/photocard/LivePreviewImage.kt`) draws the photo with Compose every frame,
   applying crop, then turns, then flips, and the four sliders as a GPU
   `ColorFilter.colorMatrix`.
 - `EditColourMatrix` (`data/edit/edit/EditColourMatrix.kt`) is the one place the four sliders

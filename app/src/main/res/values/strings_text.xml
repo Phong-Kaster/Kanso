@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Text tool of the Edit screen: its entry in the row of tools and its sheet. -->
+    <string name="text_tool_label">Text</string>
+    <string name="text_sheet_cancel">Cancel and close Text</string>
+    <string name="text_sheet_confirm">Keep texts and close</string>
+    <string name="text_hint">Your text</string>
+    <string name="text_field_description">The selected text\'s words</string>
+    <string name="text_alignment_centre">Lines centred, tap for left</string>
+    <string name="text_alignment_left">Lines to the left, tap for right</string>
+    <string name="text_alignment_right">Lines to the right, tap for centred</string>
+    <string name="text_font_none">None</string>
+    <string name="text_font_sample">Aa</string>
+    <string name="text_font_none_description">The phone\'s own font</string>
+    <string name="text_font_be_vietnam_pro">Be Vietnam Pro</string>
+    <string name="text_font_playfair_display">Playfair Display</string>
+    <string name="text_font_dancing_script">Dancing Script</string>
+    <string name="text_font_patrick_hand">Patrick Hand</string>
+    <string name="text_font_space_mono">Space Mono</string>
+    <string name="text_colour_custom">Any colour</string>
+    <string name="text_colour_back">Back to the text settings</string>
+    <string name="text_colour_title">Colour</string>
+    <string name="text_colour_white">White</string>
+    <string name="text_colour_black">Black</string>
+    <string name="text_colour_red">Red</string>
+    <string name="text_colour_orange">Orange</string>
+    <string name="text_colour_yellow">Yellow</string>
+    <string name="text_colour_green">Green</string>
+    <string name="text_colour_teal">Teal</string>
+    <string name="text_colour_blue">Blue</string>
+    <string name="text_colour_purple">Purple</string>
+    <string name="text_colour_pink">Pink</string>
+    <string name="text_colour_brown">Brown</string>
+    <string name="text_colour_grey">Grey</string>
+    <!-- Spoken name of the text frame's top-right button, which opens the keyboard. -->
+    <string name="text_frame_edit">Edit text</string>
+</resources>

@@ -39,6 +39,7 @@ import com.phongkaster.kanso.data.edit.edit.LayerPictures
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Test tag of the Edit screen's cropper, the photo card while the Crop sheet is open. */
 const val EDIT_CROPPER_TAG = "edit-cropper"
@@ -242,6 +243,8 @@ private fun withLayersDrawn(
         matrix.postScale(if (sticker.mirrored) -scale else scale, scale)
         matrix.postRotate(sticker.degrees)
         matrix.postTranslate(sticker.centreX * copy.width, sticker.centreY * copy.height)
+        // The layer's opacity, as the final render applies it (alpha 0..255).
+        paint.alpha = (sticker.opacity.coerceIn(Layer.MIN_OPACITY, 1f) * 255f).roundToInt()
         canvas.drawBitmap(picture, matrix, paint)
     }
     return copy

@@ -26,7 +26,8 @@ import kotlin.math.roundToInt
  * filtered preview for the layers at rest, the live preview's own drawing for the one under a
  * finger), so drawing it here as well would show it twice. The node still carries the caller's
  * test tag and semantics, and its bounds are the sticker's own place and size, as the
- * accessibility tree and the tests expect.
+ * accessibility tree and the tests expect. The one thing it may draw is a [hint] filling the place:
+ * the faint "Your text" of a text that has no letters yet, which the live picture cannot show.
  */
 @Composable
 internal fun LayerPlace(
@@ -36,6 +37,7 @@ internal fun LayerPlace(
     heightPx: Float,
     degrees: Float,
     modifier: Modifier = Modifier,
+    hint: (@Composable () -> Unit)? = null,
 ) {
     val w = widthPx.roundToInt().coerceAtLeast(1)
     val h = heightPx.roundToInt().coerceAtLeast(1)
@@ -50,6 +52,7 @@ internal fun LayerPlace(
             }
             .then(modifier)
             .graphicsLayer { rotationZ = degrees },
+        content = { hint?.invoke() },
     )
 }
 

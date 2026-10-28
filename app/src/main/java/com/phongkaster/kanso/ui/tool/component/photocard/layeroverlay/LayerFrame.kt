@@ -35,10 +35,12 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
 import kotlin.math.roundToInt
 
 /**
- * The frame around the selected sticker: an outline that follows the sticker's centre, size and
- * turn, and four corner buttons. Top-left deletes, top-right duplicates, bottom-left flips
- * (mirrors) and bottom-right is the resize handle: drag it away from or towards the sticker to
- * make it bigger or smaller, and round it to turn the sticker, the picture's shape never changing.
+ * The frame around the selected layer: an outline that follows the layer's centre, size and
+ * turn, and four corner buttons, in the same places on every kind of layer (ADR-005). Top-left
+ * deletes, bottom-left duplicates and bottom-right is the resize handle: drag it away from or
+ * towards the layer to make it bigger or smaller, and round it to turn the layer, the picture's
+ * shape never changing. Top-right is the one button that depends on the kind: it flips (mirrors)
+ * a sticker, and edits a text's words (opens the keyboard) when [onEdit] is given.
  *
  * All sizes and positions are in pixels of the overlay (the shown picture). The frame is drawn
  * by [drawBehind] with a rotated rectangle, and each button is placed at the matching rotated
@@ -63,7 +65,9 @@ import kotlin.math.roundToInt
  * @param maxWidthPx the widest the handle may make the sticker.
  * @param onDelete the delete button was tapped.
  * @param onDuplicate the duplicate button was tapped.
- * @param onFlip the flip button was tapped.
+ * @param onFlip the flip button was tapped (a sticker's top-right button).
+ * @param onEdit the edit button was tapped; when it is not null the top-right button edits a text
+ * instead of flipping.
  * @param onResize the handle is dragged: the sticker should now be this wide and turned this far.
  * @param onResizeEnd the handle's finger lifted after at least one resize.
  */
@@ -83,6 +87,7 @@ fun LayerFrame(
     onResize: (widthPx: Float, degrees: Float) -> Unit,
     onResizeEnd: () -> Unit,
     modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
 ) {
     val outline = MaterialTheme.colorScheme.primary
     val strokePx = with(LocalDensity.current) { 2.dp.toPx() }
@@ -132,16 +137,26 @@ fun LayerFrame(
             iconRes = R.drawable.ic_duplicate,
             description = stringResource(R.string.sticker_frame_duplicate),
             tag = LAYER_DUPLICATE_TAG,
-            modifier = placeAt(SIDE_END, SIDE_START),
+            modifier = placeAt(SIDE_START, SIDE_END),
             onClick = onDuplicate,
         )
-        LayerCornerButton(
-            iconRes = R.drawable.ic_flip,
-            description = stringResource(R.string.sticker_frame_flip),
-            tag = LAYER_FLIP_TAG,
-            modifier = placeAt(SIDE_START, SIDE_END),
-            onClick = onFlip,
-        )
+        if (onEdit != null) {
+            LayerCornerButton(
+                iconRes = R.drawable.ic_edit,
+                description = stringResource(R.string.text_frame_edit),
+                tag = LAYER_EDIT_TAG,
+                modifier = placeAt(SIDE_END, SIDE_START),
+                onClick = onEdit,
+            )
+        } else {
+            LayerCornerButton(
+                iconRes = R.drawable.ic_flip,
+                description = stringResource(R.string.sticker_frame_flip),
+                tag = LAYER_FLIP_TAG,
+                modifier = placeAt(SIDE_END, SIDE_START),
+                onClick = onFlip,
+            )
+        }
         LayerCornerButton(
             iconRes = R.drawable.ic_resize_circle,
             description = stringResource(R.string.sticker_frame_resize),

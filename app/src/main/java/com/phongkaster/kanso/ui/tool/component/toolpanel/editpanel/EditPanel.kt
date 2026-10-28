@@ -22,22 +22,23 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
-import com.phongkaster.kanso.data.edit.edit.StickerCategory
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
-import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
-import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 import com.phongkaster.kanso.ui.tool.component.EditCropper
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
+import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
 /** Test tag of the Edit panel's brightness slider. */
 const val EDIT_BRIGHTNESS_TAG = "edit-brightness"
@@ -92,7 +93,8 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
  * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
  * sheet's own Cancel and Confirm buttons; they are forwarded to the stateless content untouched,
- * as layers need no processor built here.
+ * as layers need no processor built here. [selectedLayerKey] is the layer selected on the photo,
+ * whose size and opacity the sheet's sliders show and change through [onPreview] and [onCommit].
  *
  * The drawing itself is the stateless [EditPanelContent].
  */
@@ -114,6 +116,7 @@ fun EditPanel(
     onStickerChosen: (CatalogSticker) -> Unit = {},
     onStickersCancel: () -> Unit = {},
     onStickersConfirm: () -> Unit = {},
+    selectedLayerKey: Long? = null,
 ) {
     val context = LocalContext.current
     // One function, remembered, that turns any settings into the processor drawing them. The app's
@@ -144,6 +147,7 @@ fun EditPanel(
         onStickerChosen = onStickerChosen,
         onStickersCancel = onStickersCancel,
         onStickersConfirm = onStickersConfirm,
+        selectedLayerKey = selectedLayerKey,
     )
 }
 
@@ -190,6 +194,7 @@ fun EditPanelContent(
     onStickerChosen: (CatalogSticker) -> Unit = {},
     onStickersCancel: () -> Unit = {},
     onStickersConfirm: () -> Unit = {},
+    selectedLayerKey: Long? = null,
 ) {
     // The other tools scroll when too tall for the sheet. Stickers does not: its grid is a lazy
     // list that scrolls itself, and a lazy list inside a scrolling column has no height to fill.
@@ -210,6 +215,11 @@ fun EditPanelContent(
                 onStickerChosen = onStickerChosen,
                 onCancel = onStickersCancel,
                 onConfirm = onStickersConfirm,
+                selected = settings.layers.firstOrNull { it.key == selectedLayerKey },
+                // A slider drag is previewed with the changed layer in place, and committed as one
+                // undo step when the finger lets go, like the Adjust sliders.
+                onSelectedChange = { changed -> onPreview(settings.withLayer(changed)) },
+                onSelectedChangeFinished = onCommit,
             )
             EditTool.CROP -> {
                 CropChips(chosen = settings.cropRatio, cropIsFull = settings.crop == EditSettings.CropRect.FULL, enabled = enabled, onRatio = onRatio)
@@ -246,6 +256,9 @@ fun EditPanelContent(
                     enabled = enabled,
                 )
             }
+            // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text
+            // calls; it never reaches this panel.
+            EditTool.TEXT -> Unit
             EditTool.FILTERS -> {
                 FilterChips(
                     chosen = settings.filter,
@@ -415,3 +428,7 @@ private fun EditPanelStickersPreview() {
 private fun EditPanelDisabledPreview() {
     SampleEditPanel(openTool = EditTool.CROP, settings = EditSettings(), enabled = false)
 }
+
+/** These settings with [layer] in place of the layer that has the same key (the order is kept). */
+private fun EditSettings.withLayer(layer: Layer): EditSettings =
+    copy(layers = layers.map { if (it.key == layer.key) layer else it })

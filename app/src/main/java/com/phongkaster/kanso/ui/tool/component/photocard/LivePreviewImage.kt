@@ -235,6 +235,7 @@ private fun DrawScope.drawTouchedLayer(
                 image = picture,
                 dstOffset = IntOffset(-w / 2, -h / 2),
                 dstSize = IntSize(w, h),
+                alpha = sticker.opacity.coerceIn(Layer.MIN_OPACITY, 1f),
                 colorFilter = colourFilter,
                 filterQuality = FilterQuality.Medium,
             )

@@ -11,7 +11,7 @@ import com.phongkaster.kanso.R
  * them. An entry's `pictureId` is the drawable's own name, which is also the text stored in a
  * [Layer], so a saved photo's sticker can always be found again with [byId].
  *
- * Only picture layers are listed; the text, clock, date, location and weather layers of the
+ * Only picture stickers are listed; the text, clock, date, location and weather stickers of the
  * app this was ported from are not part of Kanso.
  */
 object StickerCatalog {
@@ -20,7 +20,7 @@ object StickerCatalog {
     private fun entry(name: String, res: Int, category: StickerCategory) =
         CatalogSticker(pictureId = name, res = res, category = category)
 
-    /** All 60 layers, in display order: food, then mood, then quote, then emoji. */
+    /** All 60 stickers, in display order: food, then mood, then quote, then emoji. */
     val all: List<CatalogSticker> = listOf(
         entry("img_sticker_avocado", R.drawable.img_sticker_avocado, StickerCategory.FOOD),
         entry("img_sticker_banana", R.drawable.img_sticker_banana, StickerCategory.FOOD),
@@ -90,7 +90,7 @@ object StickerCatalog {
     /** Every sticker by its picture id, built once so [byId] is a single lookup. */
     private val byPictureId: Map<String, CatalogSticker> = all.associateBy { it.pictureId }
 
-    /** The layers of one [category], in display order. */
+    /** The stickers of one [category], in display order. */
     fun inCategory(category: StickerCategory): List<CatalogSticker> =
         all.filter { it.category == category }
 

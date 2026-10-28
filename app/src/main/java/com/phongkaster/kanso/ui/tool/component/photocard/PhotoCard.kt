@@ -78,11 +78,13 @@ import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LayerOverl
  * not finished. With [showReplace] false (the Edit screen) no Replace chip is drawn at
  * all, so nothing sits at the photo's bottom right.
  *
- * **Stickers (Edit screen only).** The live picture carries a [LayerOverlay] with the layers of
- * `state.settings`. It is touchable only while the Stickers sheet is open and Done is not running;
+ * **Layers (Edit screen only).** The live picture carries a [LayerOverlay] with the layers of
+ * `state.settings` (stickers and texts). It is touchable with any sheet open but Crop, or none,
+ * while Done is not running (touching a layer opens its sheet);
  * with Compare on the live picture is not drawn at all, so the original shows with no layers.
- * The `onSticker...` callbacks pass the overlay's events up (select, a gesture's new list, the
- * gesture's end, and the three frame buttons); they default to doing nothing.
+ * The `onLayer...` callbacks pass the overlay's events up (select, a gesture's new list, the
+ * gesture's end, and the frame buttons: delete, duplicate, a sticker's flip, a text's edit); they
+ * default to doing nothing.
  */
 @Composable
 internal fun PhotoCard(
@@ -97,6 +99,7 @@ internal fun PhotoCard(
     onLayerDelete: (Long) -> Unit = {},
     onLayerDuplicate: (Long) -> Unit = {},
     onLayerFlip: (Long) -> Unit = {},
+    onLayerEdit: (Long) -> Unit = {},
 ) {
     val running = state.processing as? ToolUiState.Processing.Running
     Card(
@@ -180,13 +183,17 @@ internal fun PhotoCard(
                                     layers = state.settings.layers,
                                     selectedKey = state.selectedLayerKey,
                                     mapping = mapping,
-                                    enabled = state.openTool == EditTool.STICKERS && !state.finishing,
+                                    // Layers answer touches with any sheet open but Crop (whose
+                                    // cropper replaces this card), or none: touching one opens its
+                                    // own sheet (ADR-005).
+                                    enabled = state.openTool != EditTool.CROP && !state.finishing,
                                     onSelect = onLayerSelect,
                                     onPreview = onLayerPreview,
                                     onCommit = onLayerCommit,
                                     onDelete = onLayerDelete,
                                     onDuplicate = onLayerDuplicate,
                                     onFlip = onLayerFlip,
+                                    onEdit = onLayerEdit,
                                 )
                             }
                         }

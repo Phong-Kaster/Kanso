@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import com.phongkaster.kanso.data.edit.edit.TextLayerLayout
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +83,7 @@ fun layerNodeTag(key: Long): String = "layer-$key"
  * @param onDelete the delete button of the sticker with this key was tapped.
  * @param onDuplicate the duplicate button of the sticker with this key was tapped.
  * @param onFlip the flip button of the sticker with this key was tapped.
+ * @param onEdit the edit button of the text with this key was tapped (a text's top-right button).
  */
 @Composable
 fun LayerOverlay(
@@ -94,10 +98,12 @@ fun LayerOverlay(
     onDuplicate: (Long) -> Unit,
     onFlip: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    onEdit: (Long) -> Unit = {},
 ) {
-    // A picture per sticker, in the same order (null for an id the catalogue lacks: not drawn).
-    val painters = layers.map { rememberLayerPainter(it.content) }
-    val aspects = layers.indices.associate { layers[it].key to (painters[it]?.aspectRatio() ?: 1f) }
+    // A shape per layer, in the same order (null for a sticker the catalogue lacks: not drawn).
+    val textLayout = rememberTextLayerLayout()
+    val shapes = layers.map { rememberLayerAspect(it.content, textLayout) }
+    val aspects = layers.indices.associate { layers[it].key to (shapes[it] ?: 1f) }
 
     // The handlers outlive a recomposition, so they read the latest values through these.
     val latestStickers by rememberUpdatedState(layers)
@@ -105,7 +111,7 @@ fun LayerOverlay(
     val latestMapping by rememberUpdatedState(mapping)
     val latestAspects by rememberUpdatedState(aspects)
     // The keys of the layers that are really drawn: only those can be touched.
-    val drawnKeys = layers.indices.filter { painters[it] != null }.map { layers[it].key }.toSet()
+    val drawnKeys = layers.indices.filter { shapes[it] != null }.map { layers[it].key }.toSet()
     val latestDrawn by rememberUpdatedState(drawnKeys)
     val latestOnSelect by rememberUpdatedState(onSelect)
     val latestOnPreview by rememberUpdatedState(onPreview)
@@ -146,25 +152,31 @@ fun LayerOverlay(
 
         // Oldest first: the Box draws its children in order, so the last is on top.
         layers.forEachIndexed { index, sticker ->
-            val painter = painters[index] ?: return@forEachIndexed
+            val aspect = shapes[index] ?: return@forEachIndexed
             key(sticker.key) {
                 val centre = sticker.shownCentre(mapping, area)
                 val width = sticker.shownWidth(mapping, area)
+                val content = sticker.content
                 LayerPlace(
                     centreX = centre.x,
                     centreY = centre.y,
                     widthPx = width,
-                    heightPx = width * painter.aspectRatio(),
+                    heightPx = width * aspect,
                     degrees = sticker.shownDegrees(mapping),
                     modifier = Modifier
                         .testTag(layerNodeTag(sticker.key))
                         .semantics { selected = sticker.key == selectedKey },
+                    hint = if (content is LayerContent.Text && content.isBlank) {
+                        { TextPlaceholder(content = content, widthPx = width, layout = textLayout) }
+                    } else {
+                        null
+                    },
                 )
             }
         }
 
         val selectedIndex = layers.indexOfFirst { it.key == selectedKey }
-        if (enabled && selectedIndex >= 0 && painters[selectedIndex] != null) {
+        if (enabled && selectedIndex >= 0 && shapes[selectedIndex] != null) {
             val sticker = layers[selectedIndex]
             val centre = sticker.shownCentre(mapping, area)
             val width = sticker.shownWidth(mapping, area)
@@ -180,6 +192,8 @@ fun LayerOverlay(
                 onDelete = { onDelete(sticker.key) },
                 onDuplicate = { onDuplicate(sticker.key) },
                 onFlip = { onFlip(sticker.key) },
+                // A text's top-right button edits its words instead of flipping it (ADR-005).
+                onEdit = if (sticker.content is LayerContent.Text) { { onEdit(sticker.key) } } else null,
                 onResize = { newWidth, newDegrees ->
                     // Same centre, new width and turn, carried back to the original's fractions.
                     // The centre is kept inside the picture, like in a drag.
@@ -243,3 +257,22 @@ private fun StickerOverlayPreview() {
 private fun StickerOverlayDisabledPreview() {
     SampleStickerOverlay(selectedKey = 2L, enabled = false)
 }
+
+/**
+ * The faint "Your text" shown in the frame of a text that has no letters yet, [widthPx] wide, so
+ * the person sees where the text will appear before typing. It is drawn by the overlay only:
+ * the live picture and the saved photo never show it.
+ */
+@Composable
+private fun TextPlaceholder(content: LayerContent.Text, widthPx: Float, layout: TextLayerLayout) {
+    val w = widthPx.roundToInt().coerceAtLeast(1)
+    val hint = remember(content, w, layout) {
+        layout.render(content, w, LayerContent.Text.PLACEHOLDER, alpha = PLACEHOLDER_ALPHA)?.asImageBitmap()
+    }
+    if (hint != null) {
+        Image(bitmap = hint, contentDescription = null, modifier = Modifier.fillMaxSize())
+    }
+}
+
+/** How solid the placeholder of an empty text is drawn: half, so it reads as a hint. */
+private const val PLACEHOLDER_ALPHA = 0.5f

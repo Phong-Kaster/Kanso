@@ -73,7 +73,8 @@ internal fun Layer.placedAt(
  * their distance and turn it by the change of their angle, about the point between them. Every
  * move calls [onPreview] with the whole new list (the screen shows it at once and makes no undo
  * entry), and the last finger lifting calls [onCommit] exactly once, however many moves there
- * were: one gesture is one undo step. A touch that never moves calls neither. A finger down on
+ * were: one gesture is one undo step. A touch that never moves calls [onCommit] only when it
+ * selected a layer (that brought the layer to the front, which is a change). A finger down on
  * empty photo selects nothing ([onSelect] with null, only if something was selected).
  *
  * A finger down on a corner button of the selected sticker is left alone for the button to
@@ -133,7 +134,11 @@ fun Modifier.layerGestures(
             return@awaitEachGesture
         }
         down.consume()
-        if (selectedKey() != hit.key) onSelect(hit.key)
+        // Selecting a layer brings it to the front (the ViewModel moves it to the end of the
+        // list), which is a change of its own: the gesture's commit below makes it one undo step
+        // together with any move that follows.
+        val selectedHere = selectedKey() != hit.key
+        if (selectedHere) onSelect(hit.key)
 
         // The sticker's live look on the shown picture, updated by every move of this gesture.
         var centre = hit.shownCentre(map, area)
@@ -202,8 +207,9 @@ fun Modifier.layerGestures(
             }
         } while (event.changes.any { it.pressed })
 
-        // The last finger is up: one gesture ends, so one commit.
-        if (previewed && !vanished) onCommit()
+        // The last finger is up: one gesture ends, so one commit (a plain tap that selected a
+        // layer commits too, so its move to the front is one undo step).
+        if ((previewed || selectedHere) && !vanished) onCommit()
     }
 }
 

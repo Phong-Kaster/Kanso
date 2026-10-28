@@ -2,14 +2,14 @@ package com.phongkaster.kanso.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.RenderedPhotoStore
-import com.phongkaster.kanso.data.edit.cutout.CutoutProcessor
-import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
-import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
 import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
 import com.phongkaster.kanso.data.edit.artistic.EngineStylizer
+import com.phongkaster.kanso.data.edit.cutout.CutoutProcessor
+import com.phongkaster.kanso.data.edit.cutout.EngineSegmenter
+import com.phongkaster.kanso.data.edit.edit.TextLayerLayout
+import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
 import com.phongkaster.kanso.data.edit.enhance.EnhanceProcessor
 import com.phongkaster.kanso.data.edit.retouch.EngineFaceFinder
 import com.phongkaster.kanso.data.edit.retouch.EngineSkinSmoother
@@ -25,11 +25,12 @@ import com.phongkaster.kanso.data.settings.SETTINGS_SCOPE
 import com.phongkaster.kanso.data.settings.SettingsRepository
 import com.phongkaster.kanso.data.settings.createSettingsDataStore
 import com.phongkaster.kanso.launcher.LauncherIconSwitcher
-import com.phongkaster.kanso.ui.gallery.GalleryViewModel
-import com.phongkaster.kanso.ui.home.HomeViewModel
+import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.camera.CameraController
 import com.phongkaster.kanso.ui.camera.CameraViewModel
 import com.phongkaster.kanso.ui.camera.CameraXController
+import com.phongkaster.kanso.ui.gallery.GalleryViewModel
+import com.phongkaster.kanso.ui.home.HomeViewModel
 import com.phongkaster.kanso.ui.myedits.MyEditsViewModel
 import com.phongkaster.kanso.ui.result.ResultViewModel
 import com.phongkaster.kanso.ui.settings.SettingsViewModel
@@ -85,6 +86,8 @@ val appModule = module {
             probe = get(),
             registry = get(),
             store = get(),
+            // The bundled fonts, so a text keeps its letter size while it is typed or restyled.
+            textLayout = TextLayerLayout.forApp(androidContext()),
         )
     }
 

@@ -5,7 +5,11 @@ import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -38,6 +42,8 @@ import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.LAYER_RESI
 import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleBetween
 import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.angleChange
 import com.phongkaster.kanso.ui.tool.component.photocard.layeroverlay.distanceBetween
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_OPACITY_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SIZE_TAG
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlin.math.cos
 import kotlin.math.sin
@@ -86,6 +92,64 @@ class StickerFrameTest {
      * DoD 5: from two layers with the second selected, a tap on the delete corner leaves only
      * the first sticker, and nothing is selected.
      */
+    /**
+     * ADR-005: every kind of layer has its corners in the same places. On an upright sticker the
+     * delete button is top-left, flip top-right, duplicate bottom-left and resize bottom-right.
+     */
+    @Test
+    fun the_corner_buttons_sit_delete_flip_duplicate_resize() {
+        showWith(EditSettings(layers = listOf(sticker(100L, 0.5f))), select = 100L)
+        val delete = centreOf(LAYER_DELETE_TAG)
+        val flip = centreOf(LAYER_FLIP_TAG)
+        val duplicate = centreOf(LAYER_DUPLICATE_TAG)
+        val resize = centreOf(LAYER_RESIZE_TAG)
+        assertTrue("delete $delete is not left of flip $flip", delete.x < flip.x)
+        assertEquals("delete and flip are not on the top edge", delete.y, flip.y, 1f)
+        assertTrue("duplicate $duplicate is not below delete $delete", duplicate.y > delete.y)
+        assertEquals("duplicate is not under delete", delete.x, duplicate.x, 1f)
+        assertEquals("resize is not under flip", flip.x, resize.x, 1f)
+        assertEquals("duplicate and resize are not on the bottom edge", duplicate.y, resize.y, 1f)
+    }
+
+    /**
+     * ADR-005: the Stickers sheet's size and opacity sliders work on the selected sticker. Size 50
+     * makes it half the photo wide, opacity 0.5 makes it half solid; each slider is one undo step.
+     */
+    @Test
+    fun the_sheet_sliders_set_the_selected_stickers_size_and_opacity() {
+        val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.5f, width = 0.3f))), select = 100L)
+        compose.onNodeWithTag(LAYER_SIZE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(LAYER_SIZE_TAG).performSemanticsAction(SemanticsActions.SetProgress) { it(50f) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(LAYER_OPACITY_TAG).performSemanticsAction(SemanticsActions.SetProgress) { it(0.5f) }
+        compose.waitForIdle()
+        val layer = viewModel.state.value.settings.layers.single()
+        assertEquals(0.5f, layer.width, 1e-4f)
+        assertEquals(0.5f, layer.opacity, 1e-4f)
+
+        viewModel.undo()
+        compose.waitForIdle()
+        assertEquals("opacity was not its own undo step", 1f, viewModel.state.value.settings.layers.single().opacity, 1e-4f)
+        assertEquals(0.5f, viewModel.state.value.settings.layers.single().width, 1e-4f)
+        viewModel.undo()
+        compose.waitForIdle()
+        assertEquals(0.3f, viewModel.state.value.settings.layers.single().width, 1e-4f)
+    }
+
+    /** With no sticker selected the two sliders are greyed out. */
+    @Test
+    fun the_sheet_sliders_are_disabled_with_nothing_selected() {
+        val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.5f))), select = 100L)
+        viewModel.selectLayer(null)
+        compose.waitForIdle()
+        compose.onNodeWithTag(LAYER_SIZE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(LAYER_OPACITY_TAG).assertIsNotEnabled()
+    }
+
+    /** The centre of the node tagged [tag], in root pixels. */
+    private fun centreOf(tag: String): Offset =
+        compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.center
+
     @Test
     fun delete_removes_the_selected_sticker_and_selects_none() {
         val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.3f), sticker(101L, 0.7f))), select = 101L)
