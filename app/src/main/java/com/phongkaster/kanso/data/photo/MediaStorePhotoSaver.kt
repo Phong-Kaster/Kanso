@@ -114,8 +114,8 @@ class MediaStorePhotoSaver(
      *
      * The format follows the picture (see [saveFormatFor]): a picture with an alpha channel, such
      * as a cut-out whose background was removed, is written as a PNG, the only common format
-     * that keeps see-through pixels; any other picture is written as a JPEG at quality 95, which
-     * is far smaller and looks the same to the eye. The file name, its extension (`.jpg` or
+     * that keeps see-through pixels; any other picture is written as a JPEG at quality 100
+     * ([EDITED_JPEG_QUALITY]), which is far smaller and looks the same to the eye. The file name, its extension (`.jpg` or
      * `.png`) and the type MediaStore and the media scanner are told (`image/jpeg` or
      * `image/png`) all follow that choice, in the same `Pictures/Kanso` album and with the same
      * `Kanso_<yyyyMMdd_HHmmss>` naming as [save] for an unedited photo.
@@ -339,10 +339,12 @@ class MediaStorePhotoSaver(
         const val RELATIVE_PATH = "Pictures/Kanso/"
 
         /**
-         * The JPEG quality of an edited picture, out of 100: high enough that no loss shows, and
-         * still several times smaller than a PNG of a photo. A PNG ignores it.
+         * The JPEG quality of an edited picture, out of 100: the highest, so saving adds as little
+         * loss as a JPEG can (the owner's decision, 2026-10-28, after a 2K photo came out visibly
+         * worse); the file is two to three times larger than at 95, and still several times
+         * smaller than a PNG of a photo. A PNG ignores it.
          */
-        const val EDITED_JPEG_QUALITY = 95
+        const val EDITED_JPEG_QUALITY = 100
 
         /** How many numbered names are tried before giving up. */
         const val MAX_SUFFIX = 9_999

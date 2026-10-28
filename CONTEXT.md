@@ -96,7 +96,7 @@ render:
 
 **EditProcessor** - The Edit tool's renderer used at Done: applies a whole `EditSettings` to the
 original photo on the CPU (`Dispatchers.Default`) in this order: stickers, crop, turns, flips,
-filter, then sliders. Inputs above `WorkingSize.EDIT` (2000 px longest edge) are scaled down first. The output
+filter, then sliders. Inputs above `WorkingSize.EDIT` (3000 px longest edge) are scaled down first. The output
 is opaque (`setHasAlpha(false)`). Out of memory gives `EditFailure.OutOfMemory`; any other error
 gives `EditFailure.Other`. `data/edit/edit/EditProcessor.kt`, one implementation of `ToolProcessor`
 (`data/edit/ToolProcessor.kt`, the seam every tool runs through).

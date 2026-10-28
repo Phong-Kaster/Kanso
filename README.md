@@ -53,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 95, at most 2000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Retouch](docs/features/retouch.md) | Finds faces with the bundled face-landmark model and smooths them with OpenCV's bilateral filter, mixed by a strength slider. | JPEG, at most 2000 px |
@@ -160,7 +160,7 @@ or `app/src/main/res/`.
    640 px (`PREVIEW_EDGE`), on `Dispatchers.Default`. The ViewModel sends requests through a
    conflated `Channel`, so only the newest one is rendered, and skips a request equal to the last.
 5. **Done.** `ToolViewModel.done` shows a spinner in Done and renders the current settings once
-   from the decoded original, shrunk to at most 2000 px (`WorkingSize.EDIT`), with
+   from the decoded original, shrunk to at most 3000 px (`WorkingSize.EDIT`, so a 2K photo keeps its size), with
    `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, in this order: **layers**, crop,
    quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar` and
    `libs/editimage.aar`, read from the assets), colour matrix, then every pixel made opaque. If no
@@ -168,7 +168,7 @@ or `app/src/main/res/`.
    picture goes into `data/edit/RenderedPhotoStore.kt` and the `Result` key is pushed above Edit;
    Back from Result returns to the session intact.
 6. **Result.** `ui/result/ResultScreen.kt` offers Share, Save and Go home. Save
-   (`data/photo/MediaStorePhotoSaver.kt`, `Dispatchers.IO`) writes a new JPEG at quality 95 named
+   (`data/photo/MediaStorePhotoSaver.kt`, `Dispatchers.IO`) writes a new JPEG at quality 100 named
    `Kanso_<yyyyMMdd_HHmmss>.jpg` into `Pictures/Kanso`. Share (`ui/result/SharePhoto.kt`) writes a
    copy under the cache's `shared/` folder and sends it through FileProvider.
 7. **On failure.** A Done render that runs out of memory ("This photo is too large to edit on this
@@ -249,7 +249,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 9. **The cost, accepted in ADR-004.** While a finger moves a layer, that layer is drawn by
    `LivePreviewImage` itself (with the sliders and its opacity, but no filter) so it can follow the
    finger; it joins the filtered copy when the finger lifts. The preview and Done can differ
-   slightly in detail (640 px against up to 2000 px).
+   slightly in detail (640 px against up to 3000 px).
 
 ### 3.3 Stickers
 
@@ -266,10 +266,10 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
    `EditSession.addLayer` puts a `Picture` layer there (a third of the shown width, upright), on
    top, selected: one Undo step. Taps are ignored while Compare is on or Done renders.
 4. **Mirror.** The frame's top-right button calls `flipLayer`: one Undo step.
-5. **Input and output.** Input: the original photo shrunk to at most 2000 px and the
+5. **Input and output.** Input: the original photo shrunk to at most 3000 px and the
    `Picture` layers (picture id, centre, width, turn, mirror, opacity). Each picture is decoded at no
    more than the photo's longest edge (`AppLayerPictures`, nothing cached). Output: the saved JPEG at
-   quality 95 in `Pictures/Kanso`.
+   quality 100 in `Pictures/Kanso`.
 
 ### 3.4 Text
 
@@ -332,7 +332,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
    under a finger (`PhotoCard.kt`, 1024 px wide) and the cropper's bake.
 10. **Input and output.** Input: the words, colour, font, alignment, wrap width and box colour of
     each `Text` layer, plus the layer's place, width, turn and opacity. Output: the letters drawn into the saved
-    JPEG at quality 95 in `Pictures/Kanso`, filtered and coloured with the photo like any layer. The
+    JPEG at quality 100 in `Pictures/Kanso`, filtered and coloured with the photo like any layer. The
     "Your text" placeholder is drawn only by the overlay and never reaches the saved photo.
 
 ### 3.5 Date
@@ -384,7 +384,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
    bake. Writing the words is plain Kotlin and cheap.
 9. **Input and output.** Input: the moment, format, colour, font and box of each `Date` layer, plus the
    layer's place, width, turn and opacity; the time comes from the phone's clock only when the sheet
-   opens. Output: the words drawn into the saved JPEG at quality 95 in `Pictures/Kanso`, filtered and
+   opens. Output: the words drawn into the saved JPEG at quality 100 in `Pictures/Kanso`, filtered and
    coloured with the photo like any layer. Nothing is read from the photo's own date (EXIF).
 
 ### 3.6 Remove background, Enhance, Retouch and Artistic

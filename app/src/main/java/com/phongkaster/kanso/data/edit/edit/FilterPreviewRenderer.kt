@@ -87,7 +87,7 @@ class FilterPreviewRenderer(
 
     /**
      * Returns [bitmap] at exactly the size of [source]. With no crop and no turn, [EditProcessor]
-     * keeps the size of any photo that fits within `WorkingSize.EDIT` (2000 px), which a preview
+     * keeps the size of any photo that fits within `WorkingSize.EDIT` (3000 px), which a preview
      * source of at most [PREVIEW_EDGE] always does, so this normally returns [bitmap] untouched.
      * Should a larger source ever be passed in, the processor would shrink it; scaling the result
      * back keeps the preview the size Compose expects.
