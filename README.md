@@ -15,9 +15,10 @@ detail, and every design decision of weight has a record in [`docs/adr/`](docs/a
 > **Status.** The app works from start to end: Home, a photo gallery for each tool, the camera, a
 > screen for each of the five editing tools, a Done button that opens a Result screen (Share, Save
 > into `Pictures/Kanso`, Go home), the My edits tab and Settings. The JVM test suite (Robolectric
-> and Compose UI tests) passes. The last run on an emulator (API 34, x86_64, 2026-10-14) came
-> before Run 9 rebuilt the Edit screen; **nothing has been checked on the owner's Galaxy A13 yet**,
-> and the Stickers and Text tools have only been exercised by the test suite.
+> and Compose UI tests) passes. On the owner's Galaxy A13 (2026-10-28) the Stickers sheet and the
+> Text sheet were driven by hand: adding a text, typing with the keyboard up (only the text area
+> shows), and the rows and sliders coming back when the keyboard closes. The other tools were last
+> run on an emulator (API 34, x86_64, 2026-10-14), before Run 9 rebuilt the Edit screen.
 
 ---
 
@@ -104,8 +105,9 @@ JVM tests. None of these has been checked on the owner's Galaxy A13.
 
 **Known limits.**
 
-- The row of tools scrolls sideways. On a 411 dp-wide phone such as the A13, the first five tools and
-  Compare fit and Text sits partly off the edge, one short swipe away. This replaces the old rule
+- The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28)
+  Crop to Stickers and Compare are in view and Text is hidden past the right edge until the row is
+  swiped left. This replaces the old rule
   that every tool fits without scrolling (DoD 2), which held for five tools.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
   `.jpg` (a known defect, not fixed yet).
