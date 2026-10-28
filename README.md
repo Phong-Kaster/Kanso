@@ -125,7 +125,8 @@ or `app/src/main/res/`.
    with `ui/tool/ToolScreen.kt` and `ui/tool/ToolViewModel.kt`, which exposes one
    `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit layout is a `Scaffold` whose
    `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
-   (`editbottombar/edittoolrow/EditToolRow.kt`) with, just above it, a 136 dp sheet area
+   (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
+   so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 136 dp sheet area
    (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust and Filters, which never changes height.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
    bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.

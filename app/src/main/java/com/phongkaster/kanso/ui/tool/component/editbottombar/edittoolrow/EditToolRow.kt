@@ -2,7 +2,6 @@ package com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.VerticalDivider
@@ -32,8 +32,11 @@ import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 
-/** Test tag of the Edit screen's row under the photo: five tools and Compare. */
+/** Test tag of the Edit screen's row under the photo: the tools and Compare. */
 const val EDIT_TOOL_ROW_TAG = "edit-tool-row"
+
+/** Test tag of the lazy list of tools inside the row (it scrolls; Compare does not). */
+const val EDIT_TOOL_LIST_TAG = "edit-tool-list"
 
 /** Test tag of the row's Compare switch, which shows the original photo while it is on. */
 const val EDIT_COMPARE_TAG = "edit-compare"
@@ -54,8 +57,8 @@ private val TOOL_ENTRY_WIDTH = 60.dp
 private val ACTION_ENTRY_WIDTH = 68.dp
 
 /**
- * The Edit screen's one row under the photo: the five tools (Crop, Rotate, Adjust, Filters,
- * Stickers), then Compare, each an icon over its name. Tapping a tool calls
+ * The Edit screen's one row under the photo: the tools (Crop, Rotate, Adjust, Filters, Stickers,
+ * Text), then Compare, each an icon over its name. Tapping a tool calls
  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
  * colour Material uses for "this one is chosen".
@@ -71,9 +74,10 @@ private val ACTION_ENTRY_WIDTH = 68.dp
  * While [enabled] is false (the Compare switch is on, or Done is rendering the final picture) the
  * five tools are drawn faint and ignore taps.
  *
- * The tools sit in a row that can scroll sideways, each [TOOL_ENTRY_WIDTH] (60 dp) wide: five of
- * them fit a 411 dp phone beside Compare, so on it nothing scrolls, and a narrower screen or more
- * tools later are reached by swiping. Compare stays pinned at the right,
+ * The tools sit in a `LazyRow`, each [TOOL_ENTRY_WIDTH] (60 dp) wide, that scrolls sideways. A lazy
+ * list composes only the entries on screen (plus a few beyond), so the row stays cheap however
+ * many tools are added later: one more [EditTool] is one more entry, reached by swiping. On a
+ * 411 dp phone five tools fit beside Compare. Compare stays pinned at the right,
  * [ACTION_ENTRY_WIDTH] wide, behind a thin divider, so they are always in reach. A name too
  * long for its entry is cut short with an ellipsis.
  */
@@ -96,34 +100,39 @@ fun EditToolRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The tools take the free width and scroll sideways when they do not all fit, so more
-        // tools can be added later without shrinking the entries. `rememberScrollState` keeps the
-        // scroll position across recompositions.
-        Row(
+        // tools can be added later without shrinking the entries. `items` composes one entry per tool, keyed by the tool, so an entry keeps its state while
+        // the list scrolls; only the entries on screen are composed.
+        LazyRow(
             modifier = Modifier
                 .weight(1f)
-                .horizontalScroll(rememberScrollState()),
+                .testTag(EDIT_TOOL_LIST_TAG),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            EditTool.entries.forEach { tool ->
-                EditToolEntry(
-                    icon = toolIcon(tool),
-                    title = toolName(tool),
-                    modifier = Modifier.width(TOOL_ENTRY_WIDTH).testTag(editToolTag(tool)),
-                    highlighted = tool == openTool,
-                    changed = !settings.isNeutral(tool),
-                    dotTag = editToolDotTag(tool),
-                    enabled = enabled,
-                    tap = {
-                        Modifier.selectable(
-                            selected = tool == openTool,
+            content = {
+                items(
+                    items = EditTool.entries,
+                    key = { it.name },
+                    itemContent = { tool ->
+                        EditToolEntry(
+                            icon = toolIcon(tool),
+                            title = toolName(tool),
+                            modifier = Modifier.width(TOOL_ENTRY_WIDTH).testTag(editToolTag(tool)),
+                            highlighted = tool == openTool,
+                            changed = !settings.isNeutral(tool),
+                            dotTag = editToolDotTag(tool),
                             enabled = enabled,
-                            role = Role.Tab,
-                            onClick = { onOpen(tool) },
+                            tap = {
+                                Modifier.selectable(
+                                    selected = tool == openTool,
+                                    enabled = enabled,
+                                    role = Role.Tab,
+                                    onClick = { onOpen(tool) },
+                                )
+                            },
                         )
                     },
                 )
-            }
-        }
+            },
+        )
         // A thin line separates the tools (which scroll) from Compare (which stays put).
         VerticalDivider(modifier = Modifier.padding(horizontal = 4.dp).height(40.dp))
         EditToolEntry(
