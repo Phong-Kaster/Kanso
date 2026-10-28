@@ -86,7 +86,9 @@ the working size, progress, Undo, failures and Done.
 ## 2. Editing features at a glance
 
 "Works" means the path is complete in code from the control to the saved file and covered by the
-JVM tests. None of these has been checked on the owner's Galaxy A13.
+JVM tests. On the owner's phones (Galaxy A13 and vivo V2408A, 2026-10-28) the Date sheet was tried
+and an edited 2K photo was saved without losing quality; the other features have not been checked
+on a phone yet.
 
 | Feature | State | Notes |
 |---|---|---|
@@ -109,7 +111,8 @@ JVM tests. None of these has been checked on the owner's Galaxy A13.
 
 - The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28)
   Crop to Stickers and Compare are in view and Text is hidden past the right edge until the row is
-  swiped left; Date, added after Text, sits further right still (not yet checked on the phone).
+  swiped left; Date, added after Text, sits further right still and is reached the same way (the
+  owner has used it on the phone).
   This replaces the old rule
   that every tool fits without scrolling (DoD 2), which held for five tools.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
