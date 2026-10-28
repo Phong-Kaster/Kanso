@@ -84,6 +84,8 @@ fun layerNodeTag(key: Long): String = "layer-$key"
  * @param onDuplicate the duplicate button of the sticker with this key was tapped.
  * @param onFlip the flip button of the sticker with this key was tapped.
  * @param onEdit the edit button of the text with this key was tapped (a text's top-right button).
+ * @param onTap the layer with this key was tapped while it was already selected (a date then
+ * moves to its next format).
  */
 @Composable
 fun LayerOverlay(
@@ -99,6 +101,7 @@ fun LayerOverlay(
     onFlip: (Long) -> Unit,
     modifier: Modifier = Modifier,
     onEdit: (Long) -> Unit = {},
+    onTap: (Long) -> Unit = {},
 ) {
     // A shape per layer, in the same order (null for a sticker the catalogue lacks: not drawn).
     val textLayout = rememberTextLayerLayout()
@@ -116,6 +119,7 @@ fun LayerOverlay(
     val latestOnSelect by rememberUpdatedState(onSelect)
     val latestOnPreview by rememberUpdatedState(onPreview)
     val latestOnCommit by rememberUpdatedState(onCommit)
+    val latestOnTap by rememberUpdatedState(onTap)
 
     var origin by remember { mutableStateOf(Offset.Zero) }
     // The overlay's size in pixels, which the touch handler reads when a gesture starts.
@@ -142,6 +146,10 @@ fun LayerOverlay(
                         onPreview = { latestOnPreview(it) },
                         onCommit = { latestOnCommit() },
                         isDrawn = { it.key in latestDrawn },
+                        hasTopRightButton = { it.content !is LayerContent.Date },
+                        // Only a date answers a tap (it moves to its next format, ADR-006).
+                        takesTaps = { it.content is LayerContent.Date },
+                        onTap = { latestOnTap(it) },
                     )
                 } else {
                     Modifier
@@ -191,7 +199,8 @@ fun LayerOverlay(
                 maxWidthPx = MAX_LAYER_WIDTH_FRACTION * area.width,
                 onDelete = { onDelete(sticker.key) },
                 onDuplicate = { onDuplicate(sticker.key) },
-                onFlip = { onFlip(sticker.key) },
+                // A date has no flip: mirrored digits cannot be read (ADR-006).
+                onFlip = if (sticker.content is LayerContent.Date) null else { { onFlip(sticker.key) } },
                 // A text's top-right button edits its words instead of flipping it (ADR-005).
                 onEdit = if (sticker.content is LayerContent.Text) { { onEdit(sticker.key) } } else null,
                 onResize = { newWidth, newDegrees ->

@@ -7,10 +7,12 @@
     <string name="stickers_tab_emoji">Emoji</string>
     <string name="stickers_sheet_cancel">Cancel and close Stickers</string>
     <string name="stickers_sheet_confirm">Keep stickers and close</string>
-    <string name="stickers_limit_message">A photo can hold 20 stickers and texts at most</string>
+    <string name="stickers_limit_message">A photo can hold 20 stickers, texts and dates at most</string>
     <string name="stickers_sticker_description">Sticker</string>
     <!-- The two sliders every layer sheet (Stickers, Text) shows for the selected layer. -->
     <string name="layer_size">Size</string>
     <string name="layer_opacity">Opacity</string>
+    <!-- The Font tab of the Text and Date sheets. -->
+    <string name="layer_tab_font">Font</string>
     <string name="layer_opacity_value">%1$d%%</string>
 </resources>

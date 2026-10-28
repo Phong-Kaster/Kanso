@@ -259,6 +259,8 @@ fun EditPanelContent(
             // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text
             // calls; it never reaches this panel.
             EditTool.TEXT -> Unit
+            // The Date sheet too is drawn by the screen itself (DatePanel).
+            EditTool.DATE -> Unit
             EditTool.FILTERS -> {
                 FilterChips(
                     chosen = settings.filter,

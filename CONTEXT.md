@@ -9,19 +9,19 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).
 
-**EditTool** - One of the six groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`, `STICKERS`, `TEXT`. Text is its own tool with its own sheet, not a section of
-the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`) and
-opens one sheet; only one sheet is open at a time (a layer sheet, Stickers or Text, takes the row's
-place while open). Holds no strings or icons.
+**EditTool** - One of the seven groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+`ADJUST`, `FILTERS`, `STICKERS`, `TEXT`, `DATE`. Text and Date are tools of their own with their own
+sheets, not sections of the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`) and
+opens one sheet; only one sheet is open at a time (a layer sheet, Stickers, Text or Date, takes the
+row's place while open). Holds no strings or icons.
 `data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
 
 **Layer** - One thing placed on the photo in Edit, which the person can select, move,
-pinch and turn. A layer has one of two kinds: a *picture* (a **Sticker**, added by the Stickers
-tool) or *text* (added by the Text tool). All layers sit in one list, oldest first, so the stacking
-order runs across both kinds; selecting a layer brings it to the front. A photo holds at most 20 layers in total. Every layer, of either kind, has a size (1-100, relative to the
+pinch and turn. A layer has one of three kinds: a *picture* (a **Sticker**, added by the Stickers
+tool), *text* (added by the Text tool) or a *date* (added by the Date tool). All layers sit in one
+list, oldest first, so the stacking order runs across every kind; selecting a layer brings it to the front. A photo holds at most 20 layers in total. Every layer, of either kind, has a size (1-100, relative to the
 photo) and an opacity (10-100%), each set by a slider in its tool's sheet; pinching a layer
-changes the same size. A layer is part of the photo (ADR-004, ADR-005): crop, turns, flips,
+changes the same size. A layer is part of the photo (ADR-004, ADR-005, ADR-006): crop, turns, flips,
 filter and sliders act on it. `data/edit/edit/Layer.kt`, `LayerContent.kt`. *Not* a layer drawn over the finished picture (the
 option ADR-004 rejected), and not Compose's `graphicsLayer`.
 
@@ -35,8 +35,22 @@ picture to choose.
 **Text (text layer)** - Words typed onto the photo in Edit: a **Layer** of the *text* kind
 (`LayerContent.Text`): the words (at most 200 characters), an opaque colour, a font (`TextFont`:
 the phone's own or one of five bundled), an alignment (`TextAlignment`) and a wrap width in
-letter heights. An empty text is never kept: it is dropped when it loses the selection. A run of
+letter heights, and an optional **background box** behind the words (any colour, see-through
+too). An empty text is never kept: it is dropped when it loses the selection. A run of
 typing is one Undo step. *Not* a sticker: it has its own tool and sheet (ADR-005).
+
+**Date (date layer)** - A day and time written onto the photo in Edit: a **Layer** of the *date*
+kind, which remembers the moment (date and time) and the **date format** it is written in, never
+the words themselves. It starts at now; the person changes the moment with a date picker and a time
+picker. It has a colour, a font and a background box like a text, but one line, so no alignment,
+and no flip. It has
+its own tool, Date, after Text in the tool row, and counts towards the 20 layers. *Not* a text: its
+words cannot be typed, only its moment and format chosen.
+
+**Date format** - One of the 20 fixed ways a date layer writes its moment, always in English: 14
+date-only (from `Wed, 28 October 2026` to the film-camera stamp `'26 10 28`) then 6 with a time
+(`14:30`, `2:30 PM`, ...). Tapping a selected date layer moves it to the next format, after the last
+comes the first. *Not* a font or a style: the same format can be drawn in any colour and font.
 
 **Sticker catalogue (`StickerCatalog`)** - The 60 pictures the Stickers sheet offers, in four
 categories (Food 17, Mood 17, Quote 6, Emoji 20; `StickerCategory`), each a `CatalogSticker` with

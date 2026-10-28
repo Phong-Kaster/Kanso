@@ -335,8 +335,12 @@ class StickerAddTest {
     private fun assertSheetClosedAndFiveToolsShown() {
         compose.onAllNodesWithTag(STICKERS_PANEL_TAG).assertCountEquals(0)
         compose.onAllNodesWithTag(EDIT_SHEET_TAG).assertCountEquals(0)
-        assertEquals(6, EditTool.entries.size)
-        EditTool.entries.forEach { compose.onNodeWithTag(editToolTag(it)).assertExists() }
+        assertEquals(7, EditTool.entries.size)
+        // The row is lazy: an entry past its right edge exists once the row scrolls to it.
+        EditTool.entries.forEach {
+            compose.scrollToolRowTo(it)
+            compose.onNodeWithTag(editToolTag(it)).assertExists()
+        }
     }
 
     /** Taps the Stickers entry and waits until the sheet is open. */

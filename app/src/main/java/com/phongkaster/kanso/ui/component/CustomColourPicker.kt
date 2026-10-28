@@ -33,10 +33,16 @@ private val PickerSurfaceColor = Color.White
  * The engine's HSV colour picker (a colour square, a hue bar and a hex box), starting at the
  * colour [seedArgb], on a white surface so its fixed black text stays readable in light and dark
  * mode. Every change calls [onColorChanged]. Two screens use it: Settings for a custom theme
- * colour, and the Edit screen's Text sheet for any colour of a text's letters.
+ * colour, and the Edit screen's Text and Date sheets for any colour of the letters or, with
+ * [showAlpha] true (its transparency bar shown), of the background box.
  */
 @Composable
-fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit, modifier: Modifier = Modifier) {
+fun CustomColourPicker(
+    seedArgb: Int,
+    onColorChanged: (Color) -> Unit,
+    modifier: Modifier = Modifier,
+    showAlpha: Boolean = false,
+) {
     val focusManager = LocalFocusManager.current
     // A Surface is a Material 3 container with its own background colour and shape. Its colour
     // is fixed white on purpose, not taken from the theme (see PickerSurfaceColor). No content
@@ -63,14 +69,15 @@ fun CustomColourPicker(seedArgb: Int, onColorChanged: (Color) -> Unit, modifier:
             },
         content = {
             // The picker remembers its own colour once it is shown, so [seedArgb] only sets where
-            // it starts; it does not jump back while the person drags. showAlpha = false hides
-            // the transparency bar and its percentage box: neither a theme colour nor a text's
-            // letters take transparency here (a text has its own opacity slider).
+            // it starts; it does not jump back while the person drags. [showAlpha] false (the
+            // default) hides the transparency bar and its percentage box: neither a theme colour
+            // nor a text's letters take transparency (a text has its own opacity slider). Only a
+            // text's or date's background box shows it, so a box can be see-through.
             HSVColorPicker(
                 color = Color(seedArgb),
                 onColorChanged = onColorChanged,
                 modifier = Modifier.padding(16.dp),
-                showAlpha = false,
+                showAlpha = showAlpha,
             )
         },
     )

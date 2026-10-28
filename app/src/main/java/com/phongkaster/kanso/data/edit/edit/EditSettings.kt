@@ -89,7 +89,8 @@ data class EditSettings(
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
      * - [EditTool.STICKERS]: no sticker is on the photo;
-     * - [EditTool.TEXT]: no text is on the photo.
+     * - [EditTool.TEXT]: no text is on the photo;
+     * - [EditTool.DATE]: no date is on the photo.
      */
     fun isNeutral(tool: EditTool): Boolean = when (tool) {
         EditTool.CROP -> crop == CropRect.FULL
@@ -98,6 +99,7 @@ data class EditSettings(
         EditTool.FILTERS -> !hasFilter
         EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
         EditTool.TEXT -> layers.none { it.content is LayerContent.Text }
+        EditTool.DATE -> layers.none { it.content is LayerContent.Date }
     }
 
     /**

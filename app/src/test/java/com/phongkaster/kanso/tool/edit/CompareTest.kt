@@ -236,8 +236,9 @@ class CompareTest {
     @Test
     fun compare_sits_in_the_tool_row_and_undo_beside_done() {
         val viewModel = showEdit(null)
-        // Stickers and Text are left out: a layer sheet replaces the whole row (Compare included).
-        (listOf<EditTool?>(null) + EditTool.entries.filter { it != EditTool.STICKERS && it != EditTool.TEXT }).forEach { open ->
+        // Stickers, Text and Date are left out: a layer sheet replaces the whole row (Compare included).
+        val layerSheets = setOf(EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
+        (listOf<EditTool?>(null) + EditTool.entries.filter { it !in layerSheets }).forEach { open ->
             if (open == null) viewModel.closeTool() else if (viewModel.state.value.openTool != open) viewModel.openTool(open)
             compose.waitForIdle()
             assertEquals(open, viewModel.state.value.openTool)
@@ -389,9 +390,13 @@ class CompareTest {
             AdjustSlider.entries.map(::editAdjustChipTag) +
             EditTool.entries.map(::editToolTag)
         tags.forEach { tag ->
+            // An entry past the row's right edge has no node until the lazy row scrolls to it.
+            EditTool.entries.firstOrNull { editToolTag(it) == tag }?.let { compose.scrollToolRowTo(it) }
             val node = compose.onNodeWithTag(tag)
             if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
         }
+        // Scroll the row back to its start, where the tests that follow find the first entries.
+        compose.scrollToolRowTo(EditTool.entries.first())
     }
 
     /**

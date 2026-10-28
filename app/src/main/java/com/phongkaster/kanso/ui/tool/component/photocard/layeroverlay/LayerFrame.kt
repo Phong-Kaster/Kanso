@@ -40,7 +40,8 @@ import kotlin.math.roundToInt
  * deletes, bottom-left duplicates and bottom-right is the resize handle: drag it away from or
  * towards the layer to make it bigger or smaller, and round it to turn the layer, the picture's
  * shape never changing. Top-right is the one button that depends on the kind: it flips (mirrors)
- * a sticker, and edits a text's words (opens the keyboard) when [onEdit] is given.
+ * a sticker, edits a text's words (opens the keyboard) when [onEdit] is given, and is left out
+ * for a date (ADR-006).
  *
  * All sizes and positions are in pixels of the overlay (the shown picture). The frame is drawn
  * by [drawBehind] with a rotated rectangle, and each button is placed at the matching rotated
@@ -65,7 +66,8 @@ import kotlin.math.roundToInt
  * @param maxWidthPx the widest the handle may make the sticker.
  * @param onDelete the delete button was tapped.
  * @param onDuplicate the duplicate button was tapped.
- * @param onFlip the flip button was tapped (a sticker's top-right button).
+ * @param onFlip the flip button was tapped (a sticker's top-right button); null for a layer with
+ * no flip, a date, whose top-right corner then stays empty (mirrored digits cannot be read).
  * @param onEdit the edit button was tapped; when it is not null the top-right button edits a text
  * instead of flipping.
  * @param onResize the handle is dragged: the sticker should now be this wide and turned this far.
@@ -83,7 +85,7 @@ fun LayerFrame(
     maxWidthPx: Float,
     onDelete: () -> Unit,
     onDuplicate: () -> Unit,
-    onFlip: () -> Unit,
+    onFlip: (() -> Unit)?,
     onResize: (widthPx: Float, degrees: Float) -> Unit,
     onResizeEnd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -148,7 +150,7 @@ fun LayerFrame(
                 modifier = placeAt(SIDE_END, SIDE_START),
                 onClick = onEdit,
             )
-        } else {
+        } else if (onFlip != null) {
             LayerCornerButton(
                 iconRes = R.drawable.ic_flip,
                 description = stringResource(R.string.sticker_frame_flip),
