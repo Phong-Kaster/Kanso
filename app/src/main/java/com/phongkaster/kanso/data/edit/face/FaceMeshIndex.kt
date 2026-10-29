@@ -35,4 +35,18 @@ object FaceMeshIndex {
 
     /** The right temple in the photo, mirroring [LEFT_TEMPLE] point by point. */
     val RIGHT_TEMPLE = listOf(284, 251, 389)
+
+    /**
+     * The chin and its neighbours along the lower outline (Chin length): the chin itself (152), then
+     * the points beside it on the left and right in the photo (148, 377), then the next ones out
+     * (176, 400).
+     */
+    val CHIN_AREA = listOf(152, 148, 377, 176, 400)
+
+    /**
+     * The top of the forehead and its neighbours along the hairline (Hairline): the middle (10),
+     * then the points beside it on the left and right in the photo (109, 338), then the next ones
+     * out (67, 297).
+     */
+    val HAIRLINE = listOf(10, 109, 338, 67, 297)
 }

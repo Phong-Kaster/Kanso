@@ -1,7 +1,8 @@
 package com.phongkaster.kanso.data.edit.face
 
 /**
- * Every face reshape at once ([FaceWidth], [FaceLift], [FaceTemple]), as one list of [WarpPush]es
+ * Every face reshape at once ([FaceWidth], [FaceLift], [FaceTemple], [FaceCheekbones],
+ * [FaceChinLength], [FaceHairline]), as one list of [WarpPush]es
  * for [LocalWarp] (the saved picture) and [WarpMesh] (the live one).
  *
  * **Why the pushes are added, not listed side by side.** Width and Lift push the same outline
@@ -21,7 +22,10 @@ object FaceShape {
         merged(
             FaceWidth.pushesFor(face, amounts.width) +
                 FaceLift.pushesFor(face, amounts.lift) +
-                FaceTemple.pushesFor(face, amounts.temple),
+                FaceTemple.pushesFor(face, amounts.temple) +
+                FaceCheekbones.pushesFor(face, amounts.cheekbones) +
+                FaceChinLength.pushesFor(face, amounts.chinLength) +
+                FaceHairline.pushesFor(face, amounts.hairline),
         )
 
     /**

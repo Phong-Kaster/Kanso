@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hairline: a face's outline with the hairline drawn across the forehead and an up-and-down
+     arrow above it, drawn for Kanso as the other face icons are. Round strokes on the 960 grid of
+     the Material Symbols Rounded icons, white like them, so an Icon tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M260,400Q260,840 480,860Q700,840 700,400M260,400Q330,300 480,300Q630,300 700,400M480,80L480,220M420,130L480,80L540,130M420,170L480,220L540,170" />
+</vector>

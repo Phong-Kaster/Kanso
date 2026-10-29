@@ -41,7 +41,8 @@ import kotlinx.coroutines.withContext
  * 1. Scale the photo down so its longest edge is at most [maxEdgePx] (2000 pixels by default,
  *    [WorkingSize.BEAUTIFY]), so a 24-megapixel photo never runs the phone out of memory.
  * 2. Reshape, in one warp ([LocalWarp]) so the photo is resampled once:
- *    - only when a face value ([width], [lift], [temple]) is not 0: ask [landmarks] for each
+ *    - only when a face value ([width], [lift], [temple], [cheekbones], [chinLength],
+ *      [hairline]) is not 0: ask [landmarks] for each
  *      face's 478 landmarks (MediaPipe's face landmarker in the app) and turn each face into
  *      pushes ([FaceShape]: every face tool's added point by point). No face: [EditFailure.NoFace];
  *    - only when [waist], [arms], [chest] or [legs] is not 0: ask [bodies] for each person's 33
@@ -291,6 +292,27 @@ class BeautifyProcessor(
     var temple: Float = 0f
 
     /**
+     * How much slimmer each face becomes across the cheekbones, from -1 (wider) through 0
+     * (unchanged, the default) to 1 (slimmest), like Meitu's Cheekbones slider. Clamped when used.
+     */
+    @Volatile
+    var cheekbones: Float = 0f
+
+    /**
+     * How much shorter each face's chin becomes, from -1 (longer) through 0 (unchanged, the default)
+     * to 1 (shortest), like Meitu's Chin length slider. Clamped when used.
+     */
+    @Volatile
+    var chinLength: Float = 0f
+
+    /**
+     * How much lower each face's hairline sits, from -1 (higher) through 0 (unchanged, the default)
+     * to 1 (lowest), like Meitu's Hairline slider. Clamped when used.
+     */
+    @Volatile
+    var hairline: Float = 0f
+
+    /**
      * Every face value the processor holds, clamped to -1..1, as one [FaceAmounts] for [FaceShape].
      * The caller passes [width] and [lift] already read and clamped; the newer tools' values are
      * read here.
@@ -298,8 +320,14 @@ class BeautifyProcessor(
     private fun faceAmounts(width: Float, lift: Float): FaceAmounts = FaceAmounts(
         width = width,
         lift = lift,
-        temple = temple.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) },
+        temple = clamped(temple),
+        cheekbones = clamped(cheekbones),
+        chinLength = clamped(chinLength),
+        hairline = clamped(hairline),
     )
+
+    /** [value] clamped to -1..1, NaN counting as 0: how every two-sided slider value is read. */
+    private fun clamped(value: Float): Float = if (value.isNaN()) 0f else value.coerceIn(-1f, 1f)
 
     /**
      * How much to reshape each person's waist, from -1 (widest) through 0 (unchanged, the default)

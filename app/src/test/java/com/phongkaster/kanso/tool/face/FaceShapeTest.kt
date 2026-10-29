@@ -1,6 +1,9 @@
 package com.phongkaster.kanso.tool.face
 
 import com.phongkaster.kanso.data.edit.face.FaceAmounts
+import com.phongkaster.kanso.data.edit.face.FaceCheekbones
+import com.phongkaster.kanso.data.edit.face.FaceChinLength
+import com.phongkaster.kanso.data.edit.face.FaceHairline
 import com.phongkaster.kanso.data.edit.face.FaceLift
 import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.FaceTemple
@@ -27,6 +30,9 @@ class FaceShapeTest {
         assertEquals(FaceWidth.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(width = 0.7f)))
         assertEquals(FaceLift.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(lift = 0.7f)))
         assertEquals(FaceTemple.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(temple = 0.7f)))
+        assertEquals(FaceCheekbones.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(cheekbones = 0.7f)))
+        assertEquals(FaceChinLength.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(chinLength = 0.7f)))
+        assertEquals(FaceHairline.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(hairline = 0.7f)))
     }
 
     /**

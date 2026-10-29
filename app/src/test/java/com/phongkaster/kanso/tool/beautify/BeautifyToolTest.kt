@@ -9,6 +9,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -33,6 +35,9 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHEST_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LEGS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_TEMPLE_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHEEKBONES_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHIN_LENGTH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_HAIRLINE_TAG
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
@@ -349,6 +354,37 @@ class BeautifyToolTest {
         assertEquals(BeautifyAmounts(), amounts.copy(faceTemple = 0f))
     }
 
+    /**
+     * Face's row shows Cheekbones, Chin length and Hairline; letting go of each slider hands over
+     * its own value with every other one at 0.
+     */
+    @Test
+    fun the_new_face_sliders_each_apply_their_own_value() {
+        val applied = showPanel()
+        tap(beautifyGroupTag(BeautifyGroup.FACE))
+
+        tap(beautifyToolTag(BeautifyTool.CHEEKBONES))
+        compose.onNodeWithTag(BEAUTIFY_CHEEKBONES_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.4f) }
+        compose.waitForIdle()
+        tap(beautifyToolTag(BeautifyTool.CHIN_LENGTH))
+        compose.onNodeWithTag(BEAUTIFY_CHIN_LENGTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(-0.3f) }
+        compose.waitForIdle()
+        // Six face tools no longer fit the test's narrow screen: scroll the row to Hairline first.
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag(beautifyToolTag(BeautifyTool.HAIRLINE)))
+        tap(beautifyToolTag(BeautifyTool.HAIRLINE))
+        compose.onNodeWithTag(BEAUTIFY_HAIRLINE_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.5f) }
+        compose.waitForIdle()
+
+        val last = applied.last()
+        assertEquals(0.4f, last.faceCheekbones, 0.01f)
+        assertEquals(-0.3f, last.faceChinLength, 0.01f)
+        assertEquals(0.5f, last.faceHairline, 0.01f)
+        assertEquals(BeautifyAmounts(), last.copy(faceCheekbones = 0f, faceChinLength = 0f, faceHairline = 0f))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -392,6 +428,9 @@ class BeautifyToolTest {
                                         registered.chest = amounts.chest
                                         registered.legs = amounts.legs
                                         registered.temple = amounts.faceTemple
+                                        registered.cheekbones = amounts.faceCheekbones
+                                        registered.chinLength = amounts.faceChinLength
+                                        registered.hairline = amounts.faceHairline
                                     },
                                 )
                             },
@@ -407,6 +446,9 @@ class BeautifyToolTest {
                                         registered.chest = amounts.chest
                                         registered.legs = amounts.legs
                                         registered.temple = amounts.faceTemple
+                                        registered.cheekbones = amounts.faceCheekbones
+                                        registered.chinLength = amounts.faceChinLength
+                                        registered.hairline = amounts.faceHairline
                                     },
                                 )
                             },

@@ -48,6 +48,15 @@ const val BEAUTIFY_CHEST_TAG = "beautify-chest"
 /** Test tag of the Beautify panel's legs slider, shown while Body > Legs is open. */
 const val BEAUTIFY_LEGS_TAG = "beautify-legs"
 
+/** Test tag of the Beautify panel's hairline slider, shown while Face > Hairline is open. */
+const val BEAUTIFY_HAIRLINE_TAG = "beautify-hairline"
+
+/** Test tag of the Beautify panel's chin length slider, shown while Face > Chin length is open. */
+const val BEAUTIFY_CHIN_LENGTH_TAG = "beautify-chin-length"
+
+/** Test tag of the Beautify panel's cheekbones slider, shown while Face > Cheekbones is open. */
+const val BEAUTIFY_CHEEKBONES_TAG = "beautify-cheekbones"
+
 /** Test tag of the Beautify panel's temple slider, shown while Face > Temple is open. */
 const val BEAUTIFY_TEMPLE_TAG = "beautify-temple"
 
@@ -110,10 +119,13 @@ fun BeautifyPanel(
     var arms by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_ARMS) })
     var chest by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_CHEST) })
     var legs by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_LEGS) })
+    var faceHairlineValue by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_HAIRLINE) })
+    var faceChinLengthValue by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_CHIN_LENGTH) })
+    var faceCheekbonesValue by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_CHEEKBONES) })
     var faceTempleValue by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_TEMPLE) })
 
     /** Every slider's value as it is now, read when a slider moves or is let go. */
-    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist, arms = arms, chest = chest, legs = legs, faceTemple = faceTempleValue)
+    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist, arms = arms, chest = chest, legs = legs, faceTemple = faceTempleValue, faceCheekbones = faceCheekbonesValue, faceChinLength = faceChinLengthValue, faceHairline = faceHairlineValue)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -211,6 +223,42 @@ fun BeautifyPanel(
                             enabled = enabled,
                             valueRange = -1f..1f,
                         )
+                        BeautifyTool.HAIRLINE -> BeautifySlider(
+                            label = R.string.beautify_hairline_label,
+                            value = faceHairlineValue,
+                            onValueChange = {
+                                faceHairlineValue = it.coerceIn(-1f, 1f)
+                                onPreview(amounts())
+                            },
+                            onValueChangeFinished = { onApply(amounts()) },
+                            tag = BEAUTIFY_HAIRLINE_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
+                        BeautifyTool.CHIN_LENGTH -> BeautifySlider(
+                            label = R.string.beautify_chin_length_label,
+                            value = faceChinLengthValue,
+                            onValueChange = {
+                                faceChinLengthValue = it.coerceIn(-1f, 1f)
+                                onPreview(amounts())
+                            },
+                            onValueChangeFinished = { onApply(amounts()) },
+                            tag = BEAUTIFY_CHIN_LENGTH_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
+                        BeautifyTool.CHEEKBONES -> BeautifySlider(
+                            label = R.string.beautify_cheekbones_label,
+                            value = faceCheekbonesValue,
+                            onValueChange = {
+                                faceCheekbonesValue = it.coerceIn(-1f, 1f)
+                                onPreview(amounts())
+                            },
+                            onValueChangeFinished = { onApply(amounts()) },
+                            tag = BEAUTIFY_CHEEKBONES_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
                         BeautifyTool.TEMPLE -> BeautifySlider(
                             label = R.string.beautify_temple_label,
                             value = faceTempleValue,
@@ -238,6 +286,9 @@ fun BeautifyPanel(
                         BeautifyTool.ARMS -> arms != DEFAULT_ARMS
                         BeautifyTool.CHEST -> chest != DEFAULT_CHEST
                         BeautifyTool.LEGS -> legs != DEFAULT_LEGS
+                        BeautifyTool.HAIRLINE -> faceHairlineValue != DEFAULT_HAIRLINE
+                        BeautifyTool.CHIN_LENGTH -> faceChinLengthValue != DEFAULT_CHIN_LENGTH
+                        BeautifyTool.CHEEKBONES -> faceCheekbonesValue != DEFAULT_CHEEKBONES
                         BeautifyTool.TEMPLE -> faceTempleValue != DEFAULT_TEMPLE
                     }
                 },
@@ -280,6 +331,15 @@ private const val DEFAULT_CHEST = 0f
 
 /** The legs slider's starting value: the legs as they are. */
 private const val DEFAULT_LEGS = 0f
+
+/** The hairline slider's starting value: the face as it is. */
+private const val DEFAULT_HAIRLINE = 0f
+
+/** The chin length slider's starting value: the face as it is. */
+private const val DEFAULT_CHIN_LENGTH = 0f
+
+/** The cheekbones slider's starting value: the face as it is. */
+private const val DEFAULT_CHEEKBONES = 0f
 
 /** The temple slider's starting value: the face as it is. */
 private const val DEFAULT_TEMPLE = 0f

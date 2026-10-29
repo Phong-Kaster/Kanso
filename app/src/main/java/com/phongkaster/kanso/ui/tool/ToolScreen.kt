@@ -969,4 +969,7 @@ private fun BeautifyProcessor.use(amounts: BeautifyAmounts) {
     chest = amounts.chest
     legs = amounts.legs
     temple = amounts.faceTemple
+    cheekbones = amounts.faceCheekbones
+    chinLength = amounts.faceChinLength
+    hairline = amounts.faceHairline
 }
