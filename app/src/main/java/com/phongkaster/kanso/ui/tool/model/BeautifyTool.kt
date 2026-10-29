@@ -11,4 +11,7 @@ enum class BeautifyTool(val group: BeautifyGroup?) {
 
     /** Face width: a -100..+100 slider, wider to the left (negative), narrower to the right, as in Meitu. */
     FACE_WIDTH(group = BeautifyGroup.FACE),
+
+    /** Face lift: a 0..100 slider, from the face as it is to the jawline raised and tightened the most. */
+    FACE_LIFT(group = BeautifyGroup.FACE),
 }

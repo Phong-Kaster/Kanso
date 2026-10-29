@@ -18,4 +18,10 @@
     <!-- Beautify panel: the name of the Width tool in the Face group's row, under its icon (the
          group already says it is about the face). -->
     <string name="beautify_tool_width">Width</string>
+    <!-- Beautify panel: the label of the face lift slider, how much the jawline of each face is
+         raised and tightened (0 to 100). Also what screen readers call the slider. -->
+    <string name="beautify_lift_label">Face lift</string>
+    <!-- Beautify panel: the name of the Lift tool in the Face group's row, under its icon (the
+         group already says it is about the face). -->
+    <string name="beautify_tool_lift">Lift</string>
 </resources>

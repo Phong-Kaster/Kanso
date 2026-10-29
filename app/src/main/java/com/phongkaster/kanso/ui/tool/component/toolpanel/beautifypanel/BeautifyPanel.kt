@@ -32,6 +32,9 @@ const val BEAUTIFY_STRENGTH_TAG = "beautify-strength"
 /** Test tag of the Beautify panel's face width slider, shown while Face width is open. */
 const val BEAUTIFY_WIDTH_TAG = "beautify-width"
 
+/** Test tag of the Beautify panel's face lift slider, shown while Face lift is open. */
+const val BEAUTIFY_LIFT_TAG = "beautify-lift"
+
 /**
  * The Beautify tool's controls, shown in the options strip under the photo, laid out like the Edit
  * screen: a row of tools on two levels ([BeautifyToolRow]: Face and Smooth on top, Face opening its
@@ -44,8 +47,8 @@ const val BEAUTIFY_WIDTH_TAG = "beautify-width"
  * slider on a rounded surface, or "Pick a tool to start editing" while none is open. The bar never
  * changes height, so the photo never jumps when a tool opens.
  *
- * - **Two levels, as in Meitu.** Tapping Face shows Face's tools (Width, then Lift and Temple
- *   once they exist) and Back, and opens the group's first tool at once, so its slider is ready;
+ * - **Two levels, as in Meitu.** Tapping Face shows Face's tools (Width and Lift, then Temple
+ *   once it exists) and Back, and opens the group's first tool at once, so its slider is ready;
  *   Back returns to the top row and closes the slider. Smooth, a tool of its own, opens its slider
  *   straight from the top row.
  * - Tapping a tool opens its slider; tapping the open tool closes it. The open tool is highlighted
@@ -53,24 +56,25 @@ const val BEAUTIFY_WIDTH_TAG = "beautify-width"
  *   API). The sliders keep their values while the person moves between the rows.
  * - **Smooth** is a 0..100 slider (0, no smoothing, by default); **Face width** a -100..+100
  *   slider (0, the face as it is, by default; negative is wider, positive narrower, as in Meitu), drawn
- *   two-sided: coloured from 0 toward the thumb.
- * - **Live while dragging, as in Meitu.** Every move of a slider calls [onPreview] with both
+ *   two-sided: coloured from 0 toward the thumb; **Face lift** a 0..100 slider (0, the face as it
+ *   is, by default).
+ * - **Live while dragging, as in Meitu.** Every move of a slider calls [onPreview] with all three
  *   values, and the screen shows a quick frame of the edit on the photo as shown, so the face
- *   follows the finger. Letting go calls [onApply] with both values, and the photo is redone from
+ *   follows the finger. Letting go calls [onApply] with all three values, and the photo is redone from
  *   the original at full quality (several seconds on a phone), which then replaces the frame.
  * - A tool whose value is not its default carries the Edit row's small dot, and so does its
  *   group in the top row, so the person sees which ones hold a change.
  *
  * The entries are the Edit screen's own ([EditToolEntry]) and each slider is a [BeautifySlider]
  * (its name on a line of its own, the slider the panel's full width under it), so both screens
- * look and behave alike. The open group, the open tool and both values are the panel's own state, kept with
+ * look and behave alike. The open group, the open tool and the three values are the panel's own state, kept with
  * `rememberSaveable`, so they survive a rotation. [enabled] false (while an edit runs) switches
  * every control off.
  */
 @Composable
 fun BeautifyPanel(
-    onApply: (strength: Float, width: Float) -> Unit,
-    onPreview: (strength: Float, width: Float) -> Unit,
+    onApply: (strength: Float, width: Float, lift: Float) -> Unit,
+    onPreview: (strength: Float, width: Float, lift: Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -79,6 +83,7 @@ fun BeautifyPanel(
     var openTool by rememberSaveable(init = { mutableStateOf<BeautifyTool?>(null) })
     var strength by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_STRENGTH) })
     var width by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_WIDTH) })
+    var lift by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_LIFT) })
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -97,9 +102,9 @@ fun BeautifyPanel(
                             value = strength,
                             onValueChange = {
                                 strength = it.coerceIn(0f, 1f)
-                                onPreview(strength, width)
+                                onPreview(strength, width, lift)
                             },
-                            onValueChangeFinished = { onApply(strength, width) },
+                            onValueChangeFinished = { onApply(strength, width, lift) },
                             tag = BEAUTIFY_STRENGTH_TAG,
                             enabled = enabled,
                             valueRange = 0f..1f,
@@ -109,12 +114,24 @@ fun BeautifyPanel(
                             value = width,
                             onValueChange = {
                                 width = it.coerceIn(-1f, 1f)
-                                onPreview(strength, width)
+                                onPreview(strength, width, lift)
                             },
-                            onValueChangeFinished = { onApply(strength, width) },
+                            onValueChangeFinished = { onApply(strength, width, lift) },
                             tag = BEAUTIFY_WIDTH_TAG,
                             enabled = enabled,
                             valueRange = -1f..1f,
+                        )
+                        BeautifyTool.FACE_LIFT -> BeautifySlider(
+                            label = R.string.beautify_lift_label,
+                            value = lift,
+                            onValueChange = {
+                                lift = it.coerceIn(0f, 1f)
+                                onPreview(strength, width, lift)
+                            },
+                            onValueChangeFinished = { onApply(strength, width, lift) },
+                            tag = BEAUTIFY_LIFT_TAG,
+                            enabled = enabled,
+                            valueRange = 0f..1f,
                         )
                     }
                 },
@@ -126,6 +143,7 @@ fun BeautifyPanel(
                     when (tool) {
                         BeautifyTool.SMOOTH -> strength != DEFAULT_STRENGTH
                         BeautifyTool.FACE_WIDTH -> width != DEFAULT_WIDTH
+                        BeautifyTool.FACE_LIFT -> lift != DEFAULT_LIFT
                     }
                 },
                 enabled = enabled,
@@ -151,6 +169,9 @@ private const val DEFAULT_STRENGTH = 0f
 /** The face width slider's starting value: the face as it is. */
 private const val DEFAULT_WIDTH = 0f
 
+/** The face lift slider's starting value: the face as it is. */
+private const val DEFAULT_LIFT = 0f
+
 /**
  * The Beautify panel with no tool open, in light and in dark. The outer Box fills the preview
  * first, because KansoTheme would otherwise stretch its single child to the whole screen.
@@ -161,7 +182,7 @@ private fun BeautifyPanelPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
             Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                BeautifyPanel(onApply = { _, _ -> }, onPreview = { _, _ -> })
+                BeautifyPanel(onApply = { _, _, _ -> }, onPreview = { _, _, _ -> })
             }
         }
     }
@@ -174,7 +195,7 @@ private fun BeautifyPanelDisabledPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
             Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                BeautifyPanel(onApply = { _, _ -> }, onPreview = { _, _ -> }, enabled = false)
+                BeautifyPanel(onApply = { _, _, _ -> }, onPreview = { _, _, _ -> }, enabled = false)
             }
         }
     }

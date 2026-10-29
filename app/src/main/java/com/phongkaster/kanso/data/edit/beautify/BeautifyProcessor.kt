@@ -11,7 +11,7 @@ import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.data.edit.face.FaceFocusSource
 import com.phongkaster.kanso.data.edit.face.FaceLandmarks
-import com.phongkaster.kanso.data.edit.face.FaceWidth
+import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.WarpPush
 import com.phongkaster.kanso.data.edit.face.paddedFaceBox
 import kotlin.math.ceil
@@ -27,14 +27,16 @@ import kotlinx.coroutines.withContext
 
 /**
  * The Beautify tool's edit: every face in the photo made narrower or wider, as much as the Face
- * width slider asks for, then its skin smoothed, as much as the Smoothing slider asks for.
+ * width slider asks for, and lifted, as much as the Face lift slider asks for, then its skin
+ * smoothed, as much as the Smoothing slider asks for.
  *
  * The steps, in order:
  * 1. Scale the photo down so its longest edge is at most [maxEdgePx] (2000 pixels by default,
  *    [WorkingSize.BEAUTIFY]), so a 24-megapixel photo never runs the phone out of memory.
- * 2. Only when [width] is not 0: ask [landmarks] for each face's 478 landmarks (MediaPipe's face
- *    landmarker in the app), turn each face's outline into pushes ([FaceWidth]) and move the
- *    pixels ([LocalWarp]). No face means nothing to reshape: [EditFailure.NoFace].
+ * 2. Only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
+ *    (MediaPipe's face landmarker in the app), turn each face's outline into pushes ([FaceShape]:
+ *    Width's and Lift's added point by point) and move the pixels ([LocalWarp]), once for both.
+ *    No face means nothing to reshape: [EditFailure.NoFace].
  * 3. Ask [finder] for the faces' rectangles on the reshaped photo (the engine's face-landmark
  *    model in the app). No face means nothing to smooth: the result is [EditFailure.NoFace] and
  *    the photo stays as it was.
@@ -99,10 +101,10 @@ class BeautifyProcessor(
 
     /**
      * The live look while a slider is dragged, for [photo] (the unedited photo as shown on screen)
-     * with the current [width] and [strength]. It is a recipe, not a picture: the screen draws it
+     * with the current [width], [lift] and [strength]. It is a recipe, not a picture: the screen draws it
      * on the graphics chip every frame (see [LivePreview]), so it is cheap to make:
      * 1. the faces' landmarks are found once per photo and kept ([facesOf]);
-     * 2. the reshape is the same [FaceWidth] pushes the full render uses, in pixels of [photo];
+     * 2. the reshape is the same [FaceShape] pushes the full render uses, in pixels of [photo];
      * 3. when smoothing is on, [photo] fully smoothed inside the face boxes is made the first time
      *    and kept ([smoothedOf]); the screen lays it over the photo [strength] opaque.
      *
@@ -112,10 +114,11 @@ class BeautifyProcessor(
         try {
             val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
             val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(0f, 1f) }
             val faces = facesOf(photo)
             if (faces.isEmpty()) return@withContext null
             ensureActive()
-            val pushes = faces.flatMap(transform = { FaceWidth.pushesFor(it, reshape) })
+            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) })
             val region = regionOf(boxesOf(faces, photo), pushes, photo) ?: return@withContext null
             LivePreview(
                 region = region,
@@ -213,6 +216,14 @@ class BeautifyProcessor(
     var width: Float = 0f
 
     /**
+     * How much to lift each face, from 0 (unchanged, the default) to 1 (the most), like Meitu's
+     * Lift slider at 0..100. The panel sets it just before a run; a value outside 0..1 is clamped
+     * when used. With it and [width] both at 0 no landmarks are looked for at all.
+     */
+    @Volatile
+    var lift: Float = 0f
+
+    /**
      * Runs the six steps above on [input] and returns the result; [input] is not changed.
      * [onProgress] only ever moves forward, from 0 to 1.
      */
@@ -231,10 +242,11 @@ class BeautifyProcessor(
                 // Read once, so a slider moved during the run cannot change it half way.
                 val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
                 val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+                val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(0f, 1f) }
                 report(0f)
                 val small = WorkingSize.fit(input, maxEdgePx)
                 report(FIT_DONE)
-                val shaped = if (reshape == 0f) small else reshapeFaces(small, reshape)
+                val shaped = if (reshape == 0f && raise == 0f) small else reshapeFaces(small, reshape, raise)
                 if (shaped == null) {
                     if (small !== input) small.recycle()
                     return@withContext EditResult.Failed(EditFailure.NoFace)
@@ -273,14 +285,15 @@ class BeautifyProcessor(
         }
 
     /**
-     * Returns a new copy of [photo] with every face's width changed by [amount] (-1..1, never 0
-     * here), or null when [landmarks] finds no face. All faces are warped in one pass, so the
-     * photo is resampled only once. [photo] is not changed.
+     * Returns a new copy of [photo] with every face's width changed by [width] (-1..1) and lifted
+     * by [lift] (0..1), not both 0 here, or null when [landmarks] finds no face. All faces, and
+     * both reshapes, are warped in one pass, so the photo is resampled only once. [photo] is not
+     * changed.
      */
-    private suspend fun reshapeFaces(photo: Bitmap, amount: Float): Bitmap? {
+    private suspend fun reshapeFaces(photo: Bitmap, width: Float, lift: Float): Bitmap? {
         val found = landmarks.findLandmarks(photo)
         if (found.isEmpty()) return null
-        val pushes = found.flatMap(transform = { face -> FaceWidth.pushesFor(face, amount) })
+        val pushes = found.flatMap(transform = { face -> FaceShape.pushesFor(face, width, lift) })
         return LocalWarp.warp(photo, pushes)
     }
 

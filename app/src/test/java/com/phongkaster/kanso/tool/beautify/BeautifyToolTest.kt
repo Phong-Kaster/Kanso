@@ -27,6 +27,7 @@ import com.phongkaster.kanso.tool.ToolFixtures
 import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_STRENGTH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WIDTH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LIFT_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.beautifyGroupTag
@@ -175,9 +176,10 @@ class BeautifyToolTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.3f) }
         compose.waitForIdle()
 
-        val (strength, width) = applied.last()
+        val (strength, width, lift) = applied.last()
         assertEquals(0.3f, strength, 0.01f)
         assertEquals(0.4f, width, 0.01f)
+        assertEquals(0f, lift, 0f)
     }
 
     /** Letting go of the smoothing slider at 0.25 applies 0.25 with the face width still 0. */
@@ -190,9 +192,10 @@ class BeautifyToolTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.25f) }
         compose.waitForIdle()
 
-        val (strength, width) = applied.single()
+        val (strength, width, lift) = applied.single()
         assertEquals(0.25f, strength, 0.01f)
         assertEquals(0f, width, 0f)
+        assertEquals(0f, lift, 0f)
     }
 
     /** Letting go of the face width slider at -0.5 applies -0.5 with no smoothing. */
@@ -205,9 +208,46 @@ class BeautifyToolTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(-0.5f) }
         compose.waitForIdle()
 
-        val (strength, width) = applied.single()
+        val (strength, width, lift) = applied.single()
         assertEquals(0f, strength, 0f)
         assertEquals(-0.5f, width, 0.01f)
+        assertEquals(0f, lift, 0f)
+    }
+
+    /** Face's row shows Lift beside Width; tapping it swaps Width's slider for Lift's. */
+    @Test
+    fun lift_sits_in_the_face_row_and_opens_its_slider() {
+        showPanel()
+
+        tap(beautifyGroupTag(BeautifyGroup.FACE))
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.FACE_LIFT)).assertExists()
+        tap(beautifyToolTag(BeautifyTool.FACE_LIFT))
+
+        compose.onNodeWithTag(BEAUTIFY_LIFT_TAG).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG).assertDoesNotExist()
+    }
+
+    /**
+     * Letting go of the face lift slider at 0.6 applies 0.6, keeping the width set before it:
+     * the two face tools add up, neither resets the other.
+     */
+    @Test
+    fun releasing_the_lift_slider_applies_it_with_the_width() {
+        val applied = showPanel()
+        open(BeautifyTool.FACE_WIDTH)
+        compose.onNodeWithTag(BEAUTIFY_WIDTH_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.3f) }
+        compose.waitForIdle()
+
+        tap(beautifyToolTag(BeautifyTool.FACE_LIFT))
+        compose.onNodeWithTag(BEAUTIFY_LIFT_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.6f) }
+        compose.waitForIdle()
+
+        val (strength, width, lift) = applied.last()
+        assertEquals(0f, strength, 0f)
+        assertEquals(0.3f, width, 0.01f)
+        assertEquals(0.6f, lift, 0.01f)
     }
 
     // --- Helpers -----------------------------------------------------------------------------
@@ -241,21 +281,23 @@ class BeautifyToolTest {
                     onDone = {},
                     panel = {
                         BeautifyPanel(
-                            onApply = { strength, width ->
+                            onApply = { strength, width, lift ->
                                 // A slider let go renders quietly from the untouched photo, as the app does.
                                 viewModel.renderRegistered(
                                     configure = { registered ->
                                         (registered as BeautifyProcessor).strength = strength
                                         registered.width = width
+                                        registered.lift = lift
                                     },
                                 )
                             },
                             // While dragging, a live frame with the same values, as the app does.
-                            onPreview = { strength, width ->
+                            onPreview = { strength, width, lift ->
                                 viewModel.previewRegistered(
                                     configure = { registered ->
                                         (registered as BeautifyProcessor).strength = strength
                                         registered.width = width
+                                        registered.lift = lift
                                     },
                                 )
                             },
@@ -288,14 +330,17 @@ class BeautifyToolTest {
     }
 
     /**
-     * Draws the Beautify panel alone and returns the list every apply's (strength, width) is added
-     * to.
+     * Draws the Beautify panel alone and returns the list every apply's (strength, width, lift) is
+     * added to.
      */
-    private fun showPanel(): MutableList<Pair<Float, Float>> {
-        val applied = mutableListOf<Pair<Float, Float>>()
+    private fun showPanel(): MutableList<Triple<Float, Float, Float>> {
+        val applied = mutableListOf<Triple<Float, Float, Float>>()
         compose.setContent {
             MaterialTheme {
-                BeautifyPanel(onApply = { strength, width -> applied += strength to width }, onPreview = { _, _ -> })
+                BeautifyPanel(
+                    onApply = { strength, width, lift -> applied += Triple(strength, width, lift) },
+                    onPreview = { _, _, _ -> },
+                )
             }
         }
         compose.onNodeWithTag(BEAUTIFY_PANEL_TAG).assertExists()

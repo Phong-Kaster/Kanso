@@ -10,7 +10,7 @@ package com.phongkaster.kanso.ui.tool.model
  * never shows an entry that does nothing.
  */
 enum class BeautifyGroup {
-    /** Reshaping the face: Face width now, Lift and Temple later. */
+    /** Reshaping the face: Width and Lift now, Temple later. */
     FACE,
     ;
 

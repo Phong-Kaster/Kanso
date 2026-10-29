@@ -49,7 +49,7 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * name every case, so a new tool cannot be added without deciding what its panel is. The Edit sheets' four
  * `onEdit...` callbacks go to the ViewModel's settings session; [onRun] runs the one the registry holds for the
  * tool (Remove background, Enhance). [onBeautify] and [onStylize] run Beautify and Artistic with
- * the strength (and face width, or style) the person set, all through the ViewModel;
+ * the strength (and face width and lift, or style) the person set, all through the ViewModel;
  * [onBeautifyPreview] asks for a live frame while a Beautify slider is dragged; [state]
  * gives the panel the photos and whether an edit is running. With the defaults a preview or test
  * gets the panel without any edit behind it.
@@ -67,8 +67,8 @@ fun ToolPanel(
     modifier: Modifier = Modifier,
     state: ToolUiState? = null,
     onRun: () -> Unit = {},
-    onBeautify: (strength: Float, width: Float) -> Unit = { _, _ -> },
-    onBeautifyPreview: (strength: Float, width: Float) -> Unit = { _, _ -> },
+    onBeautify: (strength: Float, width: Float, lift: Float) -> Unit = { _, _, _ -> },
+    onBeautifyPreview: (strength: Float, width: Float, lift: Float) -> Unit = { _, _, _ -> },
     onStylize: (style: ArtisticStyle, strength: Float) -> Unit = { _, _ -> },
     openTool: EditTool? = null,
     enabled: Boolean = true,

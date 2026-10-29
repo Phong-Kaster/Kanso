@@ -249,26 +249,28 @@ fun ToolScreen(
                 state = state,
                 onRun = { viewModel.runRegistered() },
                 // A Beautify slider let go: the full-quality render, quietly in the background.
-                onBeautify = { strength, width ->
+                onBeautify = { strength, width, lift ->
                     viewModel.renderRegistered(
                         configure = { processor ->
                             (processor as? BeautifyProcessor)?.let(
                                 block = {
                                     it.strength = strength
                                     it.width = width
+                                    it.lift = lift
                                 },
                             )
                         },
                     )
                 },
                 // While a Beautify slider is dragged: a quick live frame with the same values.
-                onBeautifyPreview = { strength, width ->
+                onBeautifyPreview = { strength, width, lift ->
                     viewModel.previewRegistered(
                         configure = { processor ->
                             (processor as? BeautifyProcessor)?.let(
                                 block = {
                                     it.strength = strength
                                     it.width = width
+                                    it.lift = lift
                                 },
                             )
                         },
@@ -412,7 +414,7 @@ fun ToolScreen(
  * - The options strip: [panel], the tool's own controls, at the bottom. There is no bottom bar
  *   (except on Edit and Beautify, below).
  *
- * **Beautify borrows Edit's frame.** Its [panel] (the row of Smooth and Face width, with Edit's
+ * **Beautify borrows Edit's frame.** Its [panel] (the row of Face and Smooth, with Edit's
  * fixed-height panel area above it) goes in the `Scaffold`'s `bottomBar` slot instead of the
  * options strip, and the photo card fills all the space above it, as on Edit, so the tools have
  * room and the photo stays as large as it can be. The card keeps its "Replace" chip.

@@ -55,7 +55,7 @@ the working size, progress, Undo, failures and Done.
 | [Edit](docs/features/edit.md) | Six tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers and typed texts together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 95, at most 2000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
-| [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width and a pinned Back; Smooth): Face width (-100..+100, MediaPipe's 478 face landmarks drive a Kotlin warp of the cheek and jaw outline) and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
+| [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift and a pinned Back; Smooth): Face width (-100..+100) and Face lift (0..100, the jowls and jaw raised and tightened), where MediaPipe's 478 face landmarks drive one Kotlin warp of the cheek and jaw outline, and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
 | [Artistic](docs/features/artistic.md) | Repaints the photo in one of four styles (Warm wash, Cool wash, Mosaic, Ink) with the bundled Inception v3 style-transfer models, mixed by a strength slider. | JPEG, at most 1024 px |
 
 ### Getting a photo
@@ -99,7 +99,7 @@ JVM tests. None of these has been checked on the owner's Galaxy A13.
 | Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
-| Beautify | Works | Face width (MediaPipe landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face. Seen on the Galaxy A13, 2026-10-28. |
+| Beautify | Works | Face width and Face lift (MediaPipe landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face. Width and smoothing seen on the Galaxy A13, 2026-10-28; Lift not yet tried on a phone. |
 | Artistic | Works | Four styles from the Inception v3 style-transfer models, with a strength slider. |
 | Done and Result | Works | Done hands the picture to Result; Save is the only gallery write. |
 
@@ -360,7 +360,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
 | Edit (text) | `data/edit/edit/TextLayerLayout.kt` | Android `StaticLayout` | five OFL fonts in `app/src/main/res/font/` |
 | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` |
 | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |
-| Beautify | `data/edit/face/EngineLandmarkFinder.kt`, `data/edit/beautify/EngineSkinSmoother.kt` | MediaPipe `FaceLandmarker` (one, for width, zoom and the smoothing boxes), OpenCV `Imgproc.bilateralFilter` | `face_landmarker.task` |
+| Beautify | `data/edit/face/EngineLandmarkFinder.kt`, `data/edit/beautify/EngineSkinSmoother.kt` | MediaPipe `FaceLandmarker` (one, for width, lift, zoom and the smoothing boxes), OpenCV `Imgproc.bilateralFilter` | `face_landmarker.task` |
 | Artistic | `data/edit/artistic/EngineStylizer.kt` | `StylePredictInceptionV3UC`, `StyleTransferInceptionV3BlendUC` | two Inception v3 stylization `.tflite` models |
 
 Outside editing, `data/media/MediaStorePhotoSource.kt` uses `core/gallery`'s `MediaRepository`, and

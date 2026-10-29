@@ -198,11 +198,12 @@ private fun BackEntry(enabled: Boolean, onBack: () -> Unit) {
     )
 }
 
-/** The drawable shown for [tool] (Face width's is drawn for Kanso; Smooth's is a Material Symbol). */
+/** The drawable shown for [tool] (Width's and Lift's are drawn for Kanso; Smooth's is a Material Symbol). */
 @DrawableRes
 private fun toolIcon(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.SMOOTH -> R.drawable.ic_face_retouching_natural
     BeautifyTool.FACE_WIDTH -> R.drawable.ic_face_width
+    BeautifyTool.FACE_LIFT -> R.drawable.ic_face_lift
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -210,6 +211,7 @@ private fun toolIcon(tool: BeautifyTool): Int = when (tool) {
 private fun toolName(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.SMOOTH -> R.string.beautify_tool_smooth
     BeautifyTool.FACE_WIDTH -> R.string.beautify_tool_width
+    BeautifyTool.FACE_LIFT -> R.string.beautify_tool_lift
 }
 
 /** The drawable shown for [group] (drawn for Kanso). */

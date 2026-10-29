@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.FaceWidth
 import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
 import com.phongkaster.kanso.tool.face.SampleFace
@@ -248,6 +249,57 @@ class BeautifyProcessorTest {
         assertTrue("only $changed pixels changed", changed > 0)
         assertEquals(photo.getPixel(0, 0), result.getPixel(0, 0))
         assertEquals(photo.getPixel(SIZE - 1, SIZE - 1), result.getPixel(SIZE - 1, SIZE - 1))
+    }
+
+    /** A face lift with no face found fails with "no face", as a face width does. */
+    @Test
+    fun lift_with_no_face_is_reported() {
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
+        processor.lift = 1f
+
+        val result = runBlocking { processor.process(noisyPatch()) {} }
+
+        assertEquals(EditResult.Failed(EditFailure.NoFace), result)
+    }
+
+    /**
+     * With smoothing off, a face lift changes the pixels along the lower outline and leaves the
+     * corners of the photo, far from any push, exactly as they were.
+     */
+    @Test
+    fun lift_reshapes_the_outline_only() {
+        val photo = noisyPatch()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        processor.strength = 0f
+        processor.lift = 1f
+
+        val result = (runBlocking { processor.process(photo) {} } as EditResult.Edited).bitmap
+
+        val original = pixels(photo)
+        val edited = pixels(result)
+        val changed = original.indices.count(predicate = { original[it] != edited[it] })
+        assertTrue("only $changed pixels changed", changed > 0)
+        assertEquals(photo.getPixel(0, 0), result.getPixel(0, 0))
+        assertEquals(photo.getPixel(SIZE - 1, SIZE - 1), result.getPixel(SIZE - 1, SIZE - 1))
+    }
+
+    /**
+     * Width and lift together: a live look carries the two merged point by point ([FaceShape]),
+     * and the landmarks are still looked for only once.
+     */
+    @Test
+    fun a_live_look_merges_width_and_lift() {
+        val photo = noisyPatch()
+        val landmarks = FakeLandmarkFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+        processor.strength = 0f
+        processor.width = 0.5f
+        processor.lift = 0.5f
+
+        val look = runBlocking { processor.livePreview(photo) }!!
+
+        assertEquals(FaceShape.pushesFor(FakeLandmarkFinder.centre(photo), 0.5f, 0.5f), look.pushes)
+        assertEquals(1, landmarks.received.size)
     }
 
     /**
