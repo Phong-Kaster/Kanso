@@ -8,6 +8,7 @@ import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.body.BodyWaist
+import com.phongkaster.kanso.data.edit.face.FaceAmounts
 import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.FaceWidth
 import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
@@ -299,7 +300,7 @@ class BeautifyProcessorTest {
 
         val look = runBlocking { processor.livePreview(photo) }!!
 
-        assertEquals(FaceShape.pushesFor(FakeLandmarkFinder.centre(photo), 0.5f, 0.5f), look.pushes)
+        assertEquals(FaceShape.pushesFor(FakeLandmarkFinder.centre(photo), FaceAmounts(width = 0.5f, lift = 0.5f)), look.pushes)
         assertEquals(1, landmarks.received.size)
     }
 
@@ -436,6 +437,25 @@ class BeautifyProcessorTest {
         )
 
         runBlocking { processor.prepareBodies(noisyPatch()) }
+    }
+
+    /** Temple alone looks for the face (and reshapes it); with no face it fails with "no face". */
+    @Test
+    fun temple_reshapes_the_face_and_needs_one() {
+        val photo = noisyPatch()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
+        processor.strength = 0f
+        processor.temple = 1f
+        val faceless = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder())
+        faceless.temple = 1f
+
+        val result = (runBlocking { processor.process(photo) {} } as EditResult.Edited).bitmap
+
+        val original = pixels(photo)
+        val edited = pixels(result)
+        assertTrue(original.indices.any(predicate = { original[it] != edited[it] }))
+        assertEquals(photo.getPixel(SIZE - 1, SIZE - 1), result.getPixel(SIZE - 1, SIZE - 1))
+        assertEquals(EditResult.Failed(EditFailure.NoFace), runBlocking { faceless.process(photo) {} })
     }
 
     /**

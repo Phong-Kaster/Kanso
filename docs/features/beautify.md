@@ -2,6 +2,9 @@
 
 [Back to README](../../README.md)
 
+The face shape tools Temple, Cheekbones, Chin length and Hairline have their own page,
+[Face shape](face-shape.md); the engine they share with Width and Lift is described here.
+
 Code links below point into `app/src/main/java/com/phongkaster/kanso/`; the link text leaves that
 prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`. The parts every tool
 shares (opening the photo, progress, Undo, Replace, Done) are on [The tool screen](tool-screen.md);
@@ -271,10 +274,15 @@ flowchart TD
    3. **Moving the pixels** —
       [`LocalWarp.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/LocalWarp.kt), plain
       Kotlin on an `IntArray`: for each result pixel inside the pushes' box, it sums every push's
-      move weighted by `f²`, `f = (r² − d²) / (r² − d² + |move|²)` (Gustafsson 1993), divides by the
-      total weight when it is above 1 (so overlapping pushes do not add up), and copies the input
-      colour from `pixel − move` with bilinear sampling. All faces and all bodies are warped in
-      one pass.
+      move weighted by `w = (1 − d²/r²)²` (1 at the push's point, so that point moves exactly by
+      its move, fading smoothly to 0 at the circle's edge), divides by the total weight when it is
+      above 1 (so overlapping pushes do not add up), and copies the input colour from
+      `pixel − move` with bilinear sampling. All faces and all bodies are warped in one pass.
+      Until 2026-10-29 the weight was Gustafsson's `f²`, `f = (r² − d²) / (r² − d² + |move|²)`
+      (1993): with a move much smaller than its circle (every Kanso tool) `f` stays near 1 almost
+      to the edge and then drops to 0 within a few pixels, so the picture folded over itself there
+      and left a hard edge; Temple showed it on the A13 as a seam across the face. The smooth `w`
+      is steepest at about `1.5 × |move| / r`, far below a fold (1).
 
    **The body (Body > Waist, Arms, Chest and Legs)**, all in
    [`data/edit/body/`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/):

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chin length: the lower half of a face's outline with an up-and-down arrow under the chin,
+     drawn for Kanso as the other face icons are. Round strokes on the 960 grid of the Material
+     Symbols Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M240,120Q230,380 330,520Q410,620 480,620Q550,620 630,520Q730,380 720,120M480,700L480,880M420,760L480,700L540,760M420,820L480,880L540,820" />
+</vector>

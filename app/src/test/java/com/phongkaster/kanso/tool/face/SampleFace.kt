@@ -19,7 +19,8 @@ object SampleFace {
      * Returns an upright oval face centred on ([centerX], [centerY]), [halfWidth] across from the
      * centre to each cheek and [halfHeight] from the centre to the chin. The centre line runs from
      * between the eyes (40% of [halfHeight] above the centre) to the chin; the outline points sit
-     * on the oval, from eye height down to near the chin, the same on both sides.
+     * on the oval, from eye height down to near the chin, and the temples on the oval above eye
+     * height, the same on both sides.
      */
     fun oval(centerX: Float, centerY: Float, halfWidth: Float, halfHeight: Float): FaceLandmarks {
         val points = MutableList(POINT_COUNT, init = { FacePoint(centerX, centerY) })
@@ -37,8 +38,51 @@ object SampleFace {
                 points[FaceMeshIndex.RIGHT_OUTLINE[position]] = FacePoint(centerX + across, y)
             },
         )
+        // The temples, on the oval above eye height: high on the forehead down to above the eye.
+        TEMPLE_HEIGHTS.forEachIndexed(
+            action = { position, down ->
+                val across = halfWidth * sqrt(1f - down * down)
+                val y = centerY + down * halfHeight
+                points[FaceMeshIndex.LEFT_TEMPLE[position]] = FacePoint(centerX - across, y)
+                points[FaceMeshIndex.RIGHT_TEMPLE[position]] = FacePoint(centerX + across, y)
+            },
+        )
+        // The chin's neighbours and the hairline's, on the oval, each pair mirrored left and right:
+        // across is a share of the half width, the height follows from the oval.
+        placeOnOval(points, FaceMeshIndex.CHIN_AREA, centerX, centerY, halfWidth, halfHeight, below = true)
+        placeOnOval(points, FaceMeshIndex.HAIRLINE, centerX, centerY, halfWidth, halfHeight, below = false)
         return FaceLandmarks(points)
     }
+
+    /**
+     * Puts [indices] (a middle point, then pairs left and right) on the oval: the middle at the
+     * bottom ([below]) or the top, each pair [ACROSS] of the half width out, at the oval's height.
+     */
+    private fun placeOnOval(
+        points: MutableList<FacePoint>,
+        indices: List<Int>,
+        centerX: Float,
+        centerY: Float,
+        halfWidth: Float,
+        halfHeight: Float,
+        below: Boolean,
+    ) {
+        val sign = if (below) 1f else -1f
+        indices.forEachIndexed(
+            action = { position, index ->
+                val across = ACROSS[position]
+                val down = sign * sqrt(1f - across * across)
+                val side = if (position % 2 == 1) -1f else 1f
+                points[index] = FacePoint(centerX + side * across * halfWidth, centerY + down * halfHeight)
+            },
+        )
+    }
+
+    /** How far out each chin and hairline point sits, as a share of the half width, in list order. */
+    private val ACROSS = floatArrayOf(0f, 0.25f, 0.25f, 0.5f, 0.5f)
+
+    /** Where the temple points sit, as a share of the half height (negative: above the centre). */
+    private val TEMPLE_HEIGHTS = floatArrayOf(-0.82f, -0.68f, -0.52f)
 
     /** Eye height, as a share of the half height above the centre. */
     private const val EYE_LEVEL = 0.4f

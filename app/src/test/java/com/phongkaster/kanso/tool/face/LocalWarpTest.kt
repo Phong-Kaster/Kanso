@@ -113,6 +113,31 @@ class LocalWarpTest {
     /** How many pixels of [bitmap] are darker than mid grey. */
     private fun blackCount(bitmap: Bitmap): Int = pixels(bitmap).count(predicate = { (it and 0xFF) < 128 })
 
+    /**
+     * A push whose move is small next to its circle (every Kanso reshape: Temple moves about 24 px
+     * in a 120 px circle) never folds the picture over itself. Walking out from the centre along
+     * the move, the point each pixel reads from (`x − move(x)`) must keep moving outward, never
+     * back, and the push's own point moves exactly by its move. Gustafsson's falloff, used before,
+     * dropped from about 0.5 to 0 in the circle's last 2.4 px, folded there and left a seam.
+     */
+    @Test
+    fun a_small_move_in_a_large_circle_never_folds() {
+        val push = listOf(WarpPush(centerX = 200f, centerY = 200f, moveX = 24f, moveY = 0f, radius = 120f))
+        val move = FloatArray(2)
+
+        LocalWarp.moveAt(200f, 200f, push, move)
+        assertEquals(24f, move[0], 0.0001f)
+        var previous = Float.NEGATIVE_INFINITY
+        var x = 80f
+        while (x <= 320f) {
+            LocalWarp.moveAt(x, 200f, push, move)
+            val readsFrom = x - move[0]
+            assertTrue("at x $x the picture folds: reads from $readsFrom after $previous", readsFrom > previous)
+            previous = readsFrom
+            x += 0.25f
+        }
+    }
+
     /** A 100 x 100 opaque picture, black on the left half (x < 50) and white on the right. */
     private fun halves(): Bitmap {
         val data = IntArray(SIZE * SIZE, init = { if (it % SIZE < SIZE / 2) Color.BLACK else Color.WHITE })

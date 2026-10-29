@@ -1,7 +1,12 @@
 package com.phongkaster.kanso.tool.face
 
+import com.phongkaster.kanso.data.edit.face.FaceAmounts
+import com.phongkaster.kanso.data.edit.face.FaceCheekbones
+import com.phongkaster.kanso.data.edit.face.FaceChinLength
+import com.phongkaster.kanso.data.edit.face.FaceHairline
 import com.phongkaster.kanso.data.edit.face.FaceLift
 import com.phongkaster.kanso.data.edit.face.FaceShape
+import com.phongkaster.kanso.data.edit.face.FaceTemple
 import com.phongkaster.kanso.data.edit.face.FaceWidth
 import com.phongkaster.kanso.data.edit.face.WarpPush
 import org.junit.Assert.assertEquals
@@ -21,9 +26,13 @@ class FaceShapeTest {
     /** Both at 0 gives nothing; one at 0 gives exactly the other's pushes. */
     @Test
     fun one_alone_is_unchanged() {
-        assertTrue(FaceShape.pushesFor(face, 0f, 0f).isEmpty())
-        assertEquals(FaceWidth.pushesFor(face, 0.7f), FaceShape.pushesFor(face, 0.7f, 0f))
-        assertEquals(FaceLift.pushesFor(face, 0.7f), FaceShape.pushesFor(face, 0f, 0.7f))
+        assertTrue(FaceShape.pushesFor(face, FaceAmounts()).isEmpty())
+        assertEquals(FaceWidth.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(width = 0.7f)))
+        assertEquals(FaceLift.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(lift = 0.7f)))
+        assertEquals(FaceTemple.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(temple = 0.7f)))
+        assertEquals(FaceCheekbones.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(cheekbones = 0.7f)))
+        assertEquals(FaceChinLength.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(chinLength = 0.7f)))
+        assertEquals(FaceHairline.pushesFor(face, 0.7f), FaceShape.pushesFor(face, FaceAmounts(hairline = 0.7f)))
     }
 
     /**
@@ -34,7 +43,7 @@ class FaceShapeTest {
     fun together_the_moves_add_up_point_by_point() {
         val width = FaceWidth.pushesFor(face, 0.5f)
         val lift = FaceLift.pushesFor(face, 0.8f)
-        val both = FaceShape.pushesFor(face, 0.5f, 0.8f)
+        val both = FaceShape.pushesFor(face, FaceAmounts(width = 0.5f, lift = 0.8f))
 
         assertEquals(width.size, both.size)
         width.forEach(

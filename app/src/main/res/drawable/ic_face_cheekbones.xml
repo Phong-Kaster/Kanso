@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cheekbones: a face's outline with an arrow pressing in at each cheekbone (slimmer), drawn for
+     Kanso as the other face icons are. Round strokes on the 960 grid of the Material Symbols
+     Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M480,140Q300,140 290,380Q280,560 360,700Q420,820 480,820Q540,820 600,700Q680,560 670,380Q660,140 480,140ZM80,460L200,460M150,410L200,460L150,510M880,460L760,460M810,410L760,460L810,510" />
+</vector>

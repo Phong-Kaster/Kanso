@@ -208,6 +208,10 @@ private fun toolIcon(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.ARMS -> R.drawable.ic_body_arms
     BeautifyTool.CHEST -> R.drawable.ic_body_chest
     BeautifyTool.LEGS -> R.drawable.ic_body_legs
+    BeautifyTool.TEMPLE -> R.drawable.ic_face_temple
+    BeautifyTool.CHEEKBONES -> R.drawable.ic_face_cheekbones
+    BeautifyTool.CHIN_LENGTH -> R.drawable.ic_face_chin
+    BeautifyTool.HAIRLINE -> R.drawable.ic_face_hairline
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -220,6 +224,10 @@ private fun toolName(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.ARMS -> R.string.beautify_tool_arms
     BeautifyTool.CHEST -> R.string.beautify_tool_chest
     BeautifyTool.LEGS -> R.string.beautify_tool_legs
+    BeautifyTool.TEMPLE -> R.string.beautify_tool_temple
+    BeautifyTool.CHEEKBONES -> R.string.beautify_tool_cheekbones
+    BeautifyTool.CHIN_LENGTH -> R.string.beautify_tool_chin_length
+    BeautifyTool.HAIRLINE -> R.string.beautify_tool_hairline
 }
 
 /** The drawable shown for [group] (drawn for Kanso). */

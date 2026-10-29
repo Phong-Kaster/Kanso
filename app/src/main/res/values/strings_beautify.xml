@@ -48,4 +48,24 @@
     <!-- Beautify panel: the label of the legs slider, how much slimmer (positive) or thicker
          (negative) each person's legs become. Also what screen readers call the slider. -->
     <string name="beautify_legs_label">Legs</string>
+    <!-- Beautify panel: the name of the Temple tool in the Face group's row, under its icon. -->
+    <string name="beautify_tool_temple">Temple</string>
+    <!-- Beautify panel: the label of the temple slider, how much fuller (positive) or hollower
+         (negative) each face's temples become. Also what screen readers call the slider. -->
+    <string name="beautify_temple_label">Temple</string>
+    <!-- Beautify panel: the name of the Cheekbones tool in the Face group's row, under its icon. -->
+    <string name="beautify_tool_cheekbones">Cheekbones</string>
+    <!-- Beautify panel: the label of the cheekbones slider, how much slimmer (positive) or wider (negative) each face becomes across the cheekbones. Also what screen readers call
+         the slider. -->
+    <string name="beautify_cheekbones_label">Cheekbones</string>
+    <!-- Beautify panel: the name of the Chin length tool in the Face group's row, under its icon. -->
+    <string name="beautify_tool_chin_length">Chin length</string>
+    <!-- Beautify panel: the label of the chin length slider, how much shorter (positive) or longer (negative) each face's chin becomes. Also what screen readers call
+         the slider. -->
+    <string name="beautify_chin_length_label">Chin length</string>
+    <!-- Beautify panel: the name of the Hairline tool in the Face group's row, under its icon. -->
+    <string name="beautify_tool_hairline">Hairline</string>
+    <!-- Beautify panel: the label of the hairline slider, how much lower (positive) or higher (negative) each face's hairline sits. Also what screen readers call
+         the slider. -->
+    <string name="beautify_hairline_label">Hairline</string>
 </resources>

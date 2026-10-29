@@ -15,6 +15,18 @@ enum class BeautifyTool(val group: BeautifyGroup?) {
     /** Face lift: a -100..+100 slider, the jaw dropped to the left (negative), raised and tightened to the right, as in Meitu. */
     FACE_LIFT(group = BeautifyGroup.FACE),
 
+    /** Temple: a -100..+100 slider, hollower to the left (negative), fuller to the right, as in Meitu's Face > Temple. */
+    TEMPLE(group = BeautifyGroup.FACE),
+
+    /** Cheekbones: a -100..+100 slider, wider to the left (negative), slimmer to the right, as in Meitu's Face > Cheekbones. */
+    CHEEKBONES(group = BeautifyGroup.FACE),
+
+    /** Chin length: a -100..+100 slider, longer to the left (negative), shorter to the right, as in Meitu's Face > Chin length. */
+    CHIN_LENGTH(group = BeautifyGroup.FACE),
+
+    /** Hairline: a -100..+100 slider, higher to the left (negative), lower to the right, as in Meitu's Face > Hairline. */
+    HAIRLINE(group = BeautifyGroup.FACE),
+
     /** Waist: a -100..+100 slider, wider to the left (negative), slimmer to the right, as in Meitu's Body > Waist. */
     WAIST(group = BeautifyGroup.BODY),
 
