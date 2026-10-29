@@ -7,6 +7,9 @@ build/
 .externalNativeBuild/
 captures/
 local.properties
+# Kotlin compiler caches and the Gradle-generated daemon JVM toolchain file
+.kotlin/
+gradle/gradle-daemon-jvm.properties
 
 # IDE and OS
 .idea/
