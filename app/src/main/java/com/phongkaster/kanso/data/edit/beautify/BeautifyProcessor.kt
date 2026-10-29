@@ -114,7 +114,7 @@ class BeautifyProcessor(
         try {
             val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
             val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
-            val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(0f, 1f) }
+            val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val faces = facesOf(photo)
             if (faces.isEmpty()) return@withContext null
             ensureActive()
@@ -216,9 +216,9 @@ class BeautifyProcessor(
     var width: Float = 0f
 
     /**
-     * How much to lift each face, from 0 (unchanged, the default) to 1 (the most), like Meitu's
-     * Lift slider at 0..100. The panel sets it just before a run; a value outside 0..1 is clamped
-     * when used. With it and [width] both at 0 no landmarks are looked for at all.
+     * How much to lift each face, from -1 (the jaw dropped the most) through 0 (unchanged, the
+     * default) to 1 (lifted the most), like Meitu's Lift slider at -100..+100. The panel sets it just
+     * before a run; a value outside -1..1 is clamped when used. With it and [width] both at 0 no landmarks are looked for at all.
      */
     @Volatile
     var lift: Float = 0f
@@ -242,7 +242,7 @@ class BeautifyProcessor(
                 // Read once, so a slider moved during the run cannot change it half way.
                 val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
                 val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
-                val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(0f, 1f) }
+                val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 report(0f)
                 val small = WorkingSize.fit(input, maxEdgePx)
                 report(FIT_DONE)
@@ -286,7 +286,7 @@ class BeautifyProcessor(
 
     /**
      * Returns a new copy of [photo] with every face's width changed by [width] (-1..1) and lifted
-     * by [lift] (0..1), not both 0 here, or null when [landmarks] finds no face. All faces, and
+     * by [lift] (-1..1), not both 0 here, or null when [landmarks] finds no face. All faces, and
      * both reshapes, are warped in one pass, so the photo is resampled only once. [photo] is not
      * changed.
      */

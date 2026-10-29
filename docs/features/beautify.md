@@ -21,10 +21,12 @@ Beautify does three things to every face in the photo, in this order:
    end narrowed it to 270 px). The slider is coloured from 0 toward the thumb, with a mark at 0.
 2. **Face lift**, like Meitu's Beautify > Face > Lift: the lower half of the outline (the jowls and
    the jaw's corners) is raised toward the eyes and drawn a little in toward the centre line, so the
-   jawline looks higher and tighter. The **Face lift** slider runs from **0** (unchanged, the
-   default) to **100** (the most); there is no "lower" side. Width and Lift are applied together in
-   one warp, and their moves **add up**: a face can be narrowed and lifted at once. Whether Meitu's
-   Lift slider is one-sided like this one has not been checked on the phone.
+   jawline looks higher and tighter. The **Face lift** slider runs from **-100** (the jaw dropped
+   and spread, a heavier face) through **0** (unchanged, the default) to **+100** (lifted the most),
+   two-sided like Width, as Meitu's Lift slider is (seen on the vivo V2408A, 2026-10-29). Which
+   end of Meitu's slider lifts was not measured; Kanso lifts to the right, as Width narrows to the
+   right. Width and Lift are applied together in one warp, and their moves **add up**: a face can
+   be narrowed and lifted at once.
 3. **Smoothing**: an **edge-preserving blur**: small differences such as pores, blemishes and noise
    are averaged away, while strong edges such as eyes, lips and hair stay sharp. The **Smoothing**
    slider (0 to 100, starting at 0) sets how much of it you see.
@@ -141,7 +143,7 @@ flowchart TD
    `EditToolEntry`; Face's icon (`ic_face_group.xml`) is drawn for Kanso. Above the row, in Edit's own panel area
    (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
-   right end (width -100..100, lift and smoothing
+   right end (width and lift -100..100, smoothing
    0..100). The open group, the open tool and the three values are kept with `rememberSaveable` (they survive a
    rotation). Every move calls `onPreview(strength, width, lift)` (step 7) and the slider's
    `onValueChangeFinished` (the finger lifts) calls `onApply(strength, width, lift)`. Width's and
@@ -163,7 +165,7 @@ flowchart TD
    [`data/edit/beautify/BeautifyProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/BeautifyProcessor.kt)
    runs on `Dispatchers.Default`:
    1. reads the strength once (a NaN counts as 1; clamped to 0..1; the panel starts it at 0) and
-      the width and the lift once (a NaN counts as 0; clamped to -1..1 and 0..1), reports 0;
+      the width and the lift once (a NaN counts as 0; each clamped to -1..1), reports 0;
    2. shrinks to 2000 px again if needed, reports 0.05;
    3. only when width or lift is not 0: **reshapes every face** (step 6 below), reports 0.25. No
       face → `NoFace`. With both at 0 no landmarks are looked for and the MediaPipe model is never
@@ -206,7 +208,8 @@ flowchart TD
       toward between the eyes, so a tilted head is lifted along its tilt. Each point rises
       `lift × 0.05 × rise weight` of the eyes-to-chin length (rise weights 0, 0.25, 0.6, 1, 1, 0.8,
       0.5) and moves in `lift × 0.06 × tighten weight` of its distance to the centre line (tighten
-      weights 0, 0.2, 0.5, 0.8, 0.9, 0.7, 0.4). The cheek at eye height gets no push at all, so the
+      weights 0, 0.2, 0.5, 0.8, 0.9, 0.7, 0.4). A negative lift turns both moves round: down the
+      face and outward. The cheek at eye height gets no push at all, so the
       eyes stay put (an empty push would still count in `LocalWarp`'s weights and damp its
       neighbours).
       [`FaceShape.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/FaceShape.kt)
@@ -306,15 +309,15 @@ stay as they were.
   through the real screen, no face changes nothing and shows the message; tapping a tool opens its
   slider; Face opens its own row with Width's slider ready and Back; Back returns to the top row
   keeping the values; letting go of a slider hands over its value with the others at their
-  defaults; Lift sits in Face's row and opens its own slider; letting go of Lift keeps the width
-  set before it.
+  defaults; Lift sits in Face's row and opens its own slider; letting go of Lift left of 0 hands
+  over the negative value and keeps the width set before it.
 - [`tool/face/FaceWidthTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceWidthTest.kt):
   on a made-up oval face, 0 gives no pushes, positive pulls inward, negative pushes outward, both
   sides mirror, values beyond 1 clamp, the moves scale with the face.
 - [`tool/face/FaceLiftTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceLiftTest.kt):
-  on the same oval, 0, NaN and negatives give no pushes; the cheek top stays and every other point
-  rises; the jaw is drawn inward; both sides mirror; values beyond 1 clamp; the moves scale with
-  the face.
+  on the same oval, 0 and NaN give no pushes; the cheek top stays and every other point rises;
+  the jaw is drawn inward; a negative lift is the same pushes turned round; both sides mirror;
+  values beyond ±1 clamp; the moves scale with the face.
 - [`tool/face/FaceShapeTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceShapeTest.kt):
   each alone is unchanged; together the moves add up point by point; merging keeps the larger
   radius and the first order.

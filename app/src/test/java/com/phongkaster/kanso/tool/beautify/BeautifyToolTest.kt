@@ -228,8 +228,8 @@ class BeautifyToolTest {
     }
 
     /**
-     * Letting go of the face lift slider at 0.6 applies 0.6, keeping the width set before it:
-     * the two face tools add up, neither resets the other.
+     * Letting go of the face lift slider at -0.6 (left of 0: it is two-sided, as in Meitu) applies
+     * -0.6, keeping the width set before it: the two face tools add up, neither resets the other.
      */
     @Test
     fun releasing_the_lift_slider_applies_it_with_the_width() {
@@ -241,13 +241,13 @@ class BeautifyToolTest {
 
         tap(beautifyToolTag(BeautifyTool.FACE_LIFT))
         compose.onNodeWithTag(BEAUTIFY_LIFT_TAG)
-            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.6f) }
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(-0.6f) }
         compose.waitForIdle()
 
         val (strength, width, lift) = applied.last()
         assertEquals(0f, strength, 0f)
         assertEquals(0.3f, width, 0.01f)
-        assertEquals(0.6f, lift, 0.01f)
+        assertEquals(-0.6f, lift, 0.01f)
     }
 
     // --- Helpers -----------------------------------------------------------------------------

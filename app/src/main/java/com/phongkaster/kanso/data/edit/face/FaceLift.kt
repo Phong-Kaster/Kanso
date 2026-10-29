@@ -6,8 +6,10 @@ import kotlin.math.sqrt
 /**
  * Face lift, the way Meitu's Beautify > Face > Lift does it: the lower half of the face's outline
  * (the jowls and the jaw's corners) is raised toward the eyes and drawn a little in toward the
- * centre line, so the jawline looks tighter and higher, as after a face-lift. 0 leaves the face as
- * it is and 1 lifts the most; there is no "lower" side.
+ * centre line, so the jawline looks tighter and higher, as after a face-lift (a positive amount).
+ * A negative amount does the reverse: the jowls drop and spread out, a heavier, longer jaw. The
+ * slider runs -1..1 through 0 (unchanged), the same way round as Meitu's Lift slider, which is
+ * two-sided like its Width slider (seen on the vivo V2408A, 2026-10-29).
  *
  * Like [FaceWidth], this object only decides *where* the outline should go and returns the moves
  * as [WarpPush]es, one per outline point that moves, centred on the same points [FaceWidth] uses
@@ -28,12 +30,12 @@ import kotlin.math.sqrt
 object FaceLift {
 
     /**
-     * Returns the pushes that lift [face] by [amount], from 0 (unchanged) to 1 (the most). A value
-     * outside 0..1 is clamped and NaN counts as 0. An amount of 0, or a face too small to measure,
-     * gives no pushes at all.
+     * Returns the pushes that lift [face] by [amount], from -1 (the jaw dropped the most) through 0
+     * (unchanged) to 1 (lifted the most). A value outside -1..1 is clamped and NaN counts as 0. An
+     * amount of 0, or a face too small to measure, gives no pushes at all.
      */
     fun pushesFor(face: FaceLandmarks, amount: Float): List<WarpPush> {
-        val strength = if (amount.isNaN()) 0f else amount.coerceIn(0f, 1f)
+        val strength = if (amount.isNaN()) 0f else amount.coerceIn(-1f, 1f)
         if (strength == 0f) return emptyList()
         val top = face[FaceMeshIndex.BETWEEN_EYES]
         val chin = face[FaceMeshIndex.CHIN]
@@ -66,6 +68,7 @@ object FaceLift {
                         val along = ((point.x - top.x) * axisX + (point.y - top.y) * axisY) / axisLengthSquared
                         val footX = top.x + along * axisX
                         val footY = top.y + along * axisY
+                        // A negative strength turns both moves round: down the face and outward.
                         val up = strength * MAX_RISE * axisLength * rise
                         val inward = strength * MAX_TIGHTEN * tighten
                         pushes += WarpPush(

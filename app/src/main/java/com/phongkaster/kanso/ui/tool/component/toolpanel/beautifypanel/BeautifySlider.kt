@@ -30,8 +30,8 @@ import kotlin.math.roundToInt
  *
  * It shows [value] within [valueRange], calls [onValueChange] while it moves and
  * [onValueChangeFinished] when the finger lifts. The number is [value] times 100, rounded, as on
- * the Edit screen's sliders: 0..100 for Smooth, -100..100 for Face width (whose range runs through
- * 0, so the slider is drawn two-sided, coloured from 0 toward the thumb). The slider carries the
+ * the Edit screen's sliders: 0..100 for Smooth, -100..100 for Face width and Face lift (whose range
+ * runs through 0, so the slider is drawn two-sided, coloured from 0 toward the thumb). The slider carries the
  * test tag [tag] and its number [editSliderValueTag] of it; a screen reader names the slider by
  * [label]. While [enabled] is false it is switched off.
  */

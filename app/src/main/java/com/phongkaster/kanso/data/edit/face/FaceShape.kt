@@ -14,7 +14,7 @@ object FaceShape {
 
     /**
      * Returns the pushes that reshape [face] by [width] (-1..1, see [FaceWidth]) and [lift]
-     * (0..1, see [FaceLift]), merged point by point. With both at 0 the list is empty; with one of
+     * (-1..1, see [FaceLift]), merged point by point. With both at 0 the list is empty; with one of
      * them at 0 it is exactly the other's list.
      */
     fun pushesFor(face: FaceLandmarks, width: Float, lift: Float): List<WarpPush> =

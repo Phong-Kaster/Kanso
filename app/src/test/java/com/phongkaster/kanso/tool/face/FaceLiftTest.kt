@@ -16,12 +16,32 @@ class FaceLiftTest {
     /** The face every test lifts: centred at (500, 500), 200 to each cheek, 260 to the chin. */
     private val face = SampleFace.oval(centerX = 500f, centerY = 500f, halfWidth = 200f, halfHeight = 260f)
 
-    /** Lift 0, NaN and anything below 0 give no pushes, so the photo is not touched. */
+    /** Lift 0 (and NaN) gives no pushes, so the photo is not touched. */
     @Test
-    fun zero_or_below_gives_no_pushes() {
+    fun zero_gives_no_pushes() {
         assertTrue(FaceLift.pushesFor(face, 0f).isEmpty())
         assertTrue(FaceLift.pushesFor(face, Float.NaN).isEmpty())
-        assertTrue(FaceLift.pushesFor(face, -1f).isEmpty())
+    }
+
+    /**
+     * A negative lift is the same pushes turned round: the jaw drops (pushed down the photo) and
+     * spreads (pushed away from the centre line), as Meitu's Lift slider does left of 0.
+     */
+    @Test
+    fun negative_drops_the_jaw() {
+        val lifted = FaceLift.pushesFor(face, 0.7f)
+        val dropped = FaceLift.pushesFor(face, -0.7f)
+        val moving = FaceMeshIndex.LEFT_OUTLINE.size - 1
+
+        assertEquals(lifted.size, dropped.size)
+        dropped.forEach(action = { assertTrue("moved by ${it.moveY} down", it.moveY > 0f) })
+        dropped.take(moving).forEach(action = { assertTrue("left side moved by ${it.moveX}", it.moveX < 0f) })
+        lifted.zip(dropped).forEach(
+            action = { (up, down) ->
+                assertEquals(-up.moveX, down.moveX, 0.001f)
+                assertEquals(-up.moveY, down.moveY, 0.001f)
+            },
+        )
     }
 
     /**
@@ -64,10 +84,11 @@ class FaceLiftTest {
         }
     }
 
-    /** A value above 1 is clamped, so 5 lifts exactly as far as 1. */
+    /** A value beyond ±1 is clamped, so 5 lifts exactly as far as 1, and -5 drops as far as -1. */
     @Test
     fun beyond_one_is_clamped() {
         assertEquals(FaceLift.pushesFor(face, 1f), FaceLift.pushesFor(face, 5f))
+        assertEquals(FaceLift.pushesFor(face, -1f), FaceLift.pushesFor(face, -5f))
     }
 
     /** The same face twice as large is lifted twice as far, with twice the reach. */

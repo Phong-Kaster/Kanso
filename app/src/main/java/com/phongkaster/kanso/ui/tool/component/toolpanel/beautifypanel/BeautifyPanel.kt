@@ -56,8 +56,8 @@ const val BEAUTIFY_LIFT_TAG = "beautify-lift"
  *   API). The sliders keep their values while the person moves between the rows.
  * - **Smooth** is a 0..100 slider (0, no smoothing, by default); **Face width** a -100..+100
  *   slider (0, the face as it is, by default; negative is wider, positive narrower, as in Meitu), drawn
- *   two-sided: coloured from 0 toward the thumb; **Face lift** a 0..100 slider (0, the face as it
- *   is, by default).
+ *   two-sided: coloured from 0 toward the thumb; **Face lift** the same, -100..+100 (negative drops
+ *   the jaw, positive lifts it, as in Meitu).
  * - **Live while dragging, as in Meitu.** Every move of a slider calls [onPreview] with all three
  *   values, and the screen shows a quick frame of the edit on the photo as shown, so the face
  *   follows the finger. Letting go calls [onApply] with all three values, and the photo is redone from
@@ -125,13 +125,13 @@ fun BeautifyPanel(
                             label = R.string.beautify_lift_label,
                             value = lift,
                             onValueChange = {
-                                lift = it.coerceIn(0f, 1f)
+                                lift = it.coerceIn(-1f, 1f)
                                 onPreview(strength, width, lift)
                             },
                             onValueChangeFinished = { onApply(strength, width, lift) },
                             tag = BEAUTIFY_LIFT_TAG,
                             enabled = enabled,
-                            valueRange = 0f..1f,
+                            valueRange = -1f..1f,
                         )
                     }
                 },
