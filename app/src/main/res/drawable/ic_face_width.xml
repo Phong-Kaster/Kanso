@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Face width: two arrows pressing in on a centre line, drawn for Kanso (no Material Symbol shows
+     narrowing a face). Round strokes on the 960 grid of the Material Symbols Rounded icons, white
+     like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M480,200L480,760M120,480L360,480M260,380L360,480L260,580M840,480L600,480M700,380L600,480L700,580"/>
+</vector>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Beautify panel: the label of the strength slider, how much the skin is smoothed. Also what
+         screen readers call the slider. Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_strength_label">Smoothing</string>
+    <!-- A slider's current strength as a percentage, next to its label, for example "70%" (the
+         Artistic panel's intensity). -->
+    <string name="beautify_strength_value">%1$d%%</string>
+    <!-- Beautify panel: the name of the Smooth tool in the row of tools, under its icon. Must never
+         equal the tool's name, the screen's title. -->
+    <string name="beautify_tool_smooth">Smooth</string>
+    <!-- Beautify panel: the label of the face width slider, how much wider (negative) or narrower
+         (positive) each face becomes. Also what screen readers call the slider. -->
+    <string name="beautify_width_label">Face width</string>
+    <!-- Beautify panel: the name of the Face group in the top row of tools, under its icon; tapping
+         it shows the face tools (Width...). Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_group_face">Face</string>
+    <!-- Beautify panel: the name of the Width tool in the Face group's row, under its icon (the
+         group already says it is about the face). -->
+    <string name="beautify_tool_width">Width</string>
+    <!-- Beautify panel: the label of the face lift slider, how much the jawline of each face is
+         raised and tightened (positive) or dropped (negative). Also what screen readers call the
+         slider. -->
+    <string name="beautify_lift_label">Face lift</string>
+    <!-- Beautify panel: the name of the Lift tool in the Face group's row, under its icon (the
+         group already says it is about the face). -->
+    <string name="beautify_tool_lift">Lift</string>
+</resources>

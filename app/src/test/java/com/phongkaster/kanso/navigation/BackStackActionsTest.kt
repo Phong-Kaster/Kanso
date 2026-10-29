@@ -21,7 +21,7 @@ class BackStackActionsTest {
         assertTrue(isTabKey(MyEdits))
         assertTrue(isTabKey(Settings))
         assertFalse(isTabKey(Gallery(Tool.EDIT)))
-        assertFalse(isTabKey(ToolPhoto(Tool.RETOUCH, PHOTO)))
+        assertFalse(isTabKey(ToolPhoto(Tool.BEAUTIFY, PHOTO)))
         assertFalse(isTabKey(Camera(Tool.EDIT)))
         assertFalse(isTabKey(Result))
     }
@@ -85,9 +85,9 @@ class BackStackActionsTest {
     /** Replace on a tool screen opened from its gallery pops back to that same gallery. */
     @Test
     fun replace_pops_back_to_the_gallery_just_below() {
-        val stack = mutableListOf<NavKey>(Home, Gallery(Tool.RETOUCH), ToolPhoto(Tool.RETOUCH, PHOTO))
-        stack.replaceWithGallery(Tool.RETOUCH)
-        assertEquals(listOf<NavKey>(Home, Gallery(Tool.RETOUCH)), stack)
+        val stack = mutableListOf<NavKey>(Home, Gallery(Tool.BEAUTIFY), ToolPhoto(Tool.BEAUTIFY, PHOTO))
+        stack.replaceWithGallery(Tool.BEAUTIFY)
+        assertEquals(listOf<NavKey>(Home, Gallery(Tool.BEAUTIFY)), stack)
     }
 
     /**

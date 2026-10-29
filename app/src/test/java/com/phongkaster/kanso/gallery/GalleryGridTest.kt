@@ -158,14 +158,14 @@ class GalleryGridTest {
     fun tapping_a_photo_reports_the_tool_and_its_uri() {
         val source = threeAlbumSource()
         val chosen = mutableListOf<Pair<Tool, String>>()
-        showGallery(source, tool = Tool.RETOUCH) { tool, uri -> chosen += tool to uri }
+        showGallery(source, tool = Tool.BEAUTIFY) { tool, uri -> chosen += tool to uri }
 
         val photos = source.allPhotos.sortedByDescending { it.modifiedSeconds }
         val k = 4
         compose.onNodeWithTag(galleryPhotoTag(photos[k].id)).performClick()
         compose.waitForIdle()
 
-        assertEquals(listOf(Tool.RETOUCH to photos[k].uri), chosen)
+        assertEquals(listOf(Tool.BEAUTIFY to photos[k].uri), chosen)
     }
 
     /**

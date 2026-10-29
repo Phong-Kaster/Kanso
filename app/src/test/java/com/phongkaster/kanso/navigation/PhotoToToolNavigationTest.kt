@@ -336,6 +336,6 @@ class PhotoToToolNavigationTest {
         val PHOTOS = GalleryGridTest.manyPhotos(3)
 
         /** The four AI tools, in the order Home's carousel shows their banners. */
-        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
     }
 }

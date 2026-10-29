@@ -51,11 +51,14 @@ private val SHEET_HEIGHT = 136.dp
  * `AnimatedContent` (Compose's own animation API) cross-fades between what it shows for one value
  * and the next: the hint and a tool's panel, or one tool's controls and another's. Only what is
  * inside the area fades; the area itself never moves.
+ *
+ * It is generic in [T], the kind of tool: the Edit screen passes its `EditTool`s and the Beautify
+ * screen its `BeautifyTool`s, so both screens share one panel area that looks and moves alike.
  */
 @Composable
-internal fun EditSheet(
-    openTool: EditTool?,
-    sheet: @Composable (EditTool) -> Unit,
+internal fun <T : Any> EditSheet(
+    openTool: T?,
+    sheet: @Composable (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetText = stringResource(R.string.edit_layout_sheet)

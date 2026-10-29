@@ -246,7 +246,7 @@ class HomeScreenshotTest {
 
         /** Home's state as its ViewModel builds it, with [photos] in the strip, [loading] or not. */
         fun homeState(photos: List<Photo>, loading: Boolean) = HomeUiState(
-            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             shortcutTools = Tool.entries.toList(),
             recentPhotos = photos,
             recentLoading = loading,

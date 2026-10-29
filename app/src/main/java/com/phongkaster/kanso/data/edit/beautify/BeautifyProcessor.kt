@@ -1,0 +1,385 @@
+package com.phongkaster.kanso.data.edit.beautify
+
+import android.graphics.Bitmap
+import android.graphics.Rect
+import com.phongkaster.kanso.data.edit.EditFailure
+import com.phongkaster.kanso.data.edit.EditResult
+import com.phongkaster.kanso.data.edit.LivePreview
+import com.phongkaster.kanso.data.edit.LivePreviewSource
+import com.phongkaster.kanso.data.edit.ToolProcessor
+import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.face.FaceFocus
+import com.phongkaster.kanso.data.edit.face.FaceFocusSource
+import com.phongkaster.kanso.data.edit.face.FaceLandmarks
+import com.phongkaster.kanso.data.edit.face.FaceShape
+import com.phongkaster.kanso.data.edit.face.WarpPush
+import com.phongkaster.kanso.data.edit.face.paddedFaceBox
+import kotlin.math.ceil
+import kotlin.math.floor
+import com.phongkaster.kanso.data.edit.face.LandmarkFinder
+import com.phongkaster.kanso.data.edit.face.LocalWarp
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
+
+/**
+ * The Beautify tool's edit: every face in the photo made narrower or wider, as much as the Face
+ * width slider asks for, and lifted, as much as the Face lift slider asks for, then its skin
+ * smoothed, as much as the Smoothing slider asks for.
+ *
+ * The steps, in order:
+ * 1. Scale the photo down so its longest edge is at most [maxEdgePx] (2000 pixels by default,
+ *    [WorkingSize.BEAUTIFY]), so a 24-megapixel photo never runs the phone out of memory.
+ * 2. Only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
+ *    (MediaPipe's face landmarker in the app), turn each face's outline into pushes ([FaceShape]:
+ *    Width's and Lift's added point by point) and move the pixels ([LocalWarp]), once for both.
+ *    No face means nothing to reshape: [EditFailure.NoFace].
+ * 3. Ask [finder] for the faces' rectangles on the reshaped photo (the engine's face-landmark
+ *    model in the app). No face means nothing to smooth: the result is [EditFailure.NoFace] and
+ *    the photo stays as it was.
+ * 4. Smooth each face's rectangle with [smoother] (OpenCV's bilateral filter in the app), one
+ *    face after another, giving a fully smoothed copy in which everything outside the faces is
+ *    untouched.
+ * 5. Blend that copy over the reshaped photo by [strength], pixel by pixel, here in Kotlin:
+ *    `out = reshaped + strength x (smoothed - reshaped)` for each colour channel. Strength 0 gives
+ *    the reshaped photo back exactly, strength 1 the fully smoothed copy, and anything between a
+ *    mix. Outside the faces smoothed equals reshaped, so those pixels never change.
+ * 6. Mark the result opaque (`setHasAlpha(false)`), so Save writes a JPEG.
+ *
+ * Like every [ToolProcessor] it never throws for a failed edit: running out of memory becomes
+ * [EditFailure.OutOfMemory], any other error from the engine [EditFailure.ModelUnavailable], and a
+ * cancellation (the person left the screen) is passed on unchanged. The work runs on
+ * [dispatcher], a background one by default. The input bitmap is never changed.
+ */
+class BeautifyProcessor(
+    private val finder: FaceFinder,
+    private val landmarks: LandmarkFinder,
+    private val smoother: SkinSmoother,
+    private val maxEdgePx: Int = WorkingSize.BEAUTIFY,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+) : ToolProcessor, FaceFocusSource, LivePreviewSource {
+
+    /**
+     * Finds the largest face in [photo] with [landmarks] and returns the smallest box holding all
+     * its points (forehead to chin, cheek to cheek), as fractions of [photo]. The largest face is
+     * the one the person most likely wants to look at. Null when there is no face, and also when
+     * the model fails: the zoom is a help, never a reason for the tool to fail.
+     *
+     * The landmarks it finds are kept for [livePreview] (the screen hands both the same shown
+     * photo), so the first live frame does not wait for the model.
+     */
+    override suspend fun findFocus(photo: Bitmap): FaceFocus? = withContext(dispatcher) {
+        try {
+            val width = photo.width.toFloat()
+            val height = photo.height.toFloat()
+            facesOf(photo)
+                .filter(predicate = { it.points.isNotEmpty() })
+                .map(
+                    transform = { face ->
+                        FaceFocus(
+                            left = face.points.minOf(selector = { it.x }) / width,
+                            top = face.points.minOf(selector = { it.y }) / height,
+                            right = face.points.maxOf(selector = { it.x }) / width,
+                            bottom = face.points.maxOf(selector = { it.y }) / height,
+                        )
+                    },
+                )
+                .maxByOrNull(selector = { it.width * it.height })
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (outOfMemory: OutOfMemoryError) {
+            null
+        } catch (missing: LinkageError) {
+            null
+        } catch (failed: Exception) {
+            null
+        }
+    }
+
+    /**
+     * The live look while a slider is dragged, for [photo] (the unedited photo as shown on screen)
+     * with the current [width], [lift] and [strength]. It is a recipe, not a picture: the screen draws it
+     * on the graphics chip every frame (see [LivePreview]), so it is cheap to make:
+     * 1. the faces' landmarks are found once per photo and kept ([facesOf]);
+     * 2. the reshape is the same [FaceShape] pushes the full render uses, in pixels of [photo];
+     * 3. when smoothing is on, [photo] fully smoothed inside the face boxes is made the first time
+     *    and kept ([smoothedOf]); the screen lays it over the photo [strength] opaque.
+     *
+     * Null when no face is found or the look cannot be made; a live look never fails the tool.
+     */
+    override suspend fun livePreview(photo: Bitmap): LivePreview? = withContext(dispatcher) {
+        try {
+            val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
+            val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val faces = facesOf(photo)
+            if (faces.isEmpty()) return@withContext null
+            ensureActive()
+            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) })
+            val region = regionOf(boxesOf(faces, photo), pushes, photo) ?: return@withContext null
+            LivePreview(
+                region = region,
+                pushes = pushes,
+                smoothed = if (amount > 0f) smoothedOf(photo, faces) else null,
+                smoothing = amount,
+            )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (outOfMemory: OutOfMemoryError) {
+            null
+        } catch (missing: LinkageError) {
+            null
+        } catch (failed: Exception) {
+            null
+        }
+    }
+
+    /** Forgets the kept landmarks and smoothed copy, so the last photo is not held on to. */
+    override fun releasePreview() {
+        keptFaces = null
+        keptSmoothed = null
+    }
+
+    /**
+     * The landmarks of every face in [photo], found with [landmarks] the first time and kept for
+     * that same bitmap afterwards (the shown photo does not change while the screen is open).
+     */
+    private suspend fun facesOf(photo: Bitmap): List<FaceLandmarks> {
+        keptFaces?.let { (source, faces) -> if (source === photo) return faces }
+        val faces = landmarks.findLandmarks(photo)
+        keptFaces = photo to faces
+        return faces
+    }
+
+    /**
+     * [photo] fully smoothed inside every face box ([boxesOf]) with [smoother], made the first
+     * time and kept for that same bitmap. It is never recycled here: the screen may be drawing it.
+     */
+    private fun smoothedOf(photo: Bitmap, faces: List<FaceLandmarks>): Bitmap {
+        keptSmoothed?.let { (source, smoothed) -> if (source === photo) return smoothed }
+        val smoothed = boxesOf(faces, photo).fold(initial = photo, operation = { current, box -> smoother.smooth(current, box) })
+        keptSmoothed = photo to smoothed
+        return smoothed
+    }
+
+    /** One padded box per face ([paddedFaceBox]), the same boxes the full render smooths. */
+    private fun boxesOf(faces: List<FaceLandmarks>, photo: Bitmap): List<Rect> =
+        faces.mapNotNull(transform = { face -> paddedFaceBox(face, photo.width, photo.height) })
+
+    /**
+     * The smallest box, cut to [photo], holding every face box in [boxes] and every push's circle
+     * in [pushes]: everything a live look can change. Null when it is empty.
+     */
+    private fun regionOf(boxes: List<Rect>, pushes: List<WarpPush>, photo: Bitmap): Rect? {
+        val region = Rect()
+        boxes.forEach(action = { region.union(it) })
+        pushes.forEach(
+            action = { push ->
+                region.union(
+                    floor(push.centerX - push.radius).toInt(),
+                    floor(push.centerY - push.radius).toInt(),
+                    ceil(push.centerX + push.radius).toInt(),
+                    ceil(push.centerY + push.radius).toInt(),
+                )
+            },
+        )
+        return clampTo(region, photo.width, photo.height)
+    }
+
+    /** The landmarks of the last photo [facesOf] looked at, with that photo; null before any. */
+    @Volatile
+    private var keptFaces: Pair<Bitmap, List<FaceLandmarks>>? = null
+
+    /** The last photo [smoothedOf] smoothed, with its smoothed copy; null before any. */
+    @Volatile
+    private var keptSmoothed: Pair<Bitmap, Bitmap>? = null
+
+    /**
+     * How much of the smoothing to show, from 0 (none: the photo as it was) to 1 (all of it).
+     * The panel's slider sets it just before a run; a value outside 0..1 is clamped when used.
+     *
+     * `@Volatile` makes a value written on the main thread visible at once to the background
+     * thread that runs [process].
+     */
+    @Volatile
+    var strength: Float = 1f
+
+    /**
+     * How much to reshape each face, from -1 (widest) through 0 (unchanged, the default) to 1
+     * (narrowest, a smaller face), like Meitu's Width slider at -100..+100. The panel sets it just before a run;
+     * a value outside -1..1 is clamped when used. At 0 no landmarks are looked for at all.
+     */
+    @Volatile
+    var width: Float = 0f
+
+    /**
+     * How much to lift each face, from -1 (the jaw dropped the most) through 0 (unchanged, the
+     * default) to 1 (lifted the most), like Meitu's Lift slider at -100..+100. The panel sets it just
+     * before a run; a value outside -1..1 is clamped when used. With it and [width] both at 0 no landmarks are looked for at all.
+     */
+    @Volatile
+    var lift: Float = 0f
+
+    /**
+     * Runs the six steps above on [input] and returns the result; [input] is not changed.
+     * [onProgress] only ever moves forward, from 0 to 1.
+     */
+    override suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): EditResult =
+        withContext(dispatcher) {
+            try {
+                var reported = 0f
+                // Passes on a progress value only if it moves the bar forward.
+                val report: (Float) -> Unit = { value ->
+                    val next = value.coerceIn(0f, 1f)
+                    if (next >= reported) {
+                        reported = next
+                        onProgress(next)
+                    }
+                }
+                // Read once, so a slider moved during the run cannot change it half way.
+                val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
+                val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+                val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+                report(0f)
+                val small = WorkingSize.fit(input, maxEdgePx)
+                report(FIT_DONE)
+                val shaped = if (reshape == 0f && raise == 0f) small else reshapeFaces(small, reshape, raise)
+                if (shaped == null) {
+                    if (small !== input) small.recycle()
+                    return@withContext EditResult.Failed(EditFailure.NoFace)
+                }
+                report(SHAPE_DONE)
+                val faces = finder.findFaces(shaped).mapNotNull { clampTo(it, shaped.width, shaped.height) }
+                report(FIND_DONE)
+                if (faces.isEmpty()) {
+                    if (shaped !== small) shaped.recycle()
+                    if (small !== input) small.recycle()
+                    return@withContext EditResult.Failed(EditFailure.NoFace)
+                }
+                ensureActive()
+                val smoothed = smoothEveryFace(shaped, faces) { done ->
+                    report(FIND_DONE + (SMOOTH_DONE - FIND_DONE) * done / faces.size)
+                }
+                ensureActive()
+                val result = blend(shaped, smoothed, amount)
+                // The working copies are no longer needed; freeing them at once matters on a phone,
+                // where each one can be a 2000-pixel picture (16 MB).
+                if (smoothed !== shaped && smoothed !== input) smoothed.recycle()
+                if (shaped !== small) shaped.recycle()
+                if (small !== input) small.recycle()
+                report(1f)
+                EditResult.Edited(result)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (outOfMemory: OutOfMemoryError) {
+                EditResult.Failed(EditFailure.OutOfMemory)
+            } catch (missing: LinkageError) {
+                // A native library or the model's class could not load on this phone.
+                EditResult.Failed(EditFailure.ModelUnavailable)
+            } catch (failed: Exception) {
+                EditResult.Failed(EditFailure.ModelUnavailable)
+            }
+        }
+
+    /**
+     * Returns a new copy of [photo] with every face's width changed by [width] (-1..1) and lifted
+     * by [lift] (-1..1), not both 0 here, or null when [landmarks] finds no face. All faces, and
+     * both reshapes, are warped in one pass, so the photo is resampled only once. [photo] is not
+     * changed.
+     */
+    private suspend fun reshapeFaces(photo: Bitmap, width: Float, lift: Float): Bitmap? {
+        val found = landmarks.findLandmarks(photo)
+        if (found.isEmpty()) return null
+        val pushes = found.flatMap(transform = { face -> FaceShape.pushesFor(face, width, lift) })
+        return LocalWarp.warp(photo, pushes)
+    }
+
+    /**
+     * Smooths each rectangle of [faces] on [photo], one after another, and returns the copy with
+     * all of them smoothed. [onFaceDone] is told how many faces are done after each one. [photo]
+     * is not changed; the in-between copies are freed as soon as the next one exists.
+     */
+    private fun smoothEveryFace(photo: Bitmap, faces: List<Rect>, onFaceDone: (Int) -> Unit): Bitmap {
+        var current = photo
+        faces.forEachIndexed { index, face ->
+            val next = smoother.smooth(current, face)
+            check(next.width == photo.width && next.height == photo.height) {
+                "The smoother returned ${next.width} x ${next.height} for a ${photo.width} x ${photo.height} photo"
+            }
+            // Free the previous face's copy, but never the photo itself.
+            if (current !== photo && current !== next) current.recycle()
+            current = next
+            onFaceDone(index + 1)
+        }
+        return current
+    }
+
+    /**
+     * Returns a new opaque bitmap mixing [original] and [smoothed] (the same size) by [amount]:
+     * each colour channel is `original + amount x (smoothed - original)`, rounded. At amount 0
+     * every pixel equals [original]'s exactly.
+     */
+    private fun blend(original: Bitmap, smoothed: Bitmap, amount: Float): Bitmap {
+        val width = original.width
+        val height = original.height
+        val before = IntArray(width * height)
+        val after = IntArray(width * height)
+        original.getPixels(before, 0, width, 0, 0, width, height)
+        smoothed.getPixels(after, 0, width, 0, 0, width, height)
+        for (i in before.indices) {
+            val o = before[i]
+            val s = after[i]
+            val r = mix((o shr 16) and CHANNEL, (s shr 16) and CHANNEL, amount)
+            val g = mix((o shr 8) and CHANNEL, (s shr 8) and CHANNEL, amount)
+            val b = mix(o and CHANNEL, s and CHANNEL, amount)
+            // Alpha is forced to fully opaque: a beautified photo has no see-through pixels.
+            before[i] = (OPAQUE_ALPHA shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        out.setPixels(before, 0, width, 0, 0, width, height)
+        out.setHasAlpha(false)
+        return out
+    }
+
+    /** One channel's mix: [from] moved toward [to] by [amount] (0..1), rounded to 0..255. */
+    private fun mix(from: Int, to: Int, amount: Float): Int =
+        (from + amount * (to - from)).roundToInt().coerceIn(0, CHANNEL)
+
+    /**
+     * Returns [face] cut to the [width] x [height] picture, or null when nothing of it lies inside
+     * (a finder must not make the processor read outside the photo).
+     */
+    private fun clampTo(face: Rect, width: Int, height: Int): Rect? {
+        val clamped = Rect(
+            face.left.coerceIn(0, width),
+            face.top.coerceIn(0, height),
+            face.right.coerceIn(0, width),
+            face.bottom.coerceIn(0, height),
+        )
+        return if (clamped.right > clamped.left && clamped.bottom > clamped.top) clamped else null
+    }
+
+    /** The processor's fixed numbers. */
+    private companion object {
+        /** The progress once the photo has been scaled to the working size. */
+        const val FIT_DONE = 0.05f
+
+        /** The progress once the faces have been reshaped (or there was nothing to reshape). */
+        const val SHAPE_DONE = 0.25f
+
+        /** The progress once the faces have been found. */
+        const val FIND_DONE = 0.4f
+
+        /** The progress once every face has been smoothed; the blend fills the rest. */
+        const val SMOOTH_DONE = 0.9f
+
+        /** The largest value of one colour channel, also the mask that reads one from a pixel. */
+        const val CHANNEL = 0xFF
+
+        /** The alpha of a fully opaque pixel. */
+        const val OPAQUE_ALPHA = 0xFF
+    }
+}

@@ -47,7 +47,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.artistic.ArtisticProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
-import com.phongkaster.kanso.data.edit.retouch.RetouchProcessor
+import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
 import com.phongkaster.kanso.data.photo.displayMaxEdgePx
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
@@ -138,8 +138,8 @@ const val TOOL_UNDO_TAG = "tool-undo"
 /** The test tag on the plain-words message shown when an edit did not work. */
 const val TOOL_FAILURE_TAG = "tool-failure"
 
-/** Test tag of the node around the failure card when no face was found (the Retouch tool). */
-const val RETOUCH_NO_FACE_TAG = "retouch-no-face"
+/** Test tag of the node around the failure card when no face was found (the Beautify tool). */
+const val BEAUTIFY_NO_FACE_TAG = "beautify-no-face"
 
 /**
  * A semantics property carrying the Uri (as text) of the photo the image node shows.
@@ -259,10 +259,33 @@ fun ToolScreen(
                 tool = state.tool,
                 state = state,
                 onRun = { viewModel.runRegistered() },
-                onRetouch = { strength ->
-                    viewModel.runRegistered(fromOriginal = true) { processor ->
-                        (processor as? RetouchProcessor)?.strength = strength
-                    }
+                // A Beautify slider let go: the full-quality render, quietly in the background.
+                onBeautify = { strength, width, lift ->
+                    viewModel.renderRegistered(
+                        configure = { processor ->
+                            (processor as? BeautifyProcessor)?.let(
+                                block = {
+                                    it.strength = strength
+                                    it.width = width
+                                    it.lift = lift
+                                },
+                            )
+                        },
+                    )
+                },
+                // While a Beautify slider is dragged: a quick live frame with the same values.
+                onBeautifyPreview = { strength, width, lift ->
+                    viewModel.previewRegistered(
+                        configure = { processor ->
+                            (processor as? BeautifyProcessor)?.let(
+                                block = {
+                                    it.strength = strength
+                                    it.width = width
+                                    it.lift = lift
+                                },
+                            )
+                        },
+                    )
                 },
                 onStylize = { style, strength ->
                     viewModel.runRegistered(fromOriginal = true) { processor ->
@@ -433,7 +456,12 @@ fun ToolScreen(
  *   an edit runs; the message about the last failed edit at its top; and the "Replace" chip at
  *   its bottom. It takes all the height the options strip leaves.
  * - The options strip: [panel], the tool's own controls, at the bottom. There is no bottom bar
- *   (except on Edit, below).
+ *   (except on Edit and Beautify, below).
+ *
+ * **Beautify borrows Edit's frame.** Its [panel] (the row of Face and Smooth, with Edit's
+ * fixed-height panel area above it) goes in the `Scaffold`'s `bottomBar` slot instead of the
+ * options strip, and the photo card fills all the space above it, as on Edit, so the tools have
+ * room and the photo stays as large as it can be. The card keeps its "Replace" chip.
  *
  * `Scaffold` is Material's frame for a screen: it places a top bar and a bottom bar and hands the
  * content the space left between them (`innerPadding`), so nothing is drawn under either bar.
@@ -493,6 +521,9 @@ fun ToolContent(
     onLayerTap: (Long) -> Unit = {},
 ) {
     val isEdit = state.tool == Tool.EDIT
+    // Beautify borrows Edit's frame: its row of tools and panel area ([panel]) in the bottom bar,
+    // and the photo filling everything above, so the tools have room and the photo stays large.
+    val panelInBottomBar = state.tool == Tool.BEAUTIFY
     // The Edit bottom bar's height with the keyboard down, in pixels (0 until measured). The photo
     // is sized from this, not from the bar's height now, so when the Text keyboard pushes the bar
     // up, the bar slides over the photo instead of shrinking it: the photo never changes size.
@@ -511,17 +542,34 @@ fun ToolContent(
                 showUndo = true,
                 // Undo sits beside Done on every tool, Edit included. It is off while Compare shows the original.
                 undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle &&
-                    !state.finishing && !state.comparing,
+                    !state.finishing && !state.comparing && !state.rendering,
                 onUndo = onUndo,
                 doneEnabled = state.photo is ToolUiState.PhotoState.Ready &&
-                    state.processing is ToolUiState.Processing.Idle && !state.finishing,
-                finishing = state.finishing,
+                    state.processing is ToolUiState.Processing.Idle && !state.finishing && !state.rendering,
+                // Done's small spinner also shows while a slider tool renders quietly.
+                finishing = state.finishing || state.rendering,
                 onDone = onDone,
             )
         },
-        // Only the Edit screen has a bottom bar: its row of tools, with the open tool's panel
-        // appearing just above it. The other tools keep their controls in the body.
+        // Edit and Beautify have a bottom bar: a row of tools, with the open tool's panel appearing
+        // just above it. The other tools keep their controls in the body.
         bottomBar = {
+            if (panelInBottomBar) {
+                // Clear of the navigation bar and of the bottom gesture area (a swipe up there means
+                // "go home" even when the navigation bar is 0 dp tall), as Edit's bar is. The padding
+                // sits outside the tagged box, so the controls themselves end above that area.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(
+                            WindowInsets.navigationBars.union(WindowInsets.systemGestures.only(WindowInsetsSides.Bottom)),
+                        )
+                        .padding(bottom = 8.dp)
+                        .testTag(EDITOR_PANEL_TAG),
+                ) {
+                    panel()
+                }
+            }
             if (isEdit) {
                 EditBottomBar(
                     state = state,
@@ -597,6 +645,15 @@ fun ToolContent(
                 },
                 cropper = editCropper,
                 modifier = editModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
+        } else if (panelInBottomBar) {
+            // As on Edit, the photo card takes all the space between the top bar and the bottom
+            // bar, with the same small gap above the bar.
+            PhotoCard(
+                state = state,
+                onReplace = onReplace,
+                onDismissFailure = onDismissFailure,
+                modifier = insetModifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         } else {
             // With no bottom bar, the tool's controls are the lowest thing on screen, so they keep
@@ -681,7 +738,7 @@ private fun ToolEnhancePreview() {
 }
 
 /**
- * A tall, narrow photo on the Retouch screen: the photo fills the card's height, and the blurred
+ * A tall, narrow photo on the Beautify screen: the photo fills the card's height, and the blurred
  * copy of it fills the space at its left and right.
  */
 @PreviewLightDark
@@ -690,14 +747,14 @@ private fun ToolNarrowPhotoPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         ToolContent(
             state = ToolUiState(
-                tool = Tool.RETOUCH,
+                tool = Tool.BEAUTIFY,
                 photoUri = SAMPLE_PHOTO_URI,
                 photo = ToolUiState.PhotoState.Ready(sampleNarrowPhoto()),
             ),
             onBack = {},
             onDone = {},
             onReplace = {},
-            panel = { ToolPanel(Tool.RETOUCH) },
+            panel = { ToolPanel(Tool.BEAUTIFY) },
         )
     }
 }
@@ -773,7 +830,7 @@ private fun ToolEditingPreview() {
 }
 
 /**
- * The Retouch screen after an edit failed because no face was found: the plain message at the
+ * The Beautify screen after an edit failed because no face was found: the plain message at the
  * top of the card, the photo unchanged under it, and Undo usable because an earlier edit
  * (the narrow sample photo standing in for it) can still be taken back.
  */
@@ -783,7 +840,7 @@ private fun ToolEditFailedPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         ToolContent(
             state = ToolUiState(
-                tool = Tool.RETOUCH,
+                tool = Tool.BEAUTIFY,
                 photoUri = SAMPLE_PHOTO_URI,
                 photo = ToolUiState.PhotoState.Ready(samplePhoto()),
                 edited = sampleNarrowPhoto(),
@@ -793,7 +850,7 @@ private fun ToolEditFailedPreview() {
             onBack = {},
             onDone = {},
             onReplace = {},
-            panel = { ToolPanel(Tool.RETOUCH) },
+            panel = { ToolPanel(Tool.BEAUTIFY) },
         )
     }
 }

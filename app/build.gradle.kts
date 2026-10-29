@@ -97,6 +97,9 @@ dependencies {
     implementation(project(":core:localml"))
     implementation(project(":core:overlaybrush"))
     implementation(project(":opencv"))
+    // MediaPipe's face landmarker, called directly by Face width (data/edit/face/EngineLandmarkFinder.kt).
+    // core:localml already pulls it in, but only for itself (implementation), so the app names it too.
+    implementation(libs.mediapipe.tasks.vision)
 
     // AndroidX
     implementation(libs.core.ktx)

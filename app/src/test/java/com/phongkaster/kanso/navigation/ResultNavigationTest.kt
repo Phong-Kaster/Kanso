@@ -50,8 +50,8 @@ import org.robolectric.annotation.Config
 
 /**
  * DoD 6 (gallery path) and DoD 15 (back stack), through the app's real navigation: from Home,
- * Retouch opens its gallery; the gallery's camera button opens the camera; Keep opens the
- * Retouch tool screen; Done opens the Result screen above it; Back returns to the tool screen and Go home leaves only
+ * Beautify opens its gallery; the gallery's camera button opens the camera; Keep opens the
+ * Beautify tool screen; Done opens the Result screen above it; Back returns to the tool screen and Go home leaves only
  * Home.
  *
  * Run 7, DoD 12: each tool has a screen of its own, so the tool Done is tapped on is the screen's own
@@ -78,12 +78,12 @@ class ResultNavigationTest {
         stopKoin()
     }
 
-    /** Gallery camera button, Keep: the Retouch tool screen opens, not the Edit one. */
+    /** Gallery camera button, Keep: the Beautify tool screen opens, not the Edit one. */
     @Test
     fun gallery_camera_keep_opens_the_galleries_own_tool() {
         launchToResult(finish = false) {
             compose.onNode(
-                hasText(app.getString(R.string.tool_retouch)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
+                hasText(app.getString(R.string.tool_beautify)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
             ).assertExists()
         }
     }
@@ -125,7 +125,7 @@ class ResultNavigationTest {
     }
 
     /**
-     * Runs the walk Home, Retouch's gallery, the gallery's camera button, shutter, Keep, then
+     * Runs the walk Home, Beautify's gallery, the gallery's camera button, shutter, Keep, then
      * (when [finish]) Done, and calls [body] with the scenario at the end of it.
      *
      * The fakes are loaded before the app starts: a screen's ViewModel keeps the sources it was
@@ -142,7 +142,7 @@ class ResultNavigationTest {
             },
         )
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            openToolGallery(compose, Tool.RETOUCH)
+            openToolGallery(compose, Tool.BEAUTIFY)
             waitFor { count(GALLERY_CAMERA_TAG) > 0 }
             compose.onNodeWithTag(GALLERY_CAMERA_TAG).performClick()
             waitFor {

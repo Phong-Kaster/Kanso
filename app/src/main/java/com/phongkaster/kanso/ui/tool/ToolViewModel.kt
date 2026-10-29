@@ -6,10 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
+import com.phongkaster.kanso.data.edit.LivePreview
+import com.phongkaster.kanso.data.edit.LivePreviewSource
 import com.phongkaster.kanso.data.edit.ProcessorRegistry
 import com.phongkaster.kanso.data.edit.RenderedPhotoStore
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.face.FaceFocusSource
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.DateFormat
@@ -35,8 +38,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,7 +81,7 @@ import java.time.temporal.ChronoUnit
  *   filter is computed here, on a small copy of the original ([ToolUiState.filterPreview]). The
  *   full render from the ORIGINAL photo, with the WHOLE current settings, runs once, when the
  *   edit is finished ([done], [renderFinal]), so nothing is ever stacked on an earlier result.
- * - **The other tools** (Remove background, Enhance, Retouch, Artistic) use [apply]: it runs one
+ * - **The other tools** (Remove background, Enhance, Beautify, Artistic) use [apply]: it runs one
  *   edit (a [ToolProcessor]) on the photo as it is now shown, the result becomes the new shown
  *   photo, and every earlier version is kept so [undo] can step back one edit at a time.
  *
@@ -157,6 +162,13 @@ class ToolViewModel(
             ) {
                 requestPreview()
             }
+            // A face tool's processor can point at the main face; the card then zooms in on it.
+            // It runs after the photo is shown, so the person never waits on it to see the photo.
+            val focusSource = registry.processorFor(tool) as? FaceFocusSource
+            if (photo != null && focusSource != null) {
+                val focus = focusSource.findFocus(photo.bitmap)
+                mutableState.update(function = { it.copy(faceFocus = focus) })
+            }
         }
     }
 
@@ -185,9 +197,11 @@ class ToolViewModel(
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         // What the person sees right now: the last edit, or the original if there is none.
         val previousEdit = current.edited
-        // A slider tool (Retouch, Artistic) re-runs from the untouched photo, so moving its
+        // A slider tool (Beautify, Artistic) re-runs from the untouched photo, so moving its
         // strength replaces the last result instead of stacking a second smoothing on top.
         val shown = if (fromOriginal) original else previousEdit ?: original
+        // A live frame still being made is now out of date: the run below replaces it.
+        editRuns++
         mutableState.update {
             it.copy(processing = ToolUiState.Processing.Running(0f), failure = null)
         }
@@ -221,17 +235,20 @@ class ToolViewModel(
                     // session, to what was there before it.
                     if (!(fromOriginal && lastEditWasFromOriginal)) history.addLast(previousEdit)
                     lastEditWasFromOriginal = fromOriginal
+                    // The full-quality result takes the live frame's place.
                     mutableState.update {
                         it.copy(
                             edited = result.bitmap,
                             canUndo = true,
                             failure = null,
                             processing = ToolUiState.Processing.Idle,
+                            livePreview = null,
                         )
                     }
                 }
+                // A failed run shows the photo as it was, not the live frame of what was tried.
                 is EditResult.Failed -> mutableState.update {
-                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle)
+                    it.copy(failure = result.failure, processing = ToolUiState.Processing.Idle, livePreview = null)
                 }
             }
         }
@@ -239,6 +256,141 @@ class ToolViewModel(
 
     /** True while the shown edit came from a run on the original photo (a slider tool's result). */
     private var lastEditWasFromOriginal = false
+
+    /**
+     * Shows this tool's edit live while a slider is dragged, as Meitu does: [configure] sets the
+     * slider's values on the registered processor, then a live look ([LivePreview], a recipe the
+     * screen draws on the graphics chip over the photo as shown) is put in
+     * [ToolUiState.livePreview]. Nothing happens
+     * when the processor cannot make live frames ([LivePreviewSource]), while an edit runs, while
+     * comparing, or before the photo is shown.
+     *
+     * **The newest position wins.** A finger moves the slider many times a second, faster than a
+     * frame can be made. Each call only rings [livePreviewWanted], whose one-slot buffer drops an
+     * older ring for a newer one, and a single worker ([livePreviewWorker]) makes one frame at a
+     * time with whatever values the processor holds when it starts: frames are skipped, never
+     * queued, so the photo follows the finger without falling behind.
+     *
+     * When the finger lifts, the full-quality render starts quietly ([renderRegistered]); its result
+     * replaces the live look unless the person has dragged again since.
+     */
+    fun previewRegistered(configure: (ToolProcessor) -> Unit) {
+        val processor = registry.processorFor(tool) ?: return
+        if (processor !is LivePreviewSource) return
+        val current = mutableState.value
+        if (current.processing is ToolUiState.Processing.Running || current.comparing || current.finishing) return
+        if (current.photo !is ToolUiState.PhotoState.Ready) return
+        configure(processor)
+        liveRequests++
+        if (livePreviewWorker == null) {
+            livePreviewWorker = viewModelScope.launch(
+                block = {
+                    livePreviewWanted.collect(
+                        collector = {
+                            val photo = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap
+                                ?: return@collect
+                            val run = editRuns
+                            val frame = withContext(workDispatcher, block = { processor.livePreview(photo) })
+                            // A blocking run (apply) that started meanwhile owns the photo now.
+                            if (run == editRuns && mutableState.value.processing is ToolUiState.Processing.Idle) {
+                                mutableState.update(function = { it.copy(livePreview = frame) })
+                            }
+                        },
+                    )
+                },
+            )
+        }
+        livePreviewWanted.tryEmit(Unit)
+    }
+
+    /**
+     * Rung once per slider move; its one slot keeps only the newest ring (DROP_OLDEST), so the
+     * worker never works through a backlog of old positions.
+     */
+    private val livePreviewWanted = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+
+    /** The coroutine that makes live frames, started by the first [previewRegistered]. */
+    private var livePreviewWorker: Job? = null
+
+    /** How many edits [apply] has started, so a live look can tell that a run began after it. */
+    @Volatile
+    private var editRuns = 0
+
+    /** How many live looks have been asked for, so a render can tell the person dragged after it began. */
+    @Volatile
+    private var liveRequests = 0
+
+    /** The quiet full-quality render under way, if any; a newer one replaces it. */
+    private var renderJob: Job? = null
+
+    /**
+     * Renders this tool's edit at full quality from the original photo, **quietly**, when a live
+     * slider is let go: [configure] sets the slider's values on the registered processor, and the
+     * render runs in the background without the progress ring and without switching the sliders
+     * off, so the person can keep dragging, as in Meitu, while the live look stays on screen.
+     *
+     * - **The newest release wins.** A render still running when the person lets go again is
+     *   cancelled and a new one starts with the new values.
+     * - While a render runs, [ToolUiState.rendering] is true: Done shows its small spinner and
+     *   waits, and so does Undo, so neither can hand over or take back a picture about to change.
+     * - When it ends, the result becomes the edit as [apply] would make it (a slider re-run
+     *   replaces the last result without an Undo step of its own), and the live look is cleared,
+     *   unless the person dragged again meanwhile ([liveRequests]): then the newer look stays. A
+     *   failed render shows its message and clears the live look, so the photo is as it was.
+     *
+     * Nothing happens while a blocking edit runs, while comparing, while Done renders, or before
+     * the photo is shown.
+     */
+    fun renderRegistered(configure: (ToolProcessor) -> Unit) {
+        val processor = registry.processorFor(tool) ?: return
+        val current = mutableState.value
+        if (current.comparing || current.finishing || current.processing is ToolUiState.Processing.Running) return
+        val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        configure(processor)
+        renderJob?.cancel()
+        val previousEdit = current.edited
+        val requestsAtStart = liveRequests
+        mutableState.update(function = { it.copy(rendering = true, failure = null) })
+        renderJob = viewModelScope.launch(
+            block = {
+                val result = try {
+                    val input = withContext(workDispatcher, block = { fittedOriginal(original) })
+                    withContext(workDispatcher, block = { processor.process(input, onProgress = {}) })
+                } catch (cancelled: CancellationException) {
+                    // Replaced by a newer render (which keeps `rendering` true) or the screen left.
+                    throw cancelled
+                } catch (outOfMemory: OutOfMemoryError) {
+                    EditResult.Failed(EditFailure.OutOfMemory)
+                } catch (other: Throwable) {
+                    EditResult.Failed(EditFailure.Other)
+                }
+                when (result) {
+                    is EditResult.Edited -> {
+                        // As in apply: a slider re-run replaces the slider's last result.
+                        if (!lastEditWasFromOriginal) history.addLast(previousEdit)
+                        lastEditWasFromOriginal = true
+                        val draggedSince = liveRequests != requestsAtStart
+                        mutableState.update(
+                            function = {
+                                it.copy(
+                                    edited = result.bitmap,
+                                    canUndo = true,
+                                    rendering = false,
+                                    livePreview = if (draggedSince) it.livePreview else null,
+                                )
+                            },
+                        )
+                    }
+                    is EditResult.Failed -> mutableState.update(
+                        function = { it.copy(failure = result.failure, rendering = false, livePreview = null) },
+                    )
+                }
+            },
+        )
+    }
 
     /**
      * The original photo and its working-size copy, remembered by [fittedOriginal].
@@ -320,11 +472,13 @@ class ToolViewModel(
             return
         }
         if (mutableState.value.processing is ToolUiState.Processing.Running) return
+        // A quiet render under way would land after the undo and bring the edit back.
+        if (mutableState.value.rendering) return
         if (history.isEmpty()) return
         val before = history.removeLast()
         lastEditWasFromOriginal = false
         mutableState.update {
-            it.copy(edited = before, canUndo = history.isNotEmpty(), failure = null)
+            it.copy(edited = before, canUndo = history.isNotEmpty(), failure = null, livePreview = null)
         }
     }
 
@@ -1420,7 +1574,8 @@ class ToolViewModel(
      */
     fun done() {
         val current = mutableState.value
-        if (current.finishing) return
+        // A quiet render under way is about to change the picture; Done waits for it.
+        if (current.finishing || current.rendering) return
         if (current.processing is ToolUiState.Processing.Running) return
         val original = (current.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
         val build = processorFor
@@ -1476,6 +1631,8 @@ class ToolViewModel(
 
     /** Reports to the probe that this ViewModel has been cleared. */
     override fun onCleared() {
+        // The processor is shared by the whole app; it must not keep this screen's photo.
+        (registry.processorFor(tool) as? LivePreviewSource)?.releasePreview()
         probe.recordCleared(this)
         super.onCleared()
     }

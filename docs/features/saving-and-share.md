@@ -24,14 +24,14 @@ opened a screen named `Saved`; Run 9 replaced both with Done and Result.
 | **Folder** | `Pictures/Kanso/` |
 | **File name** | `Kanso_<yyyyMMdd_HHmmss>.jpg`, or `.png` for a picture with an alpha channel; `_1`, `_2`, ... when the name is taken. An existing file is never overwritten. |
 | **Edited photo** | The picture Done handed over, at its size, never scaled back up or turned: a **JPEG at quality 95** when opaque, a lossless **PNG** when it has an alpha channel (a Remove background cut-out). |
-| **Untouched photo** (no edit on Remove background, Enhance, Retouch or Artistic, or every edit undone there; no change at all on Edit) | A copy of the original file, byte for byte; or, if it has an EXIF rotation, a fresh JPEG at quality 95, turned upright, with no EXIF block. |
+| **Untouched photo** (no edit on Remove background, Enhance, Beautify or Artistic, or every edit undone there; no change at all on Edit) | A copy of the original file, byte for byte; or, if it has an EXIF rotation, a fresh JPEG at quality 95, turned upright, with no EXIF block. |
 | **Shared copy** | A file in the app's cache, `shared/Kanso_<milliseconds>.jpg` (JPEG quality 100) or `.png` (with alpha), at the picture's size; the copy from the previous share is deleted first. |
 | **Original** | Opened only for reading. Never changed. |
 
 Limits, from the code:
 
 - An edited photo is saved at the tool's working size (2000 px for Edit, Remove background and
-  Retouch, up to 2048 px for Enhance, 1024 px for Artistic), never at the original's full size.
+  Beautify, up to 2048 px for Enhance, 1024 px for Artistic), never at the original's full size.
 - On Edit, any change, even one undone later, makes Done render the settings at up to 3000 px, so the
   saved file is that render, not a copy of the original.
 - One picture per Done can be saved once: after a successful save, Save reads "Saved" and is

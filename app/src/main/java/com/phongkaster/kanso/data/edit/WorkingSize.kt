@@ -24,8 +24,8 @@ object WorkingSize {
      */
     const val ENHANCE = 512
 
-    /** Longest edge, in pixels, that Retouch works on. */
-    const val RETOUCH = 2000
+    /** Longest edge, in pixels, that Beautify works on. */
+    const val BEAUTIFY = 2000
 
     /** Longest edge, in pixels, that the Artistic styles work on. */
     const val ARTISTIC = 1024
@@ -44,7 +44,7 @@ object WorkingSize {
         Tool.EDIT -> EDIT
         Tool.REMOVE_BACKGROUND -> REMOVE_BACKGROUND
         Tool.ENHANCE -> ENHANCE
-        Tool.RETOUCH -> RETOUCH
+        Tool.BEAUTIFY -> BEAUTIFY
         Tool.ARTISTIC -> ARTISTIC
     }
 

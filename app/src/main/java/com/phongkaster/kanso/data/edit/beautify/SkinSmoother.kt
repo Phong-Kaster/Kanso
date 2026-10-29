@@ -1,15 +1,15 @@
-package com.phongkaster.kanso.data.edit.retouch
+package com.phongkaster.kanso.data.edit.beautify
 
 import android.graphics.Bitmap
 import android.graphics.Rect
 
 /**
- * Smooths the skin of one face, for the Retouch tool.
+ * Smooths the skin of one face, for the Beautify tool.
  *
  * It is an interface, a seam: the app's real smoother ([EngineSkinSmoother]) uses OpenCV, which is
- * native code and cannot load in a JVM test, so tests hand [RetouchProcessor] a fake smoother.
+ * native code and cannot load in a JVM test, so tests hand [BeautifyProcessor] a fake smoother.
  * The smoother always smooths fully; how much of it the person sees (the strength slider) is
- * decided afterwards by [RetouchProcessor], which blends the smoothed copy over the original.
+ * decided afterwards by [BeautifyProcessor], which blends the smoothed copy over the original.
  */
 interface SkinSmoother {
 

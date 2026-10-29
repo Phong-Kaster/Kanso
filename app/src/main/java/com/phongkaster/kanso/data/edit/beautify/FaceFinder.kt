@@ -1,14 +1,14 @@
-package com.phongkaster.kanso.data.edit.retouch
+package com.phongkaster.kanso.data.edit.beautify
 
 import android.graphics.Bitmap
 import android.graphics.Rect
 
 /**
- * Finds the faces in a photo, for the Retouch tool.
+ * Finds the faces in a photo, for the Beautify tool.
  *
- * It is an interface, a seam: the app's real finder ([EngineFaceFinder]) runs the engine's
+ * It is an interface, a seam: the app's real finder ([LandmarkFaceFinder]) runs the
  * face-landmark model, which is native code and cannot load in a JVM test, so tests hand
- * [RetouchProcessor] a fake finder that simply returns the rectangles they want.
+ * [BeautifyProcessor] a fake finder that simply returns the rectangles they want.
  */
 interface FaceFinder {
 

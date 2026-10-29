@@ -9,10 +9,10 @@ import com.phongkaster.kanso.navigation.Tool
  * "Recent edits" strip.
  *
  * - [carouselTools] are the banners of the hero carousel, left to right: Remove background,
- *   Enhance, Retouch and Artistic, the four AI tools. A banner shows the tool large, with a line
+ *   Enhance, Beautify and Artistic, the four AI tools. A banner shows the tool large, with a line
  *   about it and a "Try now" button, so only the tools that need introducing get one.
  * - [shortcutTools] are the round tool shortcuts in the row under the carousel, left to right:
- *   Edit, Remove background, Enhance, Retouch and Artistic, every tool once. It equals
+ *   Edit, Remove background, Enhance, Beautify and Artistic, every tool once. It equals
  *   `Tool.entries`, the order the [Tool] enum declares them in, so every tool is one tap from Home
  *   without swiping the carousel.
  * - [recentPhotos] are the newest photos Kanso has saved, newest first, at most ten (the strip's

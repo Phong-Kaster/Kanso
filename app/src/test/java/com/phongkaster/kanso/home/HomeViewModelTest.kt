@@ -43,8 +43,8 @@ class HomeViewModelTest {
     }
 
     /**
-     * DoD 4: the carousel's banners are Remove background, Enhance, Retouch and Artistic, in that
-     * order, and the shortcuts are Edit, Remove background, Enhance, Retouch and Artistic, in that
+     * DoD 4: the carousel's banners are Remove background, Enhance, Beautify and Artistic, in that
+     * order, and the shortcuts are Edit, Remove background, Enhance, Beautify and Artistic, in that
      * order, which is the order of the `Tool` enum itself.
      */
     @Test
@@ -52,11 +52,11 @@ class HomeViewModelTest {
         val state = homeViewModel(FakeSavedPhotoSource()).state.value
 
         assertEquals(
-            listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             state.carouselTools,
         )
         assertEquals(
-            listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             state.shortcutTools,
         )
         assertEquals(Tool.entries.toList(), state.shortcutTools)
@@ -103,7 +103,7 @@ class HomeViewModelTest {
     fun camera_is_not_a_tool() {
         assertEquals(5, Tool.entries.size)
         assertEquals(
-            listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+            listOf(Tool.EDIT, Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
             Tool.entries,
         )
         assertTrue(

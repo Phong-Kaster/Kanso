@@ -313,7 +313,7 @@ fun KansoNavDisplay(
  * shows.
  */
 private val sampleHomeState = HomeUiState(
-    carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC),
+    carouselTools = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC),
     shortcutTools = Tool.entries,
 )
 

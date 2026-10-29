@@ -57,7 +57,7 @@ import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_CO
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ENHANCE_PANEL_TAG
-import com.phongkaster.kanso.ui.tool.component.toolpanel.RETOUCH_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BACK_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_BODY_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_CARD_TAG
@@ -185,11 +185,11 @@ class ToolScreenTest {
     @Test
     fun the_top_bar_names_the_tool_and_done_is_visible_and_enabled() {
         val loader = FakePhotoLoader(context, ToolFixtures.gradient(600, 400))
-        show(ToolViewModel(Tool.RETOUCH, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
+        show(ToolViewModel(Tool.BEAUTIFY, "content://media/external/images/media/7", loader, ViewModelClearedProbe()))
         waitForImage()
 
         compose.onNode(
-            hasText(context.getString(R.string.tool_retouch)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
+            hasText(context.getString(R.string.tool_beautify)) and hasAnyAncestor(hasTestTag(TOOL_SCREEN_TAG)),
         ).assertIsDisplayed()
         compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsEnabled()
     }
@@ -544,7 +544,7 @@ class ToolScreenTest {
     fun each_failure_shows_its_plain_message_over_the_unchanged_photo() {
         val photo = ToolFixtures.gradient(600, 400)
         var dismissCalls = 0
-        var state by mutableStateOf(readyState(Tool.RETOUCH, photo))
+        var state by mutableStateOf(readyState(Tool.BEAUTIFY, photo))
         compose.setContent {
             MaterialTheme {
                 ToolContent(state = state, onBack = {}, onDone = {}, onDismissFailure = { dismissCalls++ })
@@ -555,7 +555,7 @@ class ToolScreenTest {
 
         val messages = mutableSetOf<String>()
         FAILURE_MESSAGES.entries.forEachIndexed { index, (failure, messageRes) ->
-            compose.runOnUiThread { state = readyState(Tool.RETOUCH, photo).copy(failure = failure) }
+            compose.runOnUiThread { state = readyState(Tool.BEAUTIFY, photo).copy(failure = failure) }
             compose.waitForIdle()
             val message = context.getString(messageRes)
             assertTrue("$failure: the message is empty", message.isNotBlank())
@@ -647,7 +647,7 @@ class ToolScreenTest {
 
     // --- Helpers -----------------------------------------------------------------------------
 
-    /** The label of [tool] as the app shows it, such as "Retouch". */
+    /** The label of [tool] as the app shows it, such as "Beautify". */
     private fun label(tool: Tool): String = context.getString(tool.labelRes)
 
     /**
@@ -750,7 +750,7 @@ class ToolScreenTest {
             Tool.EDIT to EDIT_PANEL_TAG,
             Tool.REMOVE_BACKGROUND to CUTOUT_PANEL_TAG,
             Tool.ENHANCE to ENHANCE_PANEL_TAG,
-            Tool.RETOUCH to RETOUCH_PANEL_TAG,
+            Tool.BEAUTIFY to BEAUTIFY_PANEL_TAG,
             Tool.ARTISTIC to ARTISTIC_PANEL_TAG,
         )
 

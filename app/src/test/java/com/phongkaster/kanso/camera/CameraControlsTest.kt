@@ -240,7 +240,7 @@ class CameraControlsTest {
         }
         // Built outside the composable: lint forbids constructing a ViewModel while drawing.
         val viewModel = GalleryViewModel(
-            Tool.RETOUCH,
+            Tool.BEAUTIFY,
             ViewModelClearedProbe(),
             FakePhotoSource(emptyList(), emptyList()),
         )
@@ -263,7 +263,7 @@ class CameraControlsTest {
             .performClick()
         compose.waitForIdle()
 
-        assertEquals(listOf(Tool.RETOUCH), opened)
+        assertEquals(listOf(Tool.BEAUTIFY), opened)
     }
 
     /**

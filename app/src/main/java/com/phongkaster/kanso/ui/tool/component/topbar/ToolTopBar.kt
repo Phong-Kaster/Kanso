@@ -78,7 +78,7 @@ internal fun ToolTopBar(
 }
 
 /**
- * The top bar of one of the four other tools (Retouch here), in light and in dark, twice: above,
+ * The top bar of one of the four other tools (Beautify here), in light and in dark, twice: above,
  * Undo and Done both usable; below, both switched off, as while the photo is still opening or an
  * edit runs. Undo always stands left of Done. The bars sit in a full-size box first, because
  * KansoTheme would otherwise stretch the first one over the whole preview.
@@ -90,7 +90,7 @@ internal fun ToolTopBarPreview() {
         Box(Modifier.fillMaxSize()) {
             Column {
                 ToolTopBar(
-                    tool = Tool.RETOUCH,
+                    tool = Tool.BEAUTIFY,
                     onBack = {},
                     showUndo = true,
                     undoEnabled = true,
@@ -100,7 +100,7 @@ internal fun ToolTopBarPreview() {
                     onDone = {},
                 )
                 ToolTopBar(
-                    tool = Tool.RETOUCH,
+                    tool = Tool.BEAUTIFY,
                     onBack = {},
                     showUndo = true,
                     undoEnabled = false,

@@ -129,7 +129,7 @@ class SaveButtonTest {
     fun done_hands_the_photo_over_and_calls_on_done_once() {
         val photo = ToolFixtures.gradient(600, 400)
         val store = RenderedPhotoStore()
-        host(ToolViewModel(Tool.RETOUCH, PHOTO_URI, FakePhotoLoader(app, photo), ViewModelClearedProbe(), store = store))
+        host(ToolViewModel(Tool.BEAUTIFY, PHOTO_URI, FakePhotoLoader(app, photo), ViewModelClearedProbe(), store = store))
 
         compose.onNodeWithTag(TOOL_DONE_TAG).assertIsDisplayed().assertIsEnabled()
             .assert(hasText(app.getString(R.string.tool_done)))

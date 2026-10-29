@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Face lift: a jawline with an arrow rising on each side, drawn for Kanso (no Material Symbol
+     shows lifting a face). Round strokes on the 960 grid of the Material Symbols Rounded icons,
+     white like them, so an Icon tints it to the text colour around it, as ic_face_width does. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M160,520Q260,800 480,800Q700,800 800,520M300,600L300,160M200,260L300,160L400,260M660,600L660,160M560,260L660,160L760,260"/>
+</vector>

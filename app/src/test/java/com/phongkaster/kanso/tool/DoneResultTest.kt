@@ -179,16 +179,16 @@ class DoneResultTest {
         assertEquals(1, renderer.inputs.size)
 
         // A tap while another tool's edit runs is ignored too.
-        val retouchStore = RenderedPhotoStore()
-        val retouch = loadedViewModel(ToolFixtures.gradient(600, 400), retouchStore, Tool.RETOUCH)
+        val beautifyStore = RenderedPhotoStore()
+        val beautify = loadedViewModel(ToolFixtures.gradient(600, 400), beautifyStore, Tool.BEAUTIFY)
         val never = CompletableDeferred<Unit>()
-        retouch.apply(FakeProcessor { input, _ -> never.await(); EditResult.Edited(input) })
-        waitUntil("the edit to run") { retouch.state.value.processing is ToolUiState.Processing.Running }
-        retouch.done()
-        retouch.done()
+        beautify.apply(FakeProcessor { input, _ -> never.await(); EditResult.Edited(input) })
+        waitUntil("the edit to run") { beautify.state.value.processing is ToolUiState.Processing.Running }
+        beautify.done()
+        beautify.done()
         runMainThread()
-        assertNull(retouchStore.peek())
-        assertEquals(0, doneEventCount(retouch))
+        assertNull(beautifyStore.peek())
+        assertEquals(0, doneEventCount(beautify))
         never.complete(Unit)
     }
 
@@ -389,6 +389,6 @@ class DoneResultTest {
         const val EVENT_WAIT_MS = 100L
 
         /** The four tools other than Edit, whose Done hands over their last edit. */
-        val OTHER_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val OTHER_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
     }
 }

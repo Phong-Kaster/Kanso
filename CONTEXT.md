@@ -4,7 +4,7 @@ The words this code uses, what each one means here, and where it lives. Paths ar
 `app/src/main/java/com/phongkaster/kanso/`.
 
 **Tool** - One of the five things Kanso does to a photo: `EDIT`, `REMOVE_BACKGROUND`, `ENHANCE`,
-`RETOUCH`, `ARTISTIC`. An enum with a label and an icon; it travels in navigation keys, and each
+`BEAUTIFY`, `ARTISTIC`. An enum with a label and an icon; it travels in navigation keys, and each
 tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.kt`).
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).

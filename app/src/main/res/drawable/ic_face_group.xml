@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Face, the Beautify group of face tools: a round face with two eyes and a smile, drawn for Kanso
+     because the Material Symbol already shows Smooth. Round strokes on the 960 grid of the Material
+     Symbols Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M480,140A340,340 0,1 1,480 820A340,340 0,1 1,480 140ZM350,590Q480,700 610,590" />
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M370,420m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0M590,420m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0" />
+</vector>

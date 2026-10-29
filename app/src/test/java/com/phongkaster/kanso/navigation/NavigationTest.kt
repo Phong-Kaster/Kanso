@@ -790,7 +790,7 @@ class NavigationTest {
     /** Returns the label Home shows for [tool]. */
     private fun label(tool: Tool): String = context.getString(tool.labelRes)
 
-    /** Returns the title of [tool]'s gallery, such as "Retouch: choose a photo". */
+    /** Returns the title of [tool]'s gallery, such as "Beautify: choose a photo". */
     private fun galleryTitle(tool: Tool): String = context.getString(R.string.gallery_title, label(tool))
 
     /** Fails if Robolectric recorded any permission request for [scenario]'s activity. */
@@ -879,7 +879,7 @@ class NavigationTest {
     /** Values and matchers the tests share. */
     private companion object {
         /** The four AI tools, in the order Home's carousel shows their banners. */
-        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.RETOUCH, Tool.ARTISTIC)
+        val AI_TOOLS = listOf(Tool.REMOVE_BACKGROUND, Tool.ENHANCE, Tool.BEAUTIFY, Tool.ARTISTIC)
 
         /** The start of every shortcut's tag, `home-shortcut-`, taken from `homeShortcutTag` itself. */
         val SHORTCUT_TAG_PREFIX = homeShortcutTag(Tool.EDIT).removeSuffix(Tool.EDIT.name)
