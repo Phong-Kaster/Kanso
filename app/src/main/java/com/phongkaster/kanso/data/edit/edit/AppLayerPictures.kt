@@ -7,7 +7,8 @@ import android.graphics.BitmapFactory
 /**
  * The app's [LayerPictures]: for a [LayerContent.Picture] it finds the sticker in [StickerCatalog]
  * and decodes its drawable file; for a [LayerContent.Text] it draws the words with the bundled
- * fonts through [TextLayerLayout], at the width asked for, so the letters stay sharp at any size.
+ * fonts through [TextLayerLayout], at the width asked for, so the letters stay sharp at any size;
+ * a [LayerContent.Date] is drawn the same way, as the text of its words.
  *
  * Decoding with `inSampleSize` makes the bitmap smaller while it is read (the size is divided by
  * a power of two), which is much cheaper than decoding it whole and scaling it down; the
@@ -28,6 +29,8 @@ class AppLayerPictures(private val context: Context) : LayerPictures {
     override fun picture(content: LayerContent, widthPx: Int): Bitmap? = when (content) {
         is LayerContent.Picture -> sticker(content.pictureId, widthPx)
         is LayerContent.Text -> texts.render(content, widthPx)
+        // A date is drawn as the one-line text of its words (ADR-006).
+        is LayerContent.Date -> texts.render(content.asText(), widthPx)
     }
 
     /** Decodes the catalogue sticker [pictureId] at [widthPx] wide or a little wider. */

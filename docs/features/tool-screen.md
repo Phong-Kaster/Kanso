@@ -159,7 +159,7 @@ interface: `suspend fun process(input: Bitmap, onProgress: (Float) -> Unit): Edi
 
      | Tool | Longest edge it works on |
      |---|---|
-     | Edit (the render at Done) | 2000 px |
+     | Edit (the render at Done) | 3000 px |
      | Remove background | 2000 px |
      | Enhance | 512 px (the result is up to 4 times larger) |
      | Beautify | 2000 px |
@@ -222,7 +222,7 @@ person on the tool screen.
     re-encoding the screen-sized copy.
   - **Edit:** with no change made yet, the decoded original and its Uri, as above. After any change
     (even one later undone) the current settings are rendered in full from the original photo at
-    the working size (2000 px), on `Dispatchers.Default`. Meanwhile `finishing` is true in the
+    the working size (3000 px), on `Dispatchers.Default`. Meanwhile `finishing` is true in the
     state: Done shows a small spinner (`tool-done-progress`) and ignores taps, and the editing
     controls are off. A failed render keeps the person here with the failure's message; nothing is
     handed over.

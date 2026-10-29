@@ -59,6 +59,11 @@ import org.koin.core.context.stopKoin
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.layerTabTag
+import com.phongkaster.kanso.ui.tool.model.StickersTab
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertCountEquals
 
 /**
  * Proves the selected sticker's frame on the real Edit screen (Run 10, Android 15): the delete,
@@ -118,8 +123,13 @@ class StickerFrameTest {
     @Test
     fun the_sheet_sliders_set_the_selected_stickers_size_and_opacity() {
         val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.5f, width = 0.3f))), select = 100L)
+        // Each slider is a tab of its own (2026-10-28): open the tab, then move its slider.
+        compose.onNodeWithTag(layerTabTag(StickersTab.SIZE)).performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag(LAYER_SIZE_TAG).assertIsEnabled()
         compose.onNodeWithTag(LAYER_SIZE_TAG).performSemanticsAction(SemanticsActions.SetProgress) { it(50f) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(layerTabTag(StickersTab.OPACITY)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(LAYER_OPACITY_TAG).performSemanticsAction(SemanticsActions.SetProgress) { it(0.5f) }
         compose.waitForIdle()
@@ -136,14 +146,21 @@ class StickerFrameTest {
         assertEquals(0.3f, viewModel.state.value.settings.layers.single().width, 1e-4f)
     }
 
-    /** With no sticker selected the two sliders are greyed out. */
+    /**
+     * With no sticker selected the Size and Opacity tabs are greyed out and the sheet shows its
+     * Stickers tab, even if Size was the chosen tab.
+     */
     @Test
-    fun the_sheet_sliders_are_disabled_with_nothing_selected() {
+    fun the_size_and_opacity_tabs_are_disabled_with_nothing_selected() {
         val viewModel = showWith(EditSettings(layers = listOf(sticker(100L, 0.5f))), select = 100L)
+        compose.onNodeWithTag(layerTabTag(StickersTab.SIZE)).performClick()
+        compose.waitForIdle()
         viewModel.selectLayer(null)
         compose.waitForIdle()
-        compose.onNodeWithTag(LAYER_SIZE_TAG).assertIsNotEnabled()
-        compose.onNodeWithTag(LAYER_OPACITY_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(layerTabTag(StickersTab.SIZE)).assertIsNotEnabled()
+        compose.onNodeWithTag(layerTabTag(StickersTab.OPACITY)).assertIsNotEnabled()
+        compose.onNodeWithTag(layerTabTag(StickersTab.STICKERS)).assertIsSelected()
+        compose.onAllNodesWithTag(LAYER_SIZE_TAG).assertCountEquals(0)
     }
 
     /** The centre of the node tagged [tag], in root pixels. */

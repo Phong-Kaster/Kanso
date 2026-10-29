@@ -75,13 +75,13 @@ class DoneResultTest {
 
     /**
      * DoD 9: Edit's Done renders the settings as they are when Done is tapped, from the original
-     * shrunk only to the Edit working size (2000 pixels), never the 640-pixel preview copy, and
+     * shrunk only to the Edit working size (3000 pixels), never the 640-pixel preview copy, and
      * the picture in the store is exactly that render, at the size the settings give it (a
      * quarter turn swaps width and height). One done event is sent and Done is usable again.
      */
     @Test
     fun edit_done_renders_the_settings_at_full_working_size_and_hands_that_picture_over() {
-        val original = Bitmap.createBitmap(3000, 2000, Bitmap.Config.RGB_565)
+        val original = Bitmap.createBitmap(4500, 3000, Bitmap.Config.RGB_565)
         val store = RenderedPhotoStore()
         val viewModel = loadedViewModel(original, store, Tool.EDIT)
         val renderer = SizedRenderer()

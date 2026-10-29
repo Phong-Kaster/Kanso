@@ -91,6 +91,14 @@ internal fun Layer.placedAt(
  * @param onPreview called on each move with the complete new list of layers.
  * @param onCommit called once when the gesture ends after at least one preview.
  * @param isDrawn whether a sticker is drawn (its picture is in the catalogue); only those can be touched.
+ * @param hasTopRightButton whether the layer's frame has a top-right button (a date has none, so a
+ * touch there grasps the date itself).
+ * @param takesTaps whether a tap on the layer, once selected, means something (a date's next
+ * format). Only such a layer is ever reported to [onTap]; on every other layer a small move stays a
+ * small move.
+ * @param onTap called with the key of a layer that [takesTaps], tapped while it was ALREADY
+ * selected: one finger that moved less than the touch slop. Its wobble is put back first (its place
+ * only, so a flip made meanwhile is kept), so it makes no undo step.
  */
 fun Modifier.layerGestures(
     layers: () -> List<Layer>,
@@ -103,6 +111,9 @@ fun Modifier.layerGestures(
     onPreview: (List<Layer>) -> Unit,
     onCommit: () -> Unit,
     isDrawn: (Layer) -> Boolean = { true },
+    hasTopRightButton: (Layer) -> Boolean = { true },
+    takesTaps: (Layer) -> Boolean = { false },
+    onTap: (Long) -> Unit = {},
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown()
@@ -113,7 +124,9 @@ fun Modifier.layerGestures(
 
         // A touch on the selected sticker's corner button belongs to that button.
         val selected = list.firstOrNull { it.key == selectedKey() }
-        if (selected != null && isDrawn(selected) && touchesButton(selected, map, area, aspectOf(selected), down.position, buttonRadiusPx)) {
+        if (selected != null && isDrawn(selected) &&
+            touchesButton(selected, map, area, aspectOf(selected), down.position, buttonRadiusPx, hasTopRightButton(selected))
+        ) {
             return@awaitEachGesture
         }
 
@@ -145,12 +158,18 @@ fun Modifier.layerGestures(
         var widthPx = hit.shownWidth(map, area)
         var degrees = hit.shownDegrees(map)
         var previewed = false
+        // How far the gesture's pivot travelled in all, and the most fingers down at once: a
+        // one-finger touch that stayed within the touch slop (the few pixels a finger wobbles
+        // while it only taps) is a tap, not a drag.
+        var travel = 0f
+        var mostFingers = 1
 
         var vanished = false
         do {
             val event = awaitPointerEvent()
             // A pointer the resize handle (or anything else) already consumed is not ours.
             val pressed = event.changes.filter { it.pressed && !it.isConsumed }.sortedBy { it.id.value }
+            mostFingers = maxOf(mostFingers, pressed.size)
             if (pressed.isNotEmpty() && pressed.any { it.position != it.previousPosition }) {
                 var scale = 1f
                 var turn = 0f
@@ -190,6 +209,7 @@ fun Modifier.layerGestures(
                     ),
                     area,
                 )
+                travel += (newPivot - oldPivot).getDistance()
                 widthPx = newWidth
                 degrees += turn
                 // Build from the sticker AS IT IS NOW, so a flip made meanwhile (a second finger on
@@ -207,9 +227,28 @@ fun Modifier.layerGestures(
             }
         } while (event.changes.any { it.pressed })
 
+        // A tap on the layer that was ALREADY selected is a gesture of its own (a date moves to
+        // its next format). The few pixels the finger wobbled are put back first, so the commit
+        // below finds nothing changed and makes no undo step of them.
+        val tapped = takesTaps(hit) && !selectedHere && !vanished && mostFingers == 1 &&
+            travel < viewConfiguration.touchSlop
+        if (tapped && previewed) {
+            // Only the place goes back to where the touch began; anything else changed meanwhile stays.
+            onPreview(
+                layers().map {
+                    if (it.key == hit.key) {
+                        it.copy(centreX = hit.centreX, centreY = hit.centreY, width = hit.width, degrees = hit.degrees)
+                    } else {
+                        it
+                    }
+                },
+            )
+        }
+
         // The last finger is up: one gesture ends, so one commit (a plain tap that selected a
         // layer commits too, so its move to the front is one undo step).
         if ((previewed || selectedHere) && !vanished) onCommit()
+        if (tapped) onTap(hit.key)
     }
 }
 
@@ -231,12 +270,15 @@ private fun touchesButton(
     aspect: Float,
     position: Offset,
     radiusPx: Float,
+    hasTopRight: Boolean,
 ): Boolean {
     val centre = sticker.shownCentre(mapping, area)
     val w = sticker.shownWidth(mapping, area)
     val degrees = sticker.shownDegrees(mapping)
     return listOf(SIDE_START, SIDE_END).any { sx ->
         listOf(SIDE_START, SIDE_END).any { sy ->
+            // A layer with no top-right button (a date) leaves that corner to the layer itself.
+            if (!hasTopRight && sx == SIDE_END && sy == SIDE_START) return@any false
             val x = cornerX(centre.x, centre.y, w, w * aspect, degrees, sx, sy)
             val y = cornerY(centre.x, centre.y, w, w * aspect, degrees, sx, sy)
             distanceBetween(x, y, position.x, position.y) <= radiusPx

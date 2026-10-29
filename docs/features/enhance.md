@@ -115,7 +115,7 @@ flowchart TD
    before the last Enhance.
 8. **Done, then Save or Share.** Done hands the result (or, with no run or every run undone, the
    original photo) to the Result screen through `RenderedPhotoStore`, at once; it writes nothing.
-   The result is opaque, so Save on Result writes a **JPEG at quality 95**, at the size shown (up
+   The result is opaque, so Save on Result writes a **JPEG at quality 100**, at the size shown (up
    to 2048 px), into `Pictures/Kanso`, and Share sends a JPEG copy from the cache's `shared/`
    folder (see [Done, the Result screen, Save and Share](saving-and-share.md)).
 

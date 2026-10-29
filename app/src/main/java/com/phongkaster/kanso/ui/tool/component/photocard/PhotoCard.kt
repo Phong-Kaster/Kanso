@@ -80,12 +80,12 @@ import com.phongkaster.kanso.ui.tool.model.PhotoZoom
  * all, so nothing sits at the photo's bottom right.
  *
  * **Layers (Edit screen only).** The live picture carries a [LayerOverlay] with the layers of
- * `state.settings` (stickers and texts). It is touchable with any sheet open but Crop, or none,
+ * `state.settings` (stickers, texts and dates). It is touchable with any sheet open but Crop, or none,
  * while Done is not running (touching a layer opens its sheet);
  * with Compare on the live picture is not drawn at all, so the original shows with no layers.
  * The `onLayer...` callbacks pass the overlay's events up (select, a gesture's new list, the
- * gesture's end, and the frame buttons: delete, duplicate, a sticker's flip, a text's edit); they
- * default to doing nothing.
+ * gesture's end, and the frame buttons: delete, duplicate, a sticker's flip, a text's edit, and a
+ * tap on the selected layer); they default to doing nothing.
  */
 @Composable
 internal fun PhotoCard(
@@ -101,6 +101,7 @@ internal fun PhotoCard(
     onLayerDuplicate: (Long) -> Unit = {},
     onLayerFlip: (Long) -> Unit = {},
     onLayerEdit: (Long) -> Unit = {},
+    onLayerTap: (Long) -> Unit = {},
 ) {
     val running = state.processing as? ToolUiState.Processing.Running
     Card(
@@ -198,6 +199,7 @@ internal fun PhotoCard(
                                     onDuplicate = onLayerDuplicate,
                                     onFlip = onLayerFlip,
                                     onEdit = onLayerEdit,
+                                    onTap = onLayerTap,
                                 )
                             }
                         }

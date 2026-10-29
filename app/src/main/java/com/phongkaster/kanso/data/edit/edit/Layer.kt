@@ -2,7 +2,7 @@ package com.phongkaster.kanso.data.edit.edit
 
 /**
  * One thing laid on the photo, as an immutable value inside [EditSettings.layers]: a catalogue
- * sticker or a text (its [content] says which, see ADR-005). Both kinds are moved, pinched,
+ * sticker, a text or a date (its [content] says which, see ADR-005 and ADR-006). All kinds are moved, pinched,
  * turned, cropped, filtered and undone the same way, because everything about where a layer sits
  * lives here and not in its content.
  *
@@ -21,7 +21,7 @@ data class Layer(
      * for the life of the screen; whoever adds a layer chooses it (this class never does).
      */
     val key: Long,
-    /** What the layer shows: a catalogue picture or a text. */
+    /** What the layer shows: a catalogue picture, a text or a date. */
     val content: LayerContent,
     /** The horizontal centre, from 0 (left edge) to 1 (right edge) of the original photo. */
     val centreX: Float,

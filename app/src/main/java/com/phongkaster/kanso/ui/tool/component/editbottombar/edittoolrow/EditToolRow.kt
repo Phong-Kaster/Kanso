@@ -58,7 +58,7 @@ private val ACTION_ENTRY_WIDTH = 68.dp
 
 /**
  * The Edit screen's one row under the photo: the tools (Crop, Rotate, Adjust, Filters, Stickers,
- * Text), then Compare, each an icon over its name. Tapping a tool calls
+ * Text, Date), then Compare, each an icon over its name. Tapping a tool calls
  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
  * colour Material uses for "this one is chosen".
@@ -163,6 +163,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
     EditTool.FILTERS -> R.drawable.ic_filter_vintage
     EditTool.STICKERS -> R.drawable.ic_stickers
     EditTool.TEXT -> R.drawable.ic_text_fields
+    EditTool.DATE -> R.drawable.ic_calendar_today
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -174,6 +175,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
     EditTool.FILTERS -> R.string.edit_layout_filters
     EditTool.STICKERS -> R.string.stickers_tool_label
     EditTool.TEXT -> R.string.text_tool_label
+    EditTool.DATE -> R.string.date_tool_label
 }
 
 /**

@@ -36,9 +36,9 @@ fun rememberLayerPainter(content: LayerContent.Picture): Painter? {
 /**
  * A layer's shape (its height divided by its width), or null when it cannot be drawn (a sticker
  * the catalogue does not know). The overlay needs only this: the pixels on screen come from the
- * live picture beneath it. A sticker's shape is its picture's; a text's is its block's, measured
- * with the bundled fonts ([layout]), an empty text being measured as its placeholder so it still
- * has a frame.
+ * live picture beneath it. A sticker's shape is its picture's; a text's or a date's is its
+ * block's, measured with the bundled fonts ([layout]), an empty text being measured as its
+ * placeholder so it still has a frame.
  */
 @Composable
 fun rememberLayerAspect(content: LayerContent, layout: TextLayerLayout): Float? = when (content) {
@@ -46,6 +46,8 @@ fun rememberLayerAspect(content: LayerContent, layout: TextLayerLayout): Float? 
     is LayerContent.Text -> remember(content, layout) {
         layout.measure(content, content.text.ifBlank { LayerContent.Text.PLACEHOLDER }).aspect
     }
+    // A date's shape is the block of its one line of words (ADR-006).
+    is LayerContent.Date -> remember(content, layout) { layout.measure(content.asText()).aspect }
 }
 
 /**

@@ -30,8 +30,14 @@ object WorkingSize {
     /** Longest edge, in pixels, that the Artistic styles work on. */
     const val ARTISTIC = 1024
 
-    /** Longest edge, in pixels, that the general Edit tool works on. */
-    const val EDIT = 2000
+    /**
+     * Longest edge, in pixels, that the general Edit tool works on, and so the largest an edited
+     * photo is saved. 3000 keeps a 2K or 2560 px photo at its own size (the owner found a 2K photo
+     * saved at 2000 px looking worse, 2026-10-28), while a Done render of a 3000 x 2250 photo
+     * (three copies of about 27 MB) stays well inside the 192 MB the app gets on the owner's
+     * Galaxy A13. A bigger camera photo is shrunk to it.
+     */
+    const val EDIT = 3000
 
     /** Returns the longest edge, in pixels, that [tool] works on. */
     fun maxEdgeFor(tool: Tool): Int = when (tool) {

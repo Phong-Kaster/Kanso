@@ -9,6 +9,8 @@ import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.Layer
+import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import kotlinx.coroutines.runBlocking
@@ -271,7 +273,7 @@ class EditProcessorTest {
         assertTrue("down: $before -> $down", down < before)
     }
 
-    /** A 6000 x 4000 photo is worked on, and returned, at most 2000 pixels on its long edge. */
+    /** A 6000 x 4000 photo is worked on, and returned, at most 3000 pixels on its long edge. */
     @Test
     fun a_very_large_photo_is_worked_on_at_the_cap() {
         val huge = Bitmap.createBitmap(6000, 4000, Bitmap.Config.ARGB_8888)
@@ -281,6 +283,20 @@ class EditProcessorTest {
             max(edited.width, edited.height) <= WorkingSize.EDIT,
         )
         huge.recycle()
+    }
+
+    /**
+     * The owner's 2K bug (2026-10-28): a 2560 x 1440 photo with a sticker on it comes back at its
+     * own size, 2560 x 1440, not shrunk to the old 2000 px cap.
+     */
+    @Test
+    fun a_2k_photo_with_a_layer_keeps_its_size() {
+        val photo = Bitmap.createBitmap(2560, 1440, Bitmap.Config.ARGB_8888)
+        val sticker = Layer(1L, LayerContent.Picture("img_sticker_apple"), 0.5f, 0.5f, 0.2f, 0f, false)
+        val edited = run(photo, EditSettings(layers = listOf(sticker)))
+        assertEquals(2560, edited.width)
+        assertEquals(1440, edited.height)
+        photo.recycle()
     }
 
     /** The result is opaque, so Save writes it as a JPEG. */

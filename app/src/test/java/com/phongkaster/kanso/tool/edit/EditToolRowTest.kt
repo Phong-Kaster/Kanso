@@ -56,6 +56,8 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editRatioTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CANCEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.datepanel.DATE_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.datepanel.DatePanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TEXT_PANEL_TAG
 import com.phongkaster.kanso.data.edit.edit.LayerSize
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TextPanel
@@ -76,6 +78,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import androidx.compose.ui.test.performScrollTo
+import java.time.LocalDateTime
 
 /**
  * Checks on Android 15 the Edit screen's row of tools under the photo (DoD 2):
@@ -115,17 +118,22 @@ class EditToolRowTest {
     }
 
     /**
-     * The row holds six entries, Crop, Rotate, Adjust, Filters, Stickers and Text, in that order from
+     * On a window wide enough for every entry (the row is a `LazyRow`, which composes only the
+     * entries on screen), the row holds seven entries, Crop, Rotate, Adjust, Filters, Stickers, Text and Date, in that order from
      * left to right, each named by its text and with its icon drawn above the name: the name starts at
      * least an icon's height (24 dp) below the entry's top, and the band above the name holds
      * drawn ink.
      */
     @Test
-    fun the_row_shows_six_tools_in_order_each_an_icon_over_its_name() {
+    @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
+    fun the_row_shows_seven_tools_in_order_each_an_icon_over_its_name() {
         showEdit()
         compose.onAllNodes(isRowEntry()).assertCountEquals(EditTool.entries.size)
         assertEquals(
-            listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT),
+            listOf(
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS,
+                EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
+            ),
             EditTool.entries,
         )
 
@@ -156,7 +164,10 @@ class EditToolRowTest {
     fun no_tool_is_open_at_first() {
         val viewModel = showEdit()
         assertNull(viewModel.state.value.openTool)
-        EditTool.entries.forEach { tool -> compose.onNodeWithTag(editToolTag(tool)).assertIsNotSelected() }
+        EditTool.entries.forEach { tool ->
+            compose.scrollToolRowTo(tool)
+            compose.onNodeWithTag(editToolTag(tool)).assertIsNotSelected()
+        }
         compose.onAllNodesWithTag(EDIT_PANEL_TAG).assertCountEquals(0)
     }
 
@@ -171,6 +182,7 @@ class EditToolRowTest {
         val viewModel = showEdit()
         EditTool.entries.forEach { tool ->
             // The row scrolls sideways; bring the entry fully into view before touching it.
+            compose.scrollToolRowTo(tool)
             compose.onNodeWithTag(editToolTag(tool)).performScrollTo()
             compose.waitForIdle()
             val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
@@ -182,14 +194,14 @@ class EditToolRowTest {
             compose.onNodeWithTag(editToolTag(tool)).performClick()
             compose.waitForIdle()
             assertEquals(tool, viewModel.state.value.openTool)
-            // The Text sheet is the screen's own TextPanel, not the Edit panel.
-            if (tool != EditTool.TEXT) {
+            // The Text and Date sheets are the screen's own panels, not the Edit panel.
+            if (tool != EditTool.TEXT && tool != EditTool.DATE) {
                 compose.onAllNodes(hasTestTag(EDIT_PANEL_TAG) and hasAnyAncestor(hasTestTag(EDIT_SHEET_TAG)))
                     .assertCountEquals(1)
             }
             compose.onAllNodes(hasTestTag(controlTagOf(tool)) and hasAnyAncestor(hasTestTag(EDIT_SHEET_TAG)))
                 .assertCountEquals(1)
-            if (tool == EditTool.STICKERS || tool == EditTool.TEXT) {
+            if (tool == EditTool.STICKERS || tool == EditTool.TEXT || tool == EditTool.DATE) {
                 // A layer sheet takes the place of the row, so no entry is on screen to be
                 // selected or highlighted; the sheet's own cross closes it again. (Text opens its
                 // keyboard first; closing it brings the cross back.)
@@ -202,21 +214,32 @@ class EditToolRowTest {
                 compose.waitForIdle()
                 assertNull(viewModel.state.value.openTool)
                 compose.onAllNodesWithTag(EDIT_PANEL_TAG).assertCountEquals(0)
+                // The row comes back scrolled to its start, where Date has no node yet.
+                compose.scrollToolRowTo(tool)
                 compose.onNodeWithTag(editToolTag(tool)).assertIsNotSelected()
                 return@forEach
             }
+            // The highlight is measured first, while the entry is still where it was drawn closed.
+            assertNotEquals("$tool's entry is not highlighted", closedColour, pixelAt(highlightX, highlightY))
             EditTool.entries.forEach { other ->
+                compose.scrollToolRowTo(other)
                 val node = compose.onNodeWithTag(editToolTag(other))
                 if (other == tool) node.assertIsSelected() else node.assertIsNotSelected()
             }
-            assertNotEquals("$tool's entry is not highlighted", closedColour, pixelAt(highlightX, highlightY))
+            // Back to the entry under test; scrolling may have moved it, so measure it again.
+            compose.scrollToolRowTo(tool)
+            compose.onNodeWithTag(editToolTag(tool)).performScrollTo()
+            compose.waitForIdle()
+            val back = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
+            val backX = back.center.x
+            val backY = back.top + dp(2f)
 
             compose.onNodeWithTag(editToolTag(tool)).performClick()
             compose.waitForIdle()
             assertNull(viewModel.state.value.openTool)
             compose.onAllNodesWithTag(EDIT_PANEL_TAG).assertCountEquals(0)
             compose.onNodeWithTag(editToolTag(tool)).assertIsNotSelected()
-            assertEquals("$tool's highlight stayed after closing", closedColour, pixelAt(highlightX, highlightY))
+            assertEquals("$tool's highlight stayed after closing", closedColour, pixelAt(backX, backY))
         }
     }
 
@@ -242,18 +265,23 @@ class EditToolRowTest {
     }
 
     /**
-     * DoD 1 (Run 11: six tools): with a photo loaded and no change made, the row holds six entries
-     * tagged for Crop, Rotate, Adjust, Filters, Stickers and Text, and they stand in that order from
-     * left to right by their `positionInRoot`.
+     * DoD 1 (Run 11: six tools; Date added after them, ADR-006): with a photo loaded and no change
+     * made, the row holds seven entries tagged for Crop, Rotate, Adjust, Filters, Stickers, Text and
+     * Date, and they stand in that order from left to right by their `positionInRoot`. Drawn on a
+     * window wide enough for all seven, since a lazy row composes only the entries on screen.
      */
     @Test
-    fun the_row_lists_six_tools_in_order_left_to_right() {
+    @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
+    fun the_row_lists_seven_tools_in_order_left_to_right() {
         showEdit()
         assertEquals(
-            listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT),
+            listOf(
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS,
+                EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
+            ),
             EditTool.entries,
         )
-        compose.onAllNodes(isRowEntry()).assertCountEquals(6)
+        compose.onAllNodes(isRowEntry()).assertCountEquals(7)
         val lefts = EditTool.entries.map { tool ->
             compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode().positionInRoot.x
         }
@@ -264,17 +292,17 @@ class EditToolRowTest {
 
     /**
      * DoD 2, amended in Run 11: on the 411 x 891 dp screen the first five entries lie inside the
-     * row's bounds (and left of the pinned Compare entry) with the row unscrolled; the sixth, Text,
-     * is one short swipe away (the tools scroll sideways by design, Compare stays put), and once
-     * scrolled to it lies inside the row and left of Compare too. Bounds come from `positionInRoot`
+     * row's bounds (and left of the pinned Compare entry) with the row unscrolled; the sixth and
+     * seventh, Text and Date, are one short swipe away (the tools scroll sideways by design, Compare
+     * stays put), and once scrolled to each lies inside the row and left of Compare too. Bounds come from `positionInRoot`
      * and the size, never from `boundsInRoot`, which clips a scrolled node.
      */
     @Test
-    fun the_first_five_entries_fit_and_text_is_one_swipe_away() {
+    fun the_first_five_entries_fit_and_text_and_date_are_one_swipe_away() {
         showEdit()
         val row = bounds(compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).fetchSemanticsNode())
         val compare = bounds(compose.onNodeWithTag(EDIT_COMPARE_TAG).fetchSemanticsNode())
-        EditTool.entries.filter { it != EditTool.TEXT }.forEach { tool ->
+        EditTool.entries.filter { it != EditTool.TEXT && it != EditTool.DATE }.forEach { tool ->
             val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
             assertTrue(
                 "$tool $entry is not inside the row $row",
@@ -291,11 +319,14 @@ class EditToolRowTest {
         val range = scroller.config[SemanticsProperties.HorizontalScrollAxisRange]
         assertEquals("the row is scrolled", 0f, range.value(), 0.001f)
 
-        compose.onNodeWithTag(editToolTag(EditTool.TEXT)).performScrollTo()
-        compose.waitForIdle()
-        val text = bounds(compose.onNodeWithTag(editToolTag(EditTool.TEXT)).fetchSemanticsNode())
-        assertTrue("Text $text is not inside the row $row once scrolled to", text.left >= row.left - 0.5f)
-        assertTrue("Text $text reaches under Compare $compare once scrolled to", text.right <= compare.left + 0.5f)
+        listOf(EditTool.TEXT, EditTool.DATE).forEach { tool ->
+            compose.scrollToolRowTo(tool)
+            compose.onNodeWithTag(editToolTag(tool)).performScrollTo()
+            compose.waitForIdle()
+            val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
+            assertTrue("$tool $entry is not inside the row $row once scrolled to", entry.left >= row.left - 0.5f)
+            assertTrue("$tool $entry reaches under Compare $compare once scrolled to", entry.right <= compare.left + 0.5f)
+        }
     }
 
     /**
@@ -389,6 +420,31 @@ class EditToolRowTest {
                                 onColour = {},
                                 onCustomColour = {},
                                 onCustomColourDone = {},
+                                onBackground = {},
+                                onCustomBackground = {},
+                                onCustomBackgroundDone = {},
+                                onSize = {},
+                                onOpacity = {},
+                                onSliderDone = {},
+                                onCancel = viewModel::cancelLayers,
+                                onConfirm = viewModel::confirmLayers,
+                            )
+                        } else if (tool == EditTool.DATE) {
+                            // Wired as ToolScreen wires the Date sheet: the screen draws DatePanel.
+                            DatePanel(
+                                selected = null,
+                                nextMoment = state.dateMoment ?: LocalDateTime.of(2026, 10, 28, 14, 30),
+                                size = LayerSize.TEXT_DEFAULT,
+                                enabled = !state.comparing && !state.finishing,
+                                onMoment = {},
+                                onFormat = {},
+                                onFont = {},
+                                onColour = {},
+                                onCustomColour = {},
+                                onCustomColourDone = {},
+                                onBackground = {},
+                                onCustomBackground = {},
+                                onCustomBackgroundDone = {},
                                 onSize = {},
                                 onOpacity = {},
                                 onSliderDone = {},
@@ -442,6 +498,7 @@ class EditToolRowTest {
         EditTool.FILTERS -> R.string.edit_layout_filters
         EditTool.STICKERS -> R.string.stickers_tool_label
         EditTool.TEXT -> R.string.text_tool_label
+        EditTool.DATE -> R.string.date_tool_label
     }
 
     /** The test tag of one control only [tool]'s sheet shows. */
@@ -452,6 +509,7 @@ class EditToolRowTest {
         EditTool.FILTERS -> editFilterTag(FilterPreset.KELVIN)
         EditTool.STICKERS -> STICKERS_PANEL_TAG
         EditTool.TEXT -> TEXT_PANEL_TAG
+        EditTool.DATE -> DATE_PANEL_TAG
     }
 
     /** The bounds of [node] in the root's pixels, from its `positionInRoot` and its size. */

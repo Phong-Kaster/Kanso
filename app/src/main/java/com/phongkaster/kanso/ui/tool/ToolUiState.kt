@@ -9,6 +9,7 @@ import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import java.time.LocalDateTime
 
 /**
  * Everything the tool screen shows at one moment, as one snapshot. What a UiState is, and why
@@ -124,7 +125,7 @@ data class ToolUiState(
     val touchedLayerKey: Long? = null,
     /**
      * True for a moment after the person tried to add a sticker or a text beyond the limit: the
-     * screen shows the "20 stickers and texts at most" message, then calls the ViewModel to clear
+     * screen shows the "20 stickers, texts and dates at most" message, then calls the ViewModel to clear
      * this flag.
      */
     val layerLimitShown: Boolean = false,
@@ -154,6 +155,13 @@ data class ToolUiState(
      * stay usable, but Done shows its small spinner and waits, and Undo waits too.
      */
     val rendering: Boolean = false,
+    /**
+     * The moment (date and time, to the minute) the Date sheet gives the NEXT date it adds, and
+     * the one its format chips show while no date is selected. It becomes now each time the Date
+     * sheet opens, and the sheet's date and time pickers change it while no date is selected
+     * (with one selected they change that date instead). Null until the Date sheet first opens.
+     */
+    val dateMoment: LocalDateTime? = null,
 ) {
 
     /**

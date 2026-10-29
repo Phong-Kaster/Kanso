@@ -13,6 +13,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -28,7 +32,10 @@ import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LayerSheetTopBar
-import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LayerSliders
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LayerOpacitySlider
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LayerSizeSlider
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LayerTabRow
+import com.phongkaster.kanso.ui.tool.model.StickersTab
 
 /** Test tag of the whole Stickers panel (top bar, sliders, category chips and grid). */
 const val STICKERS_PANEL_TAG = "stickers-panel"
@@ -39,22 +46,31 @@ const val STICKERS_GRID_TAG = "stickers-grid"
 /** How many tiles sit side by side in the grid. */
 private const val GRID_COLUMNS = 3
 
+/** The height of one tile of the grid. */
+private val TILE_HEIGHT = 56.dp
+
 /**
- * The Stickers sheet's contents: a top bar with Cancel and Confirm, the size and opacity sliders
- * of the selected sticker ([LayerSliders]), a row of category chips, and a grid of the stickers of
- * [category], three to a row, scrolling vertically.
+ * The Stickers sheet's contents, in three parts (the owner's decision, 2026-10-28):
  *
- * It has no state of its own: [category] is the chosen chip, a chip tap calls [onCategoryChosen],
- * a tile tap calls [onStickerChosen] with that [CatalogSticker], and the top bar buttons call
- * [onCancel] and [onConfirm]. [selected] is the sticker selected on the photo, or null: the
- * sliders show its size (its width in percent of the photo, see [LayerSize]) and opacity and are
- * greyed out while it is null. A slider moving calls [onSelectedChange] with the whole changed
- * sticker (no undo step yet) and letting go calls [onSelectedChangeFinished] (one undo step).
- * While [enabled] is false every tile and slider ignores touches.
+ * 1. the top bar with Cancel ([onCancel]) and Confirm ([onConfirm]), pinned: it never scrolls;
+ * 2. the row of tabs ([LayerTabRow], [StickersTab]): Stickers, Size, Opacity;
+ * 3. the chosen tab's control: for Stickers, a row of category chips and a grid of the stickers of
+ *    [category], three to a row, filling the rest of the sheet and scrolling on its own; for Size
+ *    and Opacity, one slider for the selected sticker ([LayerSizeSlider], [LayerOpacitySlider]).
  *
- * The panel fills the height its sheet gives it and never grows it: the grid takes what the other
- * rows leave and scrolls the rest. `LazyVerticalGrid` composes only the tiles on screen plus a few
- * more as it scrolls, so a long category costs little.
+ * The sheet opens on the Stickers tab, and the chosen tab stays while it is open. Size and Opacity
+ * need a selected sticker: with none they are greyed out and the Stickers tab shows.
+ *
+ * It has no state of its own about the stickers: [category] is the chosen chip, a chip tap calls
+ * [onCategoryChosen], a tile tap calls [onStickerChosen] with that [CatalogSticker]. [selected] is
+ * the sticker selected on the photo, or null; the sliders show its size (its width in percent of
+ * the photo, see [LayerSize]) and opacity. A slider moving calls [onSelectedChange] with the whole
+ * changed sticker (no undo step yet) and letting go calls [onSelectedChangeFinished] (one undo
+ * step). While [enabled] is false every tab, tile and slider ignores touches. The one thing it
+ * remembers is the chosen tab.
+ *
+ * `LazyVerticalGrid` composes only the tiles on screen plus a few more as it scrolls, so a long
+ * category costs little.
  */
 @Composable
 internal fun StickersPanel(
@@ -69,9 +85,13 @@ internal fun StickersPanel(
     onSelectedChange: (Layer) -> Unit = {},
     onSelectedChangeFinished: () -> Unit = {},
 ) {
+    var chosenTab by rememberSaveable { mutableStateOf(StickersTab.STICKERS) }
+    // Size and Opacity need a selected sticker; without one the sheet shows its first tab.
+    val tab = if (selected == null && chosenTab.needsSelection) StickersTab.STICKERS else chosenTab
     Column(
         modifier = modifier.fillMaxSize().testTag(STICKERS_PANEL_TAG),
         content = {
+            // Pinned: above everything that changes or scrolls, so it never moves.
             LayerSheetTopBar(
                 title = stringResource(R.string.stickers_tool_label),
                 cancelDescription = stringResource(R.string.stickers_sheet_cancel),
@@ -79,35 +99,54 @@ internal fun StickersPanel(
                 onCancel = onCancel,
                 onConfirm = onConfirm,
             )
-            LayerSliders(
-                size = selected?.let { LayerSize.ofPicture(it.width) } ?: LayerSize.MIN,
-                opacity = selected?.opacity ?: 1f,
-                enabled = enabled && selected != null,
-                onSizeChange = { size -> selected?.let { onSelectedChange(it.copy(width = LayerSize.pictureWidth(size))) } },
-                onOpacityChange = { opacity -> selected?.let { onSelectedChange(it.copy(opacity = opacity)) } },
-                onChangeFinished = onSelectedChangeFinished,
+            LayerTabRow(
+                tabs = StickersTab.entries,
+                chosen = tab,
+                label = { it.labelRes },
+                usable = { !it.needsSelection || selected != null },
+                enabled = enabled,
+                onChoose = { chosenTab = it },
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
-            StickerCategoryChips(selected = category, onSelect = onCategoryChosen)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(GRID_COLUMNS),
-                modifier = Modifier.fillMaxWidth().weight(1f).testTag(STICKERS_GRID_TAG),
-                horizontalArrangement = Arrangement.Center,
-                content = {
-                    items(
-                        items = StickerCatalog.inCategory(category),
-                        key = { it.pictureId },
-                        itemContent = { sticker ->
-                            StickerTile(
-                                sticker = sticker,
-                                enabled = enabled,
-                                onClick = { onStickerChosen(sticker) },
-                                modifier = Modifier.height(56.dp),
+            when (tab) {
+                StickersTab.STICKERS -> {
+                    StickerCategoryChips(selected = category, onSelect = onCategoryChosen)
+                    // weight(1f): the grid takes all the height left and scrolls the rest.
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(GRID_COLUMNS),
+                        modifier = Modifier.fillMaxWidth().weight(1f).testTag(STICKERS_GRID_TAG),
+                        horizontalArrangement = Arrangement.Center,
+                        content = {
+                            items(
+                                items = StickerCatalog.inCategory(category),
+                                key = { it.pictureId },
+                                itemContent = { sticker ->
+                                    StickerTile(
+                                        sticker = sticker,
+                                        enabled = enabled,
+                                        onClick = { onStickerChosen(sticker) },
+                                        modifier = Modifier.height(TILE_HEIGHT),
+                                    )
+                                },
                             )
                         },
                     )
-                },
-            )
+                }
+                StickersTab.SIZE -> LayerSizeSlider(
+                    size = selected?.let { LayerSize.ofPicture(it.width) } ?: LayerSize.MIN,
+                    enabled = enabled && selected != null,
+                    onSizeChange = { size -> selected?.let { onSelectedChange(it.copy(width = LayerSize.pictureWidth(size))) } },
+                    onChangeFinished = onSelectedChangeFinished,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                StickersTab.OPACITY -> LayerOpacitySlider(
+                    opacity = selected?.opacity ?: 1f,
+                    enabled = enabled && selected != null,
+                    onOpacityChange = { opacity -> selected?.let { onSelectedChange(it.copy(opacity = opacity)) } },
+                    onChangeFinished = onSelectedChangeFinished,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         },
     )
 }
@@ -121,7 +160,7 @@ private fun StickersPanelPreview() {
             modifier = Modifier.fillMaxSize(),
             content = {
                 Surface(
-                    modifier = Modifier.fillMaxWidth().height(320.dp),
+                    modifier = Modifier.fillMaxWidth().height(208.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     content = {
                         StickersPanel(

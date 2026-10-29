@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, filters, stickers and text
+# Edit: crop, rotate, adjust, filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -15,7 +15,8 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > `ui/tool/component/`. What changed in behaviour since Run 10:
 >
 > - Every layer has an opacity (10–100%) and both layer sheets have Size and Opacity sliders.
-> - A layer sheet is 320 dp tall, so the photo is a little shorter while one is open.
+> - A layer sheet takes exactly the row's and sheet area's height, so the photo never changes size;
+>   its top bar is pinned and a row of tabs picks the one control shown under it (2026-10-28).
 > - Touching a layer with any sheet but Crop open (or none) selects it, brings it to the front and
 >   opens the sheet of its kind.
 > - The frame's corners are the same on every layer: delete top-left, duplicate bottom-left, resize
@@ -24,7 +25,13 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 >
 > The Text tool is traced end to end in the README,
 > [section 3.4](../../README.md#34-text), and the shared layer machinery in
-> [section 3.2](../../README.md#32-layers-what-stickers-and-text-share).
+> [section 3.2](../../README.md#32-layers-what-stickers-text-and-dates-share).
+>
+> **ADR-006: Date.** The seventh tool, **Date**, adds layers of the date kind
+> (`LayerContent.Date`): a moment and one of 20 English formats, styled with the Text sheet's fonts
+> and colours, with no mirror button (its top-right corner stays empty). A tap on the selected date
+> moves it to the next format. The 20-item limit now counts stickers, texts and dates together.
+> It is traced end to end in the README, [section 3.5](../../README.md#35-date).
 
 ---
 
@@ -292,7 +299,7 @@ flowchart TD
     D["Done tapped (ToolViewModel.done)"] --> N{"Any Edit control used yet?"}
     N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
     N -->|yes| F["finishing = true: spinner in Done"]
-    F --> W["WorkingSize.fit(original, 2000 px) on Dispatchers.Default"]
+    F --> W["WorkingSize.fit(original, 3000 px) on Dispatchers.Default"]
     W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix, opaque"]
     E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
     E -->|Failed| X["failure message on the photo card; stay on Edit"]
@@ -310,12 +317,12 @@ flowchart TD
    photo's Uri, at once. Otherwise it reads the settings at the tap, sets `finishing` (the Done
    button shows a small spinner and ignores taps; the row of tools, the sheet's controls and the
    cropper are disabled) and renders. Changes that were all undone still count as used, so Done
-   then renders the neutral settings (a fresh picture of at most 2000 px, which Save writes as a
+   then renders the neutral settings (a fresh picture of at most 3000 px, which Save writes as a
    JPEG) rather than handing over the file. Compare does not stop Done: it renders the settings,
    not the original.
 2. **The full render.** Its input is the decoded original ("The photo", in the section above: at
    most twice the screen's longest edge, not the file at full size). `renderFull` shrinks it once
-   to at most 2000 px on its longest edge (`WorkingSize.EDIT` in
+   to at most 3000 px on its longest edge (`WorkingSize.EDIT` in
    [`data/edit/WorkingSize.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/WorkingSize.kt))
    and runs
    [`data/edit/edit/EditProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditProcessor.kt),
@@ -372,7 +379,7 @@ flowchart TD
    - **Save** is the only gallery write. `ResultViewModel.save` calls
      [`data/photo/MediaStorePhotoSaver.kt`](../../app/src/main/java/com/phongkaster/kanso/data/photo/MediaStorePhotoSaver.kt)
      on `Dispatchers.IO`: a rendered Edit picture is opaque, so it is written as a new JPEG at
-     quality 95, at its size, into `Pictures/Kanso`. A photo on which no Edit control was used (Done with
+     quality 100, at its size, into `Pictures/Kanso`. A photo on which no Edit control was used (Done with
      no control touched) is saved from its own file instead (its bytes copied unchanged, or turned upright and
      written as a new JPEG at quality 95 if it carries an EXIF turn; a
      turned photo too large to turn in memory is copied as it is with its tag kept, and Result
@@ -383,7 +390,7 @@ flowchart TD
      picture is saved at most once; the button then reads "Saved". On Android 8.1 and 9 the
      storage-write permission is asked first.
    - **Share** writes a copy of the picture on screen in the cache's `shared/` folder (JPEG
-     quality 95 for an opaque picture, PNG for one with an alpha channel; for an untouched photo
+     quality 100 for an opaque picture, PNG for one with an alpha channel; for an untouched photo
      this is the decoded, screen-sized copy, not the file) on `Dispatchers.IO` and sends it through FileProvider and Android's share sheet with
      a one-off read grant ([`ui/result/SharePhoto.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/result/SharePhoto.kt)).
    - **Go home** clears the back stack down to Home, which ends the session; leaving Result also
@@ -413,13 +420,13 @@ flowchart TD
 ## Limits, from the code
 
 - **Size.** The photo is decoded at most twice the screen's longest edge, and Done renders at most
-  **2000 px** on the longest edge, so a 4000 x 3000 photo comes out at most 2000 x 1500. The saved
-  file is a **JPEG at quality 95**. Done with no control used saves the original file instead (its
+  **3000 px** on the longest edge, so a 4000 x 3000 photo comes out at most 3000 x 2250 and a 2K
+  photo keeps its size. The saved file is a **JPEG at quality 100**. Done with no control used saves the original file instead (its
   bytes copied unchanged, or re-encoded upright as a JPEG when it carries an EXIF turn; if it is
   too large to turn in memory, copied as it is with its tag kept and Result shows the "kept
   orientation" message). That save is always named `.jpg` and typed `image/jpeg`, so an untouched
   PNG, WebP or HEIC photo keeps its own format inside a file named `.jpg` (a known defect). Once a control was used, even if
-  every change was undone, Done renders a new JPEG of at most 2000 px.
+  every change was undone, Done renders a new JPEG of at most 3000 px.
 - **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
