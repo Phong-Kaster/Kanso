@@ -409,6 +409,36 @@ class BeautifyProcessorTest {
     }
 
     /**
+     * Preparing the bodies (as the Body group opens) finds them once, and the live look that
+     * follows on the same photo uses them without asking the pose model again.
+     */
+    @Test
+    fun prepared_bodies_make_the_first_live_look_wait_for_nothing() {
+        val photo = noisyPatch()
+        val bodies = FakeBodyFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), bodies)
+
+        runBlocking { processor.prepareBodies(photo) }
+        assertEquals(1, bodies.received.size)
+        processor.strength = 0f
+        processor.chest = 1f
+        val look = runBlocking { processor.livePreview(photo) }!!
+
+        assertEquals(1, bodies.received.size)
+        assertTrue(look.pushes.isNotEmpty())
+    }
+
+    /** A pose model that fails while preparing is not an error: nothing is thrown. */
+    @Test
+    fun a_failing_pose_model_while_preparing_is_dropped() {
+        val processor = BeautifyProcessor(
+            FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder(bodiesFor = { throw IllegalStateException("fake") }),
+        )
+
+        runBlocking { processor.prepareBodies(noisyPatch()) }
+    }
+
+    /**
      * A live look with a waist carries the same [BodyWaist] pushes the full render uses, and two
      * looks on the same photo look for bodies only once.
      */

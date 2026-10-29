@@ -3,6 +3,7 @@ package com.phongkaster.kanso.tool.body
 import com.phongkaster.kanso.data.edit.body.BodyChest
 import com.phongkaster.kanso.data.edit.body.BodyLandmarks
 import com.phongkaster.kanso.data.edit.body.PoseIndex
+import com.phongkaster.kanso.data.edit.face.LocalWarp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,6 +45,24 @@ class BodyChestTest {
         )
         assertEquals(500f - one.centerX, two.centerX - 500f, 0.01f)
         assertEquals(one.centerY, two.centerY, 0.01f)
+    }
+
+    /**
+     * At full strength the chest visibly changes: a point half way out from a centre moves at
+     * least 5% of the shoulders' spread (15 px here), outward for a fuller chest and inward for a
+     * flatter one. Guards against the first version, whose move of about 2% nobody could see.
+     */
+    @Test
+    fun full_strength_moves_the_chest_visibly() {
+        val move = FloatArray(2)
+        val fuller = BodyChest.pushesFor(body, 1f)
+        val centre = fuller.first()
+        val probeX = centre.centerX + centre.radius * 0.45f
+
+        LocalWarp.moveAt(probeX, centre.centerY, listOf(centre), move)
+        assertTrue("moved ${move[0]} px outward", move[0] > 300f * 0.05f)
+        LocalWarp.moveAt(probeX, centre.centerY, listOf(BodyChest.pushesFor(body, -1f).first()), move)
+        assertTrue("moved ${move[0]} px inward", move[0] < -300f * 0.05f)
     }
 
     /** A negative chest makes the same two pushes shrink instead. */

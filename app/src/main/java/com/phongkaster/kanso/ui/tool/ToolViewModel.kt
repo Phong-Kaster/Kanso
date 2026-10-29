@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Typeface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.phongkaster.kanso.data.edit.body.BodyPreparer
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.LivePreview
@@ -1534,6 +1535,18 @@ class ToolViewModel(
      */
     fun showWholePhoto(whole: Boolean) {
         mutableState.update(function = { it.copy(wholePhoto = whole) })
+    }
+
+    /**
+     * Starts finding the bodies in the shown photo in the background, when the processor can
+     * ([BodyPreparer]), so the first drag of a body slider is live at once instead of waiting for
+     * the pose model. Beautify calls it as its Body group opens. Nothing happens before the photo
+     * is shown; nothing is shown when it finishes, it only fills the processor's memory.
+     */
+    fun prepareBodies() {
+        val preparer = registry.processorFor(tool) as? BodyPreparer ?: return
+        val photo = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap ?: return
+        viewModelScope.launch(block = { withContext(workDispatcher, block = { preparer.prepareBodies(photo) }) })
     }
 
     /** Hides the message about the last failed edit, once the person has read it. */

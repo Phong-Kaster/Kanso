@@ -103,7 +103,7 @@ on a phone yet.
 | Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
-| Beautify | Works | Face width, Face lift, Waist, Arms, Chest and Legs (MediaPipe face and pose landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face (the whole photo while Body is open). Width and smoothing seen on the Galaxy A13, 2026-10-28; Waist at ±100, Arms at 99, Chest at 98 and Legs at 100 rendered on the A13 with no crash, each changing only its own part of the body, 2026-10-29; Lift not yet judged on a phone. |
+| Beautify | Works | Face width, Face lift, Waist, Arms, Chest and Legs (MediaPipe face and pose landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face (the whole photo while Body is open). Width and smoothing seen on the Galaxy A13, 2026-10-28; Waist at ±100, Arms at 99, Chest at ±100 and Legs at 100 rendered on the A13 with no crash, each changing only its own part of the body, and the first body drag follows the finger, 2026-10-29; Lift not yet judged on a phone. |
 | Artistic | Works | Four styles from the Inception v3 style-transfer models, with a strength slider. |
 | Done and Result | Works | Done hands the picture to Result; Save is the only gallery write. |
 

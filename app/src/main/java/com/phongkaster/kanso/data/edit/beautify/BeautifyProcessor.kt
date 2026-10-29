@@ -10,6 +10,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.body.BodyFinder
 import com.phongkaster.kanso.data.edit.body.BodyLandmarks
+import com.phongkaster.kanso.data.edit.body.BodyPreparer
 import com.phongkaster.kanso.data.edit.body.BodyShape
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.data.edit.face.FaceFocusSource
@@ -71,7 +72,7 @@ class BeautifyProcessor(
     private val bodies: BodyFinder,
     private val maxEdgePx: Int = WorkingSize.BEAUTIFY,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-) : ToolProcessor, FaceFocusSource, LivePreviewSource {
+) : ToolProcessor, FaceFocusSource, LivePreviewSource, BodyPreparer {
 
     /**
      * Finds the largest face in [photo] with [landmarks] and returns the smallest box holding all
@@ -153,6 +154,27 @@ class BeautifyProcessor(
             null
         } catch (failed: Exception) {
             null
+        }
+    }
+
+    /**
+     * Finds the bodies in [photo] and keeps them ([bodiesOf]), as the Body group opens, so the
+     * first live look of a body slider does not wait for the pose model. A failure is dropped: the
+     * first live look simply tries again.
+     */
+    override suspend fun prepareBodies(photo: Bitmap) {
+        withContext(dispatcher) {
+            try {
+                bodiesOf(photo)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (outOfMemory: OutOfMemoryError) {
+                // Nothing kept; the first live look will try again.
+            } catch (missing: LinkageError) {
+                // Nothing kept; the first live look will try again.
+            } catch (failed: Exception) {
+                // Nothing kept; the first live look will try again.
+            }
         }
     }
 

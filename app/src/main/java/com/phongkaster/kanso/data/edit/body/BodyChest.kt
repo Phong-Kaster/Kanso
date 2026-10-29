@@ -90,11 +90,19 @@ object BodyChest {
     /** How far out from the shoulders' middle toward each shoulder each centre sits (0 middle, 1 shoulder). */
     private const val INWARD = 0.6f
 
-    /** Each push reaches this share of the shoulders' spread around its centre. */
-    private const val RADIUS_SHARE = 0.32f
+    /**
+     * Each push reaches this share of the shoulders' spread around its centre: wide enough to
+     * cover the whole breast, so its outline (not only its middle) moves.
+     */
+    private const val RADIUS_SHARE = 0.42f
 
-    /** At full strength, the grow of each push (see `WarpPush.grow`). */
-    private const val MAX_GROW = 0.22f
+    /**
+     * At full strength, the grow of each push (see `WarpPush.grow`). At 0.5 the chest's outline
+     * moves about 14% of the radius, clearly visible as Meitu's is, and the warp never folds over
+     * itself (that needs a grow of 1). The first guess, 0.22 with a radius of 0.32, moved it about
+     * 2% of the shoulders' spread: a few pixels on a phone screen, which the owner could not see.
+     */
+    private const val MAX_GROW = 0.5f
 
     /** A shoulder less visible than this (0..1) means the chest is not in the photo. */
     private const val MIN_VISIBILITY = 0.5f

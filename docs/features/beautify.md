@@ -322,8 +322,11 @@ flowchart TD
       cut at the chest still works: 0.45 of the shoulders' spread down the body from the shoulder
       line and 0.6 of the way from their middle out toward each shoulder. "Down the body" is across
       the shoulder line, toward the hips when both are visible, else away from the nose (0), else
-      down the photo. Each centre gets one **growing** `WarpPush` (`grow = chest × 0.22`, reach 0.32
-      of the shoulders' spread). `LocalWarp.moveAt` gives a growing push no slide: a pixel at
+      down the photo. Each centre gets one **growing** `WarpPush` (`grow = chest × 0.5`, reach 0.42
+      of the shoulders' spread), so at ±100 the chest's outline moves about 14% of the radius,
+      outward or inward. A first version (`grow 0.22`, reach 0.32) moved it about 2% of the
+      shoulders' spread, three screen pixels on the A13, and the owner could not see it change
+      (2026-10-29); `BodyChestTest` now fails if full strength moves it less than 5%. `LocalWarp.moveAt` gives a growing push no slide: a pixel at
       offset `d` from its centre reads from `d × (1 − grow × w)`, `w = (1 − dist² / radius²)²`, so
       a positive grow reads from nearer the centre and draws it larger, fading to nothing at the
       edge; growing pushes are added after the sliding ones are averaged, and `WarpMesh` draws them
@@ -361,6 +364,15 @@ flowchart TD
    covers only the face region, where it is fine enough; the region's edges do not move, so there
    is no seam. Undo clears the look, and the processor forgets its kept copies when the screen's
    ViewModel is cleared (`releasePreview`).
+   **The first body drag is live too.** The first live look of a body slider on a photo needs the
+   pose model to run on it, a few seconds on the A13, during which no frame can be drawn; a short
+   first drag used to show nothing until the finger lifted. So opening the Body group calls
+   `ToolViewModel.prepareBodies`, which asks the processor (a
+   [`BodyPreparer`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyPreparer.kt))
+   to find and keep the bodies of the shown photo in the background; by the time a finger reaches
+   a slider they are ready. A failure there is dropped: the first live look tries again. Checked on
+   the A13 from a cold start (2026-10-29): 1.5 s into the first Chest drag, the finger still down,
+   the chest had already changed on screen.
 8. **Zooming onto the face.** In `ToolViewModel.load`, once the photo is decoded and shown, a tool
    whose processor is a
    [`FaceFocusSource`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/FaceFocusSource.kt)
@@ -456,7 +468,8 @@ stay as they were.
   pushes them out; with a mask the pushes sit on the arm's edges; hidden arms get nothing; values
   beyond ±1 clamp; the moves scale with the body.
 - [`tool/body/BodyChestTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/body/BodyChestTest.kt):
-  0 and NaN give no pushes; a positive chest gives two mirrored growing pushes below and inside the
+  0 and NaN give no pushes; full strength moves a point half way out at least 5% of the shoulders'
+  spread, outward or inward; a positive chest gives two mirrored growing pushes below and inside the
   shoulders, a negative one the same pushes shrinking; the chest is found the same with the hips,
   and even the nose, hidden; hidden shoulders give nothing; values beyond ±1 clamp; the pushes
   scale with the body.
@@ -482,7 +495,8 @@ stay as they were.
   one at its centre moves as `LocalWarp.moveAt` says.
 - `BeautifyProcessorTest` also covers the live look: at rest it changes nothing, it carries the same
   pushes as the full render and finds the face once, it merges width and lift, it carries the
-  waist and finds the body once, it smooths inside the face once and only its
+  waist and finds the body once, prepared bodies make the first live look ask the pose model
+  nothing more, a failing pose model while preparing throws nothing, it smooths inside the face once and only its
   opacity changes, and no face or a failing model gives no look.
 - `EngineLandmarkFinder`, `EngineBodyFinder` and `EngineSkinSmoother` are native code and are **not** run by any test
   on the computer, nor is the GPU drawing in `PhotoView`; only the device runs above exercised
@@ -506,10 +520,10 @@ stay as they were.
 - Waist bends what lies beside the waist (background, an arm resting on it), like Width and Lift.
 - The pose model adds 9.4 MB to the app.
 - The arms numbers (the levels and weights, 0.15, 0.3, the guesses 0.17 and 0.12) and the chest
-  numbers (0.45, 0.6, 0.32, 0.22) and the legs numbers (the levels and weights, 0.12, 0.3, the
+  numbers (0.45, 0.6, 0.42, 0.5) and the legs numbers (the levels and weights, 0.12, 0.3, the
   guesses 0.2 and 0.13) are first guesses too. On the Galaxy A13 (2026-10-29), Arms at 99
   changed only the arms (a screen-pixel comparison found every change between the shoulders and
-  the forearms on the railing), Chest at 98 only the bust, and Legs at 100, on a photo cut above the knees, only the thighs
+  the forearms on the railing), Chest at ±100 (after the strength fix) only the bust, clearly fuller or flatter, and Legs at 100, on a photo cut above the knees, only the thighs
   (and the railing right beside them); none crashed. Whether they look
   right next to Meitu is for the owner to judge.
 - **Whether the face boxes and the OpenCV settings look right has not been judged by a person**

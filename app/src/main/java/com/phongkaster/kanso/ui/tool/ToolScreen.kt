@@ -270,7 +270,11 @@ fun ToolScreen(
                     viewModel.previewRegistered(configure = { processor -> (processor as? BeautifyProcessor)?.use(amounts) })
                 },
                 // The whole photo while Body is open: the zoom onto the face would hide the waist.
-                onBeautifyGroup = { group -> viewModel.showWholePhoto(group == BeautifyGroup.BODY) },
+                // Opening Body also starts the pose model, so the first body drag is already live.
+                onBeautifyGroup = { group ->
+                    viewModel.showWholePhoto(group == BeautifyGroup.BODY)
+                    if (group == BeautifyGroup.BODY) viewModel.prepareBodies()
+                },
                 onStylize = { style, strength ->
                     viewModel.runRegistered(fromOriginal = true) { processor ->
                         (processor as? ArtisticProcessor)?.let {
