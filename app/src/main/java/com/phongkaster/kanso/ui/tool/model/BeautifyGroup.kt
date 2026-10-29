@@ -13,7 +13,7 @@ enum class BeautifyGroup {
     /** Reshaping the face: Width and Lift now, Temple later. */
     FACE,
 
-    /** Reshaping the body, as Meitu's Body > Reshape: Waist now; Arms, Legs and Chest one at a time. */
+    /** Reshaping the body, as Meitu's Body > Reshape: Waist and Arms now; Chest and Legs one at a time. */
     BODY,
     ;
 

@@ -39,6 +39,9 @@ const val BEAUTIFY_LIFT_TAG = "beautify-lift"
 /** Test tag of the Beautify panel's waist slider, shown while Body > Waist is open. */
 const val BEAUTIFY_WAIST_TAG = "beautify-waist"
 
+/** Test tag of the Beautify panel's arms slider, shown while Body > Arms is open. */
+const val BEAUTIFY_ARMS_TAG = "beautify-arms"
+
 /**
  * The Beautify tool's controls, shown in the options strip under the photo, laid out like the Edit
  * screen: a row of tools on two levels ([BeautifyToolRow]: Face, Body and Smooth on top, Face and
@@ -53,7 +56,7 @@ const val BEAUTIFY_WAIST_TAG = "beautify-waist"
  * changes height, so the photo never jumps when a tool opens.
  *
  * - **Two levels, as in Meitu.** Tapping Face shows Face's tools (Width and Lift) and Back, and
- *   tapping Body shows Body's (Waist; Arms, Legs and Chest come one at a time); either opens the
+ *   tapping Body shows Body's (Waist and Arms; Chest and Legs come one at a time); either opens the
  *   group's first tool at once, so its slider is ready. Back returns to the top row and closes the
  *   slider. Smooth, a tool of its own, opens its slider straight from the top row. Each change of
  *   group is told to [onGroupChange], so the screen can show the whole photo while Body is open
@@ -64,8 +67,8 @@ const val BEAUTIFY_WAIST_TAG = "beautify-waist"
  * - **Smooth** is a 0..100 slider (0, no smoothing, by default); **Face width** a -100..+100
  *   slider (0, the face as it is, by default; negative is wider, positive narrower, as in Meitu), drawn
  *   two-sided: coloured from 0 toward the thumb; **Face lift** the same, -100..+100 (negative drops
- *   the jaw, positive lifts it, as in Meitu); **Waist** the same, -100..+100 (negative wider,
- *   positive slimmer, as in Meitu).
+ *   the jaw, positive lifts it, as in Meitu); **Waist** and **Arms** the same, -100..+100 (negative
+ *   wider, positive slimmer, as in Meitu).
  * - **Live while dragging, as in Meitu.** Every move of a slider calls [onPreview] with every
  *   value ([BeautifyAmounts]), and the screen shows a quick frame of the edit on the photo as
  *   shown, so the photo follows the finger. Letting go calls [onApply] with every value, and the photo is redone from
@@ -94,9 +97,10 @@ fun BeautifyPanel(
     var width by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_WIDTH) })
     var lift by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_LIFT) })
     var waist by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_WAIST) })
+    var arms by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_ARMS) })
 
     /** Every slider's value as it is now, read when a slider moves or is let go. */
-    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist)
+    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist, arms = arms)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -158,6 +162,18 @@ fun BeautifyPanel(
                             enabled = enabled,
                             valueRange = -1f..1f,
                         )
+                        BeautifyTool.ARMS -> BeautifySlider(
+                            label = R.string.beautify_arms_label,
+                            value = arms,
+                            onValueChange = {
+                                arms = it.coerceIn(-1f, 1f)
+                                onPreview(amounts())
+                            },
+                            onValueChangeFinished = { onApply(amounts()) },
+                            tag = BEAUTIFY_ARMS_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
                     }
                 },
             )
@@ -170,6 +186,7 @@ fun BeautifyPanel(
                         BeautifyTool.FACE_WIDTH -> width != DEFAULT_WIDTH
                         BeautifyTool.FACE_LIFT -> lift != DEFAULT_LIFT
                         BeautifyTool.WAIST -> waist != DEFAULT_WAIST
+                        BeautifyTool.ARMS -> arms != DEFAULT_ARMS
                     }
                 },
                 enabled = enabled,
@@ -202,6 +219,9 @@ private const val DEFAULT_LIFT = 0f
 
 /** The waist slider's starting value: the body as it is. */
 private const val DEFAULT_WAIST = 0f
+
+/** The arms slider's starting value: the arms as they are. */
+private const val DEFAULT_ARMS = 0f
 
 /**
  * The Beautify panel with no tool open, in light and in dark. The outer Box fills the preview

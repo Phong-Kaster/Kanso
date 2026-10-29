@@ -33,4 +33,9 @@
     <!-- Beautify panel: the label of the waist slider, how much slimmer (positive) or wider
          (negative) each person's waist becomes. Also what screen readers call the slider. -->
     <string name="beautify_waist_label">Waist</string>
+    <!-- Beautify panel: the name of the Arms tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_arms">Arms</string>
+    <!-- Beautify panel: the label of the arms slider, how much slimmer (positive) or thicker
+         (negative) each person's arms become. Also what screen readers call the slider. -->
+    <string name="beautify_arms_label">Arms</string>
 </resources>

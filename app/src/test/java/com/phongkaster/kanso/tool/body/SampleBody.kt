@@ -14,7 +14,9 @@ object SampleBody {
 
     /**
      * Returns an upright figure on the vertical line x = [centerX]: shoulders [shoulderSpread]
-     * apart at y = [top], hips [hipSpread] apart [length] lower, every point [visibility] visible.
+     * apart at y = [top], hips [hipSpread] apart [length] lower, arms hanging straight down from
+     * the shoulders (elbows [ELBOW_DROP], wrists [WRIST_DROP] of [length] below them), every point
+     * [visibility] visible.
      * With [torsoHalf] set, it also gets a [photoWidth] x [photoHeight] mask in which the person
      * is the band [torsoHalf] to each side of the centre line, from the shoulders to the hips, so
      * the waist's edges are exactly at `centerX ± torsoHalf`.
@@ -33,6 +35,11 @@ object SampleBody {
         val points = MutableList(PoseIndex.COUNT, init = { BodyPoint(centerX, top + length / 2f, visibility) })
         points[PoseIndex.LEFT_SHOULDER] = BodyPoint(centerX + shoulderSpread / 2f, top, visibility)
         points[PoseIndex.RIGHT_SHOULDER] = BodyPoint(centerX - shoulderSpread / 2f, top, visibility)
+        // Arms hang straight down from the shoulders: elbows half way to the hips, wrists below them.
+        points[PoseIndex.LEFT_ELBOW] = BodyPoint(centerX + shoulderSpread / 2f, top + length * ELBOW_DROP, visibility)
+        points[PoseIndex.RIGHT_ELBOW] = BodyPoint(centerX - shoulderSpread / 2f, top + length * ELBOW_DROP, visibility)
+        points[PoseIndex.LEFT_WRIST] = BodyPoint(centerX + shoulderSpread / 2f, top + length * WRIST_DROP, visibility)
+        points[PoseIndex.RIGHT_WRIST] = BodyPoint(centerX - shoulderSpread / 2f, top + length * WRIST_DROP, visibility)
         points[PoseIndex.LEFT_HIP] = BodyPoint(centerX + hipSpread / 2f, top + length, visibility)
         points[PoseIndex.RIGHT_HIP] = BodyPoint(centerX - hipSpread / 2f, top + length, visibility)
         val mask = torsoHalf?.let(block = { half -> bandMask(centerX, top, length, half, photoWidth, photoHeight) })
@@ -53,4 +60,10 @@ object SampleBody {
         }
         return BodyMask(width, height, values, width, height)
     }
+
+    /** How far below the shoulders the elbows hang, as a share of the shoulders-to-hips length. */
+    private const val ELBOW_DROP = 0.55f
+
+    /** How far below the shoulders the wrists hang, as a share of the shoulders-to-hips length. */
+    private const val WRIST_DROP = 1.1f
 }

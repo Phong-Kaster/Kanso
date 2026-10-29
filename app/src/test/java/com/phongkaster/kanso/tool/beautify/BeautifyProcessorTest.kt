@@ -351,6 +351,28 @@ class BeautifyProcessorTest {
     }
 
     /**
+     * With smoothing off, the arms are reshaped even with no face to find, and the photo's corners
+     * stay as they were; the body is looked for once.
+     */
+    @Test
+    fun arms_work_without_a_face_when_smoothing_is_off() {
+        val photo = noisyPatch()
+        val bodies = FakeBodyFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder.none(), FakeSkinSmoother(), bodies)
+        processor.strength = 0f
+        processor.arms = 1f
+
+        val result = (runBlocking { processor.process(photo) {} } as EditResult.Edited).bitmap
+
+        val original = pixels(photo)
+        val edited = pixels(result)
+        val changed = original.indices.count(predicate = { original[it] != edited[it] })
+        assertTrue("only $changed pixels changed", changed > 0)
+        assertEquals(photo.getPixel(0, 0), result.getPixel(0, 0))
+        assertEquals(1, bodies.received.size)
+    }
+
+    /**
      * A live look with a waist carries the same [BodyWaist] pushes the full render uses, and two
      * looks on the same photo look for bodies only once.
      */

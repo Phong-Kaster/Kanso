@@ -15,6 +15,18 @@ object PoseIndex {
     /** The person's right shoulder. */
     const val RIGHT_SHOULDER = 12
 
+    /** The person's left elbow. */
+    const val LEFT_ELBOW = 13
+
+    /** The person's right elbow. */
+    const val RIGHT_ELBOW = 14
+
+    /** The person's left wrist. */
+    const val LEFT_WRIST = 15
+
+    /** The person's right wrist. */
+    const val RIGHT_WRIST = 16
+
     /** The person's left hip. */
     const val LEFT_HIP = 23
 
