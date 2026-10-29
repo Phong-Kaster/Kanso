@@ -35,6 +35,8 @@ object SampleBody {
         val points = MutableList(PoseIndex.COUNT, init = { BodyPoint(centerX, top + length / 2f, visibility) })
         points[PoseIndex.LEFT_SHOULDER] = BodyPoint(centerX + shoulderSpread / 2f, top, visibility)
         points[PoseIndex.RIGHT_SHOULDER] = BodyPoint(centerX - shoulderSpread / 2f, top, visibility)
+        // The nose a quarter of the torso's length above the shoulders.
+        points[PoseIndex.NOSE] = BodyPoint(centerX, top - length * NOSE_RISE, visibility)
         // Arms hang straight down from the shoulders: elbows half way to the hips, wrists below them.
         points[PoseIndex.LEFT_ELBOW] = BodyPoint(centerX + shoulderSpread / 2f, top + length * ELBOW_DROP, visibility)
         points[PoseIndex.RIGHT_ELBOW] = BodyPoint(centerX - shoulderSpread / 2f, top + length * ELBOW_DROP, visibility)
@@ -60,6 +62,9 @@ object SampleBody {
         }
         return BodyMask(width, height, values, width, height)
     }
+
+    /** How far above the shoulders the nose sits, as a share of the shoulders-to-hips length. */
+    private const val NOSE_RISE = 0.25f
 
     /** How far below the shoulders the elbows hang, as a share of the shoulders-to-hips length. */
     private const val ELBOW_DROP = 0.55f

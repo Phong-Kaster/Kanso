@@ -20,4 +20,7 @@ enum class BeautifyTool(val group: BeautifyGroup?) {
 
     /** Arms: a -100..+100 slider, thicker to the left (negative), slimmer to the right, as in Meitu's Body > Arms. */
     ARMS(group = BeautifyGroup.BODY),
+
+    /** Chest: a -100..+100 slider, flatter to the left (negative), fuller to the right, as in Meitu's Body > Chest. */
+    CHEST(group = BeautifyGroup.BODY),
 }

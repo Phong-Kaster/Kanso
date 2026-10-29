@@ -9,6 +9,9 @@ package com.phongkaster.kanso.data.edit.body
  */
 object PoseIndex {
 
+    /** The tip of the nose: tells Chest which way is up when the hips are out of the photo. */
+    const val NOSE = 0
+
     /** The person's left shoulder. */
     const val LEFT_SHOULDER = 11
 

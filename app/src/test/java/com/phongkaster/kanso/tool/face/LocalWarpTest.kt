@@ -7,7 +7,9 @@ import com.phongkaster.kanso.data.edit.face.LocalWarp
 import com.phongkaster.kanso.data.edit.face.WarpPush
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -61,6 +63,55 @@ class LocalWarpTest {
             }
         }
     }
+
+    /**
+     * A growing push (Chest) makes a black dot at its centre bigger, and a negative one smaller,
+     * while every pixel outside its circle keeps its colour.
+     */
+    @Test
+    fun a_growing_push_makes_the_middle_bigger_or_smaller() {
+        val photo = dot()
+        val before = blackCount(photo)
+        val bigger = LocalWarp.warp(photo, listOf(WarpPush(centerX = 50f, centerY = 50f, moveX = 0f, moveY = 0f, radius = 30f, grow = 0.3f)))
+        val smaller = LocalWarp.warp(photo, listOf(WarpPush(centerX = 50f, centerY = 50f, moveX = 0f, moveY = 0f, radius = 30f, grow = -0.3f)))
+
+        assertTrue("black went from $before to ${blackCount(bigger)}", blackCount(bigger) > before)
+        assertTrue("black went from $before to ${blackCount(smaller)}", blackCount(smaller) < before)
+        assertEquals(photo.getPixel(5, 5), bigger.getPixel(5, 5))
+        assertEquals(photo.getPixel(95, 95), smaller.getPixel(95, 95))
+    }
+
+    /**
+     * Under a growing push the centre itself does not move, a point to its right moves right
+     * (outward) for a positive grow, and nothing moves at the circle's edge.
+     */
+    @Test
+    fun a_growing_push_spreads_out_from_its_centre() {
+        val push = listOf(WarpPush(centerX = 50f, centerY = 50f, moveX = 0f, moveY = 0f, radius = 30f, grow = 0.3f))
+        val move = FloatArray(2)
+
+        LocalWarp.moveAt(50f, 50f, push, move)
+        assertEquals(0f, move[0], 0.0001f)
+        LocalWarp.moveAt(60f, 50f, push, move)
+        assertTrue("moved by ${move[0]}", move[0] > 0f)
+        assertEquals(0f, move[1], 0.0001f)
+        assertFalse(LocalWarp.moveAt(80f, 50f, push, move))
+    }
+
+    /** A 100 x 100 opaque white picture with a black dot of radius 10 at its centre. */
+    private fun dot(): Bitmap {
+        val data = IntArray(SIZE * SIZE, init = { i ->
+            val dx = i % SIZE - 50
+            val dy = i / SIZE - 50
+            if (dx * dx + dy * dy <= 100) Color.BLACK else Color.WHITE
+        })
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(data, 0, SIZE, 0, 0, SIZE, SIZE)
+        return bitmap
+    }
+
+    /** How many pixels of [bitmap] are darker than mid grey. */
+    private fun blackCount(bitmap: Bitmap): Int = pixels(bitmap).count(predicate = { (it and 0xFF) < 128 })
 
     /** A 100 x 100 opaque picture, black on the left half (x < 50) and white on the right. */
     private fun halves(): Bitmap {

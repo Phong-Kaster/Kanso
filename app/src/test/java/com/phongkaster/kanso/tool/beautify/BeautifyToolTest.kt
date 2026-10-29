@@ -30,6 +30,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LIFT_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WAIST_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_ARMS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHEST_TAG
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
@@ -298,6 +299,22 @@ class BeautifyToolTest {
         assertEquals(BeautifyAmounts(), amounts.copy(arms = 0f))
     }
 
+    /** Body's row shows Chest; letting go of its slider at 0.5 applies 0.5 and nothing else. */
+    @Test
+    fun releasing_the_chest_slider_applies_it() {
+        val applied = showPanel()
+
+        tap(beautifyGroupTag(BeautifyGroup.BODY))
+        tap(beautifyToolTag(BeautifyTool.CHEST))
+        compose.onNodeWithTag(BEAUTIFY_CHEST_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.5f) }
+        compose.waitForIdle()
+
+        val amounts = applied.single()
+        assertEquals(0.5f, amounts.chest, 0.01f)
+        assertEquals(BeautifyAmounts(), amounts.copy(chest = 0f))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -338,6 +355,7 @@ class BeautifyToolTest {
                                         registered.lift = amounts.faceLift
                                         registered.waist = amounts.waist
                                         registered.arms = amounts.arms
+                                        registered.chest = amounts.chest
                                     },
                                 )
                             },
@@ -350,6 +368,7 @@ class BeautifyToolTest {
                                         registered.lift = amounts.faceLift
                                         registered.waist = amounts.waist
                                         registered.arms = amounts.arms
+                                        registered.chest = amounts.chest
                                     },
                                 )
                             },

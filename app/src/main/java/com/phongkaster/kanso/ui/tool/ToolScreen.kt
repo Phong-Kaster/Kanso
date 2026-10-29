@@ -962,4 +962,5 @@ private fun BeautifyProcessor.use(amounts: BeautifyAmounts) {
     lift = amounts.faceLift
     waist = amounts.waist
     arms = amounts.arms
+    chest = amounts.chest
 }

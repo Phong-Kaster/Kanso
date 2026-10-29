@@ -10,8 +10,9 @@ package com.phongkaster.kanso.ui.tool.model
  * @param faceLift Face > Lift, -1 (jaw dropped) through 0 to 1 (lifted).
  * @param waist Body > Waist, -1 (wider) through 0 to 1 (slimmer).
  * @param arms Body > Arms, -1 (thicker) through 0 to 1 (slimmer).
+ * @param chest Body > Chest, -1 (flatter) through 0 to 1 (fuller).
  *
- * It is one object, not loose numbers, because five values of the same type passed one after
+ * It is one object, not loose numbers, because six values of the same type passed one after
  * another are easy to swap by mistake; each is named here. The defaults are the panel's
  * starting values: nothing changed.
  */
@@ -21,4 +22,5 @@ data class BeautifyAmounts(
     val faceLift: Float = 0f,
     val waist: Float = 0f,
     val arms: Float = 0f,
+    val chest: Float = 0f,
 )

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chest: a torso's shoulders and the curve of the chest, with an arrow on each side pointing
+     outward (fuller), drawn for Kanso as the other body icons are. Round strokes on the 960 grid
+     of the Material Symbols Rounded icons, white like them, so an Icon tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M300,180Q300,300 260,420Q240,560 380,600Q460,610 480,540Q500,610 580,600Q720,560 700,420Q660,300 660,180M480,540L480,820M120,480L60,480M100,440L60,480L100,520M840,480L900,480M860,440L900,480L860,520" />
+</vector>

@@ -38,4 +38,9 @@
     <!-- Beautify panel: the label of the arms slider, how much slimmer (positive) or thicker
          (negative) each person's arms become. Also what screen readers call the slider. -->
     <string name="beautify_arms_label">Arms</string>
+    <!-- Beautify panel: the name of the Chest tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_chest">Chest</string>
+    <!-- Beautify panel: the label of the chest slider, how much fuller (positive) or flatter
+         (negative) each person's chest becomes. Also what screen readers call the slider. -->
+    <string name="beautify_chest_label">Chest</string>
 </resources>

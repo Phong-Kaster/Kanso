@@ -26,6 +26,12 @@ import kotlin.math.min
  * the summed move is divided by that total: the pixel moves like a weighted average of its
  * neighbours' pushes.
  *
+ * **Growing pushes.** A push with a `grow` (Chest) does not slide: a result pixel at offset `d`
+ * from its centre takes the input pixel at `result − grow × w × d`, where
+ * `w = (1 − dist² / radius²)²`. A positive grow therefore reads from nearer the centre, so what is
+ * there is drawn larger; `w` makes the change fade to nothing at the circle's edge. Growing
+ * pushes are added on top of the sliding ones and are not part of their averaging.
+ *
  * **Sampling.** The input position is usually between pixels, so the colour is mixed from the four
  * pixels around it (bilinear sampling), which keeps edges smooth.
  *
@@ -65,8 +71,8 @@ object LocalWarp {
 
     /**
      * How far the point ([x], [y]) moves under [pushes], written into [out] (`out[0]` across,
-     * `out[1]` down): every push's move weighted by `f²`, divided by the total weight when it is
-     * above 1 (see the class comment). Returns false, with [out] at 0, when no push reaches the
+     * `out[1]` down): every sliding push's move weighted by `f²`, divided by the total weight when
+     * it is above 1, plus every growing push's spread (see the class comment). Returns false, with [out] at 0, when no push reaches the
      * point. [warp] uses it for every pixel and [WarpMesh] for every point of its grid, so the
      * live picture and the saved one move by the same rule.
      */
@@ -74,6 +80,10 @@ object LocalWarp {
         var moveX = 0f
         var moveY = 0f
         var weight = 0f
+        // The growing pushes' share, added after the sliding ones are averaged.
+        var growX = 0f
+        var growY = 0f
+        var grown = false
         for (push in pushes) {
             val offsetX = x - push.centerX
             val offsetY = y - push.centerY
@@ -81,6 +91,15 @@ object LocalWarp {
             val distanceSquared = offsetX * offsetX + offsetY * offsetY
             if (distanceSquared >= radiusSquared) continue
             val inside = radiusSquared - distanceSquared
+            if (push.grow != 0f) {
+                // w = (1 − dist² / radius²)²: 1 at the centre, 0 at the edge, smooth at both.
+                val fall = inside / radiusSquared
+                val k = push.grow * fall * fall
+                growX += offsetX * k
+                growY += offsetY * k
+                grown = true
+                continue
+            }
             val f = inside / (inside + push.moveX * push.moveX + push.moveY * push.moveY)
             val k = f * f
             moveX += k * push.moveX
@@ -91,9 +110,9 @@ object LocalWarp {
             moveX /= weight
             moveY /= weight
         }
-        out[0] = moveX
-        out[1] = moveY
-        return weight > 0f
+        out[0] = moveX + growX
+        out[1] = moveY + growY
+        return weight > 0f || grown
     }
 
     /**
