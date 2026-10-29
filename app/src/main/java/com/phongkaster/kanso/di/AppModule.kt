@@ -12,6 +12,7 @@ import com.phongkaster.kanso.data.edit.edit.TextLayerLayout
 import com.phongkaster.kanso.data.edit.enhance.EngineUpscaler
 import com.phongkaster.kanso.data.edit.enhance.EnhanceProcessor
 import com.phongkaster.kanso.data.edit.face.EngineLandmarkFinder
+import com.phongkaster.kanso.data.edit.body.EngineBodyFinder
 import com.phongkaster.kanso.data.edit.beautify.LandmarkFaceFinder
 import com.phongkaster.kanso.data.edit.beautify.EngineSkinSmoother
 import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
@@ -106,6 +107,8 @@ val appModule = module {
                             finder = LandmarkFaceFinder(landmarks),
                             landmarks = landmarks,
                             smoother = EngineSkinSmoother(),
+                            // The pose model for Body > Waist, loaded only once a waist is asked for.
+                            bodies = EngineBodyFinder(androidContext()),
                         )
                     },
                 ),

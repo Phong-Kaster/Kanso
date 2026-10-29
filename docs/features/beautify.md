@@ -1,4 +1,4 @@
-# Beautify: face width, face lift and smooth skin
+# Beautify: face width, face lift, waist and smooth skin
 
 [Back to README](../../README.md)
 
@@ -11,7 +11,7 @@ Share and Save are on [the Result screen](saving-and-share.md).
 
 ## What it is
 
-Beautify does three things to every face in the photo, in this order:
+Beautify reshapes every face and every person's waist in the photo, then smooths the faces' skin:
 
 1. **Face width**, like Meitu's Beautify > Face > Width: the outline of the cheeks and jaw is pulled
    toward the face's centre line (narrower) or pushed away from it (wider). The **Face width**
@@ -27,20 +27,28 @@ Beautify does three things to every face in the photo, in this order:
    end of Meitu's slider lifts was not measured; Kanso lifts to the right, as Width narrows to the
    right. Width and Lift are applied together in one warp, and their moves **add up**: a face can
    be narrowed and lifted at once.
-3. **Smoothing**: an **edge-preserving blur**: small differences such as pores, blemishes and noise
+3. **Waist**, like Meitu's Body > Reshape > Waist: both sides of the waist are pulled toward the
+   body's centre line (slimmer) or pushed away from it (wider). The **Waist** slider runs from
+   **-100** (wider) through **0** (unchanged, the default) to **+100** (slimmer), the same way round
+   as Meitu's Waist (seen on the Galaxy A13, 2026-10-29: Meitu's right end shortened the belt). It
+   is warped in the same pass as the face, from MediaPipe's **pose** model: 33 body points and a
+   mask of the person (see step 6 below). Arms, Legs and Chest are the next Body tools, one at a time.
+4. **Smoothing**: an **edge-preserving blur**: small differences such as pores, blemishes and noise
    are averaged away, while strong edges such as eyes, lips and hair stay sharp. The **Smoothing**
    slider (0 to 100, starting at 0) sets how much of it you see.
 
 The screen is laid out like the Edit screen: the photo fills everything down to a bottom bar that
-holds a row of tools on two levels, as in Meitu (**Face** and **Smooth** on top; **Face** opens
-its own row, **Width**, **Lift**, then **Back**), and, above it, Edit's fixed-height panel area,
+holds a row of tools on two levels, as in Meitu (**Face**, **Body** and **Smooth** on top;
+**Face** opens its own row, **Width**, **Lift**, then **Back**; **Body** opens **Waist** and
+**Back**), and, above it, Edit's fixed-height panel area,
 which shows the open tool's slider on a rounded surface (or "Pick a tool to start editing"). The
-bar never changes height, so the photo does not jump when a tool opens. **Letting go of a slider applies** all three
-values, as Meitu does when the finger lifts.
+bar never changes height, so the photo does not jump when a tool opens. **Letting go of a slider applies** every
+value, as Meitu does when the finger lifts.
 
 When the photo opens, the card **zooms in on the largest face** (it glides there in under half a
 second), so a width change is easy to see; a **double tap** on the photo switches between that and
-the whole photo.
+the whole photo. While **Body** is open the card shows the **whole photo** instead, since the zoom
+onto the face would hide the waist; Back returns to the face.
 
 Limits, from the code:
 
@@ -48,18 +56,25 @@ Limits, from the code:
   around each outline point): hair, earrings and the background right beside the cheeks bend with
   the face. Meitu's BG Lock (a person mask that keeps the background still) has no Kanso
   equivalent yet.
-- Face width and Face lift reshape at most **5 faces** per photo.
+- Face width and Face lift reshape at most **5 faces** per photo; Waist at most **3 people**.
+- Waist bends the background beside the waist too (no BG Lock yet). Where an arm rests against the
+  waist, the mask cannot separate them, so the edge is guessed from the shoulders and hips instead.
+- Waist needs the shoulders and the hips in the photo (each at least half visible to the model); a
+  portrait cut above the hips gets no waist push. With no person at all it says "No person found
+  in this photo. Nothing was changed."
 
 - It works on a **rectangle around each face**, not on a skin mask. Everything inside the box goes
   through the filter (the filter keeps strong edges, so eyes and lips stay sharp); everything
   outside it is never touched.
-- It needs a face. With none, it says "No face found in this photo. Nothing was changed."
-- It always starts again from the **original** photo, so applying again at another width, lift or
-  strength **replaces** the last result instead of reshaping or smoothing twice.
+- Smoothing and the face tools need a face. With none, they say "No face found in this photo.
+  Nothing was changed." With smoothing at 0 no face is needed, so Waist alone works on a photo whose
+  face is too small to find.
+- It always starts again from the **original** photo, so applying again at another width, lift,
+  waist or strength **replaces** the last result instead of reshaping or smoothing twice.
 - Works on at most **2000 px** on the longest edge; the JPEG that Save on Result writes is at that
   size or smaller.
-- Offline: both face models and OpenCV are inside the app.
-- It only reshapes face width and lift and smooths skin. (The original Retica app's "Retouch" screen removed
+- Offline: the face model, the pose model and OpenCV are inside the app.
+- It only reshapes face width, face lift and waist, and smooths skin. (The original Retica app's "Retouch" screen removed
   objects; Kanso's does not.)
 
 ## How to use it
@@ -67,10 +82,12 @@ Limits, from the code:
 - Reach it from the third **carousel banner** on Home ("Smooth, natural skin", or **Try now**), or
   the **Beautify** shortcut, then pick a photo (or take one with the gallery's camera button).
 - Wait a moment for the zoom onto the face (none happens if no face is found).
-- The top row shows **Face** and **Smooth**. Tap **Face** to swap the row for Face's tools: **Width**
-  (its slider opens at once) and **Lift** on the left, and **Back** pinned at the right end; Back
-  returns to the top row. Body joins the top row, and Temple joins Face's row, once they are built.
-- Tap **Width**, **Lift** or **Smooth** to open its slider and drag it: the photo changes
+- The top row shows **Face**, **Body** and **Smooth**. Tap **Face** to swap the row for Face's
+  tools: **Width** (its slider opens at once) and **Lift** on the left, and **Back** pinned at the
+  right end; Back returns to the top row. Tap **Body** for **Waist** (its slider opens at once,
+  and the photo zooms out to show the whole body). Temple joins Face's row, and Arms, Legs and
+  Chest join Body's, once they are built.
+- Tap **Width**, **Lift**, **Waist** or **Smooth** to open its slider and drag it: the photo changes
   **live while you drag**, as in Meitu, drawn on the graphics chip. Let go and Beautify renders the
   photo from the original at full quality **quietly in the background**: no progress ring, and the
   sliders stay usable, so you can keep adjusting; a newer release replaces an older render. Done
@@ -109,15 +126,21 @@ flowchart TD
     P["BeautifyPanel: slider dragged"] --> P1["previewRegistered: worker, BeautifyProcessor.livePreview"]
     P1 --> P2["ToolUiState.livePreview: region, pushes, smoothed copy"]
     P2 --> P3["PhotoView: photo, then region through WarpMesh, drawBitmapMesh on the GPU"]
-    A["BeautifyPanel: slider let go"] --> B["renderRegistered: quiet render, sets width, lift and strength"]
+    A["BeautifyPanel: slider let go"] --> B["renderRegistered: quiet render, sets width, lift, waist and strength"]
     B --> C["original photo, fit to 2000 px once, Dispatchers.Default"]
     C --> D["BeautifyProcessor"]
-    D -->|"width and lift are 0"| E
     D -->|"width or lift is not 0"| W1["EngineLandmarkFinder: MediaPipe FaceLandmarker, 478 points per face"]
     W1 -->|"no face"| N
     W1 --> W2["FaceShape: FaceWidth + FaceLift pushes, added point by point"]
-    W2 --> W3["LocalWarp: backward warp, bilinear, Kotlin"]
-    W3 --> E["LandmarkFaceFinder: the same landmarks, padded face boxes"]
+    D -->|"waist is not 0"| B1["EngineBodyFinder: MediaPipe PoseLandmarker, 33 points and a mask per person"]
+    B1 -->|"no person"| NP["NoPerson message"]
+    B1 --> B2["BodyWaist: mask edges at 4 waist levels become WarpPushes"]
+    W2 --> W3["LocalWarp: one backward warp for every push, bilinear, Kotlin"]
+    B2 --> W3
+    D -->|"nothing to reshape"| S0
+    W3 --> S0{"smoothing above 0?"}
+    S0 -->|"no"| G
+    S0 -->|"yes"| E["LandmarkFaceFinder: the same landmarks, padded face boxes"]
     E -->|"no face"| N["NoFace message"]
     E -->|"padded face boxes"| F["EngineSkinSmoother: OpenCV bilateralFilter per box"]
     F --> G["Kotlin blend by strength, opaque"]
@@ -135,21 +158,28 @@ flowchart TD
    on two levels: the top row is
    [`BeautifyEntry.TOP_ROW`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyEntry.kt)
    (the [`BeautifyGroup`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyGroup.kt)
-   Face, then the [`BeautifyTool`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyTool.kt)
-   Smooth); tapping Face shows Face's tools (every `BeautifyTool` whose `group` is `FACE`) in a
+   Face and Body, then the [`BeautifyTool`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyTool.kt)
+   Smooth); tapping Face shows Face's tools (every `BeautifyTool` whose `group` is `FACE`; Body's
+   likewise, `BODY`: Waist) in a
    `LazyRow` on the left and Back pinned at the right end behind a divider, as Edit pins Compare,
    and opens the group's first tool. The rows slide sideways with `AnimatedContent`. A new face
    tool joins the group by naming it in `BeautifyTool`. Every entry is the Edit screen's own
-   `EditToolEntry`; Face's icon (`ic_face_group.xml`) is drawn for Kanso. Above the row, in Edit's own panel area
+   `EditToolEntry`; Face's and Body's icons (`ic_face_group.xml`, `ic_body_group.xml`) are drawn for Kanso. Above the row, in Edit's own panel area
    (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
-   right end (width and lift -100..100, smoothing
-   0..100). The open group, the open tool and the three values are kept with `rememberSaveable` (they survive a
-   rotation). Every move calls `onPreview(strength, width, lift)` (step 7) and the slider's
-   `onValueChangeFinished` (the finger lifts) calls `onApply(strength, width, lift)`. Width's and
-   Lift's icons, `res/drawable/ic_face_width.xml` and `ic_face_lift.xml`, are drawn for Kanso; Smooth uses `ic_face_retouching_natural`.
+   right end (width, lift and waist -100..100, smoothing
+   0..100). The open group, the open tool and every value are kept with `rememberSaveable` (they survive a
+   rotation). Every move calls `onPreview(amounts)` (step 7) and the slider's
+   `onValueChangeFinished` (the finger lifts) calls `onApply(amounts)`, where `amounts` is a
+   [`BeautifyAmounts`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyAmounts.kt)
+   holding every slider's value by name (smoothing, face width, face lift, waist). Opening or
+   leaving a group calls `onGroupChange`; `ToolScreen` turns Body into
+   `ToolViewModel.showWholePhoto(true)` (`ToolUiState.wholePhoto`), so the card drops the face zoom
+   while Body is open. Width's, Lift's and Waist's icons, `res/drawable/ic_face_width.xml`,
+   `ic_face_lift.xml` and `ic_body_waist.xml`, are drawn for Kanso; Smooth uses `ic_face_retouching_natural`.
 2. **Handing over the values.** `ToolScreen` turns `onApply` into
-   `viewModel.renderRegistered { … it.strength = strength; it.width = width; it.lift = lift }` on the
+   `viewModel.renderRegistered { processor -> processor.use(amounts) }`, a helper in `ToolScreen.kt`
+   that sets `strength`, `width`, `lift` and `waist` on the
    `BeautifyProcessor`: a **quiet** render. It sets `ToolUiState.rendering` (Done's small spinner, Done
    and Undo wait) instead of the progress ring, leaves the sliders on, and cancels a render still
    running from an earlier release, so the newest release wins. Its result becomes the edit and
@@ -157,20 +187,22 @@ flowchart TD
    clears the live look.
 3. **Which processor.**
    [`di/AppModule.kt`](../../app/src/main/java/com/phongkaster/kanso/di/AppModule.kt) registers one
-   app-wide `BeautifyProcessor(finder = LandmarkFaceFinder(landmarks), landmarks = landmarks, smoother = EngineSkinSmoother())`
-   for `Tool.BEAUTIFY`, with one `EngineLandmarkFinder` as `landmarks`: one face model for the tool.
+   app-wide `BeautifyProcessor(finder = LandmarkFaceFinder(landmarks), landmarks = landmarks, smoother = EngineSkinSmoother(), bodies = EngineBodyFinder(androidContext()))`
+   for `Tool.BEAUTIFY`, with one `EngineLandmarkFinder` as `landmarks`: one face model and one pose
+   model for the tool.
 4. **The input.** `renderRegistered` uses the **original** photo as opened, shrunk to 2000 px (`WorkingSize.BEAUTIFY`) on `Dispatchers.Default`. That shrunk copy is
    made once per screen and reused for every later run.
 5. **The processor.**
    [`data/edit/beautify/BeautifyProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/BeautifyProcessor.kt)
    runs on `Dispatchers.Default`:
    1. reads the strength once (a NaN counts as 1; clamped to 0..1; the panel starts it at 0) and
-      the width and the lift once (a NaN counts as 0; each clamped to -1..1), reports 0;
+      the width, the lift and the waist once (a NaN counts as 0; each clamped to -1..1), reports 0;
    2. shrinks to 2000 px again if needed, reports 0.05;
-   3. only when width or lift is not 0: **reshapes every face** (step 6 below), reports 0.25. No
-      face → `NoFace`. With both at 0 no landmarks are looked for and the MediaPipe model is never
-      loaded;
-   4. asks the [`FaceFinder`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/FaceFinder.kt)
+   3. collects the pushes and **warps once** (step 6 below), reports 0.25: the faces' only when
+      width or lift is not 0 (no face → `NoFace`), the waists' only when the waist is not 0 (no
+      person → `NoPerson`). A model whose sliders are all at 0 is never loaded;
+   4. **with smoothing at 0, stops here**: the reshaped photo, made opaque, is the result, and no
+      face is needed. Otherwise it asks the [`FaceFinder`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/FaceFinder.kt)
       for face rectangles on the reshaped photo, cuts each to the photo and drops empty ones,
       reports 0.4. No face → `NoFace`;
    5. smooths each face, one after another, with the
@@ -221,17 +253,48 @@ flowchart TD
       Kotlin on an `IntArray`: for each result pixel inside the pushes' box, it sums every push's
       move weighted by `f²`, `f = (r² − d²) / (r² − d² + |move|²)` (Gustafsson 1993), divides by the
       total weight when it is above 1 (so overlapping pushes do not add up), and copies the input
-      colour from `pixel − move` with bilinear sampling. All faces are warped in one pass.
+      colour from `pixel − move` with bilinear sampling. All faces and all waists are warped in
+      one pass.
+
+   **The waist (Body > Waist)**, all in
+   [`data/edit/body/`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/):
+   1. **Find each person** —
+      [`EngineBodyFinder.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/EngineBodyFinder.kt)
+      calls MediaPipe's `PoseLandmarker` (`RunningMode.IMAGE`, up to 3 people, detection confidence
+      0.5, `setOutputSegmentationMasks(true)`) on `pose_landmarker_full.task` (9.4 MB, in
+      `app/src/main/assets/`; a zip of `pose_detector.tflite` and `pose_landmarks_detector.tflite`).
+      It gives 33 points per person as fractions (turned into pixels, each with its visibility,
+      [`BodyPoint`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyPoint.kt)) and
+      a float mask per person, read with `ByteBufferExtractor` in native byte order into a
+      [`BodyMask`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyMask.kt). The
+      landmarker is built on first use and kept, behind a `Mutex`. It runs beside the face
+      landmarker on the same `mediapipe-tasks-vision` library; on the Galaxy A13 (2026-10-29) the
+      two ran together without the SIGBUS above;
+   2. **Find the waist's edges** —
+      [`BodyWaist.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyWaist.kt):
+      the torso's centre line runs from between the shoulders (points 11, 12,
+      [`PoseIndex`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/PoseIndex.kt)) to
+      between the hips (23, 24). If any of the four is less than 0.5 visible, the person gets no
+      push. At 0.45, 0.6, 0.75 and 0.9 of the way down (weights 0.4, 0.85, 1, 0.55), it walks
+      sideways from the line, one pixel at a time, until the mask drops below 0.5
+      ([`BodyEdges.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyEdges.kt)).
+      An edge it cannot find, or one nearer than 0.5 or further than 1.8 times the guess, is
+      replaced by the guess: from 0.4 of the shoulders' spread at the top to 0.8 of the hips' spread
+      at the bottom;
+   3. **Push the edges** — each edge gets a `WarpPush` toward the centre line by
+      `waist × 0.12 × weight` of its distance to it (away from it for a negative waist), reaching
+      0.3 of the torso's length, and `LocalWarp` moves the pixels with the faces' pushes.
 7. **The live look while dragging, on the graphics chip.** Each slider move calls
-   `onPreview(strength, width, lift)`; `ToolScreen` hands it to `ToolViewModel.previewRegistered`, which
+   `onPreview(amounts)`; `ToolScreen` hands it to `ToolViewModel.previewRegistered`, which
    sets the values on the processor and rings a one-slot `MutableSharedFlow` (`DROP_OLDEST`); one
    worker coroutine asks `BeautifyProcessor.livePreview` (the
    [`LivePreviewSource`](../../app/src/main/java/com/phongkaster/kanso/data/edit/LivePreviewSource.kt)
    contract) for one look at a time, so positions it could not keep up with are skipped, never
    queued. A look is not a picture but a recipe,
    [`LivePreview`](../../app/src/main/java/com/phongkaster/kanso/data/edit/LivePreview.kt): the
-   region it changes (every face box and push circle), the same `FaceShape` pushes the full render
-   uses, and, when smoothing is on, the shown photo smoothed inside the faces, made once per photo.
+   region it changes (every face box and push circle), the same `FaceShape` and `BodyWaist` pushes
+   the full render uses (the bodies are looked for only while the waist is not 0, then kept for
+   the photo), and, when smoothing is on, the shown photo smoothed inside the faces, made once per photo.
    The landmarks are the ones found for the zoom, so a look costs almost nothing. It goes into
    `ToolUiState.livePreview`; the card draws the original photo as it is, then the region, cut out
    once, through a [`WarpMesh`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/WarpMesh.kt)
@@ -303,14 +366,17 @@ stay as they were.
   the finder and the smoother; out of memory and errors in either are reported; a cancellation
   propagates; progress only goes forward, to 1; width 0 never looks for landmarks; a width with no
   face is reported; a width reshapes the outline and leaves the photo's corners alone; a lift with
-  no face is reported; a lift reshapes the outline and leaves the photo's corners alone; the focus
-  is the largest face; no face or a failing model gives no focus.
+  no face is reported; a lift reshapes the outline and leaves the photo's corners alone; waist 0
+  never looks for bodies; a waist with no person is reported; with smoothing off a waist works on a
+  photo with no face and leaves the corners alone; the focus is the largest face; no face or a
+  failing model gives no focus.
 - [`tool/beautify/BeautifyToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/beautify/BeautifyToolTest.kt):
   through the real screen, no face changes nothing and shows the message; tapping a tool opens its
   slider; Face opens its own row with Width's slider ready and Back; Back returns to the top row
   keeping the values; letting go of a slider hands over its value with the others at their
   defaults; Lift sits in Face's row and opens its own slider; letting go of Lift left of 0 hands
-  over the negative value and keeps the width set before it.
+  over the negative value and keeps the width set before it; Body opens its own row with Waist's
+  slider ready and Back; letting go of Waist hands over its value with every other one at 0.
 - [`tool/face/FaceWidthTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceWidthTest.kt):
   on a made-up oval face, 0 gives no pushes, positive pulls inward, negative pushes outward, both
   sides mirror, values beyond 1 clamp, the moves scale with the face.
@@ -321,6 +387,14 @@ stay as they were.
 - [`tool/face/FaceShapeTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceShapeTest.kt):
   each alone is unchanged; together the moves add up point by point; merging keeps the larger
   radius and the first order.
+- [`tool/body/BodyWaistTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/body/BodyWaistTest.kt):
+  on a made-up upright figure (`SampleBody`), 0 and NaN give no pushes; a positive waist pulls both
+  edges in and a negative one pushes them out; with a mask the pushes sit on its edges; without one
+  the guessed edges are even; a hidden torso gets nothing; values beyond ±1 clamp; the moves scale
+  with the body.
+- [`tool/body/BodyEdgesTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/body/BodyEdgesTest.kt):
+  the walk finds the first background pixel, gives up past its limit or outside the person, and a
+  mask smaller than the photo is read in the photo's pixels.
 - [`tool/face/LocalWarpTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/LocalWarpTest.kt):
   no pushes copies exactly, a push moves a black/white edge, nothing outside the circle changes.
 - [`tool/face/PhotoZoomTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/PhotoZoomTest.kt):
@@ -332,9 +406,10 @@ stay as they were.
   the grid has one point per line, no pushes moves nothing, only points inside a push move and the
   one at its centre moves as `LocalWarp.moveAt` says.
 - `BeautifyProcessorTest` also covers the live look: at rest it changes nothing, it carries the same
-  pushes as the full render and finds the face once, it merges width and lift, it smooths inside the face once and only its
+  pushes as the full render and finds the face once, it merges width and lift, it carries the
+  waist and finds the body once, it smooths inside the face once and only its
   opacity changes, and no face or a failing model gives no look.
-- `EngineLandmarkFinder` and `EngineSkinSmoother` are native code and are **not** run by any test
+- `EngineLandmarkFinder`, `EngineBodyFinder` and `EngineSkinSmoother` are native code and are **not** run by any test
   on the computer, nor is the GPU drawing in `PhotoView`; only the device runs above exercised
   them.
 
@@ -349,6 +424,12 @@ stay as they were.
 - The width numbers (0.12, the weights, 0.22) are first guesses, not yet tuned against Meitu.
 - The lift numbers (0.05, 0.06 and both weight lists) are first guesses too, and **Face lift has
   not been tried on a phone yet**: only the JVM tests cover it.
+- The waist numbers (the four levels and weights, 0.12, 0.3, the guesses 0.4 and 0.8) are first
+  guesses. On the Galaxy A13 (2026-10-29), Waist at +92 on a standing portrait narrowed the belt
+  from about 56 to 41 screen pixels, rendered in about 15 s, with no crash; whether it looks right
+  next to Meitu at the same value is for the owner to judge.
+- Waist bends what lies beside the waist (background, an arm resting on it), like Width and Lift.
+- The pose model adds 9.4 MB to the app.
 - **Whether the face boxes and the OpenCV settings look right has not been judged by a person**
   (`.harness/ISSUES.md`, Run 8 Phase 3 review).
 - **Awaiting a person, Run 8:** item 11 (a one-face portrait at maximum strength: smoother skin

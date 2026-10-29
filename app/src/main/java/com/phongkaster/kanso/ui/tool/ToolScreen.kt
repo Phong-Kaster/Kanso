@@ -68,6 +68,8 @@ import com.phongkaster.kanso.ui.tool.component.topbar.ToolTopBar
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.datepanel.DatePanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.textpanel.TextPanel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
+import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
+import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
 import java.time.LocalDateTime
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
@@ -260,33 +262,15 @@ fun ToolScreen(
                 state = state,
                 onRun = { viewModel.runRegistered() },
                 // A Beautify slider let go: the full-quality render, quietly in the background.
-                onBeautify = { strength, width, lift ->
-                    viewModel.renderRegistered(
-                        configure = { processor ->
-                            (processor as? BeautifyProcessor)?.let(
-                                block = {
-                                    it.strength = strength
-                                    it.width = width
-                                    it.lift = lift
-                                },
-                            )
-                        },
-                    )
+                onBeautify = { amounts ->
+                    viewModel.renderRegistered(configure = { processor -> (processor as? BeautifyProcessor)?.use(amounts) })
                 },
                 // While a Beautify slider is dragged: a quick live frame with the same values.
-                onBeautifyPreview = { strength, width, lift ->
-                    viewModel.previewRegistered(
-                        configure = { processor ->
-                            (processor as? BeautifyProcessor)?.let(
-                                block = {
-                                    it.strength = strength
-                                    it.width = width
-                                    it.lift = lift
-                                },
-                            )
-                        },
-                    )
+                onBeautifyPreview = { amounts ->
+                    viewModel.previewRegistered(configure = { processor -> (processor as? BeautifyProcessor)?.use(amounts) })
                 },
+                // The whole photo while Body is open: the zoom onto the face would hide the waist.
+                onBeautifyGroup = { group -> viewModel.showWholePhoto(group == BeautifyGroup.BODY) },
                 onStylize = { style, strength ->
                     viewModel.runRegistered(fromOriginal = true) { processor ->
                         (processor as? ArtisticProcessor)?.let {
@@ -966,4 +950,15 @@ private fun sampleNarrowPhoto(): Bitmap {
     paint.color = 0xFFFFF59D.toInt()
     canvas.drawCircle(150f, 220f, 70f, paint)
     return bitmap
+}
+
+/**
+ * Hands every Beautify slider's value in [amounts] to this processor, just before a live frame or
+ * a full render. Each value goes to the processor's own setting of the same meaning.
+ */
+private fun BeautifyProcessor.use(amounts: BeautifyAmounts) {
+    strength = amounts.smoothing
+    width = amounts.faceWidth
+    lift = amounts.faceLift
+    waist = amounts.waist
 }

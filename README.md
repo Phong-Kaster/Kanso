@@ -56,7 +56,7 @@ the working size, progress, Undo, failures and Done.
 | [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
-| [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift and a pinned Back; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), where MediaPipe's 478 face landmarks drive one Kotlin warp of the cheek and jaw outline, and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
+| [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift and a pinned Back; Body, with Waist; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), where MediaPipe's 478 face landmarks drive a Kotlin warp of the cheek and jaw outline; Waist (-100..+100, slimmer to the right), where MediaPipe's pose model (33 body points and a person mask) finds the waist's edges for the same warp; and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
 | [Artistic](docs/features/artistic.md) | Repaints the photo in one of four styles (Warm wash, Cool wash, Mosaic, Ink) with the bundled Inception v3 style-transfer models, mixed by a strength slider. | JPEG, at most 1024 px |
 
 ### Getting a photo
@@ -103,7 +103,7 @@ on a phone yet.
 | Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
-| Beautify | Works | Face width and Face lift (MediaPipe landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face. Width and smoothing seen on the Galaxy A13, 2026-10-28; Lift not yet tried on a phone. |
+| Beautify | Works | Face width, Face lift and Waist (MediaPipe face and pose landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face (the whole photo while Body is open). Width and smoothing seen on the Galaxy A13, 2026-10-28; Waist at +92 rendered on the A13 with no crash, 2026-10-29; Lift not yet judged on a phone. |
 | Artistic | Works | Four styles from the Inception v3 style-transfer models, with a strength slider. |
 | Done and Result | Works | Done hands the picture to Result; Save is the only gallery write. |
 
@@ -404,7 +404,7 @@ card and leaves the photo as it was. Done hands the shown photo to Result at onc
 |---|---|---|---|
 | Remove background | `data/edit/cutout/CutoutProcessor.kt` | `data/edit/cutout/EngineSegmenter.kt` | [page](docs/features/remove-background.md) |
 | Enhance | `data/edit/enhance/EnhanceProcessor.kt` | `EngineUpscaler.kt`, `AutoLighting.kt` | [page](docs/features/enhance.md) |
-| Beautify | `data/edit/beautify/BeautifyProcessor.kt` | `LandmarkFaceFinder.kt`, `EngineSkinSmoother.kt`, `data/edit/face/EngineLandmarkFinder.kt` | [page](docs/features/beautify.md) |
+| Beautify | `data/edit/beautify/BeautifyProcessor.kt` | `LandmarkFaceFinder.kt`, `EngineSkinSmoother.kt`, `data/edit/face/EngineLandmarkFinder.kt`, `data/edit/body/EngineBodyFinder.kt` | [page](docs/features/beautify.md) |
 | Artistic | `data/edit/artistic/ArtisticProcessor.kt` | `EngineStylizer.kt` | [page](docs/features/artistic.md) |
 
 ---
@@ -445,7 +445,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
 | Edit (text) | `data/edit/edit/TextLayerLayout.kt` | Android `StaticLayout` | five OFL fonts in `app/src/main/res/font/` |
 | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` |
 | Enhance | `data/edit/enhance/EngineUpscaler.kt` | `EnhanceImageUC` | `realesrgan_64x64_float16.tflite` |
-| Beautify | `data/edit/face/EngineLandmarkFinder.kt`, `data/edit/beautify/EngineSkinSmoother.kt` | MediaPipe `FaceLandmarker` (one, for width, lift, zoom and the smoothing boxes), OpenCV `Imgproc.bilateralFilter` | `face_landmarker.task` |
+| Beautify | `data/edit/face/EngineLandmarkFinder.kt`, `data/edit/body/EngineBodyFinder.kt`, `data/edit/beautify/EngineSkinSmoother.kt` | MediaPipe `FaceLandmarker` (one, for width, lift, zoom and the smoothing boxes), MediaPipe `PoseLandmarker` (Waist, with its segmentation mask), OpenCV `Imgproc.bilateralFilter` | `face_landmarker.task`, `pose_landmarker_full.task` (in `app/src/main/assets/`) |
 | Artistic | `data/edit/artistic/EngineStylizer.kt` | `StylePredictInceptionV3UC`, `StyleTransferInceptionV3BlendUC` | two Inception v3 stylization `.tflite` models |
 
 Outside editing, `data/media/MediaStorePhotoSource.kt` uses `core/gallery`'s `MediaRepository`, and
@@ -522,6 +522,7 @@ only on a device or an emulator.
 | [ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md) | A sticker is part of the photo: it is drawn first, so everything else acts on it. |
 | [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md) | Stickers and text are layers: one list, one gesture handler, two kinds of picture. |
 | [ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md) | A date is its own layer kind, not a text: it keeps its moment and format, so the pickers and tap-to-cycle work on it. |
+| [ADR-007](docs/adr/ADR-007-body-reshapes-use-the-mediapipe-pose-model-and-its-mask.md) | Body reshapes (Waist first) use MediaPipe's bundled pose model and its person mask, warped with the faces in one pass, in a Body group of Beautify. |
 
 ---
 
@@ -537,5 +538,10 @@ The five bundled fonts are under the SIL Open Font License 1.1; each licence tex
 | Dancing Script Bold | `res/font/dancing_script.ttf` | `dancing_script-OFL.txt` |
 | Patrick Hand Regular | `res/font/patrick_hand_regular.ttf` | `patrick_hand_regular-OFL.txt` |
 | Space Mono Regular | `res/font/space_mono_regular.ttf` | `space_mono_regular-OFL.txt` |
+
+The pose model `app/src/main/assets/pose_landmarker_full.task` is Google's MediaPipe Pose
+Landmarker (full), downloaded unchanged from MediaPipe's model storage
+(`storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/`,
+SHA-256 `4eaa5eb7…cdcec4ad`) and published under the Apache License 2.0.
 
 The engine modules, OpenCV and the sticker pictures keep the licences of their own sources.

@@ -28,6 +28,8 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_STRENGTH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WIDTH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LIFT_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WAIST_TAG
+import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.beautifyGroupTag
@@ -250,6 +252,34 @@ class BeautifyToolTest {
         assertEquals(-0.6f, lift, 0.01f)
     }
 
+    /** The top row shows Body; tapping it swaps the row for Body's (Waist, Back) with Waist's slider open. */
+    @Test
+    fun body_opens_its_own_row_with_waist_ready() {
+        showPanel()
+
+        compose.onNodeWithTag(beautifyGroupTag(BeautifyGroup.BODY)).assertExists()
+        tap(beautifyGroupTag(BeautifyGroup.BODY))
+
+        compose.onNodeWithTag(beautifyToolTag(BeautifyTool.WAIST)).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_BACK_TAG).assertExists()
+        compose.onNodeWithTag(BEAUTIFY_WAIST_TAG).assertExists()
+    }
+
+    /** Letting go of the waist slider at 0.7 applies 0.7, with the face and smoothing untouched. */
+    @Test
+    fun releasing_the_waist_slider_applies_it() {
+        val applied = showPanel()
+
+        open(BeautifyTool.WAIST)
+        compose.onNodeWithTag(BEAUTIFY_WAIST_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.7f) }
+        compose.waitForIdle()
+
+        val amounts = applied.single()
+        assertEquals(0.7f, amounts.waist, 0.01f)
+        assertEquals(BeautifyAmounts(), amounts.copy(waist = 0f))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -258,7 +288,7 @@ class BeautifyToolTest {
      * Beautify panel in its slot. Returns the ViewModel.
      */
     private fun show(photo: Bitmap): ToolViewModel {
-        val processor = BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         val viewModel = ToolViewModel(
             Tool.BEAUTIFY,
             PHOTO_URI,
@@ -281,23 +311,25 @@ class BeautifyToolTest {
                     onDone = {},
                     panel = {
                         BeautifyPanel(
-                            onApply = { strength, width, lift ->
+                            onApply = { amounts ->
                                 // A slider let go renders quietly from the untouched photo, as the app does.
                                 viewModel.renderRegistered(
                                     configure = { registered ->
-                                        (registered as BeautifyProcessor).strength = strength
-                                        registered.width = width
-                                        registered.lift = lift
+                                        (registered as BeautifyProcessor).strength = amounts.smoothing
+                                        registered.width = amounts.faceWidth
+                                        registered.lift = amounts.faceLift
+                                        registered.waist = amounts.waist
                                     },
                                 )
                             },
                             // While dragging, a live frame with the same values, as the app does.
-                            onPreview = { strength, width, lift ->
+                            onPreview = { amounts ->
                                 viewModel.previewRegistered(
                                     configure = { registered ->
-                                        (registered as BeautifyProcessor).strength = strength
-                                        registered.width = width
-                                        registered.lift = lift
+                                        (registered as BeautifyProcessor).strength = amounts.smoothing
+                                        registered.width = amounts.faceWidth
+                                        registered.lift = amounts.faceLift
+                                        registered.waist = amounts.waist
                                     },
                                 )
                             },
@@ -330,17 +362,14 @@ class BeautifyToolTest {
     }
 
     /**
-     * Draws the Beautify panel alone and returns the list every apply's (strength, width, lift) is
-     * added to.
+     * Draws the Beautify panel alone and returns the list every apply's values are added to. A
+     * [BeautifyAmounts] reads back in order as (smoothing, face width, face lift, waist).
      */
-    private fun showPanel(): MutableList<Triple<Float, Float, Float>> {
-        val applied = mutableListOf<Triple<Float, Float, Float>>()
+    private fun showPanel(): MutableList<BeautifyAmounts> {
+        val applied = mutableListOf<BeautifyAmounts>()
         compose.setContent {
             MaterialTheme {
-                BeautifyPanel(
-                    onApply = { strength, width, lift -> applied += Triple(strength, width, lift) },
-                    onPreview = { _, _, _ -> },
-                )
+                BeautifyPanel(onApply = { amounts -> applied += amounts }, onPreview = {})
             }
         }
         compose.onNodeWithTag(BEAUTIFY_PANEL_TAG).assertExists()

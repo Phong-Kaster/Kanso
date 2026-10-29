@@ -25,4 +25,12 @@
     <!-- Beautify panel: the name of the Lift tool in the Face group's row, under its icon (the
          group already says it is about the face). -->
     <string name="beautify_tool_lift">Lift</string>
+    <!-- Beautify panel: the name of the Body group in the top row of tools, under its icon; tapping
+         it shows the body tools (Waist...). Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_group_body">Body</string>
+    <!-- Beautify panel: the name of the Waist tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_waist">Waist</string>
+    <!-- Beautify panel: the label of the waist slider, how much slimmer (positive) or wider
+         (negative) each person's waist becomes. Also what screen readers call the slider. -->
+    <string name="beautify_waist_label">Waist</string>
 </resources>

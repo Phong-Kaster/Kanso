@@ -19,9 +19,8 @@ sealed interface BeautifyEntry {
     companion object {
 
         /**
-         * The top row, in order: Face, then Smooth (Meitu's Face | Body | Smooth, with Body to come
-         * once it has a tool).
+         * The top row, in order: Face, Body, then Smooth, as Meitu's Face | Body | Smooth.
          */
-        val TOP_ROW: List<BeautifyEntry> = listOf(Group(BeautifyGroup.FACE), Single(BeautifyTool.SMOOTH))
+        val TOP_ROW: List<BeautifyEntry> = listOf(Group(BeautifyGroup.FACE), Group(BeautifyGroup.BODY), Single(BeautifyTool.SMOOTH))
     }
 }

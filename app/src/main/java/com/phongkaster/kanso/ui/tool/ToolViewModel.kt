@@ -1528,6 +1528,14 @@ class ToolViewModel(
         if (hadTouched) requestPreview()
     }
 
+    /**
+     * Shows the whole photo ([whole] true) or lets the card zoom onto the face again (false). Beautify
+     * calls it as its Body group opens and closes ([ToolUiState.wholePhoto]).
+     */
+    fun showWholePhoto(whole: Boolean) {
+        mutableState.update(function = { it.copy(wholePhoto = whole) })
+    }
+
     /** Hides the message about the last failed edit, once the person has read it. */
     fun dismissFailure() {
         mutableState.update { it.copy(failure = null) }

@@ -8,6 +8,9 @@ import com.phongkaster.kanso.data.edit.LivePreview
 import com.phongkaster.kanso.data.edit.LivePreviewSource
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.body.BodyFinder
+import com.phongkaster.kanso.data.edit.body.BodyLandmarks
+import com.phongkaster.kanso.data.edit.body.BodyWaist
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.data.edit.face.FaceFocusSource
 import com.phongkaster.kanso.data.edit.face.FaceLandmarks
@@ -27,19 +30,24 @@ import kotlinx.coroutines.withContext
 
 /**
  * The Beautify tool's edit: every face in the photo made narrower or wider, as much as the Face
- * width slider asks for, and lifted, as much as the Face lift slider asks for, then its skin
+ * width slider asks for, and lifted, as much as the Face lift slider asks for; every person's
+ * waist made slimmer or wider, as much as the Waist slider asks for; then the faces' skin
  * smoothed, as much as the Smoothing slider asks for.
  *
  * The steps, in order:
  * 1. Scale the photo down so its longest edge is at most [maxEdgePx] (2000 pixels by default,
  *    [WorkingSize.BEAUTIFY]), so a 24-megapixel photo never runs the phone out of memory.
- * 2. Only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
- *    (MediaPipe's face landmarker in the app), turn each face's outline into pushes ([FaceShape]:
- *    Width's and Lift's added point by point) and move the pixels ([LocalWarp]), once for both.
- *    No face means nothing to reshape: [EditFailure.NoFace].
- * 3. Ask [finder] for the faces' rectangles on the reshaped photo (the engine's face-landmark
- *    model in the app). No face means nothing to smooth: the result is [EditFailure.NoFace] and
- *    the photo stays as it was.
+ * 2. Reshape, in one warp ([LocalWarp]) so the photo is resampled once:
+ *    - only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
+ *      (MediaPipe's face landmarker in the app) and turn each face's outline into pushes
+ *      ([FaceShape]: Width's and Lift's added point by point). No face: [EditFailure.NoFace];
+ *    - only when [waist] is not 0: ask [bodies] for each person's 33 pose landmarks and mask
+ *      (MediaPipe's pose landmarker in the app) and turn each waist into pushes ([BodyWaist]).
+ *      No person: [EditFailure.NoPerson].
+ * 3. Only when [strength] is above 0: ask [finder] for the faces' rectangles on the reshaped photo
+ *    (the same face landmarks, as boxes). No face means nothing to smooth: the result is
+ *    [EditFailure.NoFace] and the photo stays as it was. With smoothing at 0 no face is needed,
+ *    so a Waist edit works on a photo whose face is too small to find.
  * 4. Smooth each face's rectangle with [smoother] (OpenCV's bilateral filter in the app), one
  *    face after another, giving a fully smoothed copy in which everything outside the faces is
  *    untouched.
@@ -58,6 +66,7 @@ class BeautifyProcessor(
     private val finder: FaceFinder,
     private val landmarks: LandmarkFinder,
     private val smoother: SkinSmoother,
+    private val bodies: BodyFinder,
     private val maxEdgePx: Int = WorkingSize.BEAUTIFY,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ToolProcessor, FaceFocusSource, LivePreviewSource {
@@ -101,29 +110,34 @@ class BeautifyProcessor(
 
     /**
      * The live look while a slider is dragged, for [photo] (the unedited photo as shown on screen)
-     * with the current [width], [lift] and [strength]. It is a recipe, not a picture: the screen draws it
+     * with the current [width], [lift], [waist] and [strength]. It is a recipe, not a picture: the screen draws it
      * on the graphics chip every frame (see [LivePreview]), so it is cheap to make:
      * 1. the faces' landmarks are found once per photo and kept ([facesOf]);
-     * 2. the reshape is the same [FaceShape] pushes the full render uses, in pixels of [photo];
+     * 2. the reshape is the same [FaceShape] and [BodyWaist] pushes the full render uses, in pixels
+     *    of [photo]; the bodies are found only while the waist is not 0, then kept ([bodiesOf]);
      * 3. when smoothing is on, [photo] fully smoothed inside the face boxes is made the first time
      *    and kept ([smoothedOf]); the screen lays it over the photo [strength] opaque.
      *
-     * Null when no face is found or the look cannot be made; a live look never fails the tool.
+     * Null when neither a face nor (with a waist) a person is found, or the look cannot be made; a
+     * live look never fails the tool.
      */
     override suspend fun livePreview(photo: Bitmap): LivePreview? = withContext(dispatcher) {
         try {
             val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
             val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val slim = waist.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val faces = facesOf(photo)
-            if (faces.isEmpty()) return@withContext null
+            val people = if (slim != 0f) bodiesOf(photo) else emptyList()
+            if (faces.isEmpty() && people.isEmpty()) return@withContext null
             ensureActive()
-            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) })
+            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) }) +
+                people.flatMap(transform = { BodyWaist.pushesFor(it, slim) })
             val region = regionOf(boxesOf(faces, photo), pushes, photo) ?: return@withContext null
             LivePreview(
                 region = region,
                 pushes = pushes,
-                smoothed = if (amount > 0f) smoothedOf(photo, faces) else null,
+                smoothed = if (amount > 0f && faces.isNotEmpty()) smoothedOf(photo, faces) else null,
                 smoothing = amount,
             )
         } catch (cancelled: CancellationException) {
@@ -137,9 +151,10 @@ class BeautifyProcessor(
         }
     }
 
-    /** Forgets the kept landmarks and smoothed copy, so the last photo is not held on to. */
+    /** Forgets the kept landmarks, bodies and smoothed copy, so the last photo is not held on to. */
     override fun releasePreview() {
         keptFaces = null
+        keptBodies = null
         keptSmoothed = null
     }
 
@@ -152,6 +167,18 @@ class BeautifyProcessor(
         val faces = landmarks.findLandmarks(photo)
         keptFaces = photo to faces
         return faces
+    }
+
+    /**
+     * The bodies in [photo], found with [bodies] the first time and kept for that same bitmap
+     * afterwards, as [facesOf] keeps the faces. Each comes with its mask, which can be a few MB on
+     * a large photo, so it is forgotten with the rest in [releasePreview].
+     */
+    private suspend fun bodiesOf(photo: Bitmap): List<BodyLandmarks> {
+        keptBodies?.let { (source, people) -> if (source === photo) return people }
+        val people = bodies.findBodies(photo)
+        keptBodies = photo to people
+        return people
     }
 
     /**
@@ -193,6 +220,10 @@ class BeautifyProcessor(
     @Volatile
     private var keptFaces: Pair<Bitmap, List<FaceLandmarks>>? = null
 
+    /** The bodies of the last photo [bodiesOf] looked at, with that photo; null before any. */
+    @Volatile
+    private var keptBodies: Pair<Bitmap, List<BodyLandmarks>>? = null
+
     /** The last photo [smoothedOf] smoothed, with its smoothed copy; null before any. */
     @Volatile
     private var keptSmoothed: Pair<Bitmap, Bitmap>? = null
@@ -224,6 +255,14 @@ class BeautifyProcessor(
     var lift: Float = 0f
 
     /**
+     * How much to reshape each person's waist, from -1 (widest) through 0 (unchanged, the default)
+     * to 1 (slimmest), like Meitu's Waist slider at -100..+100. The panel sets it just before a
+     * run; a value outside -1..1 is clamped when used. At 0 the pose model is never loaded.
+     */
+    @Volatile
+    var waist: Float = 0f
+
+    /**
      * Runs the six steps above on [input] and returns the result; [input] is not changed.
      * [onProgress] only ever moves forward, from 0 to 1.
      */
@@ -243,15 +282,28 @@ class BeautifyProcessor(
                 val amount = strength.let { if (it.isNaN()) 1f else it.coerceIn(0f, 1f) }
                 val reshape = width.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 val raise = lift.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+                val slim = waist.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 report(0f)
                 val small = WorkingSize.fit(input, maxEdgePx)
                 report(FIT_DONE)
-                val shaped = if (reshape == 0f && raise == 0f) small else reshapeFaces(small, reshape, raise)
-                if (shaped == null) {
+                // Each model runs only when its sliders are off 0; null means it found nothing.
+                val facePushes = if (reshape != 0f || raise != 0f) facePushes(small, reshape, raise) else emptyList()
+                val bodyPushes = if (facePushes != null && slim != 0f) bodyPushes(small, slim) else emptyList()
+                if (facePushes == null || bodyPushes == null) {
                     if (small !== input) small.recycle()
-                    return@withContext EditResult.Failed(EditFailure.NoFace)
+                    return@withContext EditResult.Failed(if (facePushes == null) EditFailure.NoFace else EditFailure.NoPerson)
                 }
+                val pushes = facePushes + bodyPushes
+                val shaped = if (pushes.isEmpty()) small else LocalWarp.warp(small, pushes)
                 report(SHAPE_DONE)
+                // With smoothing at 0 there is nothing to smooth, so no face is needed at all.
+                if (amount == 0f) {
+                    val result = blend(shaped, shaped, 0f)
+                    if (shaped !== small) shaped.recycle()
+                    if (small !== input) small.recycle()
+                    report(1f)
+                    return@withContext EditResult.Edited(result)
+                }
                 val faces = finder.findFaces(shaped).mapNotNull { clampTo(it, shaped.width, shaped.height) }
                 report(FIND_DONE)
                 if (faces.isEmpty()) {
@@ -285,16 +337,24 @@ class BeautifyProcessor(
         }
 
     /**
-     * Returns a new copy of [photo] with every face's width changed by [width] (-1..1) and lifted
-     * by [lift] (-1..1), not both 0 here, or null when [landmarks] finds no face. All faces, and
-     * both reshapes, are warped in one pass, so the photo is resampled only once. [photo] is not
-     * changed.
+     * Returns the pushes that change every face in [photo] by [width] and [lift] (-1..1, not both
+     * 0 here), or null when [landmarks] finds no face. All faces' pushes go into the one warp, so
+     * the photo is resampled only once. [photo] is not changed.
      */
-    private suspend fun reshapeFaces(photo: Bitmap, width: Float, lift: Float): Bitmap? {
+    private suspend fun facePushes(photo: Bitmap, width: Float, lift: Float): List<WarpPush>? {
         val found = landmarks.findLandmarks(photo)
         if (found.isEmpty()) return null
-        val pushes = found.flatMap(transform = { face -> FaceShape.pushesFor(face, width, lift) })
-        return LocalWarp.warp(photo, pushes)
+        return found.flatMap(transform = { face -> FaceShape.pushesFor(face, width, lift) })
+    }
+
+    /**
+     * Returns the pushes that change every person's waist in [photo] by [waist] (-1..1, not 0
+     * here), or null when [bodies] finds no person. [photo] is not changed.
+     */
+    private suspend fun bodyPushes(photo: Bitmap, waist: Float): List<WarpPush>? {
+        val people = bodies.findBodies(photo)
+        if (people.isEmpty()) return null
+        return people.flatMap(transform = { body -> BodyWaist.pushesFor(body, waist) })
     }
 
     /**

@@ -142,6 +142,11 @@ data class ToolUiState(
      */
     val faceFocus: FaceFocus? = null,
     /**
+     * True while the photo card must show the whole photo instead of zooming onto [faceFocus]: on
+     * Beautify while the Body group is open, since the zoom onto the face would hide the waist.
+     */
+    val wholePhoto: Boolean = false,
+    /**
      * A live look of a slider tool's edit (Beautify) while its slider is dragged: a recipe the card
      * draws on the graphics chip over the photo as shown (see [LivePreview]); null when there is
      * none. While it is set the card draws the original photo through it instead of [edited], so

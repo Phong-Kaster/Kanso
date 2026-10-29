@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.WorkingSize
+import com.phongkaster.kanso.data.edit.body.BodyWaist
 import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.FaceWidth
 import com.phongkaster.kanso.data.edit.beautify.BeautifyProcessor
@@ -91,7 +92,7 @@ class BeautifyProcessorTest {
         val before = pixels(photo)
         val smoother = FakeSkinSmoother()
 
-        val result = runBlocking { BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), smoother).process(photo) {} }
+        val result = runBlocking { BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder(), smoother, FakeBodyFinder()).process(photo) {} }
 
         assertEquals(EditResult.Failed(EditFailure.NoFace), result)
         assertTrue("the smoother must not run without a face", smoother.received.isEmpty())
@@ -121,7 +122,7 @@ class BeautifyProcessorTest {
         val huge = Bitmap.createBitmap(6000, 4000, Bitmap.Config.RGB_565)
         huge.eraseColor(Color.rgb(128, 128, 128))
 
-        val result = runBlocking { BeautifyProcessor(finder, FakeLandmarkFinder(), smoother).process(huge) {} }
+        val result = runBlocking { BeautifyProcessor(finder, FakeLandmarkFinder(), smoother, FakeBodyFinder()).process(huge) {} }
         huge.recycle()
 
         for ((name, sizes) in listOf("finder" to finder.received, "smoother" to smoother.received)) {
@@ -138,7 +139,7 @@ class BeautifyProcessorTest {
     @Test
     fun out_of_memory_in_the_finder_is_reported() {
         val result = runBlocking {
-            BeautifyProcessor(FakeFaceFinder(failure = OutOfMemoryError("fake")), FakeLandmarkFinder(), FakeSkinSmoother())
+            BeautifyProcessor(FakeFaceFinder(failure = OutOfMemoryError("fake")), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.OutOfMemory), result)
@@ -148,7 +149,7 @@ class BeautifyProcessorTest {
     @Test
     fun out_of_memory_in_the_smoother_is_reported() {
         val result = runBlocking {
-            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = OutOfMemoryError("fake")))
+            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = OutOfMemoryError("fake")), FakeBodyFinder())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.OutOfMemory), result)
@@ -158,7 +159,7 @@ class BeautifyProcessorTest {
     @Test
     fun a_finder_error_is_reported_as_model_unavailable() {
         val result = runBlocking {
-            BeautifyProcessor(FakeFaceFinder(failure = IllegalStateException("fake")), FakeLandmarkFinder(), FakeSkinSmoother())
+            BeautifyProcessor(FakeFaceFinder(failure = IllegalStateException("fake")), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.ModelUnavailable), result)
@@ -168,7 +169,7 @@ class BeautifyProcessorTest {
     @Test
     fun a_smoother_error_is_reported_as_model_unavailable() {
         val result = runBlocking {
-            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = IllegalStateException("fake")))
+            BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(failure = IllegalStateException("fake")), FakeBodyFinder())
                 .process(noisyPatch()) {}
         }
         assertEquals(EditResult.Failed(EditFailure.ModelUnavailable), result)
@@ -181,7 +182,7 @@ class BeautifyProcessorTest {
         var returned: EditResult? = null
         runBlocking {
             try {
-                returned = BeautifyProcessor(FakeFaceFinder(failure = CancellationException("left")), FakeLandmarkFinder(), FakeSkinSmoother())
+                returned = BeautifyProcessor(FakeFaceFinder(failure = CancellationException("left")), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
                     .process(noisyPatch()) {}
             } catch (cancelled: CancellationException) {
                 caught = cancelled
@@ -197,7 +198,7 @@ class BeautifyProcessorTest {
         val seen = mutableListOf<Float>()
         val twoFaces = FakeFaceFinder(facesFor = { listOf(Rect(0, 0, 60, 60), Rect(100, 100, 180, 180)) })
 
-        runBlocking { BeautifyProcessor(twoFaces, FakeLandmarkFinder(), FakeSkinSmoother()).process(noisyPatch()) { seen += it } }
+        runBlocking { BeautifyProcessor(twoFaces, FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder()).process(noisyPatch()) { seen += it } }
 
         assertTrue("no progress was reported", seen.isNotEmpty())
         seen.forEach { assertTrue("progress $it is outside 0..1", it in 0f..1f) }
@@ -209,7 +210,7 @@ class BeautifyProcessorTest {
     @Test
     fun width_zero_never_looks_for_landmarks() {
         val landmarks = FakeLandmarkFinder()
-        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother(), FakeBodyFinder())
 
         runBlocking { processor.process(noisyPatch()) {} }
 
@@ -221,7 +222,7 @@ class BeautifyProcessorTest {
     fun width_with_no_face_is_reported() {
         val photo = noisyPatch()
         val before = pixels(photo)
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder())
         processor.width = 1f
 
         val result = runBlocking { processor.process(photo) {} }
@@ -237,7 +238,7 @@ class BeautifyProcessorTest {
     @Test
     fun width_reshapes_the_outline_only() {
         val photo = noisyPatch()
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = 0f
         processor.width = 1f
 
@@ -254,7 +255,7 @@ class BeautifyProcessorTest {
     /** A face lift with no face found fails with "no face", as a face width does. */
     @Test
     fun lift_with_no_face_is_reported() {
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder())
         processor.lift = 1f
 
         val result = runBlocking { processor.process(noisyPatch()) {} }
@@ -269,7 +270,7 @@ class BeautifyProcessorTest {
     @Test
     fun lift_reshapes_the_outline_only() {
         val photo = noisyPatch()
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = 0f
         processor.lift = 1f
 
@@ -291,7 +292,7 @@ class BeautifyProcessorTest {
     fun a_live_look_merges_width_and_lift() {
         val photo = noisyPatch()
         val landmarks = FakeLandmarkFinder()
-        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = 0f
         processor.width = 0.5f
         processor.lift = 0.5f
@@ -300,6 +301,73 @@ class BeautifyProcessorTest {
 
         assertEquals(FaceShape.pushesFor(FakeLandmarkFinder.centre(photo), 0.5f, 0.5f), look.pushes)
         assertEquals(1, landmarks.received.size)
+    }
+
+    /** Waist 0 never asks for bodies: the pose model is not loaded for face tools or smoothing. */
+    @Test
+    fun waist_zero_never_looks_for_bodies() {
+        val bodies = FakeBodyFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), bodies)
+        processor.width = 1f
+
+        runBlocking { processor.process(noisyPatch()) {} }
+
+        assertTrue("the body finder ran ${bodies.received.size} times", bodies.received.isEmpty())
+    }
+
+    /** A waist with no person found fails with "no person" and leaves the photo as it was. */
+    @Test
+    fun waist_with_no_person_is_reported() {
+        val photo = noisyPatch()
+        val before = pixels(photo)
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder.none())
+        processor.waist = 1f
+
+        val result = runBlocking { processor.process(photo) {} }
+
+        assertEquals(EditResult.Failed(EditFailure.NoPerson), result)
+        assertArrayEquals(before, pixels(photo))
+    }
+
+    /**
+     * With smoothing off, a waist reshapes the torso even on a photo with no face to find (a
+     * small face, or a person seen from behind), and the photo's corners stay as they were.
+     */
+    @Test
+    fun waist_works_without_a_face_when_smoothing_is_off() {
+        val photo = noisyPatch()
+        val processor = BeautifyProcessor(FakeFaceFinder.none(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder())
+        processor.strength = 0f
+        processor.waist = 1f
+
+        val result = (runBlocking { processor.process(photo) {} } as EditResult.Edited).bitmap
+
+        val original = pixels(photo)
+        val edited = pixels(result)
+        val changed = original.indices.count(predicate = { original[it] != edited[it] })
+        assertTrue("only $changed pixels changed", changed > 0)
+        assertEquals(photo.getPixel(0, 0), result.getPixel(0, 0))
+        assertEquals(photo.getPixel(SIZE - 1, SIZE - 1), result.getPixel(SIZE - 1, SIZE - 1))
+    }
+
+    /**
+     * A live look with a waist carries the same [BodyWaist] pushes the full render uses, and two
+     * looks on the same photo look for bodies only once.
+     */
+    @Test
+    fun a_live_look_carries_the_waist_and_finds_the_body_once() {
+        val photo = noisyPatch()
+        val bodies = FakeBodyFinder()
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), bodies)
+        processor.strength = 0f
+        processor.waist = 1f
+
+        val first = runBlocking { processor.livePreview(photo) }!!
+        processor.waist = 0.5f
+        runBlocking { processor.livePreview(photo) }
+
+        assertEquals(BodyWaist.pushesFor(FakeBodyFinder.centre(photo), 1f), first.pushes)
+        assertEquals(1, bodies.received.size)
     }
 
     /**
@@ -311,7 +379,7 @@ class BeautifyProcessorTest {
         val photo = noisyPatch()
         val small = SampleFace.oval(centerX = 40f, centerY = 40f, halfWidth = 10f, halfHeight = 14f)
         val large = SampleFace.oval(centerX = 120f, centerY = 120f, halfWidth = 40f, halfHeight = 50f)
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(facesFor = { listOf(small, large) }), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(facesFor = { listOf(small, large) }), FakeSkinSmoother(), FakeBodyFinder())
 
         val focus = runBlocking { processor.findFocus(photo) }!!
 
@@ -327,14 +395,14 @@ class BeautifyProcessorTest {
     fun no_face_or_a_failing_model_gives_no_focus() {
         val failing = FakeLandmarkFinder(facesFor = { throw IllegalStateException("fake") })
 
-        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother()).findFocus(noisyPatch()) })
-        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother()).findFocus(noisyPatch()) })
+        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder()).findFocus(noisyPatch()) })
+        assertNull(runBlocking { BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother(), FakeBodyFinder()).findFocus(noisyPatch()) })
     }
 
     /** A live look at width 0 and no smoothing moves nothing and lays nothing on top. */
     @Test
     fun a_live_look_at_rest_changes_nothing() {
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = 0f
         processor.width = 0f
 
@@ -352,7 +420,7 @@ class BeautifyProcessorTest {
     fun live_looks_carry_the_pushes_and_find_the_face_once() {
         val photo = noisyPatch()
         val landmarks = FakeLandmarkFinder()
-        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), landmarks, FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = 0f
         processor.width = 1f
 
@@ -372,7 +440,7 @@ class BeautifyProcessorTest {
     @Test
     fun a_live_look_smooths_inside_the_face_once() {
         val photo = noisyPatch()
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         processor.width = 0f
         processor.strength = 1f
 
@@ -392,8 +460,8 @@ class BeautifyProcessorTest {
     @Test
     fun no_face_or_a_failing_model_gives_no_live_look() {
         val failing = FakeLandmarkFinder(facesFor = { throw IllegalStateException("fake") })
-        val none = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother())
-        val broken = BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother())
+        val none = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder.none(), FakeSkinSmoother(), FakeBodyFinder())
+        val broken = BeautifyProcessor(FakeFaceFinder(), failing, FakeSkinSmoother(), FakeBodyFinder())
         none.width = 1f
         broken.width = 1f
 
@@ -405,7 +473,7 @@ class BeautifyProcessorTest {
 
     /** Runs Beautify at [strength] on [photo] with the centre-face finder and returns the result. */
     private fun beautify(photo: Bitmap, strength: Float): Bitmap {
-        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother())
+        val processor = BeautifyProcessor(FakeFaceFinder(), FakeLandmarkFinder(), FakeSkinSmoother(), FakeBodyFinder())
         processor.strength = strength
         val result = runBlocking { processor.process(photo) {} }
         return (result as EditResult.Edited).bitmap

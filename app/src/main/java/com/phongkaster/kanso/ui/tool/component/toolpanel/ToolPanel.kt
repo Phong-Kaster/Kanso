@@ -22,6 +22,8 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
+import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.enhancepanel.EnhancePanel
@@ -50,7 +52,8 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * `onEdit...` callbacks go to the ViewModel's settings session; [onRun] runs the one the registry holds for the
  * tool (Remove background, Enhance). [onBeautify] and [onStylize] run Beautify and Artistic with
  * the strength (and face width and lift, or style) the person set, all through the ViewModel;
- * [onBeautifyPreview] asks for a live frame while a Beautify slider is dragged; [state]
+ * [onBeautifyPreview] asks for a live frame while a Beautify slider is dragged, and
+ * [onBeautifyGroup] hears which Beautify group (Face, Body or none) is open; [state]
  * gives the panel the photos and whether an edit is running. With the defaults a preview or test
  * gets the panel without any edit behind it.
  *
@@ -67,8 +70,9 @@ fun ToolPanel(
     modifier: Modifier = Modifier,
     state: ToolUiState? = null,
     onRun: () -> Unit = {},
-    onBeautify: (strength: Float, width: Float, lift: Float) -> Unit = { _, _, _ -> },
-    onBeautifyPreview: (strength: Float, width: Float, lift: Float) -> Unit = { _, _, _ -> },
+    onBeautify: (BeautifyAmounts) -> Unit = {},
+    onBeautifyPreview: (BeautifyAmounts) -> Unit = {},
+    onBeautifyGroup: (BeautifyGroup?) -> Unit = {},
     onStylize: (style: ArtisticStyle, strength: Float) -> Unit = { _, _ -> },
     openTool: EditTool? = null,
     enabled: Boolean = true,
@@ -116,7 +120,13 @@ fun ToolPanel(
             enhanced = state.edited,
             modifier = modifier,
         )
-        Tool.BEAUTIFY -> BeautifyPanel(onApply = onBeautify, onPreview = onBeautifyPreview, modifier = modifier, enabled = idle)
+        Tool.BEAUTIFY -> BeautifyPanel(
+            onApply = onBeautify,
+            onPreview = onBeautifyPreview,
+            modifier = modifier,
+            enabled = idle,
+            onGroupChange = onBeautifyGroup,
+        )
         Tool.ARTISTIC -> ArtisticPanelHost(onApply = onStylize, modifier = modifier, enabled = idle)
     }
 }
