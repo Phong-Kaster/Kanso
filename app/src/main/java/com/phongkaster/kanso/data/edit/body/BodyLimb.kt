@@ -16,6 +16,11 @@ import kotlin.math.hypot
  * the torso. A found edge nearer than [MIN_REACH] or further than [MAX_REACH] times the guess is
  * not trusted either.
  *
+ * **A joint out of the photo.** The pose model still places a joint it cannot see (a knee below
+ * the photo's edge), with a low visibility. The near joint must always be clearly visible
+ * ([SURE]); the far one only as visible as the caller asks (`endVisibility`), so a thigh can be
+ * slimmed in a photo cut above the knee, along the direction the model expects the leg to run.
+ *
  * Everything is measured on the limb itself, so the same value slims a near arm and a far one
  * alike, whatever its angle. A stretch whose joints are hardly visible gets no pushes.
  */
@@ -29,8 +34,8 @@ object BodyLimb {
      * - the limb's half-thickness is guessed as [halfShare] of the stretch's length;
      * - each push reaches [radiusShare] of the stretch's length.
      *
-     * No pushes when either joint is less than [MIN_VISIBILITY] visible, or the stretch is shorter
-     * than [MIN_SIZE] pixels.
+     * No pushes when [start] is less than [SURE] visible, [end] less than [endVisibility], or the
+     * stretch is shorter than [MIN_SIZE] pixels.
      */
     fun pushesFor(
         body: BodyLandmarks,
@@ -41,10 +46,11 @@ object BodyLimb {
         halfShare: Float,
         radiusShare: Float,
         share: Float,
+        endVisibility: Float = SURE,
     ): List<WarpPush> {
         val from = body[start]
         val to = body[end]
-        if (from.visibility < MIN_VISIBILITY || to.visibility < MIN_VISIBILITY) return emptyList()
+        if (from.visibility < SURE || to.visibility < endVisibility) return emptyList()
         val axisX = to.x - from.x
         val axisY = to.y - from.y
         val length = hypot(axisX, axisY)
@@ -93,8 +99,8 @@ object BodyLimb {
     /** The walk to an edge gives up after this share of the guess. */
     private const val MAX_REACH = 1.8f
 
-    /** A joint less visible than this (0..1) means that stretch is not in the photo. */
-    private const val MIN_VISIBILITY = 0.5f
+    /** How visible (0..1) a joint must be to be trusted as in the photo. */
+    const val SURE = 0.5f
 
     /** Stretches shorter than this, in pixels, are left alone. */
     private const val MIN_SIZE = 2f

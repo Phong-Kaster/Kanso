@@ -36,6 +36,18 @@ object PoseIndex {
     /** The person's right hip. */
     const val RIGHT_HIP = 24
 
+    /** The person's left knee. */
+    const val LEFT_KNEE = 25
+
+    /** The person's right knee. */
+    const val RIGHT_KNEE = 26
+
+    /** The person's left ankle. */
+    const val LEFT_ANKLE = 27
+
+    /** The person's right ankle. */
+    const val RIGHT_ANKLE = 28
+
     /** How many landmarks the pose model gives for one person. */
     const val COUNT = 33
 }

@@ -31,8 +31,8 @@ import kotlinx.coroutines.withContext
 /**
  * The Beautify tool's edit: every face in the photo made narrower or wider, as much as the Face
  * width slider asks for, and lifted, as much as the Face lift slider asks for; every person's
- * waist and arms made slimmer or wider and chest fuller or flatter, as much as the Waist, Arms and
- * Chest sliders ask for; then the faces' skin
+ * waist, arms and legs made slimmer or wider and chest fuller or flatter, as much as the Waist,
+ * Arms, Legs and Chest sliders ask for; then the faces' skin
  * smoothed, as much as the Smoothing slider asks for.
  *
  * The steps, in order:
@@ -42,9 +42,9 @@ import kotlinx.coroutines.withContext
  *    - only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
  *      (MediaPipe's face landmarker in the app) and turn each face's outline into pushes
  *      ([FaceShape]: Width's and Lift's added point by point). No face: [EditFailure.NoFace];
- *    - only when [waist], [arms] or [chest] is not 0: ask [bodies] for each person's 33 pose
- *      landmarks and mask (MediaPipe's pose landmarker in the app) and turn each body into pushes
- *      ([BodyShape]: Waist's, Arms' and Chest's together).
+ *    - only when [waist], [arms], [chest] or [legs] is not 0: ask [bodies] for each person's 33
+ *      pose landmarks and mask (MediaPipe's pose landmarker in the app) and turn each body into
+ *      pushes ([BodyShape]: Waist's, Arms', Chest's and Legs' together).
  *      No person: [EditFailure.NoPerson].
  * 3. Only when [strength] is above 0: ask [finder] for the faces' rectangles on the reshaped photo
  *    (the same face landmarks, as boxes). No face means nothing to smooth: the result is
@@ -112,7 +112,7 @@ class BeautifyProcessor(
 
     /**
      * The live look while a slider is dragged, for [photo] (the unedited photo as shown on screen)
-     * with the current [width], [lift], [waist], [arms], [chest] and [strength]. It is a recipe, not a picture: the screen draws it
+     * with the current [width], [lift], [waist], [arms], [chest], [legs] and [strength]. It is a recipe, not a picture: the screen draws it
      * on the graphics chip every frame (see [LivePreview]), so it is cheap to make:
      * 1. the faces' landmarks are found once per photo and kept ([facesOf]);
      * 2. the reshape is the same [FaceShape] and [BodyShape] pushes the full render uses, in pixels
@@ -131,12 +131,13 @@ class BeautifyProcessor(
             val slim = waist.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val limbs = arms.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val bust = chest.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val stride = legs.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val faces = facesOf(photo)
-            val people = if (slim != 0f || limbs != 0f || bust != 0f) bodiesOf(photo) else emptyList()
+            val people = if (slim != 0f || limbs != 0f || bust != 0f || stride != 0f) bodiesOf(photo) else emptyList()
             if (faces.isEmpty() && people.isEmpty()) return@withContext null
             ensureActive()
             val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) }) +
-                people.flatMap(transform = { BodyShape.pushesFor(it, slim, limbs, bust) })
+                people.flatMap(transform = { BodyShape.pushesFor(it, slim, limbs, bust, stride) })
             val region = regionOf(boxesOf(faces, photo), pushes, photo) ?: return@withContext null
             LivePreview(
                 region = region,
@@ -285,6 +286,15 @@ class BeautifyProcessor(
     var chest: Float = 0f
 
     /**
+     * How much to reshape each person's legs, from -1 (thickest) through 0 (unchanged, the default)
+     * to 1 (slimmest), like Meitu's Legs slider at -100..+100. The panel sets it just before a run;
+     * a value outside -1..1 is clamped when used. With every body slider at 0 the pose model is
+     * never loaded.
+     */
+    @Volatile
+    var legs: Float = 0f
+
+    /**
      * Runs the six steps above on [input] and returns the result; [input] is not changed.
      * [onProgress] only ever moves forward, from 0 to 1.
      */
@@ -307,13 +317,14 @@ class BeautifyProcessor(
                 val slim = waist.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 val limbs = arms.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 val bust = chest.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+                val stride = legs.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
                 report(0f)
                 val small = WorkingSize.fit(input, maxEdgePx)
                 report(FIT_DONE)
                 // Each model runs only when its sliders are off 0; null means it found nothing.
                 val facePushes = if (reshape != 0f || raise != 0f) facePushes(small, reshape, raise) else emptyList()
-                val bodyPushes = if (facePushes != null && (slim != 0f || limbs != 0f || bust != 0f)) {
-                    bodyPushes(small, slim, limbs, bust)
+                val bodyPushes = if (facePushes != null && (slim != 0f || limbs != 0f || bust != 0f || stride != 0f)) {
+                    bodyPushes(small, slim, limbs, bust, stride)
                 } else {
                     emptyList()
                 }
@@ -376,14 +387,14 @@ class BeautifyProcessor(
     }
 
     /**
-     * Returns the pushes that change every person's waist by [waist], arms by [arms] and chest by
-     * [chest] in [photo] (-1..1, not all 0 here), or null when [bodies] finds no person. [photo] is
-     * not changed.
+     * Returns the pushes that change every person's waist by [waist], arms by [arms], chest by
+     * [chest] and legs by [legs] in [photo] (-1..1, not all 0 here), or null when [bodies] finds no
+     * person. [photo] is not changed.
      */
-    private suspend fun bodyPushes(photo: Bitmap, waist: Float, arms: Float, chest: Float): List<WarpPush>? {
+    private suspend fun bodyPushes(photo: Bitmap, waist: Float, arms: Float, chest: Float, legs: Float): List<WarpPush>? {
         val people = bodies.findBodies(photo)
         if (people.isEmpty()) return null
-        return people.flatMap(transform = { body -> BodyShape.pushesFor(body, waist, arms, chest) })
+        return people.flatMap(transform = { body -> BodyShape.pushesFor(body, waist, arms, chest, legs) })
     }
 
     /**

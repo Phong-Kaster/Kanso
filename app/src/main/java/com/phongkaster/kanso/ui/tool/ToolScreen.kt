@@ -963,4 +963,5 @@ private fun BeautifyProcessor.use(amounts: BeautifyAmounts) {
     waist = amounts.waist
     arms = amounts.arms
     chest = amounts.chest
+    legs = amounts.legs
 }

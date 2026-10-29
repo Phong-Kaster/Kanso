@@ -15,8 +15,9 @@ object SampleBody {
     /**
      * Returns an upright figure on the vertical line x = [centerX]: shoulders [shoulderSpread]
      * apart at y = [top], hips [hipSpread] apart [length] lower, arms hanging straight down from
-     * the shoulders (elbows [ELBOW_DROP], wrists [WRIST_DROP] of [length] below them), every point
-     * [visibility] visible.
+     * the shoulders (elbows [ELBOW_DROP], wrists [WRIST_DROP] of [length] below them), legs
+     * standing straight down from the hips (knees [KNEE_DROP], ankles [ANKLE_DROP] of [length]
+     * below the shoulders), every point [visibility] visible.
      * With [torsoHalf] set, it also gets a [photoWidth] x [photoHeight] mask in which the person
      * is the band [torsoHalf] to each side of the centre line, from the shoulders to the hips, so
      * the waist's edges are exactly at `centerX ± torsoHalf`.
@@ -44,6 +45,11 @@ object SampleBody {
         points[PoseIndex.RIGHT_WRIST] = BodyPoint(centerX - shoulderSpread / 2f, top + length * WRIST_DROP, visibility)
         points[PoseIndex.LEFT_HIP] = BodyPoint(centerX + hipSpread / 2f, top + length, visibility)
         points[PoseIndex.RIGHT_HIP] = BodyPoint(centerX - hipSpread / 2f, top + length, visibility)
+        // Legs stand straight down from the hips: knees, then ankles below them.
+        points[PoseIndex.LEFT_KNEE] = BodyPoint(centerX + hipSpread / 2f, top + length * KNEE_DROP, visibility)
+        points[PoseIndex.RIGHT_KNEE] = BodyPoint(centerX - hipSpread / 2f, top + length * KNEE_DROP, visibility)
+        points[PoseIndex.LEFT_ANKLE] = BodyPoint(centerX + hipSpread / 2f, top + length * ANKLE_DROP, visibility)
+        points[PoseIndex.RIGHT_ANKLE] = BodyPoint(centerX - hipSpread / 2f, top + length * ANKLE_DROP, visibility)
         val mask = torsoHalf?.let(block = { half -> bandMask(centerX, top, length, half, photoWidth, photoHeight) })
         return BodyLandmarks(points, mask)
     }
@@ -71,4 +77,10 @@ object SampleBody {
 
     /** How far below the shoulders the wrists hang, as a share of the shoulders-to-hips length. */
     private const val WRIST_DROP = 1.1f
+
+    /** How far below the shoulders the knees are, as a share of the shoulders-to-hips length. */
+    private const val KNEE_DROP = 2f
+
+    /** How far below the shoulders the ankles are, as a share of the shoulders-to-hips length. */
+    private const val ANKLE_DROP = 3f
 }

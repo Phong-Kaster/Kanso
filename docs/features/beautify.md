@@ -1,4 +1,4 @@
-# Beautify: face width, face lift, waist, arms, chest and smooth skin
+# Beautify: face, body (waist, arms, chest, legs) and smooth skin
 
 [Back to README](../../README.md)
 
@@ -11,7 +11,7 @@ Share and Save are on [the Result screen](saving-and-share.md).
 
 ## What it is
 
-Beautify reshapes every face and every person's waist, arms and chest in the photo, then smooths the faces' skin:
+Beautify reshapes every face and every person's waist, arms, chest and legs in the photo, then smooths the faces' skin:
 
 1. **Face width**, like Meitu's Beautify > Face > Width: the outline of the cheeks and jaw is pulled
    toward the face's centre line (narrower) or pushed away from it (wider). The **Face width**
@@ -39,16 +39,17 @@ Beautify reshapes every face and every person's waist, arms and chest in the pho
 5. **Chest**, like Meitu's Body > Reshape > Chest: the bust made fuller (to the right, +100) or
    flatter (to the left, -100), the same way round as Meitu's Chest (seen on the Galaxy A13: its
    right end clearly enlarged the chest). It does not slide pixels but **grows** them out from a
-   point on each side of the chest, like a magnifying glass, or gathers them in. Legs is the next
-   Body tool.
-6. **Smoothing**: an **edge-preserving blur**: small differences such as pores, blemishes and noise
+   point on each side of the chest, like a magnifying glass, or gathers them in.
+6. **Legs**, like Meitu's Body > Reshape > Legs: the thighs and calves made slimmer (to the right,
+   +100) or thicker (to the left, -100). A photo cut above the knees still gets its thighs slimmed.
+7. **Smoothing**: an **edge-preserving blur**: small differences such as pores, blemishes and noise
    are averaged away, while strong edges such as eyes, lips and hair stay sharp. The **Smoothing**
    slider (0 to 100, starting at 0) sets how much of it you see.
 
 The screen is laid out like the Edit screen: the photo fills everything down to a bottom bar that
 holds a row of tools on two levels, as in Meitu (**Face**, **Body** and **Smooth** on top;
 **Face** opens its own row, **Width**, **Lift**, then **Back**; **Body** opens **Waist**, **Arms**,
-**Chest** and **Back**), and, above it, Edit's fixed-height panel area,
+**Chest**, **Legs** and **Back**), and, above it, Edit's fixed-height panel area,
 which shows the open tool's slider on a rounded surface (or "Pick a tool to start editing"). The
 bar never changes height, so the photo does not jump when a tool opens. **Letting go of a slider applies** every
 value, as Meitu does when the finger lifts.
@@ -64,10 +65,13 @@ Limits, from the code:
   around each outline point): hair, earrings and the background right beside the cheeks bend with
   the face. Meitu's BG Lock (a person mask that keeps the background still) has no Kanso
   equivalent yet.
-- Face width and Face lift reshape at most **5 faces** per photo; Waist, Arms and Chest at most **3 people**.
+- Face width and Face lift reshape at most **5 faces** per photo; Waist, Arms, Chest and Legs at most **3 people**.
 - Chest places its two centres from the shoulders alone (the pose model has no chest point): a
   photo where the body is turned far to one side puts them in the wrong place. It needs both
   shoulders at least half visible.
+- Legs bends what lies right beside the legs (the background, the other leg where they touch). A
+  thigh needs its hip clearly visible; its knee may be out of the photo, where the pose model
+  still guesses it. A calf needs both its knee and its ankle clearly visible.
 - Waist bends the background beside the waist too (no BG Lock yet). Where an arm rests against the
   waist, the mask cannot separate them, so the edge is guessed from the shoulders and hips instead.
 - Arms bends whatever lies right beside an arm (the background, the torso where the arm touches
@@ -82,13 +86,13 @@ Limits, from the code:
   outside it is never touched.
 - Smoothing and the face tools need a face. With none, they say "No face found in this photo.
   Nothing was changed." With smoothing at 0 no face is needed, so Waist alone works on a photo whose
-  face is too small to find; the same holds for Arms and Chest.
+  face is too small to find; the same holds for Arms, Chest and Legs.
 - It always starts again from the **original** photo, so applying again at another width, lift,
-  waist, arms, chest or strength **replaces** the last result instead of reshaping or smoothing twice.
+  waist, arms, chest, legs or strength **replaces** the last result instead of reshaping or smoothing twice.
 - Works on at most **2000 px** on the longest edge; the JPEG that Save on Result writes is at that
   size or smaller.
 - Offline: the face model, the pose model and OpenCV are inside the app.
-- It only reshapes face width, face lift, waist, arms and chest, and smooths skin. (The original Retica app's "Retouch" screen removed
+- It only reshapes face width, face lift, waist, arms, chest and legs, and smooths skin. (The original Retica app's "Retouch" screen removed
   objects; Kanso's does not.)
 
 ## How to use it
@@ -99,9 +103,9 @@ Limits, from the code:
 - The top row shows **Face**, **Body** and **Smooth**. Tap **Face** to swap the row for Face's
   tools: **Width** (its slider opens at once) and **Lift** on the left, and **Back** pinned at the
   right end; Back returns to the top row. Tap **Body** for **Waist** (its slider opens at once,
-  and the photo zooms out to show the whole body), **Arms** and **Chest**. Temple joins Face's
-  row, and Legs joins Body's, once they are built.
-- Tap **Width**, **Lift**, **Waist**, **Arms**, **Chest** or **Smooth** to open its slider and drag it: the photo changes
+  and the photo zooms out to show the whole body), **Arms**, **Chest** and **Legs**. Temple joins Face's
+  row once it is built.
+- Tap **Width**, **Lift**, **Waist**, **Arms**, **Chest**, **Legs** or **Smooth** to open its slider and drag it: the photo changes
   **live while you drag**, as in Meitu, drawn on the graphics chip. Let go and Beautify renders the
   photo from the original at full quality **quietly in the background**: no progress ring, and the
   sliders stay usable, so you can keep adjusting; a newer release replaces an older render. Done
@@ -146,9 +150,9 @@ flowchart TD
     D -->|"width or lift is not 0"| W1["EngineLandmarkFinder: MediaPipe FaceLandmarker, 478 points per face"]
     W1 -->|"no face"| N
     W1 --> W2["FaceShape: FaceWidth + FaceLift pushes, added point by point"]
-    D -->|"waist, arms or chest is not 0"| B1["EngineBodyFinder: MediaPipe PoseLandmarker, 33 points and a mask per person"]
+    D -->|"a body slider is not 0"| B1["EngineBodyFinder: MediaPipe PoseLandmarker, 33 points and a mask per person"]
     B1 -->|"no person"| NP["NoPerson message"]
-    B1 --> B2["BodyShape: BodyWaist, BodyArms (sliding) and BodyChest (growing) WarpPushes"]
+    B1 --> B2["BodyShape: BodyWaist, BodyArms, BodyLegs (sliding) and BodyChest (growing) WarpPushes"]
     W2 --> W3["LocalWarp: one backward warp for every push, bilinear, Kotlin"]
     B2 --> W3
     D -->|"nothing to reshape"| S0
@@ -181,20 +185,20 @@ flowchart TD
    `EditToolEntry`; Face's and Body's icons (`ic_face_group.xml`, `ic_body_group.xml`) are drawn for Kanso. Above the row, in Edit's own panel area
    (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
-   right end (width, lift, waist, arms and chest -100..100, smoothing
+   right end (the face and body tools -100..100, smoothing
    0..100). The open group, the open tool and every value are kept with `rememberSaveable` (they survive a
    rotation). Every move calls `onPreview(amounts)` (step 7) and the slider's
    `onValueChangeFinished` (the finger lifts) calls `onApply(amounts)`, where `amounts` is a
    [`BeautifyAmounts`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/BeautifyAmounts.kt)
-   holding every slider's value by name (smoothing, face width, face lift, waist, arms, chest). Opening or
+   holding every slider's value by name (smoothing, face width, face lift, waist, arms, chest, legs). Opening or
    leaving a group calls `onGroupChange`; `ToolScreen` turns Body into
    `ToolViewModel.showWholePhoto(true)` (`ToolUiState.wholePhoto`), so the card drops the face zoom
    while Body is open. The face and body tools' icons, `res/drawable/ic_face_width.xml`,
-   `ic_face_lift.xml`, `ic_body_waist.xml`, `ic_body_arms.xml` and `ic_body_chest.xml`, are drawn
+   `ic_face_lift.xml`, `ic_body_waist.xml`, `ic_body_arms.xml`, `ic_body_chest.xml` and `ic_body_legs.xml`, are drawn
    for Kanso; Smooth uses `ic_face_retouching_natural`.
 2. **Handing over the values.** `ToolScreen` turns `onApply` into
    `viewModel.renderRegistered { processor -> processor.use(amounts) }`, a helper in `ToolScreen.kt`
-   that sets `strength`, `width`, `lift`, `waist`, `arms` and `chest` on the
+   that sets `strength`, `width`, `lift`, `waist`, `arms`, `chest` and `legs` on the
    `BeautifyProcessor`: a **quiet** render. It sets `ToolUiState.rendering` (Done's small spinner, Done
    and Undo wait) instead of the progress ring, leaves the sliders on, and cancels a render still
    running from an earlier release, so the newest release wins. Its result becomes the edit and
@@ -211,12 +215,12 @@ flowchart TD
    [`data/edit/beautify/BeautifyProcessor.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/BeautifyProcessor.kt)
    runs on `Dispatchers.Default`:
    1. reads the strength once (a NaN counts as 1; clamped to 0..1; the panel starts it at 0) and
-      the width, the lift, the waist, the arms and the chest once (a NaN counts as 0; each clamped to -1..1),
+      every face and body value once (a NaN counts as 0; each clamped to -1..1),
       reports 0;
    2. shrinks to 2000 px again if needed, reports 0.05;
    3. collects the pushes and **warps once** (step 6 below), reports 0.25: the faces' only when
-      width or lift is not 0 (no face → `NoFace`), the bodies' only when the waist, the arms or the
-      chest is not 0 (no person → `NoPerson`). A model whose sliders are all at 0 is never loaded;
+      width or lift is not 0 (no face → `NoFace`), the bodies' only when a body slider (waist, arms,
+      chest, legs) is not 0 (no person → `NoPerson`). A model whose sliders are all at 0 is never loaded;
    4. **with smoothing at 0, stops here**: the reshaped photo, made opaque, is the result, and no
       face is needed. Otherwise it asks the [`FaceFinder`](../../app/src/main/java/com/phongkaster/kanso/data/edit/beautify/FaceFinder.kt)
       for face rectangles on the reshaped photo, cuts each to the photo and drops empty ones,
@@ -272,7 +276,7 @@ flowchart TD
       colour from `pixel − move` with bilinear sampling. All faces and all bodies are warped in
       one pass.
 
-   **The body (Body > Waist, Arms and Chest)**, all in
+   **The body (Body > Waist, Arms, Chest and Legs)**, all in
    [`data/edit/body/`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/):
    1. **Find each person** —
       [`EngineBodyFinder.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/EngineBodyFinder.kt)
@@ -324,9 +328,18 @@ flowchart TD
       a positive grow reads from nearer the centre and draws it larger, fading to nothing at the
       edge; growing pushes are added after the sliding ones are averaged, and `WarpMesh` draws them
       live through the same rule;
-   6. **Together** —
+   6. **Legs** —
+      [`BodyLegs.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyLegs.kt)
+      treats each leg as the thigh (hip 23/24 → knee 25/26) and the calf (knee → ankle 27/28), each
+      slimmed by `BodyLimb` as the arms are: 0.3, 0.55 and 0.8 of the thigh (weights 0.7, 1, 0.8,
+      guessed half-thickness 0.2 of its length) and 0.25, 0.5 and 0.75 of the calf (weights 0.8, 1,
+      0.6, guess 0.13), `legs × 0.12 × weight`, reach 0.3. `BodyLimb` always wants the near joint at
+      least half visible but lets the caller lower the bar for the far one: a thigh accepts a knee
+      of any visibility, so a photo cut above the knees still has its thighs slimmed along the
+      direction the pose model expects; a calf needs its knee and ankle clearly visible;
+   7. **Together** —
       [`BodyShape.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/body/BodyShape.kt)
-      returns Waist's, Arms' and Chest's pushes for one person, as `FaceShape` does for the face, and the
+      returns Waist's, Arms', Chest's and Legs' pushes for one person, as `FaceShape` does for the face, and the
       processor asks it once per person.
 7. **The live look while dragging, on the graphics chip.** Each slider move calls
    `onPreview(amounts)`; `ToolScreen` hands it to `ToolViewModel.previewRegistered`, which
@@ -412,7 +425,7 @@ stay as they were.
   face is reported; a width reshapes the outline and leaves the photo's corners alone; a lift with
   no face is reported; a lift reshapes the outline and leaves the photo's corners alone; waist 0
   never looks for bodies; a waist with no person is reported; with smoothing off a waist works on a
-  photo with no face and leaves the corners alone; so do the arms and the chest; the focus is the largest face; no face or a
+  photo with no face and leaves the corners alone; so do the arms, the chest and the legs; the focus is the largest face; no face or a
   failing model gives no focus.
 - [`tool/beautify/BeautifyToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/beautify/BeautifyToolTest.kt):
   through the real screen, no face changes nothing and shows the message; tapping a tool opens its
@@ -421,7 +434,7 @@ stay as they were.
   defaults; Lift sits in Face's row and opens its own slider; letting go of Lift left of 0 hands
   over the negative value and keeps the width set before it; Body opens its own row with Waist's
   slider ready and Back; letting go of Waist hands over its value with every other one at 0; Arms
-  sits beside Waist and letting go of it at -0.4 hands over -0.4 alone; Chest likewise at 0.5.
+  sits beside Waist and letting go of it at -0.4 hands over -0.4 alone; Chest likewise at 0.5, Legs at 0.8.
 - [`tool/face/FaceWidthTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/face/FaceWidthTest.kt):
   on a made-up oval face, 0 gives no pushes, positive pulls inward, negative pushes outward, both
   sides mirror, values beyond 1 clamp, the moves scale with the face.
@@ -447,6 +460,11 @@ stay as they were.
   shoulders, a negative one the same pushes shrinking; the chest is found the same with the hips,
   and even the nose, hidden; hidden shoulders give nothing; values beyond ±1 clamp; the pushes
   scale with the body.
+- [`tool/body/BodyLegsTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/body/BodyLegsTest.kt):
+  on the same figure with its legs straight down from the hips, 0 and NaN give no pushes; a positive
+  amount pulls all 24 leg edges in, below the hips, and a negative one pushes them out; with the
+  knees and ankles hidden both thighs are still slimmed and no calf is; hidden hips leave the
+  thighs alone but not the calves; values beyond ±1 clamp; the moves scale with the body.
 - [`tool/body/BodyEdgesTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/body/BodyEdgesTest.kt):
   the walk finds the first background pixel, gives up past its limit or outside the person, and a
   mask smaller than the photo is read in the photo's pixels.
@@ -488,9 +506,11 @@ stay as they were.
 - Waist bends what lies beside the waist (background, an arm resting on it), like Width and Lift.
 - The pose model adds 9.4 MB to the app.
 - The arms numbers (the levels and weights, 0.15, 0.3, the guesses 0.17 and 0.12) and the chest
-  numbers (0.45, 0.6, 0.32, 0.22) are first guesses too. On the Galaxy A13 (2026-10-29), Arms at 99
+  numbers (0.45, 0.6, 0.32, 0.22) and the legs numbers (the levels and weights, 0.12, 0.3, the
+  guesses 0.2 and 0.13) are first guesses too. On the Galaxy A13 (2026-10-29), Arms at 99
   changed only the arms (a screen-pixel comparison found every change between the shoulders and
-  the forearms on the railing), and Chest at 98 only the bust; neither crashed. Whether they look
+  the forearms on the railing), Chest at 98 only the bust, and Legs at 100, on a photo cut above the knees, only the thighs
+  (and the railing right beside them); none crashed. Whether they look
   right next to Meitu is for the owner to judge.
 - **Whether the face boxes and the OpenCV settings look right has not been judged by a person**
   (`.harness/ISSUES.md`, Run 8 Phase 3 review).

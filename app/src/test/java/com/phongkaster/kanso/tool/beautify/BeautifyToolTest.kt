@@ -31,6 +31,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_WAIST_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_ARMS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHEST_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LEGS_TAG
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
@@ -315,6 +316,22 @@ class BeautifyToolTest {
         assertEquals(BeautifyAmounts(), amounts.copy(chest = 0f))
     }
 
+    /** Body's row shows Legs; letting go of its slider at 0.8 applies 0.8 and nothing else. */
+    @Test
+    fun releasing_the_legs_slider_applies_it() {
+        val applied = showPanel()
+
+        tap(beautifyGroupTag(BeautifyGroup.BODY))
+        tap(beautifyToolTag(BeautifyTool.LEGS))
+        compose.onNodeWithTag(BEAUTIFY_LEGS_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.8f) }
+        compose.waitForIdle()
+
+        val amounts = applied.single()
+        assertEquals(0.8f, amounts.legs, 0.01f)
+        assertEquals(BeautifyAmounts(), amounts.copy(legs = 0f))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -356,6 +373,7 @@ class BeautifyToolTest {
                                         registered.waist = amounts.waist
                                         registered.arms = amounts.arms
                                         registered.chest = amounts.chest
+                                        registered.legs = amounts.legs
                                     },
                                 )
                             },
@@ -369,6 +387,7 @@ class BeautifyToolTest {
                                         registered.waist = amounts.waist
                                         registered.arms = amounts.arms
                                         registered.chest = amounts.chest
+                                        registered.legs = amounts.legs
                                     },
                                 )
                             },

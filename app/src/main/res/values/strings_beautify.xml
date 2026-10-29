@@ -43,4 +43,9 @@
     <!-- Beautify panel: the label of the chest slider, how much fuller (positive) or flatter
          (negative) each person's chest becomes. Also what screen readers call the slider. -->
     <string name="beautify_chest_label">Chest</string>
+    <!-- Beautify panel: the name of the Legs tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_legs">Legs</string>
+    <!-- Beautify panel: the label of the legs slider, how much slimmer (positive) or thicker
+         (negative) each person's legs become. Also what screen readers call the slider. -->
+    <string name="beautify_legs_label">Legs</string>
 </resources>
