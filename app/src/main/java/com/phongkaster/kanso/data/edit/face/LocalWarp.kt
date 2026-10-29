@@ -16,13 +16,20 @@ import kotlin.math.min
  * pixels spread apart.
  *
  * **One push.** Inside a push's circle, a result pixel at distance `dist` from its centre takes
- * the input pixel at `result − f² × move`, where
+ * the input pixel at `result − w × move`, where `w = (1 − dist² / radius²)²`. `w` is 1 at the
+ * centre, so the push's own point moves exactly by `move`, and falls smoothly to 0 at the circle's
+ * edge, with no kink there, so nothing outside the circle moves and the warp has no seam.
+ *
+ * **Why not Gustafsson's falloff.** The first version used `f²` with
  * `f = (radius² − dist²) / (radius² − dist² + |move|²)` (Gustafsson, "Interactive Image Warping",
- * 1993). `f` is near 1 at the centre and falls smoothly to 0 at the circle's edge, so the warp has
- * no visible seam and nothing outside the circle moves.
+ * 1993). When a move is much smaller than the circle, as in every Kanso reshape, that `f` is nearly
+ * 1 almost to the edge and then drops to 0 within a few pixels: the picture moved several pixels
+ * over a stretch shorter than that, folded over itself and left a hard edge. On the Galaxy A13
+ * (2026-10-29) Temple showed it as a seam across the face. With `w` the steepest stretch is about
+ * `1.5 × |move| / radius`, well under 1 (a fold) for every tool.
  *
  * **Several pushes.** Neighbouring pushes overlap, and adding their moves together would move a
- * pixel between them further than either asks. So where the weights `f²` add up to more than 1,
+ * pixel between them further than either asks. So where the weights `w` add up to more than 1,
  * the summed move is divided by that total: the pixel moves like a weighted average of its
  * neighbours' pushes.
  *
@@ -71,7 +78,7 @@ object LocalWarp {
 
     /**
      * How far the point ([x], [y]) moves under [pushes], written into [out] (`out[0]` across,
-     * `out[1]` down): every sliding push's move weighted by `f²`, divided by the total weight when
+     * `out[1]` down): every sliding push's move weighted by `w`, divided by the total weight when
      * it is above 1, plus every growing push's spread (see the class comment). Returns false, with [out] at 0, when no push reaches the
      * point. [warp] uses it for every pixel and [WarpMesh] for every point of its grid, so the
      * live picture and the saved one move by the same rule.
@@ -100,8 +107,9 @@ object LocalWarp {
                 grown = true
                 continue
             }
-            val f = inside / (inside + push.moveX * push.moveX + push.moveY * push.moveY)
-            val k = f * f
+            // w = (1 − dist² / radius²)²: 1 at the centre, 0 at the edge, smooth at both.
+            val fall = inside / radiusSquared
+            val k = fall * fall
             moveX += k * push.moveX
             moveY += k * push.moveY
             weight += k

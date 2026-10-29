@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temple: the top half of a face's outline with an arrow pointing out at each temple (fuller),
+     drawn for Kanso as the other face icons are. Round strokes on the 960 grid of the Material
+     Symbols Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M300,840Q240,620 260,420Q300,160 480,140Q660,160 700,420Q720,620 660,840M260,380L100,380M150,330L100,380L150,430M700,380L860,380M810,330L860,380L810,430" />
+</vector>

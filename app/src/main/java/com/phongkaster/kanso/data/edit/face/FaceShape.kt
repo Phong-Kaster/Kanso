@@ -1,11 +1,11 @@
 package com.phongkaster.kanso.data.edit.face
 
 /**
- * Every face reshape at once: [FaceWidth] and [FaceLift] together, as one list of [WarpPush]es for
- * [LocalWarp] (the saved picture) and [WarpMesh] (the live one).
+ * Every face reshape at once ([FaceWidth], [FaceLift], [FaceTemple]), as one list of [WarpPush]es
+ * for [LocalWarp] (the saved picture) and [WarpMesh] (the live one).
  *
  * **Why the pushes are added, not listed side by side.** Width and Lift push the same outline
- * points. Handing [LocalWarp] two pushes on one point would not add their moves: where pushes
+ * points (and later tools may share points too). Handing [LocalWarp] two pushes on one point would not add their moves: where pushes
  * overlap, [LocalWarp] averages them (it divides by the total weight above 1), so each would be
  * halved. Instead, pushes on the same point become one push whose move is the sum of both and
  * whose reach is the larger of the two, so the point moves as far as Width and Lift ask together.
@@ -13,12 +13,16 @@ package com.phongkaster.kanso.data.edit.face
 object FaceShape {
 
     /**
-     * Returns the pushes that reshape [face] by [width] (-1..1, see [FaceWidth]) and [lift]
-     * (-1..1, see [FaceLift]), merged point by point. With both at 0 the list is empty; with one of
-     * them at 0 it is exactly the other's list.
+     * Returns the pushes that reshape [face] by [amounts] (each tool's value, see [FaceAmounts]),
+     * merged point by point. With every value at 0 the list is empty; with one tool alone it is
+     * exactly that tool's list.
      */
-    fun pushesFor(face: FaceLandmarks, width: Float, lift: Float): List<WarpPush> =
-        merged(FaceWidth.pushesFor(face, width) + FaceLift.pushesFor(face, lift))
+    fun pushesFor(face: FaceLandmarks, amounts: FaceAmounts): List<WarpPush> =
+        merged(
+            FaceWidth.pushesFor(face, amounts.width) +
+                FaceLift.pushesFor(face, amounts.lift) +
+                FaceTemple.pushesFor(face, amounts.temple),
+        )
 
     /**
      * Returns [pushes] with every group of pushes on the same centre turned into one push: the

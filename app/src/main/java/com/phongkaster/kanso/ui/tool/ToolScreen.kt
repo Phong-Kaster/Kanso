@@ -968,4 +968,5 @@ private fun BeautifyProcessor.use(amounts: BeautifyAmounts) {
     arms = amounts.arms
     chest = amounts.chest
     legs = amounts.legs
+    temple = amounts.faceTemple
 }

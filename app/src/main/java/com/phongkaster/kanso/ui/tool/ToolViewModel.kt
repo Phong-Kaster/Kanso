@@ -291,9 +291,15 @@ class ToolViewModel(
                             val photo = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap
                                 ?: return@collect
                             val run = editRuns
+                            // The newest request this frame answers; read before the frame is made.
+                            val asked = liveRequests
                             val frame = withContext(workDispatcher, block = { processor.livePreview(photo) })
-                            // A blocking run (apply) that started meanwhile owns the photo now.
-                            if (run == editRuns && mutableState.value.processing is ToolUiState.Processing.Idle) {
+                            // A blocking run (apply) that started meanwhile owns the photo now, and a
+                            // render that finished meanwhile already shows these slider values at full
+                            // quality: a frame this old would cover its result (the Temple seam,
+                            // 2026-10-29), so it is dropped.
+                            val stale = asked <= liveCoveredUpTo
+                            if (!stale && run == editRuns && mutableState.value.processing is ToolUiState.Processing.Idle) {
                                 mutableState.update(function = { it.copy(livePreview = frame) })
                             }
                         },
@@ -323,6 +329,14 @@ class ToolViewModel(
     /** How many live looks have been asked for, so a render can tell the person dragged after it began. */
     @Volatile
     private var liveRequests = 0
+
+    /**
+     * The [liveRequests] count a finished render already covers: every live look asked for up to
+     * then is older than that render's result. A live frame started from such an old request must
+     * not reach the screen after the render, or it would sit on top of the result for good.
+     */
+    @Volatile
+    private var liveCoveredUpTo = 0
 
     /** The quiet full-quality render under way, if any; a newer one replaces it. */
     private var renderJob: Job? = null
@@ -374,6 +388,8 @@ class ToolViewModel(
                         if (!lastEditWasFromOriginal) history.addLast(previousEdit)
                         lastEditWasFromOriginal = true
                         val draggedSince = liveRequests != requestsAtStart
+                        // Every live look asked for before this render began is now out of date.
+                        liveCoveredUpTo = requestsAtStart
                         mutableState.update(
                             function = {
                                 it.copy(

@@ -48,4 +48,9 @@
     <!-- Beautify panel: the label of the legs slider, how much slimmer (positive) or thicker
          (negative) each person's legs become. Also what screen readers call the slider. -->
     <string name="beautify_legs_label">Legs</string>
+    <!-- Beautify panel: the name of the Temple tool in the Face group's row, under its icon. -->
+    <string name="beautify_tool_temple">Temple</string>
+    <!-- Beautify panel: the label of the temple slider, how much fuller (positive) or hollower
+         (negative) each face's temples become. Also what screen readers call the slider. -->
+    <string name="beautify_temple_label">Temple</string>
 </resources>

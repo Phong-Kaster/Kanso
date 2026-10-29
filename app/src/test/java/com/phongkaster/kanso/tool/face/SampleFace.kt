@@ -19,7 +19,8 @@ object SampleFace {
      * Returns an upright oval face centred on ([centerX], [centerY]), [halfWidth] across from the
      * centre to each cheek and [halfHeight] from the centre to the chin. The centre line runs from
      * between the eyes (40% of [halfHeight] above the centre) to the chin; the outline points sit
-     * on the oval, from eye height down to near the chin, the same on both sides.
+     * on the oval, from eye height down to near the chin, and the temples on the oval above eye
+     * height, the same on both sides.
      */
     fun oval(centerX: Float, centerY: Float, halfWidth: Float, halfHeight: Float): FaceLandmarks {
         val points = MutableList(POINT_COUNT, init = { FacePoint(centerX, centerY) })
@@ -37,8 +38,20 @@ object SampleFace {
                 points[FaceMeshIndex.RIGHT_OUTLINE[position]] = FacePoint(centerX + across, y)
             },
         )
+        // The temples, on the oval above eye height: high on the forehead down to above the eye.
+        TEMPLE_HEIGHTS.forEachIndexed(
+            action = { position, down ->
+                val across = halfWidth * sqrt(1f - down * down)
+                val y = centerY + down * halfHeight
+                points[FaceMeshIndex.LEFT_TEMPLE[position]] = FacePoint(centerX - across, y)
+                points[FaceMeshIndex.RIGHT_TEMPLE[position]] = FacePoint(centerX + across, y)
+            },
+        )
         return FaceLandmarks(points)
     }
+
+    /** Where the temple points sit, as a share of the half height (negative: above the centre). */
+    private val TEMPLE_HEIGHTS = floatArrayOf(-0.82f, -0.68f, -0.52f)
 
     /** Eye height, as a share of the half height above the centre. */
     private const val EYE_LEVEL = 0.4f

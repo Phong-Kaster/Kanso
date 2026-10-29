@@ -32,6 +32,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_ARMS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_CHEST_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_LEGS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_TEMPLE_TAG
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BeautifyPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel.BEAUTIFY_BACK_TAG
@@ -332,6 +333,22 @@ class BeautifyToolTest {
         assertEquals(BeautifyAmounts(), amounts.copy(legs = 0f))
     }
 
+    /** Face's row shows Temple; letting go of its slider at 0.6 applies 0.6 and nothing else. */
+    @Test
+    fun releasing_the_temple_slider_applies_it() {
+        val applied = showPanel()
+
+        tap(beautifyGroupTag(BeautifyGroup.FACE))
+        tap(beautifyToolTag(BeautifyTool.TEMPLE))
+        compose.onNodeWithTag(BEAUTIFY_TEMPLE_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.6f) }
+        compose.waitForIdle()
+
+        val amounts = applied.single()
+        assertEquals(0.6f, amounts.faceTemple, 0.01f)
+        assertEquals(BeautifyAmounts(), amounts.copy(faceTemple = 0f))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
@@ -374,6 +391,7 @@ class BeautifyToolTest {
                                         registered.arms = amounts.arms
                                         registered.chest = amounts.chest
                                         registered.legs = amounts.legs
+                                        registered.temple = amounts.faceTemple
                                     },
                                 )
                             },
@@ -388,6 +406,7 @@ class BeautifyToolTest {
                                         registered.arms = amounts.arms
                                         registered.chest = amounts.chest
                                         registered.legs = amounts.legs
+                                        registered.temple = amounts.faceTemple
                                     },
                                 )
                             },

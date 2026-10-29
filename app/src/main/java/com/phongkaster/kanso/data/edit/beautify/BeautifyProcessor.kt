@@ -15,6 +15,7 @@ import com.phongkaster.kanso.data.edit.body.BodyShape
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.data.edit.face.FaceFocusSource
 import com.phongkaster.kanso.data.edit.face.FaceLandmarks
+import com.phongkaster.kanso.data.edit.face.FaceAmounts
 import com.phongkaster.kanso.data.edit.face.FaceShape
 import com.phongkaster.kanso.data.edit.face.WarpPush
 import com.phongkaster.kanso.data.edit.face.paddedFaceBox
@@ -40,9 +41,9 @@ import kotlinx.coroutines.withContext
  * 1. Scale the photo down so its longest edge is at most [maxEdgePx] (2000 pixels by default,
  *    [WorkingSize.BEAUTIFY]), so a 24-megapixel photo never runs the phone out of memory.
  * 2. Reshape, in one warp ([LocalWarp]) so the photo is resampled once:
- *    - only when [width] or [lift] is not 0: ask [landmarks] for each face's 478 landmarks
- *      (MediaPipe's face landmarker in the app) and turn each face's outline into pushes
- *      ([FaceShape]: Width's and Lift's added point by point). No face: [EditFailure.NoFace];
+ *    - only when a face value ([width], [lift], [temple]) is not 0: ask [landmarks] for each
+ *      face's 478 landmarks (MediaPipe's face landmarker in the app) and turn each face into
+ *      pushes ([FaceShape]: every face tool's added point by point). No face: [EditFailure.NoFace];
  *    - only when [waist], [arms], [chest] or [legs] is not 0: ask [bodies] for each person's 33
  *      pose landmarks and mask (MediaPipe's pose landmarker in the app) and turn each body into
  *      pushes ([BodyShape]: Waist's, Arms', Chest's and Legs' together).
@@ -133,11 +134,12 @@ class BeautifyProcessor(
             val limbs = arms.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val bust = chest.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
             val stride = legs.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) }
+            val shape = faceAmounts(reshape, raise)
             val faces = facesOf(photo)
             val people = if (slim != 0f || limbs != 0f || bust != 0f || stride != 0f) bodiesOf(photo) else emptyList()
             if (faces.isEmpty() && people.isEmpty()) return@withContext null
             ensureActive()
-            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, reshape, raise) }) +
+            val pushes = faces.flatMap(transform = { FaceShape.pushesFor(it, shape) }) +
                 people.flatMap(transform = { BodyShape.pushesFor(it, slim, limbs, bust, stride) })
             val region = regionOf(boxesOf(faces, photo), pushes, photo) ?: return@withContext null
             LivePreview(
@@ -282,6 +284,24 @@ class BeautifyProcessor(
     var lift: Float = 0f
 
     /**
+     * How full each face's temples become, from -1 (hollowest) through 0 (unchanged, the default)
+     * to 1 (fullest), like Meitu's Temple slider at -100..+100. Clamped to -1..1 when used.
+     */
+    @Volatile
+    var temple: Float = 0f
+
+    /**
+     * Every face value the processor holds, clamped to -1..1, as one [FaceAmounts] for [FaceShape].
+     * The caller passes [width] and [lift] already read and clamped; the newer tools' values are
+     * read here.
+     */
+    private fun faceAmounts(width: Float, lift: Float): FaceAmounts = FaceAmounts(
+        width = width,
+        lift = lift,
+        temple = temple.let { if (it.isNaN()) 0f else it.coerceIn(-1f, 1f) },
+    )
+
+    /**
      * How much to reshape each person's waist, from -1 (widest) through 0 (unchanged, the default)
      * to 1 (slimmest), like Meitu's Waist slider at -100..+100. The panel sets it just before a
      * run; a value outside -1..1 is clamped when used. At 0 the pose model is never loaded.
@@ -344,7 +364,8 @@ class BeautifyProcessor(
                 val small = WorkingSize.fit(input, maxEdgePx)
                 report(FIT_DONE)
                 // Each model runs only when its sliders are off 0; null means it found nothing.
-                val facePushes = if (reshape != 0f || raise != 0f) facePushes(small, reshape, raise) else emptyList()
+                val shape = faceAmounts(reshape, raise)
+                val facePushes = if (!shape.isNone) facePushes(small, shape) else emptyList()
                 val bodyPushes = if (facePushes != null && (slim != 0f || limbs != 0f || bust != 0f || stride != 0f)) {
                     bodyPushes(small, slim, limbs, bust, stride)
                 } else {
@@ -398,14 +419,14 @@ class BeautifyProcessor(
         }
 
     /**
-     * Returns the pushes that change every face in [photo] by [width] and [lift] (-1..1, not both
-     * 0 here), or null when [landmarks] finds no face. All faces' pushes go into the one warp, so
-     * the photo is resampled only once. [photo] is not changed.
+     * Returns the pushes that change every face in [photo] by [amounts] (not all 0 here), or null
+     * when [landmarks] finds no face. All faces' pushes go into the one warp, so the photo is
+     * resampled only once. [photo] is not changed.
      */
-    private suspend fun facePushes(photo: Bitmap, width: Float, lift: Float): List<WarpPush>? {
+    private suspend fun facePushes(photo: Bitmap, amounts: FaceAmounts): List<WarpPush>? {
         val found = landmarks.findLandmarks(photo)
         if (found.isEmpty()) return null
-        return found.flatMap(transform = { face -> FaceShape.pushesFor(face, width, lift) })
+        return found.flatMap(transform = { face -> FaceShape.pushesFor(face, amounts) })
     }
 
     /**

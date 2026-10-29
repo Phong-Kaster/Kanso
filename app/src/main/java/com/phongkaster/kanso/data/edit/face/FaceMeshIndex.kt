@@ -26,4 +26,13 @@ object FaceMeshIndex {
 
     /** The outline of the face's right side in the photo, mirroring [LEFT_OUTLINE] point by point. */
     val RIGHT_OUTLINE = listOf(454, 323, 361, 288, 397, 365, 379)
+
+    /**
+     * The outline of the face's left temple in the photo, from high on the forehead down to just
+     * above the eye's outer corner (Temple).
+     */
+    val LEFT_TEMPLE = listOf(54, 21, 162)
+
+    /** The right temple in the photo, mirroring [LEFT_TEMPLE] point by point. */
+    val RIGHT_TEMPLE = listOf(284, 251, 389)
 }

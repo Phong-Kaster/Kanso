@@ -48,6 +48,9 @@ const val BEAUTIFY_CHEST_TAG = "beautify-chest"
 /** Test tag of the Beautify panel's legs slider, shown while Body > Legs is open. */
 const val BEAUTIFY_LEGS_TAG = "beautify-legs"
 
+/** Test tag of the Beautify panel's temple slider, shown while Face > Temple is open. */
+const val BEAUTIFY_TEMPLE_TAG = "beautify-temple"
+
 /**
  * The Beautify tool's controls, shown in the options strip under the photo, laid out like the Edit
  * screen: a row of tools on two levels ([BeautifyToolRow]: Face, Body and Smooth on top, Face and
@@ -107,9 +110,10 @@ fun BeautifyPanel(
     var arms by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_ARMS) })
     var chest by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_CHEST) })
     var legs by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_LEGS) })
+    var faceTempleValue by rememberSaveable(init = { mutableFloatStateOf(DEFAULT_TEMPLE) })
 
     /** Every slider's value as it is now, read when a slider moves or is let go. */
-    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist, arms = arms, chest = chest, legs = legs)
+    fun amounts() = BeautifyAmounts(smoothing = strength, faceWidth = width, faceLift = lift, waist = waist, arms = arms, chest = chest, legs = legs, faceTemple = faceTempleValue)
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -207,6 +211,18 @@ fun BeautifyPanel(
                             enabled = enabled,
                             valueRange = -1f..1f,
                         )
+                        BeautifyTool.TEMPLE -> BeautifySlider(
+                            label = R.string.beautify_temple_label,
+                            value = faceTempleValue,
+                            onValueChange = {
+                                faceTempleValue = it.coerceIn(-1f, 1f)
+                                onPreview(amounts())
+                            },
+                            onValueChangeFinished = { onApply(amounts()) },
+                            tag = BEAUTIFY_TEMPLE_TAG,
+                            enabled = enabled,
+                            valueRange = -1f..1f,
+                        )
                     }
                 },
             )
@@ -222,6 +238,7 @@ fun BeautifyPanel(
                         BeautifyTool.ARMS -> arms != DEFAULT_ARMS
                         BeautifyTool.CHEST -> chest != DEFAULT_CHEST
                         BeautifyTool.LEGS -> legs != DEFAULT_LEGS
+                        BeautifyTool.TEMPLE -> faceTempleValue != DEFAULT_TEMPLE
                     }
                 },
                 enabled = enabled,
@@ -263,6 +280,9 @@ private const val DEFAULT_CHEST = 0f
 
 /** The legs slider's starting value: the legs as they are. */
 private const val DEFAULT_LEGS = 0f
+
+/** The temple slider's starting value: the face as it is. */
+private const val DEFAULT_TEMPLE = 0f
 
 /**
  * The Beautify panel with no tool open, in light and in dark. The outer Box fills the preview
