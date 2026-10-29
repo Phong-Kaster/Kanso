@@ -21,8 +21,8 @@ own slider values were put back afterwards.
 |---|---|---|---|---|
 | **Temple** | +100 moved the hair's edge at eyebrow height about 25 screen px outward, -100 inward | temples fuller | temples hollower | Works, checked on the A13 |
 | **Cheekbones** | +100 moved the face's edge across the cheekbones about 7 px inward on each side, -100 about 5 px outward | slimmer across the cheekbones | wider | Works, checked on the A13 |
-| **Chin length** | +100 raised the chin's lower edge about 24 px, -100 lowered it about 18 px (about 3% of the eyes-to-chin length) | shorter chin (moved up) | longer chin (moved down) | Works in the JVM tests; not yet checked on a phone |
-| **Hairline** | +100 lowered the hairline at the parting about 17 px, -100 raised it about 17 px (about 2.5% of the eyes-to-chin length) | lower hairline, smaller forehead | higher hairline | Works in the JVM tests; not yet checked on a phone |
+| **Chin length** | +100 raised the chin's lower edge about 24 px, -100 lowered it about 18 px (about 3% of the eyes-to-chin length) | shorter chin (moved up) | longer chin (moved down) | Works, checked on the A13: the chin moves about 8 screen px each way (about 3.5% of the eyes-to-chin length, as Meitu); it can look subtle at Kanso's zoom |
+| **Hairline** | +100 lowered the hairline at the parting about 17 px, -100 raised it about 17 px (about 2.5% of the eyes-to-chin length) | lower hairline, smaller forehead | higher hairline | Works, checked on the A13: the hairline moves about 8 screen px each way, the eyebrows not at all |
 
 All four move pixels only, with the same warp as Width and Lift; nothing is drawn or added.
 They need a face: with none found, "No face found in this photo. Nothing was changed."
@@ -95,8 +95,11 @@ face's width.
 - **Hairline**, [`FaceHairline.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/FaceHairline.kt):
   the top of the forehead and its neighbours along the hairline (`HAIRLINE` 10, 109, 338, 67, 297;
   weights 1, 0.85, 0.85, 0.55, 0.55) move down for a positive value (a lower hairline, a smaller
-  forehead) and up for a negative one, by 0.03 of the eyes-to-chin length. The middle moves most,
-  so the hairline keeps its curve; the eyebrows are below the pushes' reach.
+  forehead) and up for a negative one, by 0.035 of the eyes-to-chin length. The middle moves most,
+  so the hairline keeps its curve. The face mesh stops on the forehead's skin, below the real
+  hairline, so each push is centred 0.2 of the eyes-to-chin length **above** its landmark, on the
+  hairline, reaching 0.3 of the face's width; the eyebrows stay outside the reach. A first version
+  centred on the landmarks moved the hairline only about 1 screen px on the A13.
 
 ## Two engine fixes found through Temple (2026-10-29)
 

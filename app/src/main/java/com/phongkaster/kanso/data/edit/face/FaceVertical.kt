@@ -12,7 +12,9 @@ import kotlin.math.sqrt
  * chin ([FaceMeshIndex.CHIN]), so a tilted head moves along its own tilt. Each point in `points`
  * moves `amount × maxShift × weight` of that line's length (the eyes-to-chin length) down the face
  * (a negative `amount` moves it up), and each push reaches `radiusShare` of the face's width. A
- * face too small to measure, or an amount of 0, gives no pushes.
+ * push can sit `offset` of that length further down the face than its landmark (negative: further
+ * up), for a feature the landmarks do not reach: the face mesh stops on the forehead's skin, below
+ * the real hairline. A face too small to measure, or an amount of 0, gives no pushes.
  */
 object FaceVertical {
 
@@ -20,7 +22,7 @@ object FaceVertical {
      * Returns the pushes that move [points] of [face] (landmark numbers, with [weights] in the same
      * order) down the face by [amount] (-1..1, clamped; NaN counts as 0), each by
      * `amount × maxShift × weight` of the eyes-to-chin length, reaching [radiusShare] of the face's
-     * width.
+     * width, each centred [offset] of that length down the face from its landmark (0: on it).
      */
     fun pushesFor(
         face: FaceLandmarks,
@@ -29,6 +31,7 @@ object FaceVertical {
         weights: FloatArray,
         maxShift: Float,
         radiusShare: Float,
+        offset: Float = 0f,
     ): List<WarpPush> {
         val strength = if (amount.isNaN()) 0f else amount.coerceIn(-1f, 1f)
         if (strength == 0f) return emptyList()
@@ -49,7 +52,13 @@ object FaceVertical {
             transform = { position, index ->
                 val point = face[index]
                 val move = strength * maxShift * length * weights[position]
-                WarpPush(centerX = point.x, centerY = point.y, moveX = downX * move, moveY = downY * move, radius = radius)
+                WarpPush(
+                    centerX = point.x + downX * offset * length,
+                    centerY = point.y + downY * offset * length,
+                    moveX = downX * move,
+                    moveY = downY * move,
+                    radius = radius,
+                )
             },
         )
     }
