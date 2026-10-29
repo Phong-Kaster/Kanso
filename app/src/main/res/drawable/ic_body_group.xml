@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Body, the Beautify group of body tools: a standing figure (head, shoulders, arms, body, legs),
+     drawn for Kanso like the Face group's icon. Round strokes on the 960 grid of the Material
+     Symbols Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M480,100A90,90 0,1 1,480 280A90,90 0,1 1,480 100ZM300,400Q480,340 660,400M300,400L260,600M660,400L700,600M480,370L480,620M480,620L370,860M480,620L590,860" />
+</vector>

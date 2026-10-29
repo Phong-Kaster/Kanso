@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legs: two legs from the hips down to the feet, with an arrow pressing in on each side, drawn
+     for Kanso as the other body icons are. Round strokes on the 960 grid of the Material Symbols
+     Rounded icons, white like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M330,120Q300,480 360,840M480,200L440,840M480,200L520,840M630,120Q660,480 600,840M80,480L190,480M140,430L190,480L140,530M880,480L770,480M820,430L770,480L820,530" />
+</vector>

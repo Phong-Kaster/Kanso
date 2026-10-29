@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arms: a bent arm (shoulder down to the elbow, then the forearm out to the right) with an arrow
+     pressing in on the upper arm, drawn for Kanso as the Waist icon is (no Material Symbol shows
+     slimming an arm). Round strokes on the 960 grid of the Material Symbols Rounded icons, white
+     like them, so an Icon tints it to the text colour around it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M300,140Q240,520 400,720L840,720M440,140Q400,470 500,580L840,580M80,400L200,400M140,340L200,400L140,460" />
+</vector>

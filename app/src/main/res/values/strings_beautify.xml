@@ -25,4 +25,27 @@
     <!-- Beautify panel: the name of the Lift tool in the Face group's row, under its icon (the
          group already says it is about the face). -->
     <string name="beautify_tool_lift">Lift</string>
+    <!-- Beautify panel: the name of the Body group in the top row of tools, under its icon; tapping
+         it shows the body tools (Waist...). Must never equal the tool's name, the screen's title. -->
+    <string name="beautify_group_body">Body</string>
+    <!-- Beautify panel: the name of the Waist tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_waist">Waist</string>
+    <!-- Beautify panel: the label of the waist slider, how much slimmer (positive) or wider
+         (negative) each person's waist becomes. Also what screen readers call the slider. -->
+    <string name="beautify_waist_label">Waist</string>
+    <!-- Beautify panel: the name of the Arms tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_arms">Arms</string>
+    <!-- Beautify panel: the label of the arms slider, how much slimmer (positive) or thicker
+         (negative) each person's arms become. Also what screen readers call the slider. -->
+    <string name="beautify_arms_label">Arms</string>
+    <!-- Beautify panel: the name of the Chest tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_chest">Chest</string>
+    <!-- Beautify panel: the label of the chest slider, how much fuller (positive) or flatter
+         (negative) each person's chest becomes. Also what screen readers call the slider. -->
+    <string name="beautify_chest_label">Chest</string>
+    <!-- Beautify panel: the name of the Legs tool in the Body group's row, under its icon. -->
+    <string name="beautify_tool_legs">Legs</string>
+    <!-- Beautify panel: the label of the legs slider, how much slimmer (positive) or thicker
+         (negative) each person's legs become. Also what screen readers call the slider. -->
+    <string name="beautify_legs_label">Legs</string>
 </resources>

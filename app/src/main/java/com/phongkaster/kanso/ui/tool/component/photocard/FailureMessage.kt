@@ -28,6 +28,7 @@ internal fun failureMessageRes(failure: EditFailure): Int = when (failure) {
     EditFailure.OutOfMemory -> R.string.tool_failed_out_of_memory
     EditFailure.NoSubject -> R.string.tool_failed_no_subject
     EditFailure.NoFace -> R.string.tool_failed_no_face
+    EditFailure.NoPerson -> R.string.tool_failed_no_person
     EditFailure.ModelUnavailable -> R.string.tool_failed_model_unavailable
     EditFailure.Other -> R.string.tool_failed_other
 }

@@ -47,7 +47,7 @@ fun beautifyGroupTag(group: BeautifyGroup): String = "beautify-group-${group.nam
 
 /**
  * The Beautify panel's row of tools, on two levels, as in Meitu's Beautify:
- * - **Layer 1**, while [openGroup] is null: the top row ([BeautifyEntry.TOP_ROW]), Face then
+ * - **Layer 1**, while [openGroup] is null: the top row ([BeautifyEntry.TOP_ROW]), Face, Body,
  *   Smooth. Tapping a group calls [onOpenGroup]; tapping a single tool calls [onTool].
  * - **Layer 2**, while [openGroup] is set: that group's tools on the left and a Back entry pinned
  *   at the right end ([GroupRow]). Tapping a tool calls [onTool]; Back calls [onBack].
@@ -198,12 +198,16 @@ private fun BackEntry(enabled: Boolean, onBack: () -> Unit) {
     )
 }
 
-/** The drawable shown for [tool] (Width's and Lift's are drawn for Kanso; Smooth's is a Material Symbol). */
+/** The drawable shown for [tool] (the face and body tools' are drawn for Kanso; Smooth's is a Material Symbol). */
 @DrawableRes
 private fun toolIcon(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.SMOOTH -> R.drawable.ic_face_retouching_natural
     BeautifyTool.FACE_WIDTH -> R.drawable.ic_face_width
     BeautifyTool.FACE_LIFT -> R.drawable.ic_face_lift
+    BeautifyTool.WAIST -> R.drawable.ic_body_waist
+    BeautifyTool.ARMS -> R.drawable.ic_body_arms
+    BeautifyTool.CHEST -> R.drawable.ic_body_chest
+    BeautifyTool.LEGS -> R.drawable.ic_body_legs
 }
 
 /** The string resource naming [tool] under its icon. */
@@ -212,18 +216,24 @@ private fun toolName(tool: BeautifyTool): Int = when (tool) {
     BeautifyTool.SMOOTH -> R.string.beautify_tool_smooth
     BeautifyTool.FACE_WIDTH -> R.string.beautify_tool_width
     BeautifyTool.FACE_LIFT -> R.string.beautify_tool_lift
+    BeautifyTool.WAIST -> R.string.beautify_tool_waist
+    BeautifyTool.ARMS -> R.string.beautify_tool_arms
+    BeautifyTool.CHEST -> R.string.beautify_tool_chest
+    BeautifyTool.LEGS -> R.string.beautify_tool_legs
 }
 
 /** The drawable shown for [group] (drawn for Kanso). */
 @DrawableRes
 private fun groupIcon(group: BeautifyGroup): Int = when (group) {
     BeautifyGroup.FACE -> R.drawable.ic_face_group
+    BeautifyGroup.BODY -> R.drawable.ic_body_group
 }
 
 /** The string resource naming [group] under its icon. */
 @StringRes
 private fun groupName(group: BeautifyGroup): Int = when (group) {
     BeautifyGroup.FACE -> R.string.beautify_group_face
+    BeautifyGroup.BODY -> R.string.beautify_group_body
 }
 
 /** The narrowest an entry gets, so a short name still makes a comfortable target. */

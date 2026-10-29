@@ -204,8 +204,10 @@ internal fun PhotoCard(
                             }
                         }
                     } else {
-                        // On a face tool, zoom in on the face once it is found (see ToolUiState.faceFocus).
-                        val zoom = state.faceFocus?.let(block = { PhotoZoom.toward(it) }) ?: PhotoZoom.NONE
+                        // On a face tool, zoom in on the face once it is found (see ToolUiState.faceFocus),
+                        // unless the whole photo is wanted (Beautify's Body group).
+                        val focus = if (state.wholePhoto) null else state.faceFocus
+                        val zoom = focus?.let(block = { PhotoZoom.toward(it) }) ?: PhotoZoom.NONE
                         PhotoView(image = image, photoUri = state.photoUri, zoom = zoom, live = live)
                     }
                 }

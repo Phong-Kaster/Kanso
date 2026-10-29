@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Waist: a torso pinched at the middle with an arrow pressing in on each side, drawn for Kanso as
+     the Face width icon is (no Material Symbol shows slimming a waist). Round strokes on the 960
+     grid of the Material Symbols Rounded icons, white like them, so an Icon tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="72"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M330,140Q450,480 330,820M630,140Q510,480 630,820M120,480L250,480M190,420L250,480L190,540M840,480L710,480M770,420L710,480L770,540" />
+</vector>

@@ -20,6 +20,9 @@ sealed interface EditFailure {
     /** The tool needs a face to work on and found none in the photo. */
     data object NoFace : EditFailure
 
+    /** The tool needs a person's body (a Body reshape such as Waist) and found none in the photo. */
+    data object NoPerson : EditFailure
+
     /** The machine-learning model the tool needs would not load on this phone. */
     data object ModelUnavailable : EditFailure
 

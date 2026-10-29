@@ -6,12 +6,15 @@ package com.phongkaster.kanso.ui.tool.model
  * (Face > Width, Lift, ...).
  *
  * A new face tool joins [FACE] by naming it as its group in [BeautifyTool]; the panel needs no
- * other change. A group with no tool yet (Body, for now) is simply not listed here, so the panel
- * never shows an entry that does nothing.
+ * other change. A group with no tool yet is simply not listed here, so the panel never shows an
+ * entry that does nothing.
  */
 enum class BeautifyGroup {
     /** Reshaping the face: Width and Lift now, Temple later. */
     FACE,
+
+    /** Reshaping the body, as Meitu's Body > Reshape: Waist, Arms, Chest and Legs. */
+    BODY,
     ;
 
     /** The group's tools, in the order the row shows them. */
