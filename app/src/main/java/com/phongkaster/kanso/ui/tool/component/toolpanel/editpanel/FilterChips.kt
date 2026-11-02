@@ -59,6 +59,7 @@ private fun filterLabel(preset: FilterPreset): Int = when (preset) {
     FilterPreset.WALDEN -> R.string.edit_tool_filter_walden
     FilterPreset.HUDSON -> R.string.edit_tool_filter_hudson
     FilterPreset.AMARO -> R.string.edit_tool_filter_amaro
+    FilterPreset.AUTUMN -> R.string.edit_tool_filter_autumn
 }
 
 /** The Filters chips with no filter chosen, in light and in dark. */

@@ -30,6 +30,7 @@ import kotlin.math.max
  * - None gives the patch back pixel for pixel; so does any filter at intensity 0;
  * - there are at least six named filters, and each one, read from the engine's own look-up image
  *   in the app's merged assets (the real [FilterLut.fromAssets]), changes the patch's mean colour;
+ * - Autumn turns a grey and a pale blue warm;
  * - at intensity 0.5 each channel's mean lies between the patch's and the full filter's;
  * - the two kinds of look-up image are read the right way: a generated identity colour cube
  *   keeps every colour (within the cube's rounding), a generated inverting curve strip inverts;
@@ -104,6 +105,23 @@ class EditFilterTest {
                 )
             }
         }
+    }
+
+    /**
+     * Autumn, Kanso's own image, is read as a colour cube and does what its name says: a neutral
+     * grey turns brown (red above green above blue) and darker, a pale denim blue turns warm (red
+     * above blue).
+     */
+    @Test
+    fun autumn_turns_grey_and_pale_blue_warm() {
+        val lut = bundled.lutFor(FilterPreset.AUTUMN)!!
+        assertTrue(lut.isCube)
+        val grey = lut.map(rgb(128, 128, 128))
+        val denim = lut.map(rgb(0xB9, 0xC6, 0xCC))
+        assertTrue(((grey shr 16) and 0xFF) > ((grey shr 8) and 0xFF))
+        assertTrue(((grey shr 8) and 0xFF) > (grey and 0xFF))
+        assertTrue(((grey shr 16) and 0xFF) < 128)
+        assertTrue(((denim shr 16) and 0xFF) > (denim and 0xFF))
     }
 
     /** A generated 512 x 512 identity cube is read as a cube and keeps each colour within 3. */

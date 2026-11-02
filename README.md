@@ -53,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of seven filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift, Temple, Cheekbones, Chin length, Hairline and a pinned Back; Body, with Waist, Arms, Chest and Legs; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), and [Temple, Cheekbones, Chin length, Hairline](docs/features/face-shape.md) (each -100..+100, measured against Meitu), where MediaPipe's 478 face landmarks drive a Kotlin warp of the face's outline; Waist, Arms and Legs (-100..+100, slimmer to the right) and Chest (-100..+100, fuller to the right), where MediaPipe's pose model (33 body points and a person mask) places them for the same warp (Chest grows the pixels instead of sliding them); and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
@@ -95,7 +95,7 @@ on a phone yet.
 | Edit: Crop | Works | `core/imagecrop`'s cropper on the original photo: handles, drag, pinch; Free or a locked shape. One finished gesture is one Undo step. |
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
-| Edit: Filters | Works | None or one of seven filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
+| Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -165,8 +165,9 @@ or `app/src/main/res/`.
 5. **Done.** `ToolViewModel.done` shows a spinner in Done and renders the current settings once
    from the decoded original, shrunk to at most 3000 px (`WorkingSize.EDIT`, so a 2K photo keeps its size), with
    `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, in this order: **layers**, crop,
-   quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar` and
-   `libs/editimage.aar`, read from the assets), colour matrix, then every pixel made opaque. If no
+   quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar`,
+   `libs/editimage.aar` and Kanso's own `app/src/main/assets/filters/`, read from the assets), colour
+   matrix, then every pixel made opaque. If no
    Edit control was ever used, the decoded original is handed over unchanged with its Uri. The
    picture goes into `data/edit/RenderedPhotoStore.kt` and the `Result` key is pushed above Edit;
    Back from Result returns to the session intact.
@@ -440,7 +441,7 @@ Paths are under `app/src/main/java/com/phongkaster/kanso/`.
 
 | Tool | Wrapper in `app/` | Engine class | Model or library (all bundled) |
 |---|---|---|---|
-| Edit (filters) | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`) and six curve strips in `filter_materials/map/` (`libs/editimage.aar`) |
+| Edit (filters) | `data/edit/edit/FilterLut.kt` (reads images only) | none | `lookup/lookup_light.png` (`libs/imageprocessor.aar`), six curve strips in `filter_materials/map/` (`libs/editimage.aar`) and Kanso's own colour cube `filters/autumn.png` (`app/src/main/assets/`) |
 | Edit (crop) | `ui/tool/component/EditCropper.kt` | `CropperPreview`, `CropState` (`core/imagecrop`) | none |
 | Edit (text) | `data/edit/edit/TextLayerLayout.kt` | Android `StaticLayout` | five OFL fonts in `app/src/main/res/font/` |
 | Remove background | `data/edit/cutout/EngineSegmenter.kt` | `SelfieSegmentationUC`, `OpenCVLoader` | ML Kit `segmentation-selfie` |
