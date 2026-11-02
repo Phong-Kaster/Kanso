@@ -50,7 +50,7 @@ rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (
 used there is nothing to render, and the decoded original is handed over). No model and no
 network are used. You can:
 
-- **Crop**: choose Free, 1:1, 4:3, 3:4, 16:9 or 9:16. While the Crop sheet is open the photo becomes
+- **Crop**: choose Free, 1:1, 4:3, 3:4, 4:5, 16:9 or 9:16. While the Crop sheet is open the photo becomes
   a cropper (from the `core/imagecrop` module): drag a handle to move an edge or a corner, drag inside
   the rectangle to move it, pinch to zoom. The cropper shows the decoded photo with the stickers
   drawn in, without the turns, flips, filter or slider colours. A fixed shape sets the largest centred rectangle of that
