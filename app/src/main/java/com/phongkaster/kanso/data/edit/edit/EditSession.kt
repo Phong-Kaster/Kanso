@@ -1,8 +1,9 @@
 package com.phongkaster.kanso.data.edit.edit
 
 /**
- * One Edit screen session: the settings shown right now and the earlier settings Undo can go back
- * to. Pure Kotlin with no Android in it, so the undo rules are tested on the plain JVM.
+ * One Edit screen session: the settings shown right now, the earlier settings Undo can go back
+ * to, and the undone settings Redo can bring back. Pure Kotlin with no Android in it, so the undo
+ * and redo rules are tested on the plain JVM.
  *
  * The session is immutable, like [EditSettings]: every method returns a new session and leaves
  * this one as it was. The ViewModel keeps the latest one and publishes its [settings].
@@ -14,8 +15,13 @@ package com.phongkaster.kanso.data.edit.edit
  * an undo entry, holding the settings from before the drag began, so a drag of fifty small steps
  * is still one action.
  *
- * Undo needs no pixels: each entry is a whole [EditSettings], and the processor renders any
- * settings from the original photo, so going back is just showing an earlier value again.
+ * **Redo.** [undo] does not throw the settings it leaves away: it puts them on [redoStack], and
+ * [redo] brings them back, one action at a time, in the order they were undone. A new action after
+ * an undo (a change, or a drag that moved something) empties [redoStack], as in every editor: the
+ * undone branch can no longer be reached, because a different edit now follows the same past.
+ *
+ * Neither needs pixels: each entry is a whole [EditSettings], and the processor renders any
+ * settings from the original photo, so going back or forward is just showing another value again.
  */
 data class EditSession(
     /** The settings shown right now (during a drag, the value under the finger). */
@@ -27,17 +33,27 @@ data class EditSession(
      * undo entry; null when no drag is under way.
      */
     val pending: EditSettings? = null,
+    /**
+     * Settings taken back by [undo], the most recently undone last: [redo] brings back the last
+     * one. Emptied by any new action.
+     */
+    val redoStack: List<EditSettings> = emptyList(),
 ) {
 
     /** True when there is an action to take back. */
     val canUndo: Boolean
         get() = undoStack.isNotEmpty()
 
+    /** True when there is an undone action to bring back. */
+    val canRedo: Boolean
+        get() = redoStack.isNotEmpty()
+
     /**
      * One action made the settings [new] (a chip, a turn, a flip, a finished crop). The current
      * settings become an undo entry. Settings equal to the current ones change nothing and add no
-     * entry, so tapping the chip that is already chosen leaves Undo alone. A drag still under way
-     * is committed first, so it keeps its own entry.
+     * entry, so tapping the chip that is already chosen leaves Undo and Redo alone. A drag still
+     * under way is committed first, so it keeps its own entry. A real change is a new action, so it
+     * empties the redo list.
      */
     fun change(new: EditSettings): EditSession {
         val settled = commit()
@@ -55,19 +71,20 @@ data class EditSession(
 
     /**
      * The finger let go of a slider: the whole drag becomes one undo entry, holding the settings
-     * from before it. A drag that ended where it began adds nothing; with no drag under way this
-     * returns the session unchanged.
+     * from before it, and empties the redo list. A drag that ended where it began adds nothing and
+     * keeps the redo list; with no drag under way this returns the session unchanged.
      */
     fun commit(): EditSession {
         val before = pending ?: return this
-        val stack = if (before != settings) undoStack + before else undoStack
-        return EditSession(settings = settings, undoStack = stack, pending = null)
+        if (before == settings) return copy(pending = null)
+        return EditSession(settings = settings, undoStack = undoStack + before, pending = null)
     }
 
     /**
      * Takes back the last action: the settings go back to the newest undo entry, which leaves the
-     * stack. A drag still under way is committed first, so Undo takes back the drag itself. With
-     * nothing to undo it returns the session unchanged.
+     * stack, and the settings left behind go on the redo list so [redo] can bring them back. A drag
+     * still under way is committed first, so Undo takes back the drag itself. With nothing to undo
+     * it returns the session unchanged.
      */
     fun undo(): EditSession {
         val settled = commit()
@@ -76,6 +93,25 @@ data class EditSession(
             settings = settled.undoStack.last(),
             undoStack = settled.undoStack.dropLast(1),
             pending = null,
+            redoStack = settled.redoStack + settled.settings,
+        )
+    }
+
+    /**
+     * Brings back the action [undo] took back last: the settings become the newest redo entry, which
+     * leaves the redo list, and the settings left behind become an undo entry again, so Undo can
+     * take the same action back once more. A drag still under way is committed first; if it moved
+     * anything it is a new action, which empties the redo list, so Redo then does nothing. With
+     * nothing to redo it returns the session unchanged.
+     */
+    fun redo(): EditSession {
+        val settled = commit()
+        if (settled.redoStack.isEmpty()) return settled
+        return EditSession(
+            settings = settled.redoStack.last(),
+            undoStack = settled.undoStack + settled.settings,
+            pending = null,
+            redoStack = settled.redoStack.dropLast(1),
         )
     }
 

@@ -160,6 +160,64 @@ class EditSessionTest {
         assertFalse(EditSettings(brightness = 0.1f).isNeutral)
     }
 
+    /**
+     * Redo brings back what Undo took back, one action at a time in the order it was undone, and
+     * each redone action can be undone again; with nothing undone, Redo changes nothing.
+     */
+    @Test
+    fun redo_brings_back_undone_actions_in_order() {
+        val first = EditSettings(brightness = 0.5f)
+        val second = first.copy(filter = FilterPreset.AUTUMN)
+        val session = EditSession().change(first).change(second)
+        assertFalse(session.canRedo)
+        assertSame(session, session.redo())
+
+        val undoneTwice = session.undo().undo()
+        assertEquals(EditSettings(), undoneTwice.settings)
+        assertFalse(undoneTwice.canUndo)
+        assertTrue(undoneTwice.canRedo)
+
+        val redoneOnce = undoneTwice.redo()
+        assertEquals(first, redoneOnce.settings)
+        assertTrue(redoneOnce.canUndo)
+        assertTrue(redoneOnce.canRedo)
+
+        val redoneTwice = redoneOnce.redo()
+        assertEquals(second, redoneTwice.settings)
+        assertFalse(redoneTwice.canRedo)
+        assertEquals(listOf(EditSettings(), first), redoneTwice.undoStack)
+        assertEquals(first, redoneTwice.undo().settings)
+    }
+
+    /**
+     * A new action after an undo empties the redo list: a change, or a drag that moved something.
+     * A change to the settings already shown, or a drag released where it began, is no action and
+     * keeps it.
+     */
+    @Test
+    fun a_new_action_empties_the_redo_list() {
+        val undone = EditSession().change(EditSettings(quarterTurns = 1)).undo()
+        assertTrue(undone.canRedo)
+
+        assertFalse(undone.change(EditSettings(brightness = 0.2f)).canRedo)
+        assertFalse(undone.preview(EditSettings(warmth = 0.3f)).commit().canRedo)
+
+        assertTrue(undone.change(EditSettings()).canRedo)
+        assertTrue(undone.preview(EditSettings(warmth = 0.3f)).preview(EditSettings()).commit().canRedo)
+    }
+
+    /** Redo during a drag that moved something commits the drag as a new action, so it redoes nothing. */
+    @Test
+    fun redo_during_a_moving_drag_redoes_nothing() {
+        val undone = EditSession().change(EditSettings(contrast = 0.4f)).undo()
+        val dragged = EditSettings(saturation = 0.2f)
+        val afterRedo = undone.preview(dragged).redo()
+        assertEquals(dragged, afterRedo.settings)
+        assertFalse(afterRedo.canRedo)
+        assertNull(afterRedo.pending)
+        assertEquals(EditSettings(), afterRedo.undo().settings)
+    }
+
     /** The constant the rectangle checks share. */
     private companion object {
         /** How far a rectangle's edge may be from the expected fraction (float rounding). */

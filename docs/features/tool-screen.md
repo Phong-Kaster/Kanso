@@ -18,7 +18,8 @@ prefix out. Test links point into `app/src/test/java/com/phongkaster/kanso/`.
 A tool screen shows, from top to bottom:
 
 - a top bar: a round **Back** button, the tool's name in the middle, and at the right an **Undo**
-  text button followed by a filled **Done** button (test tag `tool-done`, `TOOL_DONE_TAG`);
+  icon button (↶, `topbar/UndoButton.kt`; on Edit a **Redo** icon button, ↷, follows it) and a
+  filled **Done** button (test tag `tool-done`, `TOOL_DONE_TAG`);
 - the photo in a large rounded **card**, over a soft blurred copy of itself (or over a
   checkerboard when a Remove background result has see-through parts), with a **Replace** chip
   floating at the bottom of the card;
@@ -29,7 +30,7 @@ never writes a file; saving and sharing happen on the Result screen.
 
 The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of five tools is its
 `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
-photo never changes size, the photo has no Replace chip, Undo stays in the top bar beside Done, and
+photo never changes size, the photo has no Replace chip, Undo and Redo stay in the top bar beside Done, and
 a Compare switch is pinned at the right of the row. The fifth tool, **Stickers**, opens
 a sheet that replaces the row (the five entries and Compare are hidden while it is open); its cross, or the
 system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
@@ -80,7 +81,8 @@ Limits shared by every tool:
    Recent edits card (Edit only), from the camera, or from "Edit" in the My edits viewer. See
    [Home](home.md), [Gallery](gallery-and-albums.md) and [Camera](camera.md).
 2. Use the tool's controls. Each finished edit replaces the photo on the card.
-3. **Undo** takes back the last edit; tap again to go further back, down to the original.
+3. **Undo** takes back the last edit; tap again to go further back, down to the original. The
+   other tools have no Redo: it would keep every undone full-size picture in memory too.
 4. **Replace** goes back to this tool's photo gallery to pick another photo.
 5. **Done** opens the Result screen with the finished picture. There, **Share** sends it,
    **Save** writes it to `Pictures/Kanso`, and **Go home** ends the session; system Back returns to

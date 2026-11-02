@@ -46,8 +46,8 @@ detail, and every design decision of weight has a record in [`docs/adr/`](docs/a
 
 ### Editing tools
 
-Every tool opens on its own screen with the same frame: Back, the tool's name, Undo and Done at
-the top right, the photo in a card, and the tool's controls. Done renders the result and opens the
+Every tool opens on its own screen with the same frame: Back, the tool's name, Undo (an arrow
+icon; Edit adds a Redo arrow beside it) and Done at the top right, the photo in a card, and the tool's controls. Done renders the result and opens the
 Result screen. [The tool screen](docs/features/tool-screen.md) explains the shared parts: decoding,
 the working size, progress, Undo, failures and Done.
 
@@ -100,7 +100,7 @@ on a phone yet.
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
 | Edit: Layers (stickers, text and dates) | Works | Up to 20 in total. Select by touch (from any sheet but Crop), move with one finger, pinch and twist with two, resize and turn with the corner handle; Size (1–100) and Opacity (10–100%) tabs in all three layer sheets; a selected layer comes to the front. Drawn into the photo before the crop, so crop, turns, flips, filter and sliders all act on it ([ADR-004](docs/adr/ADR-004-sticker-is-part-of-the-photo.md), [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md)). |
-| Edit: Undo and Compare | Works | Undo (top bar) goes back one action at a time, no redo. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
+| Edit: Undo, Redo and Compare | Works | Undo (↶, top bar) goes back one action at a time; Redo (↷, beside it) brings back what Undo took back, in order, until a new action empties it. Compare (pinned in the row) shows the original while it is on and disables every editing control except Done. |
 | Remove background | Works | ML Kit selfie segmentation: people only, in practice. |
 | Enhance | Works | Real-ESRGAN four-times upscale of a 512 px copy, plus brightening when dark. |
 | Beautify | Works | Face width, Face lift, Waist, Arms, Chest and Legs (MediaPipe face and pose landmarks plus a Kotlin warp) and OpenCV bilateral smoothing, each a slider; zooms onto the face (the whole photo while Body is open). Width and smoothing seen on the Galaxy A13, 2026-10-28; Waist at ±100, Arms at 99, Chest at ±100 and Legs at 100 rendered on the A13 with no crash, each changing only its own part of the body, and the first body drag follows the finger, 2026-10-29; Lift not yet judged on a phone. |
@@ -151,7 +151,9 @@ or `app/src/main/res/`.
 3. **The session.** Every change is one immutable `EditSettings` (`data/edit/edit/EditSettings.kt`)
    inside an `EditSession` (`data/edit/edit/EditSession.kt`) with its undo stack. `change` is one
    action (a chip, a turn, a finished crop); `preview` follows a finger or a typing run without an
-   undo entry; `commit` makes the whole run one entry. Undo stores settings, never pixels. The
+   undo entry; `commit` makes the whole run one entry. `undo` moves the settings it leaves onto a
+   redo stack and `redo` (`ToolViewModel.redo`, the ↷ icon) brings them back; any new action
+   empties that stack. Undo and Redo store settings, never pixels. The
    cropper, `ui/tool/component/EditCropper.kt`, wraps `core/imagecrop`'s `CropperPreview` and shows
    the original with the layers baked into a copy of it, un-turned and unfiltered, because the crop
    is kept as fractions of the original.

@@ -68,6 +68,7 @@ import com.phongkaster.kanso.ui.tool.TOOL_PHOTO_URI_KEY
 import com.phongkaster.kanso.ui.tool.TOOL_PROGRESS_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_REPLACE_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_SCREEN_TAG
+import com.phongkaster.kanso.ui.tool.TOOL_REDO_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNDO_TAG
 import com.phongkaster.kanso.ui.tool.TOOL_UNREADABLE_TAG
 import com.phongkaster.kanso.ui.tool.ToolContent
@@ -499,6 +500,41 @@ class ToolScreenTest {
         compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsEnabled().performClick()
         compose.waitForIdle()
         assertEquals(1, undoCalls)
+    }
+
+    /**
+     * Redo is on the Edit screen only, in the top bar between Undo and Done: off with nothing
+     * undone, usable once an edit has been undone, and a tap calls `onRedo`. The other tools have
+     * no Redo.
+     */
+    @Test
+    fun redo_is_on_edit_only_between_undo_and_done() {
+        val photo = ToolFixtures.gradient(600, 400)
+        var redoCalls = 0
+        var state by mutableStateOf(readyState(Tool.EDIT, photo))
+        compose.setContent {
+            MaterialTheme {
+                ToolContent(state = state, onBack = {}, onDone = {}, onRedo = { redoCalls++ })
+            }
+        }
+        compose.waitForIdle()
+        compose.onAllNodes(hasTestTag(TOOL_REDO_TAG)).assertCountEquals(1)
+        compose.onNodeWithTag(TOOL_REDO_TAG).assertIsDisplayed().assertIsNotEnabled()
+        val undo = compose.onNodeWithTag(TOOL_UNDO_TAG).fetchSemanticsNode().boundsInRoot
+        val redo = compose.onNodeWithTag(TOOL_REDO_TAG).fetchSemanticsNode().boundsInRoot
+        val done = compose.onNodeWithTag(TOOL_DONE_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Redo $redo is not right of Undo $undo", redo.left >= undo.right - 1f)
+        assertTrue("Redo $redo is not left of Done $done", redo.right <= done.left + 1f)
+
+        compose.runOnUiThread { state = state.copy(canRedo = true) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(TOOL_REDO_TAG).assertIsEnabled().performClick()
+        compose.waitForIdle()
+        assertEquals(1, redoCalls)
+
+        compose.runOnUiThread { state = readyState(Tool.BEAUTIFY, photo) }
+        compose.waitForIdle()
+        compose.onAllNodes(hasTestTag(TOOL_REDO_TAG)).assertCountEquals(0)
     }
 
     /**

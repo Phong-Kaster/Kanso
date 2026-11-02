@@ -3,9 +3,12 @@
     <!-- Editor photo area: what screen readers say for the loading indicator shown while the
          photo is being decoded. Never shown as text. -->
     <string name="tool_loading">Opening your photo</string>
-    <!-- Editor: the Undo control's visible text and what screen readers say for it. It takes
+    <!-- Editor: what screen readers say for the Undo icon (an arrow curving back). It takes
          back the last edit, one at a time, down to the original photo. -->
     <string name="tool_undo">Undo</string>
+    <!-- Editor (Edit tool only): what screen readers say for the Redo icon, which brings back the
+         last edit Undo took back. -->
+    <string name="tool_redo">Redo</string>
     <!-- Editor: what screen readers say for the progress indicator shown while an edit runs.
          Never shown as text. -->
     <string name="tool_progress_description">Editing your photo</string>

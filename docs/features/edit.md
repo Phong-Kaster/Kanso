@@ -43,8 +43,9 @@ Lightroom (tapping it again closes it). The Stickers sheet is the exception: it 
 (see below). Each tool is 60 dp wide with a 28 dp icon, so all five fit beside Compare on a
 411 dp wide phone without scrolling; the row scrolls sideways only on a narrower screen, where a
 tool past the edge is reached with a swipe. **Compare** stays
-pinned at the right, behind a thin divider, and never scrolls away. **Undo** sits at the top right,
-next to **Done**, as on the other tools.
+pinned at the right, behind a thin divider, and never scrolls away. **Undo** (↶) and **Redo** (↷),
+two arrow icons, sit at the top right next to **Done**; Undo is there on the other tools too, Redo
+only on Edit.
 While you edit, the photo on screen is a live preview drawn by Compose; the full picture is
 rendered once, in plain Kotlin on the phone's processor, when you tap **Done** (with no control
 used there is nothing to render, and the decoded original is handed over). No model and no
@@ -445,7 +446,12 @@ flowchart TD
   throw away what was done since it opened, Undo steps included.
 - **Undo** takes back one action at a time (a chip, a turn, a flip, a crop ratio, one finished crop
   gesture, one whole slider drag, or one sticker added, deleted, duplicated, mirrored or whole
-  gesture), whichever sheet it came from. There is no redo.
+  gesture), whichever sheet it came from.
+- **Redo** (Edit only; `EditSession.redo`, `ToolViewModel.redo`, `topbar/RedoButton.kt`) brings back
+  what Undo took back, one action at a time, in the order it was undone; a redone action can be
+  undone again. Any new action after an Undo (a change, or a drag or gesture that moved something)
+  empties the redo list, as in every editor. Redo stores settings, never pixels, so it costs no
+  memory to speak of. It is off while Compare is on or Done renders, like Undo.
 - **Back with changes** asks before discarding; the check is on the current settings, so undoing
   every change leaves without asking.
 - **No session across restarts.** Settings and Undo steps are not saved; they live as long as the

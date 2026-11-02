@@ -73,6 +73,11 @@ data class ToolUiState(
     val filterPreview: Bitmap? = null,
     /** True when there is an edit to take back, so the screen's Undo control can be used. */
     val canUndo: Boolean = false,
+    /**
+     * True when an undone edit can be brought back, so the Redo control can be used. Only the Edit
+     * screen has Redo; on the other tools it stays false.
+     */
+    val canRedo: Boolean = false,
     /** Whether an edit is running right now, and how far along it is. */
     val processing: Processing = Processing.Idle,
     /**
