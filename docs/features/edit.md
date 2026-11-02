@@ -63,7 +63,7 @@ network are used. You can:
   chosen last is shown again when Adjust is reopened. The photo follows the finger
   while it drags, and the slider stays where it is let go.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
-  and Autumn, with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
+  and Autumn, each a text-only pill (`editpanel/FilterChips.kt`, Material `FilterChip`s, no icon), with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
 - **Stickers** (decision record: [ADR-004](../adr/ADR-004-sticker-is-part-of-the-photo.md)): a sheet that replaces the row of tools, with a cross at the left of a
   tick in its top row, four category tabs (Food 17, Mood 17, Quote 6, Emoji 20 bundled pictures)
