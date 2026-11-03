@@ -452,8 +452,8 @@ flowchart TD
 - **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
 - **RGB.** Each channel runs from x0 to x2. At +100 the bright parts of a photo can burn out
-  (clamped at 255); the plan leaves room to lower the maximum (to x1.5, say) if that proves too
-  strong on real photos. RGB has not been checked on a phone yet.
+  (clamped at 255). The owner tried RGB on the vivo V2408A (2026-11-03), found it works as
+  expected and kept the x2 maximum. Not yet checked on the Galaxy A13.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
 - **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the

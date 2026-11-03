@@ -87,15 +87,16 @@ the working size, progress, Undo, failures and Done.
 
 "Works" means the path is complete in code from the control to the saved file and covered by the
 JVM tests. On the owner's phones (Galaxy A13 and vivo V2408A, 2026-10-28) the Date sheet was tried
-and an edited 2K photo was saved without losing quality; the other features have not been checked
-on a phone yet.
+and an edited 2K photo was saved without losing quality; on the vivo V2408A the owner tried RGB
+(2026-11-03) and found it works as expected; the other features have not been checked on a phone
+yet.
 
 | Feature | State | Notes |
 |---|---|---|
 | Edit: Crop | Works | `core/imagecrop`'s cropper on the original photo: handles, drag, pinch; Free or a locked shape. One finished gesture is one Undo step. |
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
-| Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Not yet checked on a phone. |
+| Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |

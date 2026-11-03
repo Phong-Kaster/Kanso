@@ -1,9 +1,10 @@
 # Plan: the RGB tool on the Edit screen
 
-**Status:** built (2026-11-03): model, matrix step, sheet, tests and docs, all JVM tests green.
-Not yet checked on the owner's Galaxy A13, and the x2 maximum is not yet judged on real photos
-(see [Still open](#4-still-open-to-settle-while-building-not-design-decisions)). Every decision
-below is the owner's (2026-11-03), reached in a question-by-question design session.
+**Status:** built (2026-11-03, `72e7174`): model, matrix step, sheet, tests and docs, all JVM
+tests green. Checked by the owner on the vivo V2408A the same day: works as expected, and the x2
+maximum stays. Not yet checked on the owner's Galaxy A13 (see
+[Still open](#4-still-open-to-settle-while-building-not-design-decisions)). Every decision below is
+the owner's (2026-11-03), reached in a question-by-question design session.
 
 ---
 
@@ -112,10 +113,13 @@ code lives today; check them again before starting.
 
 ## 4. Still open (to settle while building, not design decisions)
 
-- **The exact x2 maximum.** If +100 looks too strong on real photos (bright areas burn out), lower
-  the maximum (for example x1.5). It is one number, not a design change.
-- **The three tint values**, chosen so they pass the contrast check in light and dark theme.
-- **Checked on the owner's Galaxy A13** (32-bit, `armeabi-v7a`): not yet.
+- **The exact x2 maximum.** Settled (owner, 2026-11-03): tried on the vivo V2408A, works as
+  expected, x2 stays. Were +100 ever found too strong (bright areas burning out), lowering it (for
+  example to x1.5) is one number, not a design change.
+- **The three tint values.** Settled while building: deep red, green and blue on light themes, pale
+  ones on dark themes (`RgbChannel`), each at least 3:1 on the sheet (`RgbTintContrastTest`).
+- **Checked on the owner's Galaxy A13** (32-bit, `armeabi-v7a`): not yet. The vivo V2408A
+  (64-bit) was checked on 2026-11-03.
 - **No ADR planned.** A separate tool is easy to change later and not surprising.
 
 ---
