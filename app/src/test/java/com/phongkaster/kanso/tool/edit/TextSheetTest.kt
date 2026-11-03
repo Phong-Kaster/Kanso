@@ -225,7 +225,9 @@ class TextSheetTest {
             }
         }
         compose.waitForIdle()
-        compose.onNodeWithTag(editToolTag(EditTool.TEXT)).performScrollTo().performClick()
+        // The row is lazy and Text sits past its right edge: scroll the row itself to it first.
+        compose.scrollToolRowTo(EditTool.TEXT)
+        compose.onNodeWithTag(editToolTag(EditTool.TEXT)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.TEXT, viewModel.state.value.openTool)
         return viewModel

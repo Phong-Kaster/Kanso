@@ -9,12 +9,18 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).
 
-**EditTool** - One of the seven groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `FILTERS`, `STICKERS`, `TEXT`, `DATE`. Text and Date are tools of their own with their own
+**EditTool** - One of the eight groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+`ADJUST`, `RGB`, `FILTERS`, `STICKERS`, `TEXT`, `DATE`. Text and Date are tools of their own with their own
 sheets, not sections of the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`) and
 opens one sheet; only one sheet is open at a time (a layer sheet, Stickers, Text or Date, takes the
 row's place while open). Holds no strings or icons.
-`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all five live inside `Tool.EDIT`.
+`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all eight live inside `Tool.EDIT`.
+
+**RGB tool** - The Edit tool that turns each of the photo's three colour channels, red, green and
+blue, down (towards cyan, magenta or yellow) or up, across the whole picture: one chip per channel
+and one slider for the chosen one, from -100 (the channel gone) through 0 (no change) to +100 (the
+channel doubled). Used to fix a colour cast or tint a photo. *Not* Adjust's Warmth, which shifts
+red against blue together, and not a filter, which is a fixed look.
 
 **Layer** - One thing placed on the photo in Edit, which the person can select, move,
 pinch and turn. A layer has one of three kinds: a *picture* (a **Sticker**, added by the Stickers

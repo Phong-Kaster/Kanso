@@ -18,12 +18,13 @@ import kotlin.math.roundToInt
 
 /**
  * The Edit tool's processor: renders the WHOLE of [settings] onto a photo, in this order: the
- * layers, crop, quarter turns, flips, the filter, then the four colour sliders. All of it is
+ * layers, crop, quarter turns, flips, the filter, then the colour sliders and channels. All of it is
  * plain Kotlin on the CPU, apart from each sticker, which is drawn with Android's `Canvas`.
  *
  * Every step works on the photo's pixels as one `IntArray` (one ARGB int per pixel, row after
  * row): cropping copies a rectangle out, turning and flipping move each pixel to its new place,
- * a filter sends each pixel through a [FilterLut], and the sliders through one colour matrix.
+ * a filter sends each pixel through a [FilterLut], and the sliders (Adjust's four, RGB's three)
+ * through one colour matrix.
  * Plain arrays make every step exact (a turn moves pixels, it never blurs them; a slider at its
  * middle leaves every pixel as it was) and runnable in a JVM test, where the engine's GPU code
  * cannot load.
@@ -115,8 +116,8 @@ class EditProcessor(
         }
         onProgress(PROGRESS_FILTERED)
 
-        // 5. The colour sliders, only when one is away from its middle, so all four at the middle
-        // leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
+        // 5. The colour sliders and the RGB channels, only when one is away from its middle, so all
+        // of them at the middle leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
         // builder the live preview hands to Compose, so the preview and Done agree.
         if (settings.hasColourChange) applyMatrix(image.data, EditColourMatrix.of(settings))
 
@@ -402,7 +403,7 @@ class EditProcessor(
         }
 
         /**
-         * The one colour matrix the four sliders of [settings] make together. The formula lives
+         * The one colour matrix the sliders and channels of [settings] make together. The formula lives
          * in [EditColourMatrix.of], shared with the live preview; this delegate stays so existing
          * code and tests can keep asking the processor. It is `internal` (visible to the app
          * module and its tests, nowhere else).

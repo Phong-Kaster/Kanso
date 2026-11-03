@@ -81,7 +81,7 @@ class FiltersSheetTest {
     fun filters_offers_none_and_seven_presets() {
         show()
         assertEquals(FilterPreset.NONE, FilterPreset.entries.first())
-        assertEquals(8, FilterPreset.entries.size)
+        assertEquals(9, FilterPreset.entries.size)
         FilterPreset.entries.forEach { preset -> compose.onNodeWithTag(editFilterTag(preset)).assertExists() }
         compose.onAllNodesWithText("None").assertCountEquals(1)
         compose.onNodeWithTag(editFilterTag(FilterPreset.NONE)).assertIsSelected()

@@ -11,8 +11,9 @@ import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToo
 /**
  * Scrolls the Edit screen's row of tools until [tool]'s entry is on screen.
  *
- * The row is a `LazyRow`, which composes only the entries on screen: Date, the seventh, sits past
- * the right edge of a phone-sized window and has no node at all until the row is scrolled to it.
+ * The row is a `LazyRow`, which composes only the entries on screen: Text and Date, the last two of
+ * the eight, sit past the right edge of a phone-sized window and have no node at all until the row
+ * is scrolled to them.
  * `performScrollToNode` asks the lazy list itself to scroll (by item index) until a node matching
  * the tag exists and is shown, which `performScrollTo` on the entry cannot do for an entry that
  * does not exist yet.

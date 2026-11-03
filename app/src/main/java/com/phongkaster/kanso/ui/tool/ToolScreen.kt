@@ -137,6 +137,9 @@ const val TOOL_PROGRESS_TAG = "tool-progress"
 /** The test tag on the Undo control at the top right, which takes back the last edit. */
 const val TOOL_UNDO_TAG = "tool-undo"
 
+/** The test tag on the Edit screen's Redo control, just right of Undo, which brings back an undone edit. */
+const val TOOL_REDO_TAG = "tool-redo"
+
 /** The test tag on the plain-words message shown when an edit did not work. */
 const val TOOL_FAILURE_TAG = "tool-failure"
 
@@ -287,6 +290,7 @@ fun ToolScreen(
         },
         // A method reference (viewModel::undo) is a ready-made lambda that calls that method.
         onUndo = viewModel::undo,
+        onRedo = viewModel::redo,
         onDismissFailure = viewModel::dismissFailure,
         // The Edit screen only: a tap on Crop, Rotate, Adjust or Filters opens (or closes) that
         // tool's sheet, and the row's Compare switch shows the original photo while it is on.
@@ -400,6 +404,7 @@ fun ToolScreen(
                     onEditCommit = viewModel::commitSettings,
                     onEditRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
                     onEditAdjustSlider = viewModel::chooseAdjustSlider,
+                    onEditRgbChannel = viewModel::chooseRgbChannel,
                 )
             }
         },
@@ -436,7 +441,8 @@ fun ToolScreen(
  * the screen's one snapshot, from top to bottom.
  *
  * - The top bar: the round Back button, the tool's name, centred, and at the right the Undo
- *   control (usable only when there is an edit to take back and no edit is running) and the Done
+ *   icon (usable only when there is an edit to take back and no edit is running), on Edit the
+ *   Redo icon (usable only when there is an undone edit to bring back), and the Done
  *   button (usable once the photo is shown, while no edit runs and no Done is rendering).
  * - The photo card: whatever the photo part of [state] says (a loading indicator while the photo
  *   is decoded, the photo over its blurred backdrop when ready, a plain message when unreadable);
@@ -460,7 +466,7 @@ fun ToolScreen(
  *
  * The photo's Uri in [state] only marks the image node for tests. Taps are reported through
  * callbacks and nothing is changed here: [onBack] for Back, [onDone] for Done, [onReplace] for
- * "Replace", [onUndo] for Undo and [onDismissFailure] for a tap on the failure message, which
+ * "Replace", [onUndo] for Undo, [onRedo] for Redo (Edit only) and [onDismissFailure] for a tap on the failure message, which
  * hides it.
  *
  * The root node sets `testTagsAsResourceId`, still marked experimental (hence the opt-in), so
@@ -493,6 +499,7 @@ fun ToolContent(
     modifier: Modifier = Modifier,
     panel: @Composable () -> Unit = {},
     onUndo: () -> Unit = {},
+    onRedo: () -> Unit = {},
     onDismissFailure: () -> Unit = {},
     onOpenTool: (EditTool) -> Unit = {},
     onCompare: (Boolean) -> Unit = {},
@@ -532,6 +539,11 @@ fun ToolContent(
                 undoEnabled = state.canUndo && state.processing is ToolUiState.Processing.Idle &&
                     !state.finishing && !state.comparing && !state.rendering,
                 onUndo = onUndo,
+                // Redo is the Edit screen's only, and follows the same rules as Undo.
+                showRedo = isEdit,
+                redoEnabled = state.canRedo && state.processing is ToolUiState.Processing.Idle &&
+                    !state.finishing && !state.comparing && !state.rendering,
+                onRedo = onRedo,
                 doneEnabled = state.photo is ToolUiState.PhotoState.Ready &&
                     state.processing is ToolUiState.Processing.Idle && !state.finishing && !state.rendering,
                 // Done's small spinner also shows while a slider tool renders quietly.

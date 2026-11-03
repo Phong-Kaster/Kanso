@@ -59,6 +59,7 @@ private fun ratioIcon(ratio: CropRatio): Int = when (ratio) {
     CropRatio.SQUARE -> R.drawable.ic_ratio_square
     CropRatio.FOUR_THREE -> R.drawable.ic_ratio_4_3
     CropRatio.THREE_FOUR -> R.drawable.ic_ratio_3_4
+    CropRatio.FOUR_FIVE -> R.drawable.ic_ratio_4_5
     CropRatio.SIXTEEN_NINE -> R.drawable.ic_ratio_16_9
     CropRatio.NINE_SIXTEEN -> R.drawable.ic_ratio_9_16
 }
@@ -71,6 +72,7 @@ private fun ratioLabel(ratio: CropRatio): Int = when (ratio) {
     CropRatio.SQUARE -> R.string.edit_tool_ratio_square
     CropRatio.FOUR_THREE -> R.string.edit_tool_ratio_4_3
     CropRatio.THREE_FOUR -> R.string.edit_tool_ratio_3_4
+    CropRatio.FOUR_FIVE -> R.string.edit_tool_ratio_4_5
     CropRatio.SIXTEEN_NINE -> R.string.edit_tool_ratio_16_9
     CropRatio.NINE_SIXTEEN -> R.string.edit_tool_ratio_9_16
 }

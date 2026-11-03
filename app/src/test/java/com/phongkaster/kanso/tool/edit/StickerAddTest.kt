@@ -331,11 +331,11 @@ class StickerAddTest {
         assertEquals(EditSettings(), viewModel.state.value.settings)
     }
 
-    /** The sheet's nodes are gone and each of the five tool entries is on screen. */
+    /** The sheet's nodes are gone and each of the eight tool entries is in the row. */
     private fun assertSheetClosedAndFiveToolsShown() {
         compose.onAllNodesWithTag(STICKERS_PANEL_TAG).assertCountEquals(0)
         compose.onAllNodesWithTag(EDIT_SHEET_TAG).assertCountEquals(0)
-        assertEquals(7, EditTool.entries.size)
+        assertEquals(8, EditTool.entries.size)
         // The row is lazy: an entry past its right edge exists once the row scrolls to it.
         EditTool.entries.forEach {
             compose.scrollToolRowTo(it)

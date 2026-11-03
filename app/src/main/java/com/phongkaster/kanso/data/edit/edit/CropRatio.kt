@@ -33,6 +33,9 @@ enum class CropRatio(val widthPart: Int, val heightPart: Int) {
     /** Portrait 3:4, the 4:3 shape turned upright. */
     THREE_FOUR(3, 4),
 
+    /** Portrait 4:5, the tallest shape an Instagram feed post keeps without cutting it. */
+    FOUR_FIVE(4, 5),
+
     /** Wide 16:9, the shape of a television or a phone held sideways. */
     SIXTEEN_NINE(16, 9),
 

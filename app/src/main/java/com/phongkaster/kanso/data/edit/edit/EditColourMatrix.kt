@@ -4,8 +4,8 @@ import android.graphics.ColorMatrix
 import kotlin.math.abs
 
 /**
- * The one place that turns the Edit tool's four colour sliders (brightness, contrast, saturation,
- * warmth) into numbers.
+ * The one place that turns the Edit screen's colour settings into numbers: Adjust's four sliders
+ * (brightness, contrast, saturation, warmth) and RGB's three channels (red, green, blue).
  *
  * Two parts of the app need those numbers and they must agree to the last digit:
  *
@@ -38,18 +38,25 @@ object EditColourMatrix {
     private const val IDENTITY_TOLERANCE = 1e-4f
 
     /**
-     * Builds the one colour matrix the four sliders of [settings] make together, applied in this
-     * order: contrast, saturation, warmth, brightness. The crop, turns, flips and filter of
-     * [settings] play no part in it. Returns 20 floats in Android's `ColorMatrix` layout.
+     * Builds the one colour matrix the four sliders and three channels of [settings] make together,
+     * applied in this order: contrast, saturation, warmth, the RGB channels, brightness. The crop,
+     * turns, flips and filter of [settings] play no part in it (the filter is drawn before this
+     * matrix, so the sliders and channels fine-tune the filtered look). Returns 20 floats in
+     * Android's `ColorMatrix` layout.
      *
      * - Contrast scales each channel away from (or towards) mid-grey 128: by up to 2 at the
      *   maximum, down to 0.2 at the minimum.
      * - Saturation uses `setSaturation`: 0 at the minimum (every channel becomes the pixel's
      *   luminance, so black and white), 1 in the middle, 2 at the maximum.
      * - Warmth adds up to [WARMTH_SHIFT] to red and takes it from blue (the reverse when cooler).
+     * - The RGB channels multiply red, green and blue each by its own factor, `1 + value`: 0 at the
+     *   minimum (the channel is gone), 1 in the middle, 2 at the maximum. Multiplying, rather than
+     *   adding as warmth does, keeps black black, so the shadows are not tinted. It comes before
+     *   brightness, so blacks that brightness lifts stay a neutral grey instead of a tinted one.
      * - Brightness adds up to [BRIGHTNESS_SHIFT] to every channel (or takes it away).
      *
-     * With every slider at its middle this is the identity matrix (each pixel stays as it was).
+     * With every slider and channel at its middle this is the identity matrix (each pixel stays as
+     * it was). Results past 0..255 are clamped by whoever applies the matrix.
      */
     fun of(settings: EditSettings): FloatArray {
         val matrix = ColorMatrix()
@@ -70,6 +77,13 @@ object EditColourMatrix {
         if (warmth != EditSettings.MIDDLE) {
             val shift = warmth * WARMTH_SHIFT
             matrix.postConcat(ColorMatrix(scaleAndShift(1f, shift, 0f, -shift)))
+        }
+        val red = settings.red.coerceIn(EditSettings.MIN, EditSettings.MAX)
+        val green = settings.green.coerceIn(EditSettings.MIN, EditSettings.MAX)
+        val blue = settings.blue.coerceIn(EditSettings.MIN, EditSettings.MAX)
+        if (red != EditSettings.MIDDLE || green != EditSettings.MIDDLE || blue != EditSettings.MIDDLE) {
+            // One factor per channel on the diagonal; no offsets, so black (0) stays black.
+            matrix.postConcat(ColorMatrix(channelScale(1f + red, 1f + green, 1f + blue)))
         }
         val brightness = settings.brightness.coerceIn(EditSettings.MIN, EditSettings.MAX)
         if (brightness != EditSettings.MIDDLE) {
@@ -94,7 +108,7 @@ object EditColourMatrix {
         return true
     }
 
-    /** True when the four sliders of [settings] make no change at all to the colours. */
+    /** True when the sliders and channels of [settings] make no change at all to the colours. */
     fun isIdentity(settings: EditSettings): Boolean = isIdentity(of(settings))
 
     /** How many numbers a colour matrix holds: 4 rows of 5. */
@@ -102,6 +116,17 @@ object EditColourMatrix {
 
     /** How many numbers one row of a colour matrix holds (four weights and an offset). */
     private const val ROW_LENGTH = 5
+
+    /**
+     * A colour matrix's 20 numbers that multiply red by [red], green by [green] and blue by
+     * [blue], each on its own, adding nothing and leaving alpha alone.
+     */
+    private fun channelScale(red: Float, green: Float, blue: Float): FloatArray = floatArrayOf(
+        red, 0f, 0f, 0f, 0f,
+        0f, green, 0f, 0f, 0f,
+        0f, 0f, blue, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f,
+    )
 
     /**
      * A colour matrix's 20 numbers that multiply red, green and blue by [scale] and then add

@@ -193,9 +193,14 @@ class EditLayoutTest {
         val viewModel = showEdit()
         moveTo(viewModel, null)
         val before = bounds(TOOL_CARD_TAG)
-        // Date sits past the row's right edge on this window (the row scrolls), so it is not on screen.
-        EditTool.entries.filter { it != EditTool.DATE }.forEach { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() }
+        // Text and Date sit past the row's right edge on this window since RGB joined the row (the
+        // row scrolls), so they are not on screen.
+        EditTool.entries.filter(predicate = { it != EditTool.TEXT && it != EditTool.DATE }).forEach(
+            action = { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() },
+        )
 
+        // Stickers is only partly in view; bring it fully into the row before tapping it.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)

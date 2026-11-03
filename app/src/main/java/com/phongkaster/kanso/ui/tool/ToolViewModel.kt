@@ -34,6 +34,7 @@ import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -500,6 +501,26 @@ class ToolViewModel(
     }
 
     /**
+     * Brings back the edit [undo] took back last, on the Edit screen only (the other tools keep
+     * full pictures for Undo, and holding the undone ones too would cost memory a small phone does
+     * not have). Nothing happens while comparing or while Done renders, or when there is nothing
+     * to bring back.
+     *
+     * Words being typed are settled first, as for Undo: if they changed the photo they are a new
+     * action, which empties the redo list, so Redo then does nothing. The screen draws the
+     * restored settings at once (a selected layer that is no longer there is cleared by
+     * [publishSession]), and a filter they hold is previewed again from the original.
+     */
+    fun redo() {
+        if (tool != Tool.EDIT) return
+        if (mutableState.value.comparing || mutableState.value.finishing) return
+        settleText()
+        if (!session.commit().canRedo) return
+        publishSession(session.redo())
+        requestPreview()
+    }
+
+    /**
      * Opens the sheet of the Edit screen's [tool] under the photo, closing any other one, since
      * only one sheet is open at a time. Tapping the tool whose sheet is already open closes it
      * again, so the row's entries work as toggles. Opening the Text sheet this way adds a new,
@@ -543,6 +564,15 @@ class ToolViewModel(
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
     fun chooseAdjustSlider(slider: AdjustSlider) {
         mutableState.update { it.copy(adjustSlider = slider) }
+    }
+
+    /**
+     * Shows the RGB tool's [channel] (red, green or blue) in place of the one shown. Like
+     * [chooseAdjustSlider] it changes only which slider shows, never the photo, so it makes no
+     * Undo step.
+     */
+    fun chooseRgbChannel(channel: RgbChannel) {
+        mutableState.update { it.copy(rgbChannel = channel) }
     }
 
     /**
@@ -1313,7 +1343,7 @@ class ToolViewModel(
     }
 
     /**
-     * Makes [new] the current session and shows its settings and whether Undo can be used. The
+     * Makes [new] the current session and shows its settings and whether Undo and Redo can be used. The
      * selection is pruned here, on every settings change: a selected key that is no longer one of
      * the layers (the add was undone, the sticker deleted) becomes none.
      */
@@ -1327,6 +1357,7 @@ class ToolViewModel(
             state.copy(
                 settings = new.settings,
                 canUndo = new.canUndo,
+                canRedo = new.canRedo,
                 selectedLayerKey = if (stillThere) selected else null,
                 touchedLayerKey = if (touchedStillThere) touched else null,
             )

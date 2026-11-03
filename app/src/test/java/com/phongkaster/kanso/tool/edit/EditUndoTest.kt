@@ -203,6 +203,58 @@ class EditUndoTest {
         assertNull(viewModel.state.value.edited)
     }
 
+    /**
+     * Redo on the Edit screen: after two Undos, Redo brings the actions back in order, the shown
+     * picture following the settings each time (the filter preview included), and `canRedo` says
+     * when there is something to bring back. A new action after an Undo empties the redo list, and
+     * Redo is ignored while comparing.
+     */
+    @Test
+    fun redo_brings_back_undone_actions_and_a_new_action_clears_it() {
+        val viewModel = loadedEditViewModel(ToolFixtures.gradient(600, 400))
+        val renderer = RecordingRenderer()
+        val filtered = EditSettings(filter = FilterPreset.HUDSON)
+        val turned = filtered.copy(quarterTurns = 1)
+        viewModel.changeSettings(filtered, renderer.processorFor)
+        viewModel.changeSettings(turned, renderer.processorFor)
+        runMainThread()
+        assertFalse(viewModel.state.value.canRedo)
+
+        viewModel.undo()
+        viewModel.undo()
+        runMainThread()
+        assertEquals(EditSettings(), viewModel.state.value.settings)
+        assertTrue(viewModel.state.value.canRedo)
+
+        viewModel.setComparing(true)
+        viewModel.redo()
+        runMainThread()
+        assertEquals("Redo worked while comparing", EditSettings(), viewModel.state.value.settings)
+        viewModel.setComparing(false)
+
+        viewModel.redo()
+        runMainThread()
+        assertShows(viewModel, renderer, filtered)
+        assertTrue(viewModel.state.value.canRedo)
+
+        viewModel.redo()
+        runMainThread()
+        assertShows(viewModel, renderer, turned)
+        assertFalse(viewModel.state.value.canRedo)
+        assertTrue(viewModel.state.value.canUndo)
+
+        viewModel.undo()
+        runMainThread()
+        assertTrue(viewModel.state.value.canRedo)
+        val changed = filtered.copy(brightness = 0.2f)
+        viewModel.changeSettings(changed, renderer.processorFor)
+        runMainThread()
+        assertFalse("A new action left Redo usable", viewModel.state.value.canRedo)
+        viewModel.redo()
+        runMainThread()
+        assertEquals(changed, viewModel.state.value.settings)
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /**

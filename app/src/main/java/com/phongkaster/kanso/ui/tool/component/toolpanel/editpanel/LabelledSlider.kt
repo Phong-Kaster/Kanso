@@ -1,8 +1,10 @@
 package com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel
 
 import androidx.annotation.StringRes
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -41,7 +43,9 @@ fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALU
  * The number is [value] times 100, rounded: -100..100 for a colour slider, 0..100 for the
  * intensity; it carries the test tag [editSliderValueTag] of [tag]. While [enabled] is false the
  * slider is disabled. The slider also carries the label as its description, so a screen reader
- * names it.
+ * names it. [tint] colours the slider's track and thumb: the theme's `primary` for every slider
+ * but RGB's, which takes its channel's colour (see `RgbChannel`); the name and number keep their
+ * usual colours.
  */
 @Composable
 internal fun LabelledSlider(
@@ -52,6 +56,7 @@ internal fun LabelledSlider(
     tag: String,
     enabled: Boolean,
     valueRange: ClosedFloatingPointRange<Float> = EditSettings.MIN..EditSettings.MAX,
+    tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     val text = stringResource(label)
     val shown = stringResource(R.string.edit_session_slider_value, (value * SHOWN_SCALE).roundToInt())
@@ -65,6 +70,7 @@ internal fun LabelledSlider(
             valueRange = valueRange,
             onValueChangeFinished = onValueChangeFinished,
             enabled = enabled,
+            color = tint,
             sliderModifier = Modifier
                 .testTag(tag)
                 .semantics { contentDescription = text },

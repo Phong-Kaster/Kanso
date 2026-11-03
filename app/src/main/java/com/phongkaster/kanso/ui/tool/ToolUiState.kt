@@ -9,6 +9,7 @@ import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import java.time.LocalDateTime
 
 /**
@@ -73,6 +74,11 @@ data class ToolUiState(
     val filterPreview: Bitmap? = null,
     /** True when there is an edit to take back, so the screen's Undo control can be used. */
     val canUndo: Boolean = false,
+    /**
+     * True when an undone edit can be brought back, so the Redo control can be used. Only the Edit
+     * screen has Redo; on the other tools it stays false.
+     */
+    val canRedo: Boolean = false,
     /** Whether an edit is running right now, and how far along it is. */
     val processing: Processing = Processing.Idle,
     /**
@@ -92,6 +98,12 @@ data class ToolUiState(
      * slider the person used last.
      */
     val adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+    /**
+     * The Edit screen's RGB channel whose slider is shown (RGB shows one channel at a time,
+     * picked by a chip, as Adjust does). Red at first; kept here so reopening RGB shows the
+     * channel the person used last.
+     */
+    val rgbChannel: RgbChannel = RgbChannel.RED,
     /**
      * True while the Compare switch is on: the screen shows the untouched original photo instead
      * of the edit, and every editing control is disabled until it is switched off again.
