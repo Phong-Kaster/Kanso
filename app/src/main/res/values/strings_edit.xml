@@ -17,6 +17,10 @@
     <string name="edit_tool_contrast">Contrast</string>
     <string name="edit_tool_saturation">Saturation</string>
     <string name="edit_tool_warmth">Warmth</string>
+    <!-- The RGB tool's three channels, on their chips and beside the one slider. -->
+    <string name="edit_tool_red">Red</string>
+    <string name="edit_tool_green">Green</string>
+    <string name="edit_tool_blue">Blue</string>
     <string name="edit_tool_filter_intensity">Intensity</string>
     <string name="edit_tool_filter_none">None</string>
     <string name="edit_tool_filter_light">Light</string>

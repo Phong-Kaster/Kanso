@@ -22,6 +22,7 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
 import com.phongkaster.kanso.ui.tool.ToolUiState
@@ -61,8 +62,8 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * its own sheet under the photo. [openTool] says which of them the sheet shows; while it is null
  * (no sheet open) the Edit panel draws nothing, only its empty, tagged slot. [enabled] switches
  * the Edit controls off, which the screen does while an edit runs or while Compare shows the
- * original photo. [onEditAdjustSlider] is one of Adjust's sub-tool chips tapped; the chosen one
- * comes from [state]. The other four tools ignore all three.
+ * original photo. [onEditAdjustSlider] is one of Adjust's sub-tool chips tapped and
+ * [onEditRgbChannel] one of RGB's channel chips; the chosen ones come from [state]. The other four tools ignore all three.
  */
 @Composable
 fun ToolPanel(
@@ -81,6 +82,7 @@ fun ToolPanel(
     onEditCommit: () -> Unit = {},
     onEditRatio: (CropRatio, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
     onEditAdjustSlider: (AdjustSlider) -> Unit = {},
+    onEditRgbChannel: (RgbChannel) -> Unit = {},
 ) {
     // With no state (a preview, or a test of the screen's frame) the slot stays an empty, tagged
     // box, so those pictures show the frame and not a tool's controls; the real screen passes it.
@@ -105,6 +107,8 @@ fun ToolPanel(
                 enabled = enabled,
                 adjustSlider = state.adjustSlider,
                 onAdjustSlider = onEditAdjustSlider,
+                rgbChannel = state.rgbChannel,
+                onRgbChannel = onEditRgbChannel,
             )
         }
         // The checkerboard is drawn behind the photo by the screen, so the panel draws none.

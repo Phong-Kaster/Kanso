@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -49,9 +50,10 @@ private const val DISABLED_ALPHA = 0.38f
  * colour the part before the thumb. The thumb's centre travels between half a thumb in from each
  * end of the slider, so the track's coloured end is placed at the same spot.
  *
- * The coloured part and the thumb use the theme's `primary`; the rest of the track and the dots
- * on it use `primary` at 24% opacity, as Material 2 did, and the dots on the coloured part use
- * `onPrimary`, so they stay visible.
+ * The coloured part and the thumb use [color], the theme's `primary` unless the caller gives
+ * another (the RGB tool tints each channel's slider with that channel's colour); the rest of the
+ * track and the dots on it use [color] at 24% opacity, as Material 2 did, and the dots on the
+ * coloured part use `onPrimary`, so they stay visible on `primary`.
  *
  * A **two-sided** slider (a [valueRange] that runs through 0, such as -1..1) is coloured from 0 to
  * the thumb instead of from the left end, with a short upright mark at 0, so it reads
@@ -66,8 +68,9 @@ fun ClassicSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     steps: Int = 0,
     enabled: Boolean = true,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    val primary = MaterialTheme.colorScheme.primary
+    val primary = color
     val onPrimary = MaterialTheme.colorScheme.onPrimary
     val inactive = primary.copy(alpha = 0.24f)
     // The slots exist only on the Slider that takes a SliderState (the holder of value, range and
@@ -140,8 +143,8 @@ private fun originFraction(range: ClosedFloatingPointRange<Float>): Float =
 private val CENTRE_TICK_HEIGHT = 12.dp
 
 /**
- * The slider in light and in dark: a continuous one at 40%, a stepped one at 50%, and two-sided
- * ones (-1..1) at 0, at 0.5 and at -0.6.
+ * The slider in light and in dark: a continuous one at 40%, a stepped one at 50%, two-sided
+ * ones (-1..1) at 0, at 0.5 and at -0.6, and a two-sided one tinted red at 0.3.
  */
 @PreviewLightDark
 @Composable
@@ -155,6 +158,7 @@ private fun ClassicSliderPreview() {
                     ClassicSlider(value = 0f, onValueChange = {}, valueRange = -1f..1f)
                     ClassicSlider(value = 0.5f, onValueChange = {}, valueRange = -1f..1f)
                     ClassicSlider(value = -0.6f, onValueChange = {}, valueRange = -1f..1f)
+                    ClassicSlider(value = 0.3f, onValueChange = {}, valueRange = -1f..1f, color = Color(0xFFC62828))
                 }
             }
         }

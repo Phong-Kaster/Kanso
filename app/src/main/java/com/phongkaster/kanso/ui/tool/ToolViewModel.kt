@@ -34,6 +34,7 @@ import com.phongkaster.kanso.data.photo.PhotoLoader
 import com.phongkaster.kanso.di.ViewModelClearedProbe
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -563,6 +564,15 @@ class ToolViewModel(
     /** Shows the Adjust tool's [slider] (one of its four sub-tools) in place of the one shown. */
     fun chooseAdjustSlider(slider: AdjustSlider) {
         mutableState.update { it.copy(adjustSlider = slider) }
+    }
+
+    /**
+     * Shows the RGB tool's [channel] (red, green or blue) in place of the one shown. Like
+     * [chooseAdjustSlider] it changes only which slider shows, never the photo, so it makes no
+     * Undo step.
+     */
+    fun chooseRgbChannel(channel: RgbChannel) {
+        mutableState.update { it.copy(rgbChannel = channel) }
     }
 
     /**

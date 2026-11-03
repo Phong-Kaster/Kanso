@@ -38,6 +38,7 @@ import com.phongkaster.kanso.ui.tool.component.EditCropper
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
 /** Test tag of the Edit panel's brightness slider. */
@@ -52,13 +53,22 @@ const val EDIT_SATURATION_TAG = "edit-saturation"
 /** Test tag of the Edit panel's warmth slider. */
 const val EDIT_WARMTH_TAG = "edit-warmth"
 
+/** Test tag of the RGB sheet's red channel slider. */
+const val EDIT_RED_TAG = "edit-red"
+
+/** Test tag of the RGB sheet's green channel slider. */
+const val EDIT_GREEN_TAG = "edit-green"
+
+/** Test tag of the RGB sheet's blue channel slider. */
+const val EDIT_BLUE_TAG = "edit-blue"
+
 /** Test tag of the Edit panel's filter intensity slider. */
 const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
 
 /**
  * The Edit tool's controls for one sheet of the Edit screen: the group of [openTool] only, which
- * is crop shapes (Crop), quarter turns and flips (Rotate), four colour sliders (Adjust), or
- * filters with an intensity (Filters).
+ * is crop shapes (Crop), quarter turns and flips (Rotate), four colour sliders (Adjust), three
+ * colour channels (RGB), or filters with an intensity (Filters).
  *
  * **No state of its own.** Everything drawn here comes from [settings], the editing session's
  * current settings, which the screen's ViewModel keeps. So when the sheet is drawn afresh (the
@@ -88,7 +98,7 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  * off mid-drag would flicker and lose the finger.
  *
  * [adjustSlider] is Adjust's chosen sub-tool (kept in the screen's state) and [onAdjustSlider] a
- * sub-tool chip tapped.
+ * sub-tool chip tapped. [rgbChannel] and [onRgbChannel] are the same for RGB's channel chips.
  *
  * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
  * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
@@ -111,6 +121,8 @@ fun EditPanel(
     filterSource: FilterLut.Source? = null,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
     onAdjustSlider: (AdjustSlider) -> Unit = {},
+    rgbChannel: RgbChannel = RgbChannel.RED,
+    onRgbChannel: (RgbChannel) -> Unit = {},
     stickerCategory: StickerCategory = StickerCategory.FOOD,
     onStickerCategoryChosen: (StickerCategory) -> Unit = {},
     onStickerChosen: (CatalogSticker) -> Unit = {},
@@ -142,6 +154,8 @@ fun EditPanel(
         modifier = modifier,
         adjustSlider = adjustSlider,
         onAdjustSlider = onAdjustSlider,
+        rgbChannel = rgbChannel,
+        onRgbChannel = onRgbChannel,
         stickerCategory = stickerCategory,
         onStickerCategoryChosen = onStickerCategoryChosen,
         onStickerChosen = onStickerChosen,
@@ -166,6 +180,10 @@ fun EditPanel(
  *   +100, with its number beside its name. A chip tap calls [onAdjustSlider] and changes nothing
  *   in the photo. One slider at a time keeps Adjust as short as the other tools, so the panel
  *   area never has to grow;
+ * - RGB: the same pattern for the three colour channels: a chip each for red, green and blue and
+ *   ONE slider, for the chosen chip ([rgbChannel]), from -100 (the channel gone) through 0 (no
+ *   change) to +100 (the channel doubled), its track and thumb tinted in the channel's colour. A
+ *   chip tap calls [onRgbChannel] and changes nothing in the photo;
  * - Filters: None and the seven presets, one at a time (the chosen one is marked), and the
  *   intensity from 0 to 100, which is only usable while a filter is chosen.
  *
@@ -189,6 +207,8 @@ fun EditPanelContent(
     modifier: Modifier = Modifier,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
     onAdjustSlider: (AdjustSlider) -> Unit = {},
+    rgbChannel: RgbChannel = RgbChannel.RED,
+    onRgbChannel: (RgbChannel) -> Unit = {},
     stickerCategory: StickerCategory = StickerCategory.FOOD,
     onStickerCategoryChosen: (StickerCategory) -> Unit = {},
     onStickerChosen: (CatalogSticker) -> Unit = {},
@@ -256,6 +276,19 @@ fun EditPanelContent(
                     enabled = enabled,
                 )
             }
+            EditTool.RGB -> {
+                RgbChips(chosen = rgbChannel, enabled = enabled, onChoose = onRgbChannel)
+                // One slider, for the chosen channel only, tinted in that channel's colour.
+                LabelledSlider(
+                    label = rgbChannel.labelRes,
+                    value = rgbValue(settings, rgbChannel),
+                    onValueChange = { onPreview(withRgb(settings, rgbChannel, it)) },
+                    onValueChangeFinished = onCommit,
+                    tag = rgbChannel.sliderTag,
+                    enabled = enabled,
+                    tint = rgbChannel.tintOn(MaterialTheme.colorScheme.surface),
+                )
+            }
             // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text
             // calls; it never reaches this panel.
             EditTool.TEXT -> Unit
@@ -310,6 +343,20 @@ private fun withAdjust(settings: EditSettings, slider: AdjustSlider, value: Floa
     AdjustSlider.WARMTH -> settings.copy(warmth = value)
 }
 
+/** The value of [channel]'s setting in [settings], from -1 to 1 (0 is no change). */
+private fun rgbValue(settings: EditSettings, channel: RgbChannel): Float = when (channel) {
+    RgbChannel.RED -> settings.red
+    RgbChannel.GREEN -> settings.green
+    RgbChannel.BLUE -> settings.blue
+}
+
+/** [settings] with [channel]'s setting moved to [value], every other setting left as it was. */
+private fun withRgb(settings: EditSettings, channel: RgbChannel, value: Float): EditSettings = when (channel) {
+    RgbChannel.RED -> settings.copy(red = value)
+    RgbChannel.GREEN -> settings.copy(green = value)
+    RgbChannel.BLUE -> settings.copy(blue = value)
+}
+
 /**
  * One sample sheet for the previews: the panel showing [openTool]'s group for the sample
  * [settings], enabled or not, on the sheet's colour. Nothing is read from assets and every
@@ -322,6 +369,7 @@ private fun SampleEditPanel(
     settings: EditSettings,
     enabled: Boolean = true,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
+    rgbChannel: RgbChannel = RgbChannel.RED,
 ) {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
@@ -336,6 +384,7 @@ private fun SampleEditPanel(
                     enabled = enabled,
                     modifier = Modifier.padding(16.dp),
                     adjustSlider = adjustSlider,
+                    rgbChannel = rgbChannel,
                 )
             }
         }
@@ -363,6 +412,30 @@ private fun EditPanelWarmthPreview() {
         openTool = EditTool.ADJUST,
         settings = EditSettings(brightness = 0.3f, warmth = -0.2f),
         adjustSlider = AdjustSlider.WARMTH,
+    )
+}
+
+/**
+ * The RGB sheet as it looks mid-edit, in light and in dark: the Red chip chosen, and its one
+ * slider, tinted red, at 30.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelRgbPreview() {
+    SampleEditPanel(openTool = EditTool.RGB, settings = EditSettings(red = 0.3f, blue = -0.4f))
+}
+
+/**
+ * The RGB sheet with the Blue chip chosen, in light and in dark: the one slider now shows blue,
+ * tinted blue, at -40.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelRgbBluePreview() {
+    SampleEditPanel(
+        openTool = EditTool.RGB,
+        settings = EditSettings(red = 0.3f, blue = -0.4f),
+        rgbChannel = RgbChannel.BLUE,
     )
 }
 

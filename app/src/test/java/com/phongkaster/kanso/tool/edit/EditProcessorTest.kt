@@ -40,7 +40,8 @@ import kotlin.math.sqrt
  * - colour sliders, each alone on a 100 x 100 patch of mid-grey and colours: all four at the
  *   middle change nothing; brightness moves the mean luminance, contrast its spread, saturation
  *   the colourfulness (black and white at the minimum) and warmth red against blue; the colour
- *   matrix itself is the identity in the middle;
+ *   matrix itself is the identity in the middle; each RGB channel at -100 empties only itself and
+ *   at +100 doubles only itself, clamped at 255;
  * - Run 9, whole settings from the original: the filter runs before the sliders, rendering twice
  *   from the same original gives the same pixels and leaves the original alone, and a second
  *   filter replaces the first rather than stacking on it;
@@ -273,6 +274,37 @@ class EditProcessorTest {
         assertTrue("down: $before -> $down", down < before)
     }
 
+    /**
+     * RGB on real pixels: each channel at -100 empties that channel of every pixel and leaves the
+     * other two exactly as they were; at +100 it doubles that channel, clamped at 255 (the patch's
+     * reds of 128, 180 and 200 come out 255; its 90 and 120 come out 180 and 240).
+     */
+    @Test
+    fun each_rgb_channel_at_its_ends_empties_or_doubles_only_itself() {
+        val patch = patch()
+        val before = pixels(patch)
+        // Each channel's bit shift in an ARGB int, and the settings that move it alone.
+        listOf<Triple<String, Int, (Float) -> EditSettings>>(
+            Triple(first = "red", second = 16, third = { v -> EditSettings(red = v) }),
+            Triple(first = "green", second = 8, third = { v -> EditSettings(green = v) }),
+            Triple(first = "blue", second = 0, third = { v -> EditSettings(blue = v) }),
+        ).forEach(
+            action = { (name, shift, settingsAt) ->
+                val emptied = pixels(run(patch, settingsAt(EditSettings.MIN)))
+                val doubled = pixels(run(patch, settingsAt(EditSettings.MAX)))
+                before.indices.forEach(
+                    action = { i ->
+                        val original = before[i]
+                        val channel = (original shr shift) and 0xFF
+                        assertEquals("$name at -100, pixel $i", withChannel(original, shift, 0), emptied[i])
+                        val twice = withChannel(original, shift, minOf(channel * 2, 255))
+                        assertEquals("$name at +100, pixel $i", twice, doubled[i])
+                    },
+                )
+            },
+        )
+    }
+
     /** A 6000 x 4000 photo is worked on, and returned, at most 3000 pixels on its long edge. */
     @Test
     fun a_very_large_photo_is_worked_on_at_the_cap() {
@@ -461,6 +493,10 @@ class EditProcessorTest {
         }
         return bitmapOf(data, size, size)
     }
+
+    /** [color] with the channel at bit [shift] (16 red, 8 green, 0 blue) replaced by [value]. */
+    private fun withChannel(color: Int, shift: Int, value: Int): Int =
+        (color and (0xFF shl shift).inv()) or (value shl shift)
 
     /** An opaque ARGB colour from its three channels. */
     private fun rgb(r: Int, g: Int, b: Int): Int = (0xFF shl 24) or (r shl 16) or (g shl 8) or b

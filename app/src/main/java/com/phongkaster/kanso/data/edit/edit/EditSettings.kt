@@ -2,7 +2,7 @@ package com.phongkaster.kanso.data.edit.edit
 
 /**
  * Everything the Edit screen has done to the photo so far, as one immutable value: the crop
- * rectangle, quarter turns, flips, four colour sliders and a filter. There is one such value for
+ * rectangle, quarter turns, flips, four colour sliders, three colour channels and a filter. There is one such value for
  * the whole editing session (held by [EditSession]); every tap or slider move makes a new one.
  *
  * Immutable means a value never changes after it is made; a change makes a new value with
@@ -46,6 +46,21 @@ data class EditSettings(
     val saturation: Float = MIDDLE,
     /** Warmth, from [MIN] (cooler, bluer) through [MIDDLE] (unchanged) to [MAX] (warmer, redder). */
     val warmth: Float = MIDDLE,
+    /**
+     * The red channel, from [MIN] (no red at all: the photo turns cyan) through [MIDDLE]
+     * (unchanged) to [MAX] (twice the red). The RGB tool multiplies the channel by `1 + red`.
+     */
+    val red: Float = MIDDLE,
+    /**
+     * The green channel, from [MIN] (no green: the photo turns magenta) through [MIDDLE]
+     * (unchanged) to [MAX] (twice the green). The RGB tool multiplies the channel by `1 + green`.
+     */
+    val green: Float = MIDDLE,
+    /**
+     * The blue channel, from [MIN] (no blue: the photo turns yellow) through [MIDDLE]
+     * (unchanged) to [MAX] (twice the blue). The RGB tool multiplies the channel by `1 + blue`.
+     */
+    val blue: Float = MIDDLE,
     /** The one colour filter laid over the photo; [FilterPreset.NONE] for none. */
     val filter: FilterPreset = FilterPreset.NONE,
     /**
@@ -63,9 +78,21 @@ data class EditSettings(
     /** True while the photo holds fewer than [MAX_LAYERS] layers, so another may be added. */
     val canAddLayer: Boolean
         get() = layers.size < MAX_LAYERS
-    /** True when at least one of the four colour sliders is away from its middle. */
+    /**
+     * True when at least one setting the colour matrix is built from (Adjust's four sliders or
+     * RGB's three channels, see [EditColourMatrix]) is away from its middle, so the matrix changes
+     * the photo.
+     */
     val hasColourChange: Boolean
+        get() = hasAdjustChange || hasRgbChange
+
+    /** True when at least one of Adjust's four sliders is away from its middle. */
+    val hasAdjustChange: Boolean
         get() = brightness != MIDDLE || contrast != MIDDLE || saturation != MIDDLE || warmth != MIDDLE
+
+    /** True when at least one of RGB's three channels is away from its middle. */
+    val hasRgbChange: Boolean
+        get() = red != MIDDLE || green != MIDDLE || blue != MIDDLE
 
     /** True when a filter is chosen and its intensity is above 0, so it changes the photo. */
     val hasFilter: Boolean
@@ -87,6 +114,7 @@ data class EditSettings(
      * - [EditTool.CROP]: the crop keeps the whole photo;
      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
+     * - [EditTool.RGB]: all three channels sit at their middle;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
      * - [EditTool.STICKERS]: no sticker is on the photo;
      * - [EditTool.TEXT]: no text is on the photo;
@@ -95,7 +123,8 @@ data class EditSettings(
     fun isNeutral(tool: EditTool): Boolean = when (tool) {
         EditTool.CROP -> crop == CropRect.FULL
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
-        EditTool.ADJUST -> !hasColourChange
+        EditTool.ADJUST -> !hasAdjustChange
+        EditTool.RGB -> !hasRgbChange
         EditTool.FILTERS -> !hasFilter
         EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
         EditTool.TEXT -> layers.none { it.content is LayerContent.Text }
@@ -116,7 +145,7 @@ data class EditSettings(
         }
     }
 
-    /** The slider range shared by brightness, contrast, saturation and warmth. */
+    /** The slider range shared by brightness, contrast, saturation, warmth and the three channels. */
     companion object {
         /** The lowest value of a colour slider. */
         const val MIN = -1f

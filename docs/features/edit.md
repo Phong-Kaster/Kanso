@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, filters, stickers, text and date
+# Edit: crop, rotate, adjust, RGB, filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -32,6 +32,12 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > and colours, with no mirror button (its top-right corner stays empty). A tap on the selected date
 > moves it to the next format. The 20-item limit now counts stickers, texts and dates together.
 > It is traced end to end in the README, [section 3.5](../../README.md#35-date).
+>
+> **RGB (2026-11-03, plan [`docs/plans/rgb-tool.md`](../plans/rgb-tool.md)).** An eighth tool,
+> **RGB**, sits between Adjust and Filters, so the row now holds Crop, Rotate, Adjust, RGB,
+> Filters, Stickers, Text and Date; on a 411 dp phone Stickers, Text and Date are one swipe away.
+> RGB is described below with Adjust, and its step in "Done, the full render" below; it is traced end
+> to end in the README, [section 3.1, step 8](../../README.md#31-the-edit-screen).
 
 ---
 
@@ -63,6 +69,12 @@ network are used. You can:
   +100, with the number beside the name. Choosing a chip changes nothing in the photo; the chip
   chosen last is shown again when Adjust is reopened. The photo follows the finger
   while it drags, and the slider stays where it is let go.
+- **RGB**: three chips, **Red**, **Green** and **Blue**, each with a dot in its colour, and one
+  slider for the chosen chip, tinted in that channel's colour. Each runs from -100 (the channel is
+  gone: less red turns the photo cyan, less green magenta, less blue yellow) through 0 (no change)
+  to +100 (the channel doubled). It works like Adjust in everything else: Red is chosen the first
+  time, the chip chosen last comes back, choosing a chip changes nothing, each drag is one Undo
+  step, and there is no reset button and no Opacity slider.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
   and Autumn, each a text-only pill (`editpanel/FilterChips.kt`, Material `FilterChip`s, no icon), with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
@@ -122,7 +134,7 @@ flowchart TD
     S --> U["ToolUiState.settings"]
     P --> U
     C --> U
-    U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders"]
+    U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders and RGB channels"]
     U -->|filter, intensity or sticker changed| Q["conflated Channel of preview requests"]
     Q --> R["FilterPreviewRenderer: 640 px copy of the original, stickers (not the touched one) then filter, Dispatchers.Default"]
     R -->|ToolUiState.filterPreview| L
@@ -142,7 +154,10 @@ flowchart TD
    height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
    [`ui/tool/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/AdjustSlider.kt);
-   the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`), and
+   the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`; RGB
+   does the same with three channel chips, see
+   [`ui/tool/model/RgbChannel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/RgbChannel.kt),
+   `ToolUiState.rgbChannel` and `ToolViewModel.chooseRgbChannel`), and
    very large text scrolls inside it. It is an ordinary `Surface` cross-faded with
    `AnimatedContent`, not a
    Material `ModalBottomSheet`, because a modal sheet dims the photo and swallows touches, and the
@@ -158,7 +173,7 @@ flowchart TD
 3. **One settings value for the whole visit.** Everything the person has done is one immutable
    [`data/edit/edit/EditSettings.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt):
    the crop rectangle (fractions of the original), the locked crop shape, quarter turns, the two
-   flips, four sliders from -1 to 1 (0 is no change), the filter and its intensity (0 to 1), and the
+   flips, four sliders and three colour channels (red, green, blue) from -1 to 1 (0 is no change), the filter and its intensity (0 to 1), and the
    stickers. It is
    held, with its undo stack, by
    [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
@@ -195,7 +210,7 @@ flowchart TD
    `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) whenever Compare is off and the Crop sheet
    is closed. It is a Compose `Canvas` that, every frame, takes only the crop rectangle from the
    bitmap (rounded exactly as the final render rounds it), turns it, mirrors it, fits it inside the
-   card, and draws it through `ColorFilter.colorMatrix` with the four sliders' matrix from
+   card, and draws it through `ColorFilter.colorMatrix` with the matrix of the four sliders and the three RGB channels from
    [`data/edit/edit/EditColourMatrix.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditColourMatrix.kt),
    the same numbers Done uses. With every slider at 0 no colour filter is set. No pixel is
    recomputed on the CPU for crop, turn, flip or the sliders.
@@ -301,7 +316,7 @@ flowchart TD
     N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
     N -->|yes| F["finishing = true: spinner in Done"]
     F --> W["WorkingSize.fit(original, 3000 px) on Dispatchers.Default"]
-    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix, opaque"]
+    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix (Adjust and RGB), opaque"]
     E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
     E -->|Failed| X["failure message on the photo card; stay on Edit"]
     H0 --> R["doneEvents: navigate to Result"]
@@ -345,10 +360,13 @@ flowchart TD
       look-up, then is mixed with its own colour by the intensity (`filterPixel`, shared with the
       preview). Progress 0.75. The filter comes before the sliders so the sliders fine-tune the
       filtered look.
-   4. **Colour**, when a slider is away from 0: one 4 x 5 matrix from `EditColourMatrix.of`, in this
-      order: contrast scales each channel around mid-grey 128 (up to x2, down to x0.2), saturation
-      uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to red and takes it from blue,
-      brightness adds up to 80 to every channel. Values are rounded and clamped to 0..255.
+   4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
+      `EditColourMatrix.of`, in this order: contrast scales each channel around mid-grey 128 (up to
+      x2, down to x0.2), saturation uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to
+      red and takes it from blue, the **RGB channels** multiply red, green and blue each by
+      `1 + value` (x0 to x2, no offset, so black stays black), and brightness adds up to 80 to
+      every channel. RGB comes after the filter (it fine-tunes the filtered look) and before
+      brightness (lifted blacks stay a neutral grey). Values are rounded and clamped to 0..255.
    5. Every pixel's alpha is set to 255 and the result is a new `ARGB_8888` bitmap with
       `setHasAlpha(false)`. Progress 1. (Done shows no progress ring; only the spinner.)
 
@@ -433,6 +451,9 @@ flowchart TD
   every change was undone, Done renders a new JPEG of at most 3000 px.
 - **Preview size.** The filter preview is computed on a copy at most **640 px** on its longest
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
+- **RGB.** Each channel runs from x0 to x2. At +100 the bright parts of a photo can burn out
+  (clamped at 255); the plan leaves room to lower the maximum (to x1.5, say) if that proves too
+  strong on real photos. RGB has not been checked on a phone yet.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
 - **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the
@@ -473,6 +494,11 @@ The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
 [`EditUndoTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditUndoTest.kt),
 [`CompareTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/CompareTest.kt),
 [`AdjustSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/AdjustSheetTest.kt),
+[`RgbSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/RgbSheetTest.kt),
+[`RgbToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/RgbToolTest.kt),
+[`RgbMatrixTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/RgbMatrixTest.kt)
+(x0 / x1 / x2, black stays black, after warmth and before brightness), with the slider tints'
+contrast in [`a11y/RgbTintContrastTest.kt`](../../app/src/test/java/com/phongkaster/kanso/a11y/RgbTintContrastTest.kt),
 [`FiltersSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FiltersSheetTest.kt),
 [`EditToolRowTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolRowTest.kt),
 [`EditLayoutTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditLayoutTest.kt),

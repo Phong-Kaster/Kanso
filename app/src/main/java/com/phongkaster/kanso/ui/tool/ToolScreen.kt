@@ -404,6 +404,7 @@ fun ToolScreen(
                     onEditCommit = viewModel::commitSettings,
                     onEditRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
                     onEditAdjustSlider = viewModel::chooseAdjustSlider,
+                    onEditRgbChannel = viewModel::chooseRgbChannel,
                 )
             }
         },

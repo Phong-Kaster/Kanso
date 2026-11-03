@@ -49,6 +49,7 @@ import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToo
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_RED_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
@@ -119,19 +120,19 @@ class EditToolRowTest {
 
     /**
      * On a window wide enough for every entry (the row is a `LazyRow`, which composes only the
-     * entries on screen), the row holds seven entries, Crop, Rotate, Adjust, Filters, Stickers, Text and Date, in that order from
+     * entries on screen), the row holds eight entries, Crop, Rotate, Adjust, RGB, Filters, Stickers, Text and Date, in that order from
      * left to right, each named by its text and with its icon drawn above the name: the name starts at
      * least an icon's height (24 dp) below the entry's top, and the band above the name holds
      * drawn ink.
      */
     @Test
     @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
-    fun the_row_shows_seven_tools_in_order_each_an_icon_over_its_name() {
+    fun the_row_shows_eight_tools_in_order_each_an_icon_over_its_name() {
         showEdit()
         compose.onAllNodes(isRowEntry()).assertCountEquals(EditTool.entries.size)
         assertEquals(
             listOf(
-                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS,
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.FILTERS,
                 EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
             ),
             EditTool.entries,
@@ -265,23 +266,24 @@ class EditToolRowTest {
     }
 
     /**
-     * DoD 1 (Run 11: six tools; Date added after them, ADR-006): with a photo loaded and no change
-     * made, the row holds seven entries tagged for Crop, Rotate, Adjust, Filters, Stickers, Text and
-     * Date, and they stand in that order from left to right by their `positionInRoot`. Drawn on a
-     * window wide enough for all seven, since a lazy row composes only the entries on screen.
+     * DoD 1 (Run 11: six tools; Date added after them, ADR-006; RGB after Adjust, plan
+     * `docs/plans/rgb-tool.md`): with a photo loaded and no change made, the row holds eight
+     * entries tagged for Crop, Rotate, Adjust, RGB, Filters, Stickers, Text and Date, and they
+     * stand in that order from left to right by their `positionInRoot`. Drawn on a window wide
+     * enough for all eight, since a lazy row composes only the entries on screen.
      */
     @Test
     @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
-    fun the_row_lists_seven_tools_in_order_left_to_right() {
+    fun the_row_lists_eight_tools_in_order_left_to_right() {
         showEdit()
         assertEquals(
             listOf(
-                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.FILTERS,
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.FILTERS,
                 EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
             ),
             EditTool.entries,
         )
-        compose.onAllNodes(isRowEntry()).assertCountEquals(7)
+        compose.onAllNodes(isRowEntry()).assertCountEquals(8)
         val lefts = EditTool.entries.map { tool ->
             compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode().positionInRoot.x
         }
@@ -291,18 +293,19 @@ class EditToolRowTest {
     }
 
     /**
-     * DoD 2, amended in Run 11: on the 411 x 891 dp screen the first five entries lie inside the
-     * row's bounds (and left of the pinned Compare entry) with the row unscrolled; the sixth and
-     * seventh, Text and Date, are one short swipe away (the tools scroll sideways by design, Compare
+     * DoD 2, amended in Run 11 and for RGB: on the 411 x 891 dp screen the first five entries
+     * (Crop, Rotate, Adjust, RGB, Filters) lie inside the row's bounds (and left of the pinned
+     * Compare entry) with the row unscrolled; the last three, Stickers, Text and Date, are one
+     * short swipe away (the tools scroll sideways by design, Compare
      * stays put), and once scrolled to each lies inside the row and left of Compare too. Bounds come from `positionInRoot`
      * and the size, never from `boundsInRoot`, which clips a scrolled node.
      */
     @Test
-    fun the_first_five_entries_fit_and_text_and_date_are_one_swipe_away() {
+    fun the_first_five_entries_fit_and_the_last_three_are_one_swipe_away() {
         showEdit()
         val row = bounds(compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).fetchSemanticsNode())
         val compare = bounds(compose.onNodeWithTag(EDIT_COMPARE_TAG).fetchSemanticsNode())
-        EditTool.entries.filter { it != EditTool.TEXT && it != EditTool.DATE }.forEach { tool ->
+        EditTool.entries.filter { it !in SWIPE_AWAY }.forEach { tool ->
             val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
             assertTrue(
                 "$tool $entry is not inside the row $row",
@@ -319,7 +322,7 @@ class EditToolRowTest {
         val range = scroller.config[SemanticsProperties.HorizontalScrollAxisRange]
         assertEquals("the row is scrolled", 0f, range.value(), 0.001f)
 
-        listOf(EditTool.TEXT, EditTool.DATE).forEach { tool ->
+        SWIPE_AWAY.forEach { tool ->
             compose.scrollToolRowTo(tool)
             compose.onNodeWithTag(editToolTag(tool)).performScrollTo()
             compose.waitForIdle()
@@ -495,6 +498,7 @@ class EditToolRowTest {
         EditTool.CROP -> R.string.edit_layout_crop
         EditTool.ROTATE -> R.string.edit_layout_rotate
         EditTool.ADJUST -> R.string.edit_layout_adjust
+        EditTool.RGB -> R.string.edit_layout_rgb
         EditTool.FILTERS -> R.string.edit_layout_filters
         EditTool.STICKERS -> R.string.stickers_tool_label
         EditTool.TEXT -> R.string.text_tool_label
@@ -506,6 +510,7 @@ class EditToolRowTest {
         EditTool.CROP -> editRatioTag(CropRatio.SQUARE)
         EditTool.ROTATE -> EDIT_ROTATE_LEFT_TAG
         EditTool.ADJUST -> EDIT_BRIGHTNESS_TAG
+        EditTool.RGB -> EDIT_RED_TAG
         EditTool.FILTERS -> editFilterTag(FilterPreset.KELVIN)
         EditTool.STICKERS -> STICKERS_PANEL_TAG
         EditTool.TEXT -> TEXT_PANEL_TAG
@@ -584,5 +589,11 @@ class EditToolRowTest {
     private companion object {
         /** A content Uri no real photo has; the fake loader ignores it. */
         const val PHOTO_URI = "content://media/external/images/media/42"
+
+        /**
+         * The tools past the fifth entry, which on a 411 dp phone sit beyond the row's edge until
+         * it is swiped: Stickers, Text and Date.
+         */
+        val SWIPE_AWAY = listOf(EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
     }
 }

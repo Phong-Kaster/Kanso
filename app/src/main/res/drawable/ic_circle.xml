@@ -1,0 +1,11 @@
+<!-- A plain filled dot, drawn for Kanso (not a Material Symbol): the RGB tool's chips show it in
+     their channel's colour. Same 24 dp size and 960 viewport as the Material Symbols icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M480,760A280,280 0,1 1,480 200A280,280 0,1 1,480 760Z"/>
+</vector>

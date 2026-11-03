@@ -53,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Seven tools in a row under the photo (Crop, Rotate, Adjust, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Eight tools in a row under the photo (Crop, Rotate, Adjust, RGB, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; the red, green and blue channels each turned down or up; one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift, Temple, Cheekbones, Chin length, Hairline and a pinned Back; Body, with Waist, Arms, Chest and Legs; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), and [Temple, Cheekbones, Chin length, Hairline](docs/features/face-shape.md) (each -100..+100, measured against Meitu), where MediaPipe's 478 face landmarks drive a Kotlin warp of the face's outline; Waist, Arms and Legs (-100..+100, slimmer to the right) and Chest (-100..+100, fuller to the right), where MediaPipe's pose model (33 body points and a person mask) places them for the same warp (Chest grows the pixels instead of sliding them); and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
@@ -95,6 +95,7 @@ on a phone yet.
 | Edit: Crop | Works | `core/imagecrop`'s cropper on the original photo: handles, drag, pinch; Free or a locked shape. One finished gesture is one Undo step. |
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
+| Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Not yet checked on a phone. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
@@ -109,12 +110,13 @@ on a phone yet.
 
 **Known limits.**
 
-- The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28)
-  Crop to Stickers and Compare are in view and Text is hidden past the right edge until the row is
-  swiped left; Date, added after Text, sits further right still and is reached the same way (the
-  owner has used it on the phone).
-  This replaces the old rule
-  that every tool fits without scrolling (DoD 2), which held for five tools.
+- The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28,
+  with seven tools) Crop to Stickers and Compare were in view and Text was hidden past the right
+  edge until the row was swiped left; Date sits further right still and is reached the same way.
+  RGB, added after Adjust (2026-11-03), pushes every later tool one place right: on a 411 dp wide
+  screen Crop to Filters and Compare are in view, and Stickers, Text and Date are one swipe away
+  (`EditToolRowTest`; not yet seen on the phone). This replaces the old rule that every tool fits
+  without scrolling (DoD 2), which held for five tools.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
   `.jpg` (a known defect, not fixed yet).
 
@@ -133,7 +135,7 @@ or `app/src/main/res/`.
    `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
    so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 136 dp sheet area
-   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust and Filters, which never changes height.
+   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust, RGB and Filters, which never changes height.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
    bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.
    A **layer sheet** (Stickers, Text or Date) takes the row's place instead, in exactly the height of
@@ -158,8 +160,8 @@ or `app/src/main/res/`.
    the original with the layers baked into a copy of it, un-turned and unfiltered, because the crop
    is kept as fractions of the original.
 4. **Live preview.** `ui/tool/component/photocard/LivePreviewImage.kt` draws the original on a
-   Compose `Canvas` every frame: crop, quarter turns, flips, and the four sliders as one
-   `ColorFilter.colorMatrix` (`data/edit/edit/EditColourMatrix.kt`). The CPU part is
+   Compose `Canvas` every frame: crop, quarter turns, flips, and Adjust's four sliders with RGB's
+   three channels as one `ColorFilter.colorMatrix` (`data/edit/edit/EditColourMatrix.kt`). The CPU part is
    `data/edit/edit/FilterPreviewRenderer.kt`: the filter, its intensity and every layer except the
    one under a finger, rendered with the real `EditProcessor` on a copy of the original at most
    640 px (`PREVIEW_EDGE`), on `Dispatchers.Default`. The ViewModel sends requests through a
@@ -169,7 +171,7 @@ or `app/src/main/res/`.
    `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, in this order: **layers**, crop,
    quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar`,
    `libs/editimage.aar` and Kanso's own `app/src/main/assets/filters/`, read from the assets), colour
-   matrix, then every pixel made opaque. If no
+   matrix (Adjust and RGB), then every pixel made opaque. If no
    Edit control was ever used, the decoded original is handed over unchanged with its Uri. The
    picture goes into `data/edit/RenderedPhotoStore.kt` and the `Result` key is pushed above Edit;
    Back from Result returns to the session intact.
@@ -182,6 +184,32 @@ or `app/src/main/res/`.
    and keeps every setting and Undo step. A failed filter preview leaves the preview empty: the card
    draws the original without the filter or the resting layers; Done is unaffected. After a process
    kill, Result shows "Nothing to show" and Edit reopens with no changes.
+8. **RGB, end to end** (plan `docs/plans/rgb-tool.md`, owner's decisions of 2026-11-03).
+   - *Screen and ViewModel.* RGB is the fourth entry of the row (`EditTool.RGB`, icon
+     `ic_palette`, name "RGB"), between Adjust and Filters. Its sheet (`EditPanel.kt`'s
+     `EditTool.RGB` branch) shows `editpanel/RgbChips.kt`, three tiles Red, Green and Blue each
+     with a dot in its channel's colour (`ui/tool/model/RgbChannel.kt`), over ONE
+     `LabelledSlider` for the chosen channel. Its track and thumb are tinted in that channel's
+     colour, a deep shade on a light theme and a pale one on a dark theme
+     (`RgbChannel.tintOn`, at least 3:1 against the sheet). The chosen channel is
+     `ToolUiState.rgbChannel`, Red at first, set by `ToolViewModel.chooseRgbChannel`; choosing one
+     never changes the photo. There is no Opacity slider and no reset button.
+   - *Settings and Undo.* `EditSettings.red`, `green` and `blue`, each -1..1 (shown -100..100, 0 =
+     unchanged). A drag calls `previewSettings` as it moves and `commitSettings` when let go, so
+     each drag is one Undo step and Redo brings it back. The row's dot shows while any channel is
+     away from 0 (`EditSettings.isNeutral(EditTool.RGB)`); Back with only an RGB change asks to
+     discard it.
+   - *The step.* `EditColourMatrix.of` multiplies each channel by `1 + value` (x0 at -100, x1 at 0,
+     x2 at +100) with no offset, so black stays black. It runs inside the one colour matrix, in
+     this order: contrast, saturation, warmth, **RGB**, brightness. That puts it after the filter,
+     so RGB fine-tunes the filtered look, and before brightness, so blacks that brightness lifts
+     stay a neutral grey.
+   - *Preview, Done, output.* The live preview hands that matrix to the GPU
+     (`LivePreviewImage`), so the photo follows the finger with no CPU work. Done runs it in
+     `EditProcessor` on `Dispatchers.Default` with the rest of the edit; each channel is rounded and
+     clamped to 0..255. The output is the Edit output: a JPEG at quality 100, at most 3000 px.
+     Compare shows the original without RGB. A Done render that fails is the Edit failure above;
+     RGB adds no failure of its own.
 
 ### 3.2 Layers: what stickers, text and dates share
 
@@ -343,7 +371,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 
 ### 3.5 Date
 
-1. **Screen.** Date is the seventh entry of the row (`EditTool.DATE`, icon `ic_calendar_today`).
+1. **Screen.** Date is the eighth entry of the row (`EditTool.DATE`, icon `ic_calendar_today`).
    Tapping it (`ToolViewModel.openTool`) sets `ToolUiState.dateMoment` to now, to the minute, and
    opens the Date sheet in place of the row; it adds nothing yet. `ToolScreen.kt` fills the sheet
    with `ui/tool/component/toolpanel/editpanel/datepanel/DatePanel.kt`: the pinned top bar (✕,

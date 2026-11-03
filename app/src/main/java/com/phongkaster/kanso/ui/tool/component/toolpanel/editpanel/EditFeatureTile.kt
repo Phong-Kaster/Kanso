@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -46,6 +47,9 @@ private const val DISABLED_ALPHA = 0.38f
  * chosen", and a screen reader says which tile is chosen. While [enabled] is false the tile is
  * drawn faint and ignores taps.
  *
+ * The icon takes the title's colour, unless [iconTint] gives it one of its own: the RGB tool's
+ * chips show a dot in their channel's colour this way.
+ *
  * The title under the icon names the tile, so the icon itself says nothing to a screen reader.
  */
 @Composable
@@ -56,6 +60,7 @@ fun EditFeatureTile(
     modifier: Modifier = Modifier,
     selected: Boolean? = null,
     enabled: Boolean = true,
+    iconTint: Color? = null,
 ) {
     val colours = MaterialTheme.colorScheme
     val chosen = selected == true
@@ -81,7 +86,7 @@ fun EditFeatureTile(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
     ) {
-        Icon(painter = painterResource(icon), contentDescription = null, tint = content)
+        Icon(painter = painterResource(icon), contentDescription = null, tint = iconTint ?: content)
         Text(
             text = stringResource(title),
             style = MaterialTheme.typography.labelMedium,

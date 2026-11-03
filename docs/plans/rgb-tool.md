@@ -1,8 +1,9 @@
 # Plan: the RGB tool on the Edit screen
 
-**Status:** decided, not started. No code yet. Every decision below is the owner's (2026-11-03),
-reached in a question-by-question design session. Pick the work up from
-[How to resume](#how-to-resume).
+**Status:** built (2026-11-03): model, matrix step, sheet, tests and docs, all JVM tests green.
+Not yet checked on the owner's Galaxy A13, and the x2 maximum is not yet judged on real photos
+(see [Still open](#4-still-open-to-settle-while-building-not-design-decisions)). Every decision
+below is the owner's (2026-11-03), reached in a question-by-question design session.
 
 ---
 

@@ -53,7 +53,7 @@ import kotlin.math.sqrt
 @Config(sdk = [35])
 class ColourMatrixParityTest {
 
-    /** Each of the four sliders alone at each of the five values agrees with Done. */
+    /** Each of the four sliders and three RGB channels alone at each of the five values agrees with Done. */
     @Test
     fun each_slider_alone_matches_done() {
         val photo = gradient()
@@ -63,6 +63,9 @@ class ColourMatrixParityTest {
                 EditSettings(contrast = value),
                 EditSettings(saturation = value),
                 EditSettings(warmth = value),
+                EditSettings(red = value),
+                EditSettings(green = value),
+                EditSettings(blue = value),
             )
         }
         settings.forEach { assertPreviewMatchesDone(photo, it, noFilters) }
@@ -216,7 +219,10 @@ class ColourMatrixParityTest {
     private fun describe(color: Int): String =
         "(${(color shr 16) and 0xFF}, ${(color shr 8) and 0xFF}, ${color and 0xFF})"
 
-    /** Several mixes of the four sliders: each value on all four, and opposing pulls. */
+    /**
+     * Several mixes of the four sliders: each value on all four, and opposing pulls; then the RGB
+     * channels with and against them, where their place between warmth and brightness matters.
+     */
     private fun mixes(): List<EditSettings> =
         SLIDER_VALUES.map { EditSettings(brightness = it, contrast = it, saturation = it, warmth = it) } +
             listOf(
@@ -225,6 +231,9 @@ class ColourMatrixParityTest {
                 EditSettings(brightness = 0.5f, contrast = 0.5f, saturation = -0.5f, warmth = 1f),
                 EditSettings(brightness = -1f, contrast = -0.5f, saturation = 1f, warmth = -1f),
                 EditSettings(brightness = 0f, contrast = 1f, saturation = 1f, warmth = 0f),
+                EditSettings(red = 1f, green = -0.5f, blue = 0.5f),
+                EditSettings(red = -1f, brightness = 1f, warmth = 1f),
+                EditSettings(green = 1f, blue = -1f, contrast = 0.5f, saturation = -0.5f),
             )
 
     /**
