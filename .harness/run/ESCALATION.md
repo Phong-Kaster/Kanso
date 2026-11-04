@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 11 (HSL), and the list of pictures to re-record
 
-- **Status:** pending
+- **Status:** answered — approved by the owner in DECISIONS.md (2026-11-04), applied in Iteration 2
 - **Type:** DoD approval
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-11-04

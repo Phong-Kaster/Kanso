@@ -13,7 +13,7 @@
 ## A-001 - The HSL sheet fits 136 dp with three 40 dp rows and 48 dp touch areas
 
 - **Tier:** 2 (plan/architecture)
-- **Iteration:** 1 (bootstrap)
+- **Iteration:** 1 (bootstrap), commit 77f828b
 - **First dependent checkpoint:** Phase 3's commit (T-003) — filled in after it lands
 - **Revert:** `git revert <sha>` of Phase 3
 - **Assumed DoD criteria:** -
@@ -42,7 +42,7 @@ the 48 dp touch rule. The nine circles scroll sideways on a screen narrower than
 ## A-002 - README is updated in each commit that changes the app, not only in Phase 4
 
 - **Tier:** 2 (plan/architecture)
-- **Iteration:** 1 (bootstrap)
+- **Iteration:** 1 (bootstrap), commit 77f828b
 - **First dependent checkpoint:** Phase 2's commit (T-002)
 - **Revert:** `git revert <sha>` of each Phase
 - **Assumed DoD criteria:** -
@@ -67,7 +67,7 @@ render step (HSL row "not wired"), Phase 3 the working tool, Phase 4 the ADR lin
 ## A-003 - The 27 values are stored as one HSL group inside the edit settings, from -1 to 1
 
 - **Tier:** 2 (plan/architecture)
-- **Iteration:** 1 (bootstrap)
+- **Iteration:** 1 (bootstrap), commit 77f828b
 - **First dependent checkpoint:** Phase 1's commit (T-001)
 - **Revert:** `git revert <sha>` of Phase 1 and every later Phase
 - **Assumed DoD criteria:** -
@@ -92,7 +92,7 @@ Option 2. Stored from -1 to 1 like RGB's values; the slider shows -100..+100.
 ## A-004 - The HSL formula and its thresholds
 
 - **Tier:** 2 (plan/architecture)
-- **Iteration:** 1 (bootstrap)
+- **Iteration:** 1 (bootstrap), commit 77f828b
 - **First dependent checkpoint:** Phase 1's commit (T-001)
 - **Revert:** `git revert <sha>` of Phase 1 and every later Phase
 - **Assumed DoD criteria:** -

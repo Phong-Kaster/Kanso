@@ -4,6 +4,14 @@
 
 <!-- Newest first. One entry per iteration. -->
 
+### Iteration 2 - 2026-11-04
+- **Phase:** 1 (T-001)
+- Recovered: the previous invocation crashed after consuming D-001 (uncommitted AMENDMENTS/DoD/ESCALATION/STATE edits, kept) and writing slice 1 of T-001 (compiled clean, kept); two stray `_*-copy.md` files in `knowledge/reference/` removed.
+- Consumed D-001: DoD approved, A-001..A-004 stand, 35 baselines may be re-recorded (AMENDMENTS).
+- Attempted: slice 2 tests (Worker, Fast); review (Capable) found a missing `test-edits.md` entry and perf/robustness issues in the formula; a fix Worker added the per-hue table, removed per-pixel allocation, size check and NaN guard.
+- Learned: `foreman-check-scope` does not expand `.../` in task scopes (task files T-001, T-002 rewritten with full paths, Tier 1); a full `testDebugUnitTest` takes ~10 min.
+- Reconciled: no failed attempt; T-001 complete.
+
 ### Iteration 1 (Bootstrap) - 2026-11-04
 - **Phase:** none (bootstrap)
 - Attempted: read PRD (HSL tool, uncommitted edit to `PRD.md` at `8b2b0f2`, committed here); classed the repository a product (PROJECT.md); created `loop/kanso-hsl` from `feat/autumn-filter` at `8b2b0f2`. Fan-out at Capable: conventions survey, DoD proposal, decomposition, conflict/tier analysis, then an independent critique of the draft.

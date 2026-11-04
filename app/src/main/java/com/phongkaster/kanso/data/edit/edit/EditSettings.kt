@@ -2,7 +2,8 @@ package com.phongkaster.kanso.data.edit.edit
 
 /**
  * Everything the Edit screen has done to the photo so far, as one immutable value: the crop
- * rectangle, quarter turns, flips, four colour sliders, three colour channels and a filter. There is one such value for
+ * rectangle, quarter turns, flips, four colour sliders, three colour channels, the HSL tool's 27
+ * values (see [HslAdjustments]) and a filter. There is one such value for
  * the whole editing session (held by [EditSession]); every tap or slider move makes a new one.
  *
  * Immutable means a value never changes after it is made; a change makes a new value with
@@ -15,7 +16,8 @@ package com.phongkaster.kanso.data.edit.edit
  * "70 more". That is also why Undo can simply go back to an earlier value (see [EditSession]).
  *
  * The default value changes nothing: the whole photo, no turn, no flip, every slider at its middle
- * and no filter ([isNeutral]).
+ * and no filter ([isNeutral]). The HSL tool's 27 values all start at 0; note that [isNeutral] for a
+ * single tool does not know the HSL tool yet (a later task adds it), though [hasHslChange] does.
  */
 data class EditSettings(
     /**
@@ -73,7 +75,16 @@ data class EditSettings(
      * most [MAX_LAYERS]. Which one is selected is not kept here (see [Layer]).
      */
     val layers: List<Layer> = emptyList(),
+    /**
+     * The HSL tool's 27 values (hue, saturation and lightness for each of nine colour ranges), each
+     * from -1 through 0 (unchanged) to 1. [HslAdjustments.NEUTRAL] changes nothing.
+     */
+    val hsl: HslAdjustments = HslAdjustments.NEUTRAL,
 ) {
+
+    /** True when at least one of the HSL tool's 27 values is away from 0. */
+    val hasHslChange: Boolean
+        get() = !hsl.isNeutral
 
     /** True while the photo holds fewer than [MAX_LAYERS] layers, so another may be added. */
     val canAddLayer: Boolean

@@ -1,8 +1,8 @@
 # ISSUES
 
-## Run 11 (HSL on the Edit screen), loop/kanso-hsl: waiting for the DoD approval
+## Run 11 (HSL on the Edit screen), loop/kanso-hsl: building (Phase 1 done)
 
-- **D-001 awaits the owner:** approve `.harness/run/DoD.md` and paste the `## Baselines` list from `.harness/run/ESCALATION.md` into `.harness/run/DECISIONS.md`. Every task waits on it.
+- D-001 answered by the owner (DoD approved, baselines list given). No open decision.
 - Assumptions taken while planning (Tier 2, each reversible, see `.harness/run/ASSUMPTIONS.md`): A-001 the 136 dp sheet holds three 40 dp rows with 48 dp touch areas; A-002 README is updated in every commit that changes the app; A-003 the 27 values are one HSL group from -1 to 1; A-004 the HSL formula (CPU, one function, cos² range shares, colourfulness gate, ±20°, ×0..2, lightness 5 %..95 %).
 - Criteria awaiting a person once built: 23 (re-recorded pictures), 24 (HSL on a phone), 25 (no stutter on the Galaxy A13), 26 (docs tell the truth).
 
