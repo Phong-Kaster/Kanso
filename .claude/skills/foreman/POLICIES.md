@@ -61,6 +61,10 @@ This replaced the opposite default ("everything else defaults to Capable; a wron
 
 **A failed Fast-tier attempt escalates the task to Capable for its remaining attempts** (`ENGINE.md` §8) — mechanical, not re-judged, and free: it does not consume an extra attempt beyond the normal three.
 
+**A translation task is always Fast — the platform's lowest tier.** A task whose work is translating text between human languages (UI strings, content files, documentation) is never classified Capable, whichever of the three conditions above it seems to meet, and does not escalate after a failed attempt: every attempt runs at Fast. The Reviewer still reviews it at Capable; the rule governs who translates, not who judges the translation.
+
+**Decided by the human, 2026-11-03:** translation always runs on the platform's lowest model — on Claude, Sonnet. This is a cost ruling, not a lesson from a failed run. **What would change this:** a run in which Fast-tier translation is abandoned after three attempts, or the Reviewer files blocking findings on translation quality that a Capable attempt would plausibly have avoided — measured, not expected.
+
 ## Phase Grouping
 
 - A **Phase** is a set of tasks executed by one Iteration. It may hold one task or several.

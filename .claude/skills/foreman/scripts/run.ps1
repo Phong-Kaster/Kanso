@@ -8,7 +8,8 @@
 
     Per iteration it does exactly four things:
       1. Compile human-approved Capability Ledgers into fresh permission settings (a build artifact).
-      2. Invoke Claude Code once, with .harness/loop/ENGINE.md as appended system prompt.
+      2. Invoke Claude Code once, with .harness/loop/ENGINE.md as appended system prompt, less the
+         sections this Iteration's Stage and Run Mode never use (ADR-046).
       3. Read the Execution Status the engine persisted (.harness/run/STATUS.md).
       4. React: CONTINUE -> invoke again | DONE/DONE_PARTIAL/ESCALATE/FAILED -> stop | no status -> Watchdog.
 
@@ -55,6 +56,9 @@ param(
     # Keep the dynamic (per-machine, per-iteration) sections out of the system prompt so the
     # cacheable prefix stays byte-identical across iterations. This flag opts out.
     [switch]$NoStablePrompt,
+    # Send ENGINE.md whole instead of only the sections this Iteration's Stage and Run Mode use
+    # (ADR-046). The rollback, and the other arm of any measurement of what the cut saves.
+    [switch]$FullEngineSpec,
     # Invocation mechanics.
     [string]$ClaudeCommand = "claude",
     [string]$Model = "",
@@ -468,6 +472,63 @@ function Test-DoneCandidate {
         }
     } catch { }
     return $false
+}
+
+# ---------- The engine spec, cut to the Iteration's Stage (ADR-046) ----------
+# ENGINE.md went whole into every Iteration and was re-sent on every Orchestrator call, though a build
+# Iteration never runs §5 Bootstrap or §11 Final Verification, and a Collaborative one never reads §14.
+# Measured on ENGINE.md at 53,582 bytes: those three are 20,364 bytes, about 5,300 tokens of every
+# build call. The Stage is read from the same two signals that choose the tier, so the two cannot
+# disagree: no .harness/run/ is the Bootstrap, a DONE- or PARTIAL-candidate is the Verifier.
+function Get-EngineStage {
+    if (-not (Test-Path $RunDir)) { return "bootstrap" }
+    if (Test-DoneCandidate) { return "verify" }
+    return "build"
+}
+
+# A line `<!-- foreman-omit: <tokens> -->` directly above a heading names the Stages (bootstrap, build,
+# verify) and Run Modes (collaborative, autonomous) that do not get that section; it runs to the next
+# heading of the same or a higher level. The section is replaced by its heading and a pointer back to
+# ENGINE.md, so a cross-reference still lands somewhere and a Stage judged wrongly can read what it
+# lacks. Mechanical only: the Runtime chooses no text, ENGINE.md's markers do. The output depends on
+# nothing but ENGINE.md, the Stage and the Mode, so the cached prefix stays byte-identical across the
+# Iterations of one Stage.
+function Write-StageEngineSpec([string]$stage, [string]$mode) {
+    $omitFor = @($stage, $mode.ToLowerInvariant())
+    $out = New-Object System.Collections.Generic.List[string]
+    $omitted = @()
+    $pending = @()
+    $skipLevel = 0
+    $inFence = $false
+    foreach ($line in [System.IO.File]::ReadAllLines($EngineSpecPath)) {
+        if ($line -match '^\s*```') { $inFence = -not $inFence }
+        if (-not $inFence) {
+            if ($line -match '^\s*<!--\s*foreman-omit:\s*(.*?)\s*-->\s*$') {
+                $pending = @($Matches[1].ToLowerInvariant() -split '[\s,]+' | Where-Object { $_ })
+                continue
+            }
+            if ($line -match '^(#+)\s+(.*)$') {
+                $level = $Matches[1].Length
+                $title = $Matches[2]
+                if ($skipLevel -gt 0 -and $level -le $skipLevel) { $skipLevel = 0 }
+                if ($skipLevel -eq 0 -and @($pending | Where-Object { $omitFor -contains $_ }).Count -gt 0) {
+                    $out.Add($line)
+                    $out.Add("")
+                    $out.Add("> Not loaded for this Iteration (Stage: $stage, Run Mode: $mode; ADR-046). If you need it, read it from ``.harness/loop/ENGINE.md``, from this heading to the next heading of the same level.")
+                    $out.Add("")
+                    $omitted += $title
+                    $skipLevel = $level
+                    $pending = @()
+                    continue
+                }
+                $pending = @()
+            }
+        }
+        if ($skipLevel -eq 0) { $out.Add($line) }
+    }
+    $path = Join-Path $env:TEMP ("loop-engine-" + [System.Guid]::NewGuid().ToString("N") + ".md")
+    [System.IO.File]::WriteAllText($path, (($out -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    return [pscustomobject]@{ Path = $path; Omitted = $omitted }
 }
 
 # ---------- Per-iteration measurement ----------
@@ -1724,12 +1785,22 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
     Reset-IterationUsage
 
     # Fresh permission settings every iteration - build artifact, never a source artifact.
-    # The engine spec goes in by FILE, not as an inline argument: it is ~13KB of multi-line text,
+    # The engine spec goes in by FILE, not as an inline argument: it is ~50KB of multi-line text,
     # which cannot survive Start-Process argument quoting (needed for the timeout bounds).
-    # The mode travels in the prompt, not the system prompt, so the cached spec prefix stays
-    # byte-identical whichever mode a run is in (ENGINE.md 14).
+    # The mode travels in the prompt too, because the engine reads it there (ENGINE.md 14). The spec
+    # is cut to this Stage and Mode (ADR-046); both stay fixed across a run's build Iterations, so the
+    # cached spec prefix stays byte-identical across them.
     $prompt = "$IterationPrompt Run Mode: $($script:RunMode)."
-    $claudeArgs = @("-p", $prompt, "--append-system-prompt-file", $EngineSpecPath)
+    $stage = Get-EngineStage
+    $stageSpec = $null
+    $specPath = $EngineSpecPath
+    if (-not $FullEngineSpec) {
+        $stageSpec = Write-StageEngineSpec $stage $script:RunMode
+        $specPath = $stageSpec.Path
+        $omittedText = if ($stageSpec.Omitted.Count -gt 0) { $stageSpec.Omitted -join "; " } else { "nothing" }
+        Write-RunLog "engine spec: stage $stage, $((Get-Item $specPath).Length) of $((Get-Item $EngineSpecPath).Length) bytes; omitted: $omittedText"
+    }
+    $claudeArgs = @("-p", $prompt, "--append-system-prompt-file", $specPath)
     if ($DangerouslySkipPermissions) {
         $claudeArgs += "--dangerously-skip-permissions"
     } else {
@@ -1764,7 +1835,7 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
     # Bootstrap writes the plan, so it runs Capable too (decided by the human, 2026-10-20). Bootstrap is
     # known by the one thing it alone lacks - .harness/run/ - never by STATE.md's Stage, which still read
     # "bootstrap (DoD approval pending)" on the first execution Iteration of the Kanso A/B routing arm.
-    $capableIteration = (-not (Test-Path $RunDir)) -or (Test-DoneCandidate)
+    $capableIteration = $stage -ne "build"
     $iterModel = $Model
     $iterTier  = "override"
     if ($iterModel -eq "") {
@@ -1796,6 +1867,7 @@ for ($iteration = $priorIterations + 1; $iteration -le $MaxIterations; $iteratio
 
     # Invoke the engine. Its exit code is irrelevant; only the persisted status counts.
     $timeoutKind = Invoke-EngineOnce -EngineArgs $claudeArgs -IterStart $IterStart -Stream (-not $QuietEngine)
+    if ($stageSpec) { Remove-Item $stageSpec.Path -Force -ErrorAction SilentlyContinue }
 
     $status = Read-ExecutionStatus
     # Before anything else reacts to this iteration: a moved baseline is a changed exam.
