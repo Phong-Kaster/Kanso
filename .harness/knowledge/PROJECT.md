@@ -97,4 +97,5 @@ One line per topic under `.harness/knowledge/reference/`; open a topic only when
 - `reference/engine-artistic.md` — Artistic: style models, style images, cache, mix — read when touching: Artistic.
 - `reference/engine-phase3-facts.md` — javap facts for face and style engine classes — read when touching: Retouch, Artistic.
 - `reference/engine-enhance.md` — Enhance: EnhanceImageUC flow, progress, initModel — read when touching: Enhance.
+- `reference/run11-facts.md` — Run 11 facts: how an Edit tool is wired (RGB as template), the render and live-preview pipeline with line numbers, tests and pictures a ninth tool breaks, traps — read when touching: Edit tools, EditProcessor, FilterPreviewRenderer, the tool row, Edit screenshot tests.
 - `reference/run9-facts.md` — Run 9 facts: how Edit, Save and Saved work before the run, core/imagecrop API, tests and guards that break, docs to rewrite — read when touching: Edit screen, ToolViewModel, Save/Saved/Result, core/imagecrop.
