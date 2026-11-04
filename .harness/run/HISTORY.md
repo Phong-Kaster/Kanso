@@ -4,6 +4,13 @@
 
 <!-- Newest first. One entry per iteration. -->
 
+### Iteration 3 - 2026-11-04
+- **Phase:** 2 (T-002)
+- Attempted: slice 1 (production) and slice 2 (tests) Workers, Fast; full tests + lint green; Capable review found a README "eight ranges" error (fixed) and carry-overs for T-003.
+- Learned: a Worker cannot Read a whole constraints copy (read guard); Grep works. Constraints were copied to a temp reference file and deleted before commit.
+- Reconciled: no failed attempt; T-002 complete.
+
+
 ### Iteration 2 - 2026-11-04
 - **Phase:** 1 (T-001)
 - Recovered: the previous invocation crashed after consuming D-001 (uncommitted AMENDMENTS/DoD/ESCALATION/STATE edits, kept) and writing slice 1 of T-001 (compiled clean, kept); two stray `_*-copy.md` files in `knowledge/reference/` removed.

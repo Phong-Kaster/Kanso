@@ -116,6 +116,15 @@ class EditProcessor(
         }
         onProgress(PROGRESS_FILTERED)
 
+        // 4b. The HSL tool: hue, saturation and lightness per colour range. It comes after the
+        // filter and before the colour matrix, and runs only when one of its 27 values is away
+        // from 0, so all zeros leave every pixel exactly as it was. The formula lives only in
+        // EditHsl, which the live preview calls too.
+        if (settings.hasHslChange) {
+            EditHsl.apply(image.data, settings.hsl)
+            checkActive()
+        }
+
         // 5. The colour sliders and the RGB channels, only when one is away from its middle, so all
         // of them at the middle leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
         // builder the live preview hands to Compose, so the preview and Done agree.

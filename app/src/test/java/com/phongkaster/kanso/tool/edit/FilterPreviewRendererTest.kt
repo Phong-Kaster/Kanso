@@ -2,7 +2,10 @@ package com.phongkaster.kanso.tool.edit
 
 import android.graphics.Bitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
+import com.phongkaster.kanso.data.edit.edit.HslAdjustments
+import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
@@ -149,6 +152,28 @@ class FilterPreviewRendererTest {
     fun a_missing_look_up_gives_null() {
         val renderer = FilterPreviewRenderer(photo()) { settings -> EditProcessor(settings, FilterLut.Source { null }) }
         assertNull(render(renderer, EditSettings(filter = FilterPreset.KELVIN, filterIntensity = 1f)))
+    }
+
+    /**
+     * DoD 17: with no filter and no sticker, an HSL value that exists only in the preview still
+     * produces a picture (not null), and it differs from the unfiltered photo, so dragging an HSL
+     * slider updates the photo on screen even when no filter is chosen.
+     */
+    @Test
+    fun an_hsl_change_alone_gives_a_changed_preview() {
+        val photo = photo()
+        var hsl = HslAdjustments.NEUTRAL
+        ColourRange.entries.forEach { hsl = hsl.with(it, HslChannel.SATURATION, -1f) }
+        val result = render(rendererOn(photo), EditSettings(hsl = hsl))
+        assertNotNull("an HSL change alone gave no preview", result)
+        assertEquals(photo.width, result!!.width)
+        assertEquals(photo.height, result.height)
+        val original = pixels(photo)
+        val changed = pixels(result)
+        assertTrue(
+            "the HSL change left the photo as it was",
+            original.indices.any { (original[it] and RGB) != (changed[it] and RGB) },
+        )
     }
 
     // --- Helpers -----------------------------------------------------------------------------

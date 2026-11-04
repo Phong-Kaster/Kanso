@@ -146,3 +146,7 @@ Unsigned items from Runs 2 to 8, moved here word for word when their runs' secti
 - [ ] Run 1 21 - Open Home, each of the six tools, and Settings in light, dark and with a picked colour; in Settings open the custom colour picker, drag, read its hex field in dark mode → plain surfaces, readable text, every control visible, picker text readable, no ornament.
 - [ ] Run 1 22 - Open a tool, back gesture → Home; back gesture again → app closes to the launcher.
 - [ ] Run 1 26 - Read `app/src/main/java/com/phongkaster/kanso/navigation/` and the Home and Settings screen files → back stack, `NavDisplay`, `entryProvider`, per-entry ViewModels, `remember`/state and the theme are each explained in plain English where first used.
+
+### Run 11 - Phase 2 review findings (recorded, not fixed)
+
+- Back-without-asking ignores HSL-only changes until T-003 wires `isNeutral`; stale preview comments in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63`; README layer notes (:285, :289) omit HSL. All carried into `TASKS/T-003.md`.

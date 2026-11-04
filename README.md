@@ -98,6 +98,7 @@ yet.
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
 | Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
+| Edit: HSL | Not wired | Hue, saturation and lightness for nine colour ranges (27 values). The model, the formula (`EditHsl.kt`) and both pipelines (live preview and Done) apply it after the filter and before the colour matrix, but no screen sets it yet. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -163,15 +164,18 @@ or `app/src/main/res/`.
 4. **Live preview.** `ui/tool/component/photocard/LivePreviewImage.kt` draws the original on a
    Compose `Canvas` every frame: crop, quarter turns, flips, and Adjust's four sliders with RGB's
    three channels as one `ColorFilter.colorMatrix` (`data/edit/edit/EditColourMatrix.kt`). The CPU part is
-   `data/edit/edit/FilterPreviewRenderer.kt`: the filter, its intensity and every layer except the
-   one under a finger, rendered with the real `EditProcessor` on a copy of the original at most
+   `data/edit/edit/FilterPreviewRenderer.kt`: the filter, its intensity, the HSL values (when any
+   is not 0, run by `EditHsl.apply` after the filter, so the preview works with no filter chosen)
+   and every layer except the one under a finger, rendered with the real `EditProcessor` on a copy of the original at most
    640 px (`PREVIEW_EDGE`), on `Dispatchers.Default`. The ViewModel sends requests through a
    conflated `Channel`, so only the newest one is rendered, and skips a request equal to the last.
 5. **Done.** `ToolViewModel.done` shows a spinner in Done and renders the current settings once
    from the decoded original, shrunk to at most 3000 px (`WorkingSize.EDIT`, so a 2K photo keeps its size), with
    `data/edit/edit/EditProcessor.kt` on `Dispatchers.Default`, in this order: **layers**, crop,
    quarter turns, flips, filter (look-up images from `libs/imageprocessor.aar`,
-   `libs/editimage.aar` and Kanso's own `app/src/main/assets/filters/`, read from the assets), colour
+   `libs/editimage.aar` and Kanso's own `app/src/main/assets/filters/`, read from the assets), HSL
+   (`data/edit/edit/EditHsl.kt`, after the filter and before the colour matrix; skipped when all 27
+   values are 0, so the saved picture is then identical to one saved without it), colour
    matrix (Adjust and RGB), then every pixel made opaque. If no
    Edit control was ever used, the decoded original is handed over unchanged with its Uri. The
    picture goes into `data/edit/RenderedPhotoStore.kt` and the `Result` key is pushed above Edit;

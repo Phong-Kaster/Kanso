@@ -22,6 +22,7 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
+import com.phongkaster.kanso.data.edit.edit.HslAdjustments
 import com.phongkaster.kanso.data.edit.edit.Layer
 import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.edit.edit.LayerMapping
@@ -160,7 +161,8 @@ class ToolViewModel(
             // A filter chosen before the photo arrived (or kept from a smaller decode) is applied
             // to the newly decoded original now; everything else the screen draws by itself.
             if (tool == Tool.EDIT && photo != null &&
-                (session.settings.hasFilter || session.settings.layers.isNotEmpty())
+                (session.settings.hasFilter || session.settings.hasHslChange ||
+                    session.settings.layers.isNotEmpty())
             ) {
                 requestPreview()
             }
@@ -1403,6 +1405,7 @@ class ToolViewModel(
         val filter: FilterPreset,
         val intensity: Float,
         val layers: List<Layer>,
+        val hsl: HslAdjustments,
     )
 
     /** The key last asked for, so an unchanged request is not rendered again. */
@@ -1429,7 +1432,7 @@ class ToolViewModel(
         val touched = mutableState.value.touchedLayerKey
         val full = session.settings
         val settings = full.copy(layers = full.layers.filter { it.key != touched })
-        if (!settings.hasFilter && settings.layers.isEmpty()) {
+        if (!settings.hasFilter && !settings.hasHslChange && settings.layers.isEmpty()) {
             lastPreviewKey = null
             mutableState.update { it.copy(filterPreview = null) }
             return
@@ -1441,6 +1444,7 @@ class ToolViewModel(
             filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
             intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
             layers = settings.layers,
+            hsl = settings.hsl,
         )
         if (key == lastPreviewKey) return
         lastPreviewKey = key
@@ -1485,11 +1489,14 @@ class ToolViewModel(
         // intensity has moved on since, so a drag keeps changing the photo; the newer request is
         // already queued and replaces it. A failed render shows the plain photo rather than the
         // previous filter's look.
+        // HSL values that moved on since are no reason to drop the frame either: like the
+        // intensity, they are replaced by the newer request already queued.
         val stillWanted = if (requested.hasFilter) {
             now.hasFilter && now.filter == requested.filter
         } else {
             val touched = mutableState.value.touchedLayerKey
-            !now.hasFilter && now.layers.any { it.key != touched }
+            !now.hasFilter &&
+                (now.hasHslChange || now.layers.any { it.key != touched })
         }
         if (stillWanted) {
             mutableState.update { it.copy(filterPreview = rendered) }

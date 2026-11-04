@@ -6,7 +6,11 @@ import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.EditResult
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.edit.CropRatio
+import com.phongkaster.kanso.data.edit.edit.ColourRange
+import com.phongkaster.kanso.data.edit.edit.EditHsl
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
+import com.phongkaster.kanso.data.edit.edit.HslAdjustments
+import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.Layer
@@ -424,7 +428,96 @@ class EditProcessorTest {
         assertArrayEquals(expected, brighter, 0.0001f)
     }
 
+    /**
+     * DoD 15: the HSL change is applied after the filter and before the colour matrix. With a
+     * filter, a change to the Blue range and brightness, the output equals the filter-only render,
+     * then [EditHsl.apply], then the colour matrix worked by hand; and it differs from the same
+     * steps with HSL applied before the filter.
+     */
+    @Test
+    fun hsl_runs_after_the_filter_and_before_the_colour_matrix() {
+        val photo = hueRamp()
+        val filters = testFilters()
+        val hsl = HslAdjustments.NEUTRAL
+            .with(ColourRange.BLUE, HslChannel.HUE, 0.8f)
+            .with(ColourRange.BLUE, HslChannel.SATURATION, -0.7f)
+            .with(ColourRange.BLUE, HslChannel.LIGHTNESS, 0.5f)
+        val settings = EditSettings(filter = FilterPreset.HUDSON, hsl = hsl, brightness = 0.5f)
+        val actual = pixels(run(photo, settings, filters))
+
+        // Filter first, then HSL, then the matrix by hand.
+        val expected = pixels(run(photo, EditSettings(filter = FilterPreset.HUDSON), filters))
+        EditHsl.apply(expected, hsl)
+        val matrix = EditProcessor.colourMatrix(settings)
+        for (i in expected.indices) expected[i] = matrixPixel(expected[i], matrix)
+        assertArrayEquals(expected.map { it and 0xFFFFFF }.toIntArray(), actual.map { it and 0xFFFFFF }.toIntArray())
+
+        // HSL before the filter gives another picture.
+        val early = pixels(photo)
+        EditHsl.apply(early, hsl)
+        val earlyPhoto = bitmapOf(early, photo.width, photo.height)
+        val wrongOrder = pixels(run(earlyPhoto, EditSettings(filter = FilterPreset.HUDSON), filters))
+        for (i in wrongOrder.indices) wrongOrder[i] = matrixPixel(wrongOrder[i], matrix)
+        assertTrue(
+            "HSL before the filter gave the same picture",
+            actual.indices.any { (actual[it] and 0xFFFFFF) != (wrongOrder[it] and 0xFFFFFF) },
+        )
+    }
+
+    /**
+     * DoD 27: with all 27 HSL values at 0 (reached by setting and clearing one), a render with a
+     * filter, crop and Adjust change is pixel-identical to the same settings that never mention
+     * HSL, and [EditSettings.hasHslChange] is false.
+     */
+    @Test
+    fun neutral_hsl_leaves_every_pixel_as_without_the_tool() {
+        val photo = hueRamp()
+        val filters = testFilters()
+        val cleared = HslAdjustments.NEUTRAL
+            .with(ColourRange.RED, HslChannel.HUE, 0.4f)
+            .with(ColourRange.RED, HslChannel.HUE, 0f)
+        val crop = EditSettings.CropRect(0.1f, 0.2f, 0.9f, 0.8f)
+        val with = EditSettings(
+            crop = crop, filter = FilterPreset.HUDSON, filterIntensity = 0.6f, brightness = 0.3f,
+            contrast = 0.2f, hsl = cleared,
+        )
+        val without = EditSettings(
+            crop = crop, filter = FilterPreset.HUDSON, filterIntensity = 0.6f, brightness = 0.3f,
+            contrast = 0.2f,
+        )
+        assertFalse(with.hasHslChange)
+        val a = run(photo, with, filters)
+        val b = run(photo, without, filters)
+        assertEquals(a.width, b.width)
+        assertEquals(a.height, b.height)
+        assertArrayEquals(pixels(b), pixels(a))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
+
+    /** A 64 x 32 photo whose hue sweeps the whole wheel across and whose brightness rises down. */
+    private fun hueRamp(): Bitmap {
+        val width = 64
+        val height = 32
+        val data = IntArray(width * height) { index ->
+            val x = index % width
+            val y = index / width
+            android.graphics.Color.HSVToColor(floatArrayOf(x * 360f / width, 0.9f, 0.4f + 0.6f * y / (height - 1)))
+        }
+        return bitmapOf(data, width, height)
+    }
+
+    /** One pixel through the 4 x 5 colour [matrix], rounded and clamped, as the processor does it. */
+    private fun matrixPixel(color: Int, matrix: FloatArray): Int {
+        val r = ((color shr 16) and 0xFF).toFloat()
+        val g = ((color shr 8) and 0xFF).toFloat()
+        val b = (color and 0xFF).toFloat()
+        fun ch(v: Float): Int = if (v <= 0f) 0 else if (v >= 255f) 255 else (v + 0.5f).toInt()
+        val nr = ch(matrix[0] * r + matrix[1] * g + matrix[2] * b + matrix[3] * 255f + matrix[4])
+        val ng = ch(matrix[5] * r + matrix[6] * g + matrix[7] * b + matrix[8] * 255f + matrix[9])
+        val nb = ch(matrix[10] * r + matrix[11] * g + matrix[12] * b + matrix[13] * 255f + matrix[14])
+        return (0xFF shl 24) or (nr shl 16) or (ng shl 8) or nb
+    }
 
     /** Runs the real processor with [settings] and [filters] on [input] and returns the edited bitmap. */
     private fun run(input: Bitmap, settings: EditSettings, filters: FilterLut.Source = noFilters): Bitmap {

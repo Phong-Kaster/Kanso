@@ -6,9 +6,9 @@
 ## Current
 
 - **Run:** 11 — HSL on the Edit screen. Run Mode: Autonomous. Base commit `8b2b0f2`.
-- **Stage:** build — Phase 2
+- **Stage:** build — Phase 3
 - **Loop Branch:** loop/kanso-hsl
-- **Next Phase:** Phase 2 — T-002
+- **Next Phase:** Phase 3 — T-003
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -17,7 +17,7 @@
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
 | T-001 | complete (Phase 1) | `data/edit/edit/{ColourRange,HslChannel,HslAdjustments,EditHsl,EditSettings}.kt`, tests `HslRangeWeightTest`, `HslFormulaTest` | tests 31 pass, lint 0 |
-| T-002 | pending | `EditProcessor`, `FilterPreviewRenderer`, `ToolViewModel` (preview), `LivePreviewImage` (KDoc), `README.md`, tests `EditProcessorTest`, `FilterPreviewRendererTest`, `HslParityTest` | - |
+| T-002 | complete (Phase 2) | `EditProcessor`, `FilterPreviewRenderer`, `ToolViewModel` (preview), `LivePreviewImage` (KDoc), `README.md`, tests `EditProcessorTest`, `FilterPreviewRendererTest`, `HslParityTest` | full tests + lint green (`evidence/p2-full.log`) |
 | T-003 | pending | 27 files, see `TASKS/T-003.md` | - |
 | T-004 | pending | `README.md`, `docs/features/{edit,tool-screen}.md`, `docs/adr/ADR-008-…`, `CONTEXT.md` | - |
 | T-005 | pending | `screenshots/ToolScreenshotTest.kt` | - |
