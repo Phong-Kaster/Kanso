@@ -105,6 +105,7 @@ Rules for `STATUS.md`:
 
 ---
 
+<!-- foreman-omit: build verify -->
 # 5. Bootstrap Iteration
 
 If `.harness/run/` does not exist, this invocation is the Bootstrap. Do not implement anything. Instead:
@@ -367,7 +368,7 @@ Every discovery — build failure, test failure, review finding, hidden dependen
 
 A task that fails its third attempt is **abandoned**. Mark it abandoned, record all three attempts' errors in its task file, and mark every task that transitively depends on it **unreachable** — do not attempt them. Then continue with unrelated work.
 
-**A failed attempt at the Fast tier escalates the task to the Capable tier for its remaining attempts.** This is mechanical, not a judgment call: a failure is evidence the task was misclassified or is harder than assumed, and the second attempt should not repeat the same mistake with the same capability. The escalation costs no extra attempt beyond the normal three.
+**A failed attempt at the Fast tier escalates the task to the Capable tier for its remaining attempts.** This is mechanical, not a judgment call: a failure is evidence the task was misclassified or is harder than assumed, and the second attempt should not repeat the same mistake with the same capability. The escalation costs no extra attempt beyond the normal three. A translation task is the one exception: it stays Fast on every attempt (`POLICIES.md`, Model Tier Criteria).
 
 Abandonment is not failure of the run. It is how the loop keeps making progress without a human. But a run containing an abandoned task can **never** report `DONE`.
 
@@ -426,6 +427,7 @@ Kanso's `ISSUES.md` reached 49 KB in Run 7, 43 KB of it about Runs 3–6, read a
 
 ---
 
+<!-- foreman-omit: build -->
 # 11. Final Verification and Completion
 
 When `STATE.md` records a DONE-candidate, this invocation is the **Verifier**. You wrote none of this implementation. Distrust all of it.
@@ -496,6 +498,7 @@ Never: optimize for looking productive; generate volume for its own sake; modify
 
 ---
 
+<!-- foreman-omit: collaborative -->
 # 14. Run Mode
 
 The Runtime ends every invocation prompt with `Run Mode: Collaborative` or `Run Mode: Autonomous`
