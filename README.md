@@ -98,7 +98,7 @@ yet.
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
 | Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
-| Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`). Not yet tried on a phone. |
+| Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Not yet tried on a phone; its cost on the Galaxy A13 is not measured. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -122,6 +122,15 @@ yet.
   screen only Crop, Adjust and RGB are guaranteed in view, and HSL, Filters, Stickers, Text and Date
   are one swipe away (`EditToolRowTest`; not yet seen on the phone). This replaces the old rule that every tool fits
   without scrolling (DoD 2), which held for five tools.
+- **HSL limits** (decision record: [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)).
+  Hue turns by at most 20 degrees at +-100, so a colour cannot be swapped for a far one. Greys,
+  white, black and near-greys are never changed (a gate in `EditHsl.kt` skips them), so no tint
+  can be added to them, and a colour already at full saturation cannot get more. Lightness stops at
+  0.95 and 0.05, never pure white or black. Each range fades into its two neighbours, so changing one
+  range also moves colours a little way toward the next centres. The live preview is computed on the
+  640 px copy, so on screen it holds less detail than the saved picture; the colours are the same
+  formula. **Cost on the Galaxy A13: not measured, because the A13 was not available to the run; to
+  be signed by the owner.** HSL was not tried on a phone this run.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
   `.jpg` (a known defect, not fixed yet).
 
@@ -608,6 +617,7 @@ only on a device or an emulator.
 | [ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md) | Stickers and text are layers: one list, one gesture handler, two kinds of picture. |
 | [ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md) | A date is its own layer kind, not a text: it keeps its moment and format, so the pickers and tap-to-cycle work on it. |
 | [ADR-007](docs/adr/ADR-007-body-reshapes-use-the-mediapipe-pose-model-and-its-mask.md) | Body reshapes (Waist first) use MediaPipe's bundled pose model and its person mask, warped with the faces in one pass, in a Body group of Beautify. |
+| [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md) | HSL is computed on the CPU by one formula (`EditHsl`) for the preview and for Done; no shader, no look-up table. |
 
 ---
 

@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, RGB, filters, stickers, text and date
+# Edit: crop, rotate, adjust, RGB, HSL, filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -38,6 +38,15 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > Filters, Stickers, Text and Date; on a 411 dp phone Stickers, Text and Date are one swipe away.
 > RGB is described below with Adjust, and its step in "Done, the full render" below; it is traced end
 > to end in the README, [section 3.1, step 8](../../README.md#31-the-edit-screen).
+>
+> **HSL (Run 11, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)).** A ninth
+> tool, **HSL**, sits between RGB and Filters, so the row now holds Crop, Rotate, Adjust, RGB, HSL,
+> Filters, Stickers, Text and Date. It changes hue, saturation and lightness for nine colour ranges
+> (27 values) with nine circles, three chips and one slider. Unlike Adjust and RGB it is **not** part
+> of the colour matrix: it is a per-pixel step on the CPU (`data/edit/edit/EditHsl.kt`) that runs
+> after the filter and before the colour matrix, in the live preview and in Done alike. It is
+> described below with RGB, and traced end to end in the README,
+> [section 3.1, step 9](../../README.md#31-the-edit-screen).
 
 ---
 
@@ -75,6 +84,12 @@ network are used. You can:
   to +100 (the channel doubled). It works like Adjust in everything else: Red is chosen the first
   time, the chip chosen last comes back, choosing a chip changes nothing, each drag is one Undo
   step, and there is no reset button and no Opacity slider.
+- **HSL**: a row of nine colour circles (Red, Orange, Light green, Green, Light blue, Blue, Navy
+  blue, Purple, Pink), a row of three chips (**Hue**, **Saturation**, **Lightness**) and one slider,
+  from -100 through 0 (no change) to +100, for the chosen range and chip, so there are 27 values in
+  all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
+  the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
+  is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
   and Autumn, each a text-only pill (`editpanel/FilterChips.kt`, Material `FilterChip`s, no icon), with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
@@ -136,7 +151,8 @@ flowchart TD
     C --> U
     U --> L["LivePreviewImage: Canvas crops, turns, flips; ColorFilter.colorMatrix for the sliders and RGB channels"]
     U -->|filter, intensity or sticker changed| Q["conflated Channel of preview requests"]
-    Q --> R["FilterPreviewRenderer: 640 px copy of the original, stickers (not the touched one) then filter, Dispatchers.Default"]
+    U -->|HSL value changed| Q
+    Q --> R["FilterPreviewRenderer: 640 px copy of the original, stickers (not the touched one), filter, then EditHsl.apply, Dispatchers.Default"]
     R -->|ToolUiState.filterPreview| L
 ```
 
@@ -173,8 +189,11 @@ flowchart TD
 3. **One settings value for the whole visit.** Everything the person has done is one immutable
    [`data/edit/edit/EditSettings.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSettings.kt):
    the crop rectangle (fractions of the original), the locked crop shape, quarter turns, the two
-   flips, four sliders and three colour channels (red, green, blue) from -1 to 1 (0 is no change), the filter and its intensity (0 to 1), and the
-   stickers. It is
+   flips, four sliders and three colour channels (red, green, blue) from -1 to 1 (0 is no change),
+   the 27 HSL values (`EditSettings.hsl`, a
+   [`HslAdjustments`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/HslAdjustments.kt):
+   hue, saturation and lightness for each of nine `ColourRange`s, each -1 to 1), the filter and its
+   intensity (0 to 1), and the stickers. It is
    held, with its undo stack, by
    [`data/edit/edit/EditSession.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditSession.kt).
    No control ever asks for a change on top of the last result: each re-renders from the original
@@ -222,7 +241,10 @@ flowchart TD
    runs the real `EditProcessor` with the filter, its intensity and every sticker except the one
    being touched, on `Dispatchers.Default`, on a copy of
    the original shrunk once to at most 640 px (`PREVIEW_EDGE`). It also renders when there is no
-   filter but there are stickers. `requestPreview` is called, among other places, from `addSticker`,
+   filter but there are stickers or an HSL change. After the filter it runs `EditHsl.apply` on the
+   copy (the same function Done calls) when any of the 27 HSL values is not 0, so a drag of the HSL
+   slider changes the photo on screen with no filter chosen; `LivePreviewImage` then draws the
+   colour matrix on top, so the order is filter, HSL, colour matrix, as in Done. `requestPreview` is called, among other places, from `addSticker`,
    `deleteSticker`, `duplicateSticker`, `flipSticker`, `commitSettings`, `confirmStickers` and
    `cancelStickers` (also `changeSettings`, `previewSettings`, `chooseCropRatio`, `undo`, `load`,
    `openTool` and `setComparing`).
@@ -316,7 +338,7 @@ flowchart TD
     N -->|no| H0["RenderedPhotoStore.put(decoded original, photo Uri)"]
     N -->|yes| F["finishing = true: spinner in Done"]
     F --> W["WorkingSize.fit(original, 3000 px) on Dispatchers.Default"]
-    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, colour matrix (Adjust and RGB), opaque"]
+    W --> E["EditProcessor: stickers first, then crop, turn, flip, filter, HSL (EditHsl.apply), colour matrix (Adjust and RGB), opaque"]
     E -->|Edited| H1["RenderedPhotoStore.put(rendered bitmap)"]
     E -->|Failed| X["failure message on the photo card; stay on Edit"]
     H0 --> R["doneEvents: navigate to Result"]
@@ -360,6 +382,17 @@ flowchart TD
       look-up, then is mixed with its own colour by the intensity (`filterPixel`, shared with the
       preview). Progress 0.75. The filter comes before the sliders so the sliders fine-tune the
       filtered look.
+   3b. **HSL**, when any of the 27 HSL values is away from 0 (`EditSettings.hasHslChange`):
+      `EditHsl.apply` ([`data/edit/edit/EditHsl.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditHsl.kt))
+      on the pixels in place. Each pixel is converted to hue, saturation and lightness; the
+      amounts of the colour ranges its hue falls between are blended (a range weighs 1 at its
+      centre and falls as a cosine squared to 0 at the next centre, centres 40 degrees apart); that
+      blend is multiplied by a gate that is 0 for greys and 1 for clear colours; hue then turns by
+      up to 20 degrees, saturation is multiplied by `1 + amount` (kept in 0..1) and lightness moves
+      toward 0.95 or 0.05; then the pixel is converted back with its alpha kept. It comes after the
+      filter (HSL fine-tunes the filtered look) and before the colour matrix, and it colours the
+      layers with the photo. With all 27 values at 0 it is skipped. The full reasoning is in
+      [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md).
    4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
       `EditColourMatrix.of`, in this order: contrast scales each channel around mid-grey 128 (up to
       x2, down to x0.2), saturation uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to
@@ -454,6 +487,10 @@ flowchart TD
 - **RGB.** Each channel runs from x0 to x2. At +100 the bright parts of a photo can burn out
   (clamped at 255). The owner tried RGB on the vivo V2408A (2026-11-03), found it works as
   expected and kept the x2 maximum. Not yet checked on the Galaxy A13.
+- **HSL.** Hue turns at most 20 degrees at +-100; greys and near-greys are never changed; the
+  preview is computed on the 640 px copy, Done on up to 3000 px. Not yet tried on a phone, and its
+  cost on the Galaxy A13 is not measured (to be signed by the owner). A layer being dragged under a
+  finger is shown without HSL until it is let go, as it is shown without the filter.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
 - **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the
@@ -499,6 +536,13 @@ The Edit tests live in `app/src/test/java/com/phongkaster/kanso/tool/edit/`:
 [`RgbMatrixTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/RgbMatrixTest.kt)
 (x0 / x1 / x2, black stays black, after warmth and before brightness), with the slider tints'
 contrast in [`a11y/RgbTintContrastTest.kt`](../../app/src/test/java/com/phongkaster/kanso/a11y/RgbTintContrastTest.kt),
+[`HslFormulaTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/HslFormulaTest.kt),
+[`HslRangeWeightTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/HslRangeWeightTest.kt),
+[`HslParityTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/HslParityTest.kt)
+(the preview and Done agree pixel by pixel),
+[`HslToolTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/HslToolTest.kt),
+[`HslSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/HslSheetTest.kt), with the circles'
+mark contrast in [`a11y/ColourRangeMarkContrastTest.kt`](../../app/src/test/java/com/phongkaster/kanso/a11y/ColourRangeMarkContrastTest.kt),
 [`FiltersSheetTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/FiltersSheetTest.kt),
 [`EditToolRowTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditToolRowTest.kt),
 [`EditLayoutTest.kt`](../../app/src/test/java/com/phongkaster/kanso/tool/edit/EditLayoutTest.kt),

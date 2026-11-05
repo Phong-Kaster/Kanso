@@ -152,3 +152,5 @@ Unsigned items from Runs 2 to 8, moved here word for word when their runs' secti
 ### Run 11 - Phase 2 review findings (recorded, not fixed)
 
 - Back-without-asking ignores HSL-only changes until T-003 wires `isNeutral`; stale preview comments in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63`; README layer notes (:285, :289) omit HSL. All carried into `TASKS/T-003.md`.
+
+Run 11 carry-over (not a signature): README "Known limits" row-width sentence (nine tools) not re-verified; stale KDocs in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63` are outside T-004's scope.

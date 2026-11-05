@@ -32,3 +32,6 @@
 - Recovered Iteration 4's debris (owner-stopped, coherent). Ran `HslSheetTest` alone (ends, 47 s), then the full suite and lint (green). Review at Capable: B1 test-edits.md (fixed), B2 HSL controls ignored `enabled` (fixed, test added), B3 touch-box overlap (A-005), README Filters-in-view claim (fixed), minor comments/tag constant (fixed). Re-run: full tests + lint green (`p3-full-7.log`).
 - `verifyRoborazziDebug` fails 25 pictures (the row moved). The record script refused all of them: DECISIONS.md `## Baselines` uses bare names, the script wants `app/src/test/screenshots/<name>`. Left unrecorded.
 - Learned: foreman-compile.ps1 must not be piped. Not done: M3 (helpers in HslSlider.kt), FilterPreviewRenderer.kt:63 comment, ToolViewModel stale KDocs (T-004).
+
+## Iteration 5 — Phase 4 (T-004)
+Worker (Fast) wrote ADR-008, edit.md, tool-screen.md, CONTEXT.md, README additions. Scope check passed. A13 cost recorded as "not measured". Docs only: no build run. Carry-overs left in ISSUES.md.
