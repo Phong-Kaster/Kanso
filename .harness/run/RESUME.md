@@ -2,7 +2,7 @@
 
 > Derived cache, never a source of truth. On disagreement with task files or git, this is wrong.
 
-- **Stage:** build - Phase 5 done (T-005, pictures recorded). Next: full tests, lint, verifyRoborazzi, then DONE-candidate or PARTIAL-candidate (23-26 need a person).
+- **Stage:** build - Phase 5 done (T-005, pictures recorded). PARTIAL-candidate set: full tests ran, only 4 StickerScreenshotTest pictures (69,70,81,82) fail, not recordable without the owner listing them. Next invocation is the Verifier (§14.4): rerun lint + verifyRoborazziDebug (not reached last time), then DONE_PARTIAL.
 - **Next Phase:** none left.
 - **Carry-over (outside any scope, in ISSUES.md):** stale `ToolViewModel.kt` KDocs and `FilterPreviewRenderer.kt:63` comment; README "Known limits" row-width sentence (nine tools) unverified.
 - **Queued decisions:** 0 | **Abandoned:** none | **Unreachable:** none

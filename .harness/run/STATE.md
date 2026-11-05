@@ -6,11 +6,11 @@
 ## Current
 
 - **Run:** 11 — HSL on the Edit screen. Run Mode: Autonomous. Base commit `8b2b0f2`.
-- **Stage:** build — Phase 5 done; full verify next
+- **Stage:** build — Phase 5 done; full test run: 4 sticker pictures red; Verifier next
 - **Loop Branch:** loop/kanso-hsl
 - **Next Phase:** none (Verifier path next)
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** no
+- **PARTIAL-candidate:** yes - 4 Sticker pictures (69, 70, 81, 82) red and not on the owner's Baselines list; criteria 23-26 need a person
 
 ## Progress
 

@@ -38,3 +38,6 @@ Worker (Fast) wrote ADR-008, edit.md, tool-screen.md, CONTEXT.md, README additio
 
 ## Iteration 6 — Phase 5 (T-005)
 Fast Worker wrote 14 tests; recording stalled twice (performScrollTo on a non-scrolling row; now a Constraint). Capable Worker fixed it; 12 new pictures and the listed baselines recorded (old copies in evidence/baseline-diffs). Full suite/lint not re-run (test-only change; compile passed).
+
+## Iteration 6
+Full test run: 1212 tests, 4 failed (StickerScreenshotTest 69,70,81,82, nine-entry row). Not on Baselines list; not re-recordable. PARTIAL-candidate set. Evidence: .harness/run/evidence/p5-full.log
