@@ -84,6 +84,7 @@ for every UI step; `EditColourMatrix` is the template for "one formula, one plac
 - T-003 - HSL is the ninth Edit tool: circles, chips, slider, Undo per drag (depends on: T-002) - 27 files, 5 slices - tier: Fast
 - T-004 - The written record describes HSL (depends on: T-003) - 5 files - tier: Fast
 - T-005 - The pictures show HSL (depends on: T-003) - 1 file - tier: Fast
+- T-006 - The four Sticker pictures pass again with nine tools (depends on: T-005) - 1 file + 4 baselines - tier: Fast (added by the Verifier, Iteration 7)
 
 Scopes are in each `TASKS/T-00N.md`.
 
@@ -95,6 +96,7 @@ Scopes are in each `TASKS/T-00N.md`.
 | 2 | T-002 | - |
 | 3 | T-003 | `R/drawable/ic_invert_colors.xml` (Iteration, fetched); re-recorded row baselines (Iteration, via the wrapper) |
 | 4 | T-004, T-005 | new baselines 83–94 (Iteration, via the wrapper); `.harness/run/evidence/test-edits.md` |
+| 6 | T-006 | baselines 69, 70, 81, 82 (Iteration, via the wrapper) |
 
 `EditSettings.kt` (T-001, T-003), `ToolViewModel.kt` (T-002, T-003) and `README.md` (T-002, T-003,
 T-004) are shared only across Phases, which run in order, so no Wiring Worker is needed.

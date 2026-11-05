@@ -41,3 +41,6 @@ Fast Worker wrote 14 tests; recording stalled twice (performScrollTo on a non-sc
 
 ## Iteration 6
 Full test run: 1212 tests, 4 failed (StickerScreenshotTest 69,70,81,82, nine-entry row). Not on Baselines list; not re-recordable. PARTIAL-candidate set. Evidence: .harness/run/evidence/p5-full.log
+
+## Iteration 7 — Verifier (PARTIAL-candidate), gap found
+Assemble + lint exit 0 (`evidence/v-build-lint.log`; 0 lint errors). Full tests (`evidence/v-test.log`, 13 min): 1212, 2 failed, `StickerScreenshotTest` 81/82 `AssertionError at StickerScreenshotTest.kt:304`. Iteration 6's claim that 69/70/81/82 are not on the Baselines list was wrong: all four are listed. Filed T-006, cleared PARTIAL-candidate. `verifyRoborazziDebug` not run (known red until T-006). Machine-then-human criteria 23, 24 not driven (reachable only after T-006). First test run was killed at the 10-minute background limit and rerun.
