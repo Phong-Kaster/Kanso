@@ -6,9 +6,9 @@
 ## Current
 
 - **Run:** 11 — HSL on the Edit screen. Run Mode: Autonomous. Base commit `8b2b0f2`.
-- **Stage:** build — Phase 5 next
+- **Stage:** build — Phase 5 done; full verify next
 - **Loop Branch:** loop/kanso-hsl
-- **Next Phase:** Phase 5 — T-005
+- **Next Phase:** none (Verifier path next)
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -20,7 +20,7 @@
 | T-002 | complete (Phase 2) | `EditProcessor`, `FilterPreviewRenderer`, `ToolViewModel` (preview), `LivePreviewImage` (KDoc), `README.md`, tests `EditProcessorTest`, `FilterPreviewRendererTest`, `HslParityTest` | full tests + lint green (`evidence/p2-full.log`) |
 | T-003 | complete (Phase 3), row pictures not re-recorded | 27 files, see `TASKS/T-003.md` | full tests + lint green (`evidence/p3-full-7.log`); pictures red, see ISSUES |
 | T-004 | complete (Phase 4) | `README.md`, `docs/features/{edit,tool-screen}.md`, `docs/adr/ADR-008-…`, `CONTEXT.md` | scope check passed; docs only |
-| T-005 | pending | `screenshots/ToolScreenshotTest.kt` | - |
+| T-005 | complete (Phase 5) | `screenshots/ToolScreenshotTest.kt`; 12 new pictures 83-94, listed baselines re-recorded (old ones in `evidence/baseline-diffs/`) | pictures recorded, 85, 87, 94 looked at; full suite not re-run |
 
 ## Assumptions
 

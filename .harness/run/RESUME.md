@@ -2,9 +2,8 @@
 
 > Derived cache, never a source of truth. On disagreement with task files or git, this is wrong.
 
-- **Stage:** build — Phase 4 done (T-004 docs); next Phase 5.
-- **Next Phase:** Phase 5: T-005 (`TASKS/T-005.md`; `screenshots/ToolScreenshotTest.kt`, HSL pictures). Read the task file for scope and DoD text.
-- **Pictures:** `verifyRoborazziDebug` fails 25 pictures (the row moved). The record script refuses them: `## Baselines` in DECISIONS.md lists bare names, the script wants `app/src/test/screenshots/<name>`. Only the owner can fix the list; do not route around.
+- **Stage:** build - Phase 5 done (T-005, pictures recorded). Next: full tests, lint, verifyRoborazzi, then DONE-candidate or PARTIAL-candidate (23-26 need a person).
+- **Next Phase:** none left.
 - **Carry-over (outside any scope, in ISSUES.md):** stale `ToolViewModel.kt` KDocs and `FilterPreviewRenderer.kt:63` comment; README "Known limits" row-width sentence (nine tools) unverified.
 - **Queued decisions:** 0 | **Abandoned:** none | **Unreachable:** none
 - **Verified commands:** build `./gradlew :app:assembleDebug` | test `./gradlew :app:testDebugUnitTest` (~6 min; run `HslSheetTest` alone first) | lint `./gradlew :app:lintDebug` | pictures `./gradlew :app:verifyRoborazziDebug` | record `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app` | Worker compile `powershell -NoProfile -File D:/Valve/Personal/Kanso/.harness/loop/bin/foreman-compile.ps1`. Never run stdin-reading commands in Bash.

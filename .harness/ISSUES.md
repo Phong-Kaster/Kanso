@@ -1,6 +1,6 @@
 # ISSUES
 
-## Run 11 (HSL on the Edit screen), loop/kanso-hsl: building (Phase 3 done)
+## Run 11 (HSL on the Edit screen), loop/kanso-hsl: building (Phase 5 done; full verify next)
 
 - D-001 answered by the owner (DoD approved, baselines list given). No open decision.
 - **Pictures are red, and the owner must fix the list (Iteration 5):** `verifyRoborazziDebug` fails 25 pictures because the tool row gained a ninth entry. `foreman-record-baselines.ps1` put every one back unchanged, because `## Baselines` in `DECISIONS.md` lists bare names (`16_tool_photo_light.png`) and the script only matches repo-relative paths (`app/src/test/screenshots/16_tool_photo_light.png`). Only the owner can edit that file: rewrite the 35 lines with the `app/src/test/screenshots/` prefix, then the next Iteration records them (`.harness/run/evidence/record-p3.log`). Until then DoD 30 (pictures pass) and 23 cannot hold; the run can end at best `DONE_PARTIAL`.

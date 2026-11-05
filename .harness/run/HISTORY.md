@@ -35,3 +35,6 @@
 
 ## Iteration 5 — Phase 4 (T-004)
 Worker (Fast) wrote ADR-008, edit.md, tool-screen.md, CONTEXT.md, README additions. Scope check passed. A13 cost recorded as "not measured". Docs only: no build run. Carry-overs left in ISSUES.md.
+
+## Iteration 6 — Phase 5 (T-005)
+Fast Worker wrote 14 tests; recording stalled twice (performScrollTo on a non-scrolling row; now a Constraint). Capable Worker fixed it; 12 new pictures and the listed baselines recorded (old copies in evidence/baseline-diffs). Full suite/lint not re-run (test-only change; compile passed).

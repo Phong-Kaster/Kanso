@@ -17,3 +17,4 @@ Each test added, edited, renamed or removed, with its reason (PROJECT.md Constra
 | 3 | `.../tool/edit/EditLayoutTest.kt`, `ToolRowScrolling.kt` | edited | T-003: row has nine entries; scroll before tapping an entry that moved out of view |
 | 3 | `.../tool/edit/Sticker{Add,Compare,Frame,Gesture,Overlay,Selection}Test.kt`, `StickersPanelTest.kt` | edited (taps only: scroll to the Stickers entry first) | T-003: HSL pushes the Stickers entry off the 411 dp row |
 | 3 | `.../screenshots/ToolScreenshotTest.kt`, `StickerScreenshotTest.kt` | edited (taps only) | T-003: same, scroll before tapping a row entry |
+| 5 | `.../screenshots/ToolScreenshotTest.kt` | edited (14 new tests: pictures 83-94; no existing test changed) | T-005: DoD 18, 19, 20 |

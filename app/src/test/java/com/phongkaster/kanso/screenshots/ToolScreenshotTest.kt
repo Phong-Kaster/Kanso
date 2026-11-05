@@ -40,6 +40,11 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.ui.tool.TOOL_DONE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
 import com.phongkaster.kanso.ui.tool.ToolViewModel
+import com.phongkaster.kanso.data.edit.edit.ColourRange
+import com.phongkaster.kanso.data.edit.edit.HslChannel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HSL_SLIDER_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.colourrangerow.hslRangeTag
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.hslChipTag
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -327,6 +332,144 @@ class ToolScreenshotTest {
         setBrightness70()
         compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).assertIsDisplayed()
         capture("68_edit_pill_dark.png")
+    }
+
+    /** Picture 83: the row of tools scrolled so HSL, the ninth tool, is in view, light. Run 11: DoD 18. */
+    @Test
+    fun edit_tool_row_hsl_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        compose.scrollToolRowTo(EditTool.HSL)
+        capture("83_edit_tool_row_hsl_light.png")
+    }
+
+    /** Picture 84: the row of tools scrolled so HSL is in view, dark. */
+    @Test
+    fun edit_tool_row_hsl_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        compose.scrollToolRowTo(EditTool.HSL)
+        capture("84_edit_tool_row_hsl_dark.png")
+    }
+
+    /** Picture 85: the HSL sheet on the Red range, Hue chip, set to +60, light. Run 11: DoD 19. */
+    @Test
+    fun edit_hsl_red_hue_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("85_edit_hsl_red_hue_light.png")
+    }
+
+    /** Picture 86: the HSL sheet on the Red range, Hue chip, dark. */
+    @Test
+    fun edit_hsl_red_hue_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("86_edit_hsl_red_hue_dark.png")
+    }
+
+    /** Picture 87: the HSL sheet on the Blue range, Saturation chip, set to +60, light. */
+    @Test
+    fun edit_hsl_blue_saturation_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHsl(ColourRange.BLUE, HslChannel.SATURATION, 0.6f)
+        capture("87_edit_hsl_blue_saturation_light.png")
+    }
+
+    /** Picture 88: the HSL sheet on the Blue range, Saturation chip, dark. */
+    @Test
+    fun edit_hsl_blue_saturation_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHsl(ColourRange.BLUE, HslChannel.SATURATION, 0.6f)
+        capture("88_edit_hsl_blue_saturation_dark.png")
+    }
+
+    /** Picture 89: the HSL sheet on the Orange range, Lightness chip, set to +60, light. */
+    @Test
+    fun edit_hsl_orange_lightness_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHsl(ColourRange.ORANGE, HslChannel.LIGHTNESS, 0.6f)
+        capture("89_edit_hsl_orange_lightness_light.png")
+    }
+
+    /** Picture 90: the HSL sheet on the Orange range, Lightness chip, dark. */
+    @Test
+    fun edit_hsl_orange_lightness_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHsl(ColourRange.ORANGE, HslChannel.LIGHTNESS, 0.6f)
+        capture("90_edit_hsl_orange_lightness_dark.png")
+    }
+
+    /** Picture 91: a photo of sky blue, orange, skin and grey after a Blue hue change, light. Run 11: DoD 20. */
+    @Test
+    fun edit_hsl_blue_after_light() {
+        showTool(Tool.EDIT, ThemeMode.Light, colourSamplePhoto())
+        setHsl(ColourRange.BLUE, HslChannel.HUE, 0.8f)
+        capture("91_edit_hsl_blue_after_light.png")
+    }
+
+    /** Picture 92: the same Blue change, dark. */
+    @Test
+    fun edit_hsl_blue_after_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark, colourSamplePhoto())
+        setHsl(ColourRange.BLUE, HslChannel.HUE, 0.8f)
+        capture("92_edit_hsl_blue_after_dark.png")
+    }
+
+    /** Picture 93: the same photo after an Orange saturation change (down to grey), light. */
+    @Test
+    fun edit_hsl_orange_after_light() {
+        showTool(Tool.EDIT, ThemeMode.Light, colourSamplePhoto())
+        setHsl(ColourRange.ORANGE, HslChannel.SATURATION, -1f)
+        capture("93_edit_hsl_orange_after_light.png")
+    }
+
+    /** Picture 94: the same Orange change, dark. */
+    @Test
+    fun edit_hsl_orange_after_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark, colourSamplePhoto())
+        setHsl(ColourRange.ORANGE, HslChannel.SATURATION, -1f)
+        capture("94_edit_hsl_orange_after_dark.png")
+    }
+
+    /**
+     * Opens the HSL sheet, taps the [range] circle and the [channel] chip, then sets the slider to
+     * [value] (from -1 to 1) through its semantics, and gives the live preview's background render
+     * a short real-time settle so the photo shows the change before the picture is taken.
+     */
+    private fun setHsl(range: ColourRange, channel: HslChannel, value: Float) {
+        openSheet(EditTool.HSL)
+        // No performScrollTo: all nine circles fit this 411 dp window (368 dp), and asking the circle
+        // row, which has nothing to scroll, to scroll never lets Compose's test clock go idle, so the
+        // test hangs (HslSheetTest found this first). The circle is tapped where it is.
+        compose.onNodeWithTag(hslRangeTag(range)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(hslChipTag(channel)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(HSL_SLIDER_TAG)
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(value) }
+        compose.waitForIdle()
+        Thread.sleep(FILTER_SETTLE_MILLIS)
+        compose.waitForIdle()
+    }
+
+    /**
+     * Draws a 600 x 400 photo in four vertical bands: sky blue, orange, a skin tone and a mid grey,
+     * so a change to one colour range is visible next to the colours it must leave alone.
+     */
+    private fun colourSamplePhoto(): Bitmap {
+        val bitmap = Bitmap.createBitmap(600, 400, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint()
+        val colours = intArrayOf(
+            android.graphics.Color.rgb(90, 170, 240),
+            android.graphics.Color.rgb(240, 140, 30),
+            android.graphics.Color.rgb(224, 172, 140),
+            android.graphics.Color.rgb(128, 128, 128),
+        )
+        colours.forEachIndexed { index, colour ->
+            paint.color = colour
+            canvas.drawRect(index * 150f, 0f, (index + 1) * 150f, 400f, paint)
+        }
+        return bitmap
     }
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
