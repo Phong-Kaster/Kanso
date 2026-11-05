@@ -1,9 +1,11 @@
 # ISSUES
 
-## Run 11 (HSL on the Edit screen), loop/kanso-hsl: building (Phase 1 done)
+## Run 11 (HSL on the Edit screen), loop/kanso-hsl: building (Phase 3 done)
 
 - D-001 answered by the owner (DoD approved, baselines list given). No open decision.
-- Assumptions taken while planning (Tier 2, each reversible, see `.harness/run/ASSUMPTIONS.md`): A-001 the 136 dp sheet holds three 40 dp rows with 48 dp touch areas; A-002 README is updated in every commit that changes the app; A-003 the 27 values are one HSL group from -1 to 1; A-004 the HSL formula (CPU, one function, cos² range shares, colourfulness gate, ±20°, ×0..2, lightness 5 %..95 %).
+- **Pictures are red, and the owner must fix the list (Iteration 5):** `verifyRoborazziDebug` fails 25 pictures because the tool row gained a ninth entry. `foreman-record-baselines.ps1` put every one back unchanged, because `## Baselines` in `DECISIONS.md` lists bare names (`16_tool_photo_light.png`) and the script only matches repo-relative paths (`app/src/test/screenshots/16_tool_photo_light.png`). Only the owner can edit that file: rewrite the 35 lines with the `app/src/test/screenshots/` prefix, then the next Iteration records them (`.harness/run/evidence/record-p3.log`). Until then DoD 30 (pictures pass) and 23 cannot hold; the run can end at best `DONE_PARTIAL`.
+- Assumptions taken (Tier 2, each reversible, see `.harness/run/ASSUMPTIONS.md`): A-001 the 136 dp sheet holds three 40 dp rows with 48 dp touch areas; A-002 README is updated in every commit that changes the app; A-003 the 27 values are one HSL group from -1 to 1; A-004 the HSL formula; A-005 48 dp touch boxes of neighbouring circles/chips overlap by 8 dp / 4 dp (review B3; judge by hand).
+- Review notes not fixed (Phase 3): helpers `displayColour`, `nameRes`, `labelRes` live in `HslSlider.kt` and `ColourRangeCircle.kt` imports them (move to a shared file); the circle row's sideways scrolling on a narrow phone is untested (a scroll made Compose's idle check hang); `SliderWithValue.touchHeight` default 20 dp duplicates `ClassicSlider`'s thumb size; stale comments at `ToolViewModel.kt` (`PreviewKey`, `requestPreview`, `renderPreview` KDocs) and `FilterPreviewRenderer.kt:63` (T-004 does them).
 - Criteria awaiting a person once built: 23 (re-recorded pictures), 24 (HSL on a phone), 25 (no stutter on the Galaxy A13), 26 (docs tell the truth).
 
 ## Run 10 (stickers on the Edit screen), loop/kanso-stickers: DONE, Iteration 16

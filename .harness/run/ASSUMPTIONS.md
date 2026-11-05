@@ -116,3 +116,10 @@ Option 1. Range share = cos²(π·d/80) of the hue distance d (1 at the centre, 
 next centre); colourfulness gate smoothstep(0.03, 0.25) on max − min, so greys are hardly touched;
 Hue ±20° at ±100; Saturation × (1 + value), clamped; Lightness moves at most to 5 % or 95 %, never
 pure black or white. ADR-008 records it.
+
+## A-005 — Tier 2 (Iteration 5)
+
+**Question:** DoD 21 wants every circle, chip and the slider to be at least 48 dp to touch, but circles are 40 dp apart and the sheet's rows 36 dp apart, so 48 dp touch areas overlap their neighbours (review B3).
+**Options:** (1) keep 32 dp cells with 48 dp touch boxes that overlap by 8 dp / 4 dp; (2) 48 dp pitch, which does not fit the 136 dp sheet (A-001) or 411 dp width.
+**Taken:** option 1, the same pattern as the existing `ColourCircle`; each control's own touch box measures >= 48 dp (tested). The owner should judge feel on a phone (DoD 24).
+**Depends on:** Iteration 5 (phase-3 checkpoint).

@@ -1,7 +1,7 @@
 package com.phongkaster.kanso.data.edit.edit
 
 /**
- * The eight groups of controls the Edit screen offers, one per entry in the row of tools under the
+ * The nine groups of controls the Edit screen offers, one per entry in the row of tools under the
  * photo. Tapping an entry opens a sheet below the photo holding that group's controls; only one
  * sheet is open at a time.
  *
@@ -25,6 +25,12 @@ enum class EditTool {
      * whole picture, one slider per channel: to fix a colour cast or tint the photo.
      */
     RGB,
+
+    /**
+     * Shifting the hue, saturation and lightness of one chosen range of colours (nine ranges, such
+     * as red or light blue) without touching the others: 27 values in all.
+     */
+    HSL,
 
     /** The ready-made looks (filters) and how strongly the chosen one is applied. */
     FILTERS,

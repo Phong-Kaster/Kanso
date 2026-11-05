@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -45,7 +46,7 @@ fun editSliderValueTag(sliderTag: String): String = sliderTag + EDIT_SLIDER_VALU
  * slider is disabled. The slider also carries the label as its description, so a screen reader
  * names it. [tint] colours the slider's track and thumb: the theme's `primary` for every slider
  * but RGB's, which takes its channel's colour (see `RgbChannel`); the name and number keep their
- * usual colours.
+ * usual colours. [trackBrush], when not null, paints the slider's track (the HSL sliders' gradients).
  */
 @Composable
 internal fun LabelledSlider(
@@ -57,6 +58,7 @@ internal fun LabelledSlider(
     enabled: Boolean,
     valueRange: ClosedFloatingPointRange<Float> = EditSettings.MIN..EditSettings.MAX,
     tint: Color = MaterialTheme.colorScheme.primary,
+    trackBrush: Brush? = null,
 ) {
     val text = stringResource(label)
     val shown = stringResource(R.string.edit_session_slider_value, (value * SHOWN_SCALE).roundToInt())
@@ -71,6 +73,7 @@ internal fun LabelledSlider(
             onValueChangeFinished = onValueChangeFinished,
             enabled = enabled,
             color = tint,
+            trackBrush = trackBrush,
             sliderModifier = Modifier
                 .testTag(tag)
                 .semantics { contentDescription = text },

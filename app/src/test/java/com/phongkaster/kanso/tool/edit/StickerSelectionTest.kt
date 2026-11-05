@@ -340,6 +340,8 @@ class StickerSelectionTest {
         compose.onNodeWithTag(LAYER_SHEET_CONFIRM_TAG).performClick()
         compose.waitForIdle()
         if (openFilters) {
+            // Nine entries no longer fit a phone-sized window: bring Filters into view first.
+            compose.scrollToolRowTo(EditTool.FILTERS)
             compose.onNodeWithTag(editToolTag(EditTool.FILTERS)).performClick()
             compose.waitForIdle()
             assertEquals(EditTool.FILTERS, viewModel.state.value.openTool)
@@ -464,6 +466,8 @@ class StickerSelectionTest {
 
     /** Taps the Stickers entry and waits until the sheet is open. */
     private fun openStickers(viewModel: ToolViewModel) {
+        // Nine entries no longer fit a phone-sized window: bring Stickers into view first.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)

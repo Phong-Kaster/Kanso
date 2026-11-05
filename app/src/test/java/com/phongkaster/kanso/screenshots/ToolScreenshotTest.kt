@@ -29,6 +29,7 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.tool.BrightenedProcessor
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
+import com.phongkaster.kanso.tool.edit.scrollToolRowTo
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.component.toolpanel.enhancepanel.enhancecompare.ENHANCE_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.enhancepanel.ENHANCE_RUN_TAG
@@ -330,6 +331,8 @@ class ToolScreenshotTest {
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
     private fun openSheet(tool: EditTool) {
+        // The row has nine entries: scroll to the one to tap, as a lazy row has no node past its edge.
+        compose.scrollToolRowTo(tool)
         compose.onNodeWithTag(editToolTag(tool)).performClick()
         compose.waitForIdle()
     }

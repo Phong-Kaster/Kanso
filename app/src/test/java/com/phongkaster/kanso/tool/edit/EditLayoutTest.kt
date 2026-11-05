@@ -193,10 +193,16 @@ class EditLayoutTest {
         val viewModel = showEdit()
         moveTo(viewModel, null)
         val before = bounds(TOOL_CARD_TAG)
-        // Text and Date sit past the row's right edge on this window since RGB joined the row (the
-        // row scrolls), so they are not on screen.
-        EditTool.entries.filter(predicate = { it != EditTool.TEXT && it != EditTool.DATE }).forEach(
-            action = { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() },
+        // The row now holds nine entries and scrolls, so on this window only the first four are
+        // surely on screen; every other entry is scrolled to first (a lazy row has no node for an
+        // entry past its edge) and is then displayed.
+        val alwaysShown = listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB)
+        alwaysShown.forEach(action = { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() })
+        EditTool.entries.filter(predicate = { it !in alwaysShown }).forEach(
+            action = {
+                compose.scrollToolRowTo(it)
+                compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed()
+            },
         )
 
         // Stickers is only partly in view; bring it fully into the row before tapping it.

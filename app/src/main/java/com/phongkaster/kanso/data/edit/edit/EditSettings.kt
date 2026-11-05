@@ -16,8 +16,8 @@ package com.phongkaster.kanso.data.edit.edit
  * "70 more". That is also why Undo can simply go back to an earlier value (see [EditSession]).
  *
  * The default value changes nothing: the whole photo, no turn, no flip, every slider at its middle
- * and no filter ([isNeutral]). The HSL tool's 27 values all start at 0; note that [isNeutral] for a
- * single tool does not know the HSL tool yet (a later task adds it), though [hasHslChange] does.
+ * and no filter ([isNeutral]). The HSL tool's 27 values all start at 0, and [isNeutral] for the HSL tool
+ * is true while they do.
  */
 data class EditSettings(
     /**
@@ -126,6 +126,7 @@ data class EditSettings(
      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
      * - [EditTool.RGB]: all three channels sit at their middle;
+     * - [EditTool.HSL]: all 27 values sit at 0;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
      * - [EditTool.STICKERS]: no sticker is on the photo;
      * - [EditTool.TEXT]: no text is on the photo;
@@ -136,6 +137,7 @@ data class EditSettings(
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
         EditTool.ADJUST -> !hasAdjustChange
         EditTool.RGB -> !hasRgbChange
+        EditTool.HSL -> !hasHslChange
         EditTool.FILTERS -> !hasFilter
         EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
         EditTool.TEXT -> layers.none { it.content is LayerContent.Text }

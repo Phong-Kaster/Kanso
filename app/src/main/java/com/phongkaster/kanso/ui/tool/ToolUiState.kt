@@ -3,7 +3,9 @@ package com.phongkaster.kanso.ui.tool
 import android.graphics.Bitmap
 import com.phongkaster.kanso.data.edit.EditFailure
 import com.phongkaster.kanso.data.edit.LivePreview
+import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.EditSettings
+import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.edit.face.FaceFocus
@@ -104,6 +106,17 @@ data class ToolUiState(
      * channel the person used last.
      */
     val rgbChannel: RgbChannel = RgbChannel.RED,
+    /**
+     * The colour range the HSL sheet is editing (it shows one range at a time, picked by a row of
+     * colour dots). Red at first; kept here so reopening HSL shows the range used last. Choosing
+     * one changes no setting.
+     */
+    val hslRange: ColourRange = ColourRange.RED,
+    /**
+     * Which of the three HSL values (hue, saturation or lightness) the HSL sheet's slider edits for
+     * the chosen range. Hue at first; kept here so reopening HSL shows the one used last.
+     */
+    val hslChannel: HslChannel = HslChannel.HUE,
     /**
      * True while the Compare switch is on: the screen shows the untouched original photo instead
      * of the edit, and every editing control is disabled until it is switched off again.

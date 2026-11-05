@@ -57,8 +57,8 @@ private val TOOL_ENTRY_WIDTH = 60.dp
 private val ACTION_ENTRY_WIDTH = 68.dp
 
 /**
- * The Edit screen's one row under the photo: the tools (Crop, Rotate, Adjust, RGB, Filters,
- * Stickers, Text, Date), then Compare, each an icon over its name. Tapping a tool calls
+ * The Edit screen's one row under the photo: the nine tools (Crop, Rotate, Adjust, RGB, HSL,
+ * Filters, Stickers, Text, Date), then Compare, each an icon over its name. Tapping a tool calls
  * [onOpen] with it; the ViewModel then opens that tool's sheet (or closes it, when it was already
  * open). The entry of [openTool] is highlighted with the theme's secondary container colour, the
  * colour Material uses for "this one is chosen".
@@ -161,6 +161,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
     EditTool.ROTATE -> R.drawable.ic_rotate_right
     EditTool.ADJUST -> R.drawable.ic_tune
     EditTool.RGB -> R.drawable.ic_palette
+    EditTool.HSL -> R.drawable.ic_invert_colors
     EditTool.FILTERS -> R.drawable.ic_filter_vintage
     EditTool.STICKERS -> R.drawable.ic_stickers
     EditTool.TEXT -> R.drawable.ic_text_fields
@@ -174,6 +175,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
     EditTool.ROTATE -> R.string.edit_layout_rotate
     EditTool.ADJUST -> R.string.edit_layout_adjust
     EditTool.RGB -> R.string.edit_layout_rgb
+    EditTool.HSL -> R.string.edit_hsl_label
     EditTool.FILTERS -> R.string.edit_layout_filters
     EditTool.STICKERS -> R.string.stickers_tool_label
     EditTool.TEXT -> R.string.text_tool_label

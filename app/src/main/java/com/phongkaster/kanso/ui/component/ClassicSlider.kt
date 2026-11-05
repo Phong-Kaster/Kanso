@@ -19,9 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -58,6 +60,10 @@ private const val DISABLED_ALPHA = 0.38f
  * A **two-sided** slider (a [valueRange] that runs through 0, such as -1..1) is coloured from 0 to
  * the thumb instead of from the left end, with a short upright mark at 0, so it reads
  * -100 ··· 0 ··· +100 and sits empty at its default of 0 (see [originFraction]).
+ *
+ * When [trackBrush] is not null it paints the whole track instead (a colour gradient); null keeps
+ * the look above exactly. [touchHeight] makes the slider that tall (never below the thumb's 20 dp)
+ * so its touch area is bigger than the drawing; the track and thumb stay centred.
  */
 @Composable
 fun ClassicSlider(
@@ -69,6 +75,8 @@ fun ClassicSlider(
     steps: Int = 0,
     enabled: Boolean = true,
     color: Color = MaterialTheme.colorScheme.primary,
+    trackBrush: Brush? = null,
+    touchHeight: Dp = CLASSIC_THUMB_SIZE,
 ) {
     val primary = color
     val onPrimary = MaterialTheme.colorScheme.onPrimary
@@ -99,7 +107,9 @@ fun ClassicSlider(
             )
         },
         track = { state ->
-            Canvas(Modifier.fillMaxWidth().height(CLASSIC_THUMB_SIZE)) {
+            // Material's Slider is as tall as its tallest slot, so a taller track canvas makes the
+            // slider itself (and its touch area) [touchHeight] tall; the drawing stays centred.
+            Canvas(Modifier.fillMaxWidth().height(maxOf(touchHeight, CLASSIC_THUMB_SIZE))) {
                 val trackHeight = 4.dp.toPx()
                 val dotRadius = 1.dp.toPx()
                 val inset = CLASSIC_THUMB_SIZE.toPx() / 2f
@@ -111,8 +121,14 @@ fun ClassicSlider(
                 val fromX = min(originX, thumbX)
                 val toX = max(originX, thumbX)
                 // The whole track, then the coloured part between the origin and the thumb over it.
-                drawLine(inactive, Offset(inset, centreY), Offset(size.width - inset, centreY), trackHeight, StrokeCap.Round)
-                drawLine(primary, Offset(fromX, centreY), Offset(toX, centreY), trackHeight, StrokeCap.Round)
+                if (trackBrush != null) {
+                    // A caller-given brush (the HSL sliders' colour gradients) paints the whole track
+                    // and replaces the coloured part, so the gradient reads as a scale under the thumb.
+                    drawLine(trackBrush, Offset(inset, centreY), Offset(size.width - inset, centreY), trackHeight, StrokeCap.Round)
+                } else {
+                    drawLine(inactive, Offset(inset, centreY), Offset(size.width - inset, centreY), trackHeight, StrokeCap.Round)
+                    drawLine(primary, Offset(fromX, centreY), Offset(toX, centreY), trackHeight, StrokeCap.Round)
+                }
                 // On a two-sided slider a short upright mark shows where 0, "no change", is.
                 if (originX > inset) {
                     val tickHalf = CENTRE_TICK_HEIGHT.toPx() / 2f

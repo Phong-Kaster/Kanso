@@ -27,6 +27,7 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.settings.sampleScreen
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
+import com.phongkaster.kanso.tool.edit.scrollToolRowTo
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
@@ -216,6 +217,7 @@ class StickerScreenshotTest {
 
     /** Taps the Stickers entry in the row of tools so its sheet opens. */
     private fun openStickers() {
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
     }

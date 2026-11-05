@@ -98,6 +98,8 @@ class StickerCompareTest {
     fun compare_shows_the_original_without_stickers_and_the_sticker_controls_do_nothing() {
         val viewModel = showEdit()
         // The Stickers sheet makes the photo shorter, so the photo is measured once it is open.
+        // Nine entries no longer fit a phone-sized window: bring Stickers into view first.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center

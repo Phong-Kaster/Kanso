@@ -2,29 +2,22 @@
 
 > Derived cache, never a source of truth. On disagreement with task files or git, this is wrong.
 
-- **Stage:** build — Phase 2 done (T-002 complete); next Phase 3.
-- **Next Phase:** Phase 3
-  - T-003 (Fast, 5 slices, sequential; see `TASKS/T-003.md`, scope uses M/T/P abbreviations defined there). Includes carry-over from the Phase 2 review (HSL in `isNeutral`/Back-discard, stale preview comments, README layer notes). Iteration fetches `ic_invert_colors.xml` first; re-records row baselines afterwards (D-001 `## Baselines`).
-  - T-002 left: `EditProcessor`/`FilterPreviewRenderer` apply HSL; `ToolViewModel` preview considers `hsl` (`previewSettings` drives it); README has an HSL row "Not wired". Tests appended to `evidence/test-edits.md`.
-  - Fixed design: `PLAN.md` "Fixed design", "Sheet layout", "Slider track" - quote into Briefs.
+- **Stage:** build — Phase 3 done (T-003 complete, row pictures not re-recorded); next Phase 4.
+- **Next Phase:** Phase 4
+  - T-004 (Fast; `TASKS/T-004.md`): README, `docs/features/edit.md`, `docs/features/tool-screen.md`, new ADR-008, `CONTEXT.md`. Carry-over: stale `ToolViewModel.kt` KDocs and `FilterPreviewRenderer.kt:63` comment (outside T-004's scope: leave in ISSUES.md unless a scope amendment is made).
+  - Then Phase 5: T-005 (`screenshots/ToolScreenshotTest.kt`, HSL pictures).
+  - T-003 left: HSL tool, sheet, ViewModel, README row "Works" and pipeline; full tests + lint green (`evidence/p3-full-7.log`).
+- **Pictures:** `verifyRoborazziDebug` fails 25 pictures (the row moved). The record script refuses them: `## Baselines` in DECISIONS.md lists bare names, the script wants `app/src/test/screenshots/<name>`. Only the owner can fix the list; do not route around. Re-run `foreman-record-baselines.ps1` once DECISIONS.md is fixed.
 - **Queued decisions:** 0
 - **Abandoned:** none
 - **Unreachable:** none
-- **Verified commands:** (run from the repo root, under `timeout`) build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` | lint: `./gradlew :app:lintDebug` | pictures: `./gradlew :app:verifyRoborazziDebug` | record new/approved pictures: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app` | Worker compile: `powershell -NoProfile -File D:/Valve/Personal/Kanso/.harness/loop/bin/foreman-compile.ps1` (module `app`)
+- **Verified commands:** (run from the repo root, under `timeout`) build: `./gradlew :app:assembleDebug` | test: `./gradlew :app:testDebugUnitTest` (about 6 min; run `HslSheetTest` alone first when touching the sheet) | lint: `./gradlew :app:lintDebug` | pictures: `./gradlew :app:verifyRoborazziDebug` | record: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app` | Worker compile (never piped): `powershell -NoProfile -File D:/Valve/Personal/Kanso/.harness/loop/bin/foreman-compile.ps1` (module `app`). Never run `python -`/stdin-reading commands in Bash: they hang.
 - **Criteria the next Phase cites (quoted from DoD.md):**
-  - **DoD 1:** [machine] The Edit screen has nine tools, and the new one, named "HSL", sits right after RGB and before Filters, with an icon unlike Adjust's and RGB's.
-  - **DoD 2:** [machine] HSL offers nine colour ranges in this order, 40° apart: Red 0°, Orange 40°, Light green 80°, Green 120°, Light blue 160°, Blue 200°, Navy blue 240°, Purple 280°, Pink 320°, each chosen by tapping a circle filled with its colour, with the chosen circle marked.
-  - **DoD 10:** [machine] The first time HSL opens, Red and Hue are chosen; reopened, it shows the range and setting last chosen.
-  - **DoD 11:** [machine] Choosing a range or a setting never changes the photo and adds nothing to Undo.
-  - **DoD 12:** [machine] One drag of the HSL slider is one Undo step, and Redo brings it back.
-  - **DoD 13:** [machine] The HSL tool shows its "changed" dot while any of its 27 values is away from 0, and only then; no other tool's dot lights up because of HSL.
-  - **DoD 14:** [machine] Compare shows the photo without the HSL change, Back after an HSL change asks "Discard your changes?", and the HSL sheet has no reset button.
-  - **DoD 17:** [machine] Dragging an HSL slider updates the photo on screen while the finger moves, even when no filter is chosen.
-  - **DoD 21:** [machine] The sheet stays 136 dp tall with all three rows fully visible, the photo does not change size when HSL opens, and every circle, chip and the slider is at least 48 dp to touch.
-  - **DoD 22:** [machine] The mark on the chosen circle stands out against all nine colours, in light and in dark.
-  - **DoD 30:** [machine] The app builds, opens, and the Edit screen with the HSL sheet open does not crash; tests, lint and pictures pass.
+  - **DoD 26:** [human-only] The README, the two feature pages and the ADR tell the truth about HSL and are readable.
   - **DoD 31:** [machine] README describes HSL as the code is: its row in "Editing features" with its real state, and its pipeline traced end to end in "How each editing feature works".
-  - **DoD 35:** [machine] The code follows the owner's standing rules: every new composable has a light and a dark preview, one class per file, the screen-folder layout, and every new class and function explained in plain English.
-- **Open issues touching the next Phase's files:** Phase 2 review carry-overs, in T-003.md.
+  - **DoD 32:** [machine] The Edit and tool-screen feature pages describe HSL, with flow diagrams.
+  - **DoD 33:** [machine] A new decision record says how HSL is computed and why that way, how the preview and the saved photo stay identical, and what it costs on the Galaxy A13.
+  - **DoD 34:** [machine] The glossary defines "colour range" and says the Edit screen now has nine tools.
+- **Open issues touching the next Phase's files:** none beyond the carry-overs above.
 - **Reference topics the next Phase touches:** `.harness/knowledge/reference/run11-facts.md`
 - **Model tiers (resolved from `.harness/loop/models.json`):** fast: `sonnet` (effort medium) | capable: `opus` (effort medium)

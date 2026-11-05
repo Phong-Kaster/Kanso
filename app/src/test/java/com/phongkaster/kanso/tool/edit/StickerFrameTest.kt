@@ -396,6 +396,8 @@ class StickerFrameTest {
         compose.waitForIdle()
         viewModel.changeSettings(settings, processorFor)
         compose.waitForIdle()
+        // Nine entries no longer fit a phone-sized window: bring Stickers into view first.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)

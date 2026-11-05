@@ -15,6 +15,7 @@ import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.WorkingSize
 import com.phongkaster.kanso.data.edit.face.FaceFocusSource
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
+import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.DateFormat
 import com.phongkaster.kanso.data.edit.edit.EditSession
@@ -23,6 +24,7 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.data.edit.edit.FilterPreviewRenderer
 import com.phongkaster.kanso.data.edit.edit.HslAdjustments
+import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.data.edit.edit.Layer
 import com.phongkaster.kanso.data.edit.edit.LayerContent
 import com.phongkaster.kanso.data.edit.edit.LayerMapping
@@ -575,6 +577,23 @@ class ToolViewModel(
      */
     fun chooseRgbChannel(channel: RgbChannel) {
         mutableState.update { it.copy(rgbChannel = channel) }
+    }
+
+    /**
+     * Shows the HSL tool's colour [range] (red, orange, ... pink) in place of the one shown. Like
+     * [chooseRgbChannel] it changes only what the sheet shows, never a setting or the photo, so it
+     * makes no Undo step; the choice is kept in the state, so reopening HSL shows it again.
+     */
+    fun chooseHslRange(range: ColourRange) {
+        mutableState.update { it.copy(hslRange = range) }
+    }
+
+    /**
+     * Shows the HSL tool's [channel] (hue, saturation or lightness) in place of the one shown.
+     * Like [chooseHslRange] it changes no setting and makes no Undo step.
+     */
+    fun chooseHslChannel(channel: HslChannel) {
+        mutableState.update { it.copy(hslChannel = channel) }
     }
 
     /**
@@ -1398,7 +1417,8 @@ class ToolViewModel(
 
     /**
      * What a preview request is made of: the filter and its strength (none and 0 without a
-     * filter) and the layers drawn into the small copy, never the one under a finger. Two
+     * filter), the HSL values and the layers drawn into the small copy, never the one under a
+     * finger. Two
      * requests with an equal key would give the same picture, so the second is not rendered.
      */
     private data class PreviewKey(
@@ -1418,10 +1438,12 @@ class ToolViewModel(
     private var previewRendererRecipe: ((EditSettings) -> ToolProcessor)? = null
 
     /**
-     * Asks for the session's current filter to be drawn on the small preview copy.
+     * Asks for the session's current filter, HSL change and layers to be drawn on the small
+     * preview copy (HSL is computed on this CPU copy; the GPU colour matrix goes on top of it).
      *
-     * Without a filter there is nothing to compute: [ToolUiState.filterPreview] becomes null at
-     * once and the screen draws the original. With one, the settings go into [previewRequests],
+     * With no filter, no HSL change and no layer there is nothing to compute:
+     * [ToolUiState.filterPreview] becomes null at once and the screen draws the original. With
+     * any of them, the settings go into [previewRequests],
      * where a newer request replaces an older one still waiting. Nothing here marks the screen as
      * busy (no `Processing.Running`): the preview is quick, and the controls must not flicker or
      * lock while a finger drags a slider.
@@ -1437,9 +1459,10 @@ class ToolViewModel(
             mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        // A slider, turn or crop leaves the filter and the layers as they were: the preview is
-        // still right, so no render is repeated (it would only cost memory and a redraw during a
-        // drag). The key is the filter, its strength and the untouched layers.
+        // A colour slider, turn or crop leaves the filter, the HSL values and the layers as they
+        // were: the preview is still right, so no render is repeated (it would only cost memory and
+        // a redraw during a drag). The key is the filter, its strength, the HSL values and the
+        // untouched layers.
         val key = PreviewKey(
             filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
             intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
@@ -1460,11 +1483,12 @@ class ToolViewModel(
     }
 
     /**
-     * Renders the filter of [requested] on the small preview copy of the original, in the
-     * background, and publishes it unless a newer filter choice has replaced it meanwhile (the
-     * newer one is then already waiting in [previewRequests]), or the filter was removed (the
-     * preview then stays null). A preview that fails shows the plain photo: the full render at
-     * the end reports a real failure.
+     * Renders [requested] on the small preview copy of the original, in the background: the
+     * filter, the HSL change and the layers, in that order (HSL is computed on this CPU copy; the
+     * screen's colour matrix goes on top of it). It publishes the picture unless a newer request
+     * has replaced it meanwhile (the newer one is then already waiting in [previewRequests]), or
+     * the filter, the HSL change and the layers were all removed (the preview then stays null). A
+     * preview that fails shows the plain photo: the full render at the end reports a real failure.
      */
     private suspend fun renderPreview(requested: EditSettings) {
         val original = (mutableState.value.photo as? ToolUiState.PhotoState.Ready)?.bitmap

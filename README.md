@@ -98,7 +98,7 @@ yet.
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
 | Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
-| Edit: HSL | Not wired | Hue, saturation and lightness for nine colour ranges (27 values). The model, the formula (`EditHsl.kt`) and both pipelines (live preview and Done) apply it after the filter and before the colour matrix, but no screen sets it yet. |
+| Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`). Not yet tried on a phone. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -116,8 +116,11 @@ yet.
   with seven tools) Crop to Stickers and Compare were in view and Text was hidden past the right
   edge until the row was swiped left; Date sits further right still and is reached the same way.
   RGB, added after Adjust (2026-11-03), pushes every later tool one place right: on a 411 dp wide
-  screen Crop to Filters and Compare are in view, and Stickers, Text and Date are one swipe away
-  (`EditToolRowTest`; not yet seen on the phone). This replaces the old rule that every tool fits
+  screen Crop to Filters and Compare were in view, and Stickers, Text and Date were one swipe away.
+  HSL, added after RGB, pushes every tool after it one more place right; the row is then nine
+  entries long. Six 60 dp tools plus Compare's 68 dp make 428 dp, wider than 411 dp, so on a 411 dp
+  screen only Crop, Adjust and RGB are guaranteed in view, and HSL, Filters, Stickers, Text and Date
+  are one swipe away (`EditToolRowTest`; not yet seen on the phone). This replaces the old rule that every tool fits
   without scrolling (DoD 2), which held for five tools.
 - An untouched PNG, WebP or HEIC photo saved from Result keeps its own bytes inside a file named
   `.jpg` (a known defect, not fixed yet).
@@ -137,7 +140,7 @@ or `app/src/main/res/`.
    `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
    so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 136 dp sheet area
-   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust, RGB and Filters, which never changes height.
+   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust, RGB, HSL and Filters, which never changes height.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
    bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.
    A **layer sheet** (Stickers, Text or Date) takes the row's place instead, in exactly the height of
@@ -215,6 +218,52 @@ or `app/src/main/res/`.
      clamped to 0..255. The output is the Edit output: a JPEG at quality 100, at most 3000 px.
      Compare shows the original without RGB. A Done render that fails is the Edit failure above;
      RGB adds no failure of its own.
+9. **HSL, end to end** (the row's fifth entry, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
+   between RGB and Filters).
+   - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.HSL` branch) is
+     `editpanel/hslpanel/HslPanel.kt`: three rows of 32 dp with 4 dp gaps, exactly the 104 dp the
+     136 dp sheet leaves, so nothing scrolls. Row 1 is nine circles
+     (`hslpanel/colourrangerow/ColourRangeRow.kt` and `ColourRangeCircle.kt`) filled with their
+     colours, in order 40 degrees apart: Red 0, Orange 40, Light green 80, Green 120, Light blue
+     160, Blue 200, Navy blue 240, Purple 280, Pink 320 (`data/edit/edit/ColourRange.kt`); the chosen
+     one carries a ring and a check mark taken from the theme's colours (`markColours`, whichever
+     of `onSurface` and `surface` stands out more from the circle). Row 2 is three chips, Hue,
+     Saturation and Lightness (`hslpanel/HslChips.kt`). Row 3 is one slider
+     (`hslpanel/HslSlider.kt`) from -100 to +100 whose track is a colour gradient of the chosen
+     range and channel. Every circle, chip and the slider is 32 dp in the layout and takes touches
+     in a 48 dp area. There is no reset button.
+   - *ViewModel.* The chosen range and chip are `ToolUiState.hslRange` (Red at first) and
+     `hslChannel` (Hue at first), set by `ToolViewModel.chooseHslRange` and `chooseHslChannel`;
+     choosing changes no setting and makes no Undo step, and the choice is kept while the sheet is
+     closed and opened again. A drag of the slider calls `previewSettings` while it moves and
+     `commitSettings` when let go: one Undo step, which Redo brings back.
+   - *Settings.* `EditSettings.hsl` (`data/edit/edit/HslAdjustments.kt`): 27 values, hue,
+     saturation and lightness for each of the nine ranges, each -1..1 (shown -100..100, 0 =
+     unchanged). The row's dot shows while any of the 27 is away from 0
+     (`EditSettings.isNeutral(EditTool.HSL)`, `hasHslChange`) and no other tool's dot lights up for
+     it. Back with only an HSL change asks to discard it. Compare shows the original without it.
+   - *The step* (`data/edit/edit/EditHsl.kt`, plain Kotlin on ARGB ints, on the CPU). For each
+     pixel: convert to hue, saturation and lightness; take the amounts of the ranges the hue
+     falls between, each range weighing 1 at its centre and falling as a cosine squared to 0 at
+     the next centre, so neighbours sum to 1 and nothing bands; a "colourfulness" gate (a smoothstep
+     of the spread between the largest and smallest channel, from 0.03 to 0.25) multiplies the
+     change, so greys and near-greys are left alone; then hue turns by up to +-20 degrees, saturation
+     is multiplied by 1 + amount (kept within 0..1), and lightness moves toward 0.95 (amount above 0)
+     or toward 0.05 (amount below 0), by that amount of the way; and the pixel is converted back with
+     its alpha kept. The amounts for 3600 hue steps (0.1 degree) are worked out once per call. With
+     all 27 values at 0 the step is skipped and no pixel changes.
+   - *Live preview.* `FilterPreviewRenderer` renders the filter, then HSL, with the real
+     `EditProcessor`, on the copy of the original of at most 640 px, on `Dispatchers.Default`;
+     it also does this when no filter is chosen, so a drag of the HSL slider changes the photo on
+     screen while the finger moves. `LivePreviewImage` then puts the Adjust and RGB colour matrix
+     on top on the GPU. So HSL comes before the colour matrix in the preview as in Done.
+   - *Done and output.* `EditProcessor.render`, on `Dispatchers.Default`, in this order: layers,
+     crop, quarter turns, flips, filter, **HSL** (`EditHsl.apply`, the same function as the
+     preview), colour matrix, every pixel made opaque. HSL therefore colours the layers and the
+     photo together, but not a layer being dragged under a finger in the preview (see 3.2, item 9).
+     The output is the Edit output: a JPEG at quality 100, at most 3000 px, saved from Result into
+     `Pictures/Kanso`. A Done render that fails is the Edit failure above; HSL adds no failure of
+     its own.
 
 ### 3.2 Layers: what stickers, text and dates share
 
@@ -282,12 +331,12 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
    layer it asks for its picture at no more than the photo's longest edge, then draws it with a
    `Matrix` (scale, mirror, turn, move) into a bitmap only as big as the visible part of the layer,
    with the layer's opacity as the paint's alpha, and blends that into the cropped pixels one row at
-   a time. So the crop cuts a layer, the turns and flips carry it, and the filter and sliders colour
-   it. A layer whose picture cannot be made, or whose numbers are not finite, is skipped without an
+   a time. So the crop cuts a layer, the turns and flips carry it, and the filter, the HSL tool and
+   the sliders colour it (HSL runs after the layers are drawn in, so it colours them with the photo). A layer whose picture cannot be made, or whose numbers are not finite, is skipped without an
    error.
 9. **The cost, accepted in ADR-004.** While a finger moves a layer, that layer is drawn by
-   `LivePreviewImage` itself (with the sliders and its opacity, but no filter) so it can follow the
-   finger; it joins the filtered copy when the finger lifts. The preview and Done can differ
+   `LivePreviewImage` itself (with the sliders and its opacity, but neither the filter nor HSL) so it can follow the
+   finger; it joins the filtered and HSL-coloured copy when the finger lifts. The preview and Done can differ
    slightly in detail (640 px against up to 3000 px).
 
 ### 3.3 Stickers
@@ -312,7 +361,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 
 ### 3.4 Text
 
-1. **Screen.** Text is the sixth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
+1. **Screen.** Text is the eighth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
    it opens the Text sheet in place of the row; `ToolScreen.kt` fills it with
    `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`: the pinned top bar (✕, "Text",
    ✓), the tabs **Text | Font | Size | Colour | Background | Opacity**, and the chosen tab's control:
@@ -376,7 +425,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 
 ### 3.5 Date
 
-1. **Screen.** Date is the eighth entry of the row (`EditTool.DATE`, icon `ic_calendar_today`).
+1. **Screen.** Date is the ninth entry of the row (`EditTool.DATE`, icon `ic_calendar_today`).
    Tapping it (`ToolViewModel.openTool`) sets `ToolUiState.dateMoment` to now, to the minute, and
    opens the Date sheet in place of the row; it adds nothing yet. `ToolScreen.kt` fills the sheet
    with `ui/tool/component/toolpanel/editpanel/datepanel/DatePanel.kt`: the pinned top bar (✕,

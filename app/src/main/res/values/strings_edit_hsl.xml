@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The HSL tool on the Edit screen: its name, its nine colour ranges and its three settings. -->
+    <string name="edit_hsl_label">HSL</string>
+
+    <string name="edit_hsl_range_red">Red</string>
+    <string name="edit_hsl_range_orange">Orange</string>
+    <string name="edit_hsl_range_light_green">Light green</string>
+    <string name="edit_hsl_range_green">Green</string>
+    <string name="edit_hsl_range_light_blue">Light blue</string>
+    <string name="edit_hsl_range_blue">Blue</string>
+    <string name="edit_hsl_range_navy_blue">Navy blue</string>
+    <string name="edit_hsl_range_purple">Purple</string>
+    <string name="edit_hsl_range_pink">Pink</string>
+
+    <string name="edit_hsl_channel_hue">Hue</string>
+    <string name="edit_hsl_channel_saturation">Saturation</string>
+    <string name="edit_hsl_channel_lightness">Lightness</string>
+</resources>

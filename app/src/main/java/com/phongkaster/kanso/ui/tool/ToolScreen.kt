@@ -405,6 +405,8 @@ fun ToolScreen(
                     onEditRatio = { ratio, _ -> viewModel.chooseCropRatio(ratio, processorFor) },
                     onEditAdjustSlider = viewModel::chooseAdjustSlider,
                     onEditRgbChannel = viewModel::chooseRgbChannel,
+                    onEditHslRange = viewModel::chooseHslRange,
+                    onEditHslChannel = viewModel::chooseHslChannel,
                 )
             }
         },

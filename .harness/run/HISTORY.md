@@ -27,3 +27,8 @@
 - ISSUES.md: the settled Run 10 section stays (the archive cannot be written from here, PROJECT.md Constraint on `.harness/archive/`); a Run 11 section added on top.
 
 ## Archived Decisions
+
+## Iteration 5 (2026-11-05) — Phase 3, T-003
+- Recovered Iteration 4's debris (owner-stopped, coherent). Ran `HslSheetTest` alone (ends, 47 s), then the full suite and lint (green). Review at Capable: B1 test-edits.md (fixed), B2 HSL controls ignored `enabled` (fixed, test added), B3 touch-box overlap (A-005), README Filters-in-view claim (fixed), minor comments/tag constant (fixed). Re-run: full tests + lint green (`p3-full-7.log`).
+- `verifyRoborazziDebug` fails 25 pictures (the row moved). The record script refused all of them: DECISIONS.md `## Baselines` uses bare names, the script wants `app/src/test/screenshots/<name>`. Left unrecorded.
+- Learned: foreman-compile.ps1 must not be piped. Not done: M3 (helpers in HslSlider.kt), FilterPreviewRenderer.kt:63 comment, ToolViewModel stale KDocs (T-004).
