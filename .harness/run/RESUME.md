@@ -2,8 +2,8 @@
 
 > Derived cache, never a source of truth. On disagreement with task files or git, this is wrong.
 
-- **Stage:** build - Phase 6 (T-006). The Verifier (Iteration 7) found assemble + lint green, tests 1212 with 2 failed (`StickerScreenshotTest` 81/82, `AssertionError at StickerScreenshotTest.kt:304`), and that pictures 69, 70, 81, 82 ARE on the owner's `## Baselines` list. After Phase 6: full tests, lint, `verifyRoborazziDebug`, then set PARTIAL-candidate again (criteria 23-26 need a person).
-- **Next Phase:** Phase 6 - T-006 (Fast). Scope: `app/src/test/java/com/phongkaster/kanso/screenshots/StickerScreenshotTest.kt` (Worker); baselines `app/src/test/screenshots/{69_edit_stickers_row_light,70_edit_stickers_row_dark,81_edit_stickers_crop_filter_light,82_edit_stickers_crop_filter_dark}.png` (Iteration, via the record wrapper with `-Tests "*StickerScreenshotTest*"`; copy old ones to `evidence/baseline-diffs/` first). See `TASKS/T-006.md` for steps.
+- **Stage:** build - all tasks complete (T-001..T-006); full tests, lint, verifyRoborazziDebug green. PARTIAL-candidate set; next invocation is the Verifier (re-prove machine criteria, drive machine-then-human, report DONE_PARTIAL).
+- **Next Phase:** none (Verifier next)
 - **DoD cited by T-006:**
   - 23. [machine-then-human] Pictures that changed only because the row gained a tool really differ only in the row.
   - 28. [machine] The other eight tools render exactly as before and every test that existed before this run still passes.

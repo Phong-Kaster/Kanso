@@ -249,7 +249,7 @@ WARNING: java.lang.System::load has been called by org.robolectric.nativeruntime
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 
-Exception in thread "DefaultDispatcher-worker-1 @coroutine#3384" Exception in thread "DefaultDispatcher-worker-1 @coroutine#3385" Exception in thread "DefaultDispatcher-worker-1 @coroutine#4155"          WARNING: A restricted method in java.lang.System has been called
+Exception in thread "DefaultDispatcher-worker-1 @coroutine#3384" Exception in thread "DefaultDispatcher-worker-1 @coroutine#3385" Exception in thread "DefaultDispatcher-worker-1 @coroutine#4155" WARNING: A restricted method in java.lang.System has been called
 WARNING: java.lang.System::load has been called by org.robolectric.nativeruntime.DefaultNativeRuntimeLoader in an unnamed module
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
@@ -268,7 +268,7 @@ FAILURE: Build failed with an exception.
 
 * What went wrong:
 Execution failed for task ':app:testDebugUnitTest' (registered by plugin 'com.android.internal.application').
-> java.io.EOFException
+> java.nio.file.NoSuchFileException: D:\Valve\Personal\Kanso\app\build\test-results\testDebugUnitTest\binary\in-progress-results-generic.bin
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -282,5 +282,6 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 13m 12s
+BUILD FAILED in 12m 43s
 162 actionable tasks: 1 executed, 161 up-to-date
+exit 1
