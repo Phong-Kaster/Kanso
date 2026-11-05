@@ -1,0 +1,3 @@
+task: :app:compileDebugUnitTestKotlin
+foreman-compile: compile check passed.
+exit 0

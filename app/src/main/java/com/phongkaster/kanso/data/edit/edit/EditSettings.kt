@@ -2,7 +2,8 @@ package com.phongkaster.kanso.data.edit.edit
 
 /**
  * Everything the Edit screen has done to the photo so far, as one immutable value: the crop
- * rectangle, quarter turns, flips, four colour sliders, three colour channels and a filter. There is one such value for
+ * rectangle, quarter turns, flips, four colour sliders, three colour channels, the HSL tool's 27
+ * values (see [HslAdjustments]) and a filter. There is one such value for
  * the whole editing session (held by [EditSession]); every tap or slider move makes a new one.
  *
  * Immutable means a value never changes after it is made; a change makes a new value with
@@ -15,7 +16,8 @@ package com.phongkaster.kanso.data.edit.edit
  * "70 more". That is also why Undo can simply go back to an earlier value (see [EditSession]).
  *
  * The default value changes nothing: the whole photo, no turn, no flip, every slider at its middle
- * and no filter ([isNeutral]).
+ * and no filter ([isNeutral]). The HSL tool's 27 values all start at 0, and [isNeutral] for the HSL tool
+ * is true while they do.
  */
 data class EditSettings(
     /**
@@ -73,7 +75,16 @@ data class EditSettings(
      * most [MAX_LAYERS]. Which one is selected is not kept here (see [Layer]).
      */
     val layers: List<Layer> = emptyList(),
+    /**
+     * The HSL tool's 27 values (hue, saturation and lightness for each of nine colour ranges), each
+     * from -1 through 0 (unchanged) to 1. [HslAdjustments.NEUTRAL] changes nothing.
+     */
+    val hsl: HslAdjustments = HslAdjustments.NEUTRAL,
 ) {
+
+    /** True when at least one of the HSL tool's 27 values is away from 0. */
+    val hasHslChange: Boolean
+        get() = !hsl.isNeutral
 
     /** True while the photo holds fewer than [MAX_LAYERS] layers, so another may be added. */
     val canAddLayer: Boolean
@@ -115,6 +126,7 @@ data class EditSettings(
      * - [EditTool.ROTATE]: the turns come back round to upright and neither flip is on;
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
      * - [EditTool.RGB]: all three channels sit at their middle;
+     * - [EditTool.HSL]: all 27 values sit at 0;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
      * - [EditTool.STICKERS]: no sticker is on the photo;
      * - [EditTool.TEXT]: no text is on the photo;
@@ -125,6 +137,7 @@ data class EditSettings(
         EditTool.ROTATE -> quarterTurns % 4 == 0 && !flipHorizontal && !flipVertical
         EditTool.ADJUST -> !hasAdjustChange
         EditTool.RGB -> !hasRgbChange
+        EditTool.HSL -> !hasHslChange
         EditTool.FILTERS -> !hasFilter
         EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
         EditTool.TEXT -> layers.none { it.content is LayerContent.Text }

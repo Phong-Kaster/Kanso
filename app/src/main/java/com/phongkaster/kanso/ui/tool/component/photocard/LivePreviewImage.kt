@@ -85,8 +85,10 @@ private val IDENTITY_MATRIX = List(20) { index -> if (index % 6 == 0) 1f else 0f
  * Draws [bitmap] with the Edit [settings] applied live, every frame, by Compose itself, filling
  * the space [modifier] gives it (it fills its parent by default).
  *
- * [bitmap] is the original photo, or its small copy with the filter already applied (the
- * ViewModel's `filterPreview`): the filter is the one part Compose cannot draw. Everything else
+ * [bitmap] is the original photo, or its small copy with the filter and then the HSL values
+ * already applied (the ViewModel's `filterPreview`): the filter and the HSL tool are the parts
+ * Compose cannot draw, and the colour matrix below goes on top of them, the same order as the
+ * final render (filter, HSL, colour matrix). Everything else
  * is applied here while drawing, so the photo follows a slider while the finger is still on it
  * and no full-size picture is ever rendered before the edit is finished:
  *

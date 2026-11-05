@@ -12,10 +12,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
@@ -31,7 +33,9 @@ private val VALUE_BOX_WIDTH = 64.dp
  * [valueText] is the text to show (the caller formats it, "55" or "55%"); [valueTag] is the test
  * tag of that text. [color] tints the slider's track and thumb (the theme's `primary` unless the
  * caller gives another). The other parameters go to the slider unchanged. The number box has a fixed
- * width, so the slider does not change length as the number gains or loses digits.
+ * width, so the slider does not change length as the number gains or loses digits. [trackBrush], when
+ * not null, paints the slider's track (see [ClassicSlider]). [touchHeight] is the slider's height,
+ * passed to [ClassicSlider]; the 20 dp default keeps the usual look.
  */
 @Composable
 fun SliderWithValue(
@@ -45,6 +49,8 @@ fun SliderWithValue(
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     enabled: Boolean = true,
     color: Color = MaterialTheme.colorScheme.primary,
+    trackBrush: Brush? = null,
+    touchHeight: Dp = 20.dp,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -59,6 +65,8 @@ fun SliderWithValue(
             enabled = enabled,
             modifier = sliderModifier.weight(1f),
             color = color,
+            trackBrush = trackBrush,
+            touchHeight = touchHeight,
         )
         Surface(
             shape = MaterialTheme.shapes.medium,

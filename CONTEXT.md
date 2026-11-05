@@ -9,18 +9,30 @@ tool opens its own tool screen (`ui/tool/ToolScreen.kt`, `ui/tool/ToolViewModel.
 `navigation/Tool.kt`. *Not* an `EditTool`, and not the camera (the camera makes a photo, so it has
 its own `Camera` key).
 
-**EditTool** - One of the eight groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
-`ADJUST`, `RGB`, `FILTERS`, `STICKERS`, `TEXT`, `DATE`. Text and Date are tools of their own with their own
+**EditTool** - One of the nine groups of controls inside the Edit tool's screen: `CROP`, `ROTATE`,
+`ADJUST`, `RGB`, `HSL`, `FILTERS`, `STICKERS`, `TEXT`, `DATE`. Text and Date are tools of their own with their own
 sheets, not sections of the Stickers sheet. Each is an entry in the row under the photo (`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`) and
 opens one sheet; only one sheet is open at a time (a layer sheet, Stickers, Text or Date, takes the
 row's place while open). Holds no strings or icons.
-`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all eight live inside `Tool.EDIT`.
+`data/edit/edit/EditTool.kt`. *Not* a `Tool`: all nine live inside `Tool.EDIT`.
 
 **RGB tool** - The Edit tool that turns each of the photo's three colour channels, red, green and
 blue, down (towards cyan, magenta or yellow) or up, across the whole picture: one chip per channel
 and one slider for the chosen one, from -100 (the channel gone) through 0 (no change) to +100 (the
 channel doubled). Used to fix a colour cast or tint a photo. *Not* Adjust's Warmth, which shifts
 red against blue together, and not a filter, which is a fixed look.
+
+**HSL tool** - The Edit tool (between RGB and Filters) that changes the hue, the saturation and the
+lightness of one **colour range** at a time: nine circles pick the range, three chips pick Hue,
+Saturation or Lightness, and one slider from -100 to +100 sets that one of its 27 values. Applied
+by `EditHsl` after the filter and before the colour matrix. *Not* Adjust's Saturation, which acts on
+every colour together.
+
+**Colour range** - One of the nine slices of the colour wheel the HSL tool edits separately: Red,
+Orange, Light green, Green, Light blue, Blue, Navy blue, Purple and Pink, centred 40 degrees apart
+(`data/edit/edit/ColourRange.kt`). A range has no hard edge: its weight falls smoothly from 1 at
+its centre to 0 at the next range's centre, so a pixel between two ranges feels both and nothing
+bands. Greys belong to no range and are never changed.
 
 **Layer** - One thing placed on the photo in Edit, which the person can select, move,
 pinch and turn. A layer has one of three kinds: a *picture* (a **Sticker**, added by the Stickers

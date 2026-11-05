@@ -27,6 +27,7 @@ import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.settings.sampleScreen
 import com.phongkaster.kanso.tool.FakePhotoLoader
 import com.phongkaster.kanso.tool.ToolFixtures
+import com.phongkaster.kanso.tool.edit.scrollToolRowTo
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.TOOL_IMAGE_TAG
 import com.phongkaster.kanso.ui.tool.ToolScreen
@@ -216,6 +217,7 @@ class StickerScreenshotTest {
 
     /** Taps the Stickers entry in the row of tools so its sheet opens. */
     private fun openStickers() {
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
     }
@@ -270,8 +272,14 @@ class StickerScreenshotTest {
             crop = EditSettings.CropRect(0.15f, 0.15f, 0.85f, 0.85f),
             filter = FilterPreset.SEVENTY_SEVEN,
         )
+        // The sticker alone already made a small copy (layers only), so "a copy exists" would be
+        // true at once: wait for a NEW copy, the one that also holds the 1977 filter.
+        val layersOnlyCopy = viewModel.state.value.filterPreview
         viewModel.changeSettings(settings, processorFor)
-        waitUntil("the filtered copy") { viewModel.state.value.filterPreview != null }
+        waitUntil("the filtered copy") {
+            val copy = viewModel.state.value.filterPreview
+            copy != null && copy !== layersOnlyCopy
+        }
         waitUntilStill()
     }
 
@@ -293,8 +301,8 @@ class StickerScreenshotTest {
      * thread's queue and the composition between checks (where background results land). Fails
      * naming [what] when time runs out. No fixed sleep stands in for the render.
      */
-    private fun waitUntil(what: String, condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + WAIT_TIMEOUT_MS
+    private fun waitUntil(what: String, timeoutMs: Long = WAIT_TIMEOUT_MS, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
         while (true) {
             shadowOf(Looper.getMainLooper()).idle()
             compose.waitForIdle()
@@ -311,12 +319,15 @@ class StickerScreenshotTest {
      */
     private fun waitUntilStill() {
         val bounds = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot
-        val points = listOf(0.3f, 0.5f, 0.7f).flatMap { fx ->
-            listOf(0.3f, 0.5f, 0.7f).map { fy -> bounds.left + bounds.width * fx to bounds.top + bounds.height * fy }
+        // Three points, not nine: every read draws the whole screen into a bitmap, which is slow
+        // once the filtered copy is on it, and a long loop (not a changing picture) was what ran
+        // the wait out. The long limit is only a ceiling; the wait ends after STILL_READS equal reads.
+        val points = listOf(0.3f to 0.3f, 0.5f to 0.5f, 0.7f to 0.7f).map { (fx, fy) ->
+            bounds.left + bounds.width * fx to bounds.top + bounds.height * fy
         }
         var last: List<Color>? = null
         var same = 0
-        waitUntil("the picture to stop changing") {
+        waitUntil("the picture to stop changing", STILL_TIMEOUT_MS) {
             val now = points.map { (x, y) -> pixelAt(x, y) }
             same = if (last != null && now.indices.all { distance(now[it], last!![it]) <= 1f }) same + 1 else 0
             last = now
@@ -388,6 +399,9 @@ class StickerScreenshotTest {
 
         /** The longest a wait takes, in real milliseconds, before the test fails. */
         const val WAIT_TIMEOUT_MS = 10_000L
+
+        /** The ceiling for waiting on a settled picture, in real milliseconds. */
+        const val STILL_TIMEOUT_MS = 40_000L
 
         /** Real milliseconds between two checks of a wait. */
         const val POLL_MS = 50L

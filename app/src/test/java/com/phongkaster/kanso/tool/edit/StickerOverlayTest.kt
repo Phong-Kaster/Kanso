@@ -92,6 +92,8 @@ class StickerOverlayTest {
     fun compare_hides_the_sticker_and_its_frame_and_disables_the_grid() {
         val viewModel = showEdit()
         // The Stickers sheet makes the photo shorter, so the photo is measured once it is open.
+        // Nine entries no longer fit a phone-sized window: bring Stickers into view first.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         val centre = compose.onNodeWithTag(TOOL_IMAGE_TAG).fetchSemanticsNode().boundsInRoot.center

@@ -43,15 +43,15 @@ class FilterPreviewRenderer(
 ) {
 
     /**
-     * Returns [source] with the layers of [settings] drawn on it and then the filter of
-     * [settings] at its intensity applied, as a new bitmap the same size as [source], or null when
-     * [settings] has neither a filter nor a sticker to draw (the preview then shows [source]
-     * itself) or when the work failed (a look-up image that cannot be read, or no memory left).
+     * Returns [source] with the layers of [settings] drawn on it, then the filter of
+     * [settings] at its intensity applied, then its HSL values, as a new bitmap the same size as
+     * [source], or null when [settings] has no filter, no HSL change and no sticker to draw (the
+     * preview then shows [source] itself) or when the work failed (a look-up image that cannot be read, or no memory left).
      *
      * The sticker whose key is [touchedLayerKey] (the one under a finger) is not drawn: the
      * screen draws it live, so it joins this picture only when the finger lifts.
      *
-     * Everything else in [settings] (crop, turns, flips, colour sliders) is deliberately left out:
+     * Everything else in [settings] (crop, turns, flips, colour sliders, RGB) is deliberately left out:
      * Compose draws those on top, so they must not be applied twice.
      *
      * The work runs on a background thread. A cancelled call (a newer setting replaced it) stops
@@ -61,15 +61,18 @@ class FilterPreviewRenderer(
         // The sticker under a finger is left out: the screen draws it live on top instead.
         val layers = settings.layers.filter { it.key != touchedLayerKey }
         // Nothing to bake in: no filter and no sticker, so the preview shows [source] itself.
-        if (!settings.hasFilter && layers.isEmpty()) return null
-        // Only the filter, its strength and the layers: every other setting stays at its
-        // neutral default. The processor draws layers BEFORE the filter (as Done does), so a
+        if (!settings.hasFilter && !settings.hasHslChange && layers.isEmpty()) return null
+        // Only the filter, its strength, the HSL values and the layers: every other setting stays
+        // at its neutral default. The processor draws layers BEFORE the filter (as Done does), so a
         // sticker under a filter comes out filtered, and the whole photo is kept (no crop), so
-        // the layers keep their place as fractions of the original.
+        // the layers keep their place as fractions of the original. HSL runs after the filter
+        // inside the processor, so the copy holds filter then HSL, and Compose puts the colour
+        // matrix on top: the same order as Done.
         val filterOnly = EditSettings(
             filter = settings.filter,
             filterIntensity = settings.filterIntensity,
             layers = layers,
+            hsl = settings.hsl,
         )
         return withContext(Dispatchers.Default) {
             try {

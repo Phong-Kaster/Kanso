@@ -24,18 +24,22 @@ import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.ToolProcessor
 import com.phongkaster.kanso.data.edit.edit.AppLayerPictures
 import com.phongkaster.kanso.data.edit.edit.CatalogSticker
+import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.EditProcessor
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.FilterLut
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
+import com.phongkaster.kanso.data.edit.edit.HslAdjustments
+import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.data.edit.edit.Layer
 import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.component.EditCropper
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HslPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
 import com.phongkaster.kanso.ui.tool.model.RgbChannel
@@ -129,6 +133,10 @@ fun EditPanel(
     onStickersCancel: () -> Unit = {},
     onStickersConfirm: () -> Unit = {},
     selectedLayerKey: Long? = null,
+    hslRange: ColourRange = ColourRange.RED,
+    hslChannel: HslChannel = HslChannel.HUE,
+    onHslRange: (ColourRange) -> Unit = {},
+    onHslChannel: (HslChannel) -> Unit = {},
 ) {
     val context = LocalContext.current
     // One function, remembered, that turns any settings into the processor drawing them. The app's
@@ -162,6 +170,10 @@ fun EditPanel(
         onStickersCancel = onStickersCancel,
         onStickersConfirm = onStickersConfirm,
         selectedLayerKey = selectedLayerKey,
+        hslRange = hslRange,
+        hslChannel = hslChannel,
+        onHslRange = onHslRange,
+        onHslChannel = onHslChannel,
     )
 }
 
@@ -215,10 +227,19 @@ fun EditPanelContent(
     onStickersCancel: () -> Unit = {},
     onStickersConfirm: () -> Unit = {},
     selectedLayerKey: Long? = null,
+    hslRange: ColourRange = ColourRange.RED,
+    hslChannel: HslChannel = HslChannel.HUE,
+    onHslRange: (ColourRange) -> Unit = {},
+    onHslChannel: (HslChannel) -> Unit = {},
 ) {
     // The other tools scroll when too tall for the sheet. Stickers does not: its grid is a lazy
     // list that scrolls itself, and a lazy list inside a scrolling column has no height to fill.
-    val scrolling = if (openTool == EditTool.STICKERS) Modifier else Modifier.verticalScroll(rememberScrollState())
+    // HSL does not either: its three 32 dp rows and two 4 dp gaps are exactly the 104 dp the
+    // sheet leaves, so nothing needs to scroll.
+    val scrolling = when (openTool) {
+        EditTool.STICKERS, EditTool.HSL -> Modifier
+        else -> Modifier.verticalScroll(rememberScrollState())
+    }
     Column(
         modifier = modifier
             .testTag(EDIT_PANEL_TAG)
@@ -289,6 +310,18 @@ fun EditPanelContent(
                     tint = rgbChannel.tintOn(MaterialTheme.colorScheme.surface),
                 )
             }
+            EditTool.HSL -> HslPanel(
+                settings = settings,
+                range = hslRange,
+                channel = hslChannel,
+                onRangeChosen = onHslRange,
+                onChannelChosen = onHslChannel,
+                // The same preview and commit as the RGB slider: the photo follows the finger, and
+                // letting go makes the whole drag one Undo step.
+                onValueChange = { onPreview(settings.copy(hsl = settings.hsl.with(hslRange, hslChannel, it))) },
+                onValueChangeFinished = onCommit,
+                enabled = enabled,
+            )
             // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text
             // calls; it never reaches this panel.
             EditTool.TEXT -> Unit
@@ -370,6 +403,8 @@ private fun SampleEditPanel(
     enabled: Boolean = true,
     adjustSlider: AdjustSlider = AdjustSlider.BRIGHTNESS,
     rgbChannel: RgbChannel = RgbChannel.RED,
+    hslRange: ColourRange = ColourRange.RED,
+    hslChannel: HslChannel = HslChannel.HUE,
 ) {
     KansoTheme(themeMode = ThemeMode.System) {
         Box(Modifier.fillMaxSize()) {
@@ -385,6 +420,8 @@ private fun SampleEditPanel(
                     modifier = Modifier.padding(16.dp),
                     adjustSlider = adjustSlider,
                     rgbChannel = rgbChannel,
+                    hslRange = hslRange,
+                    hslChannel = hslChannel,
                 )
             }
         }
@@ -423,6 +460,21 @@ private fun EditPanelWarmthPreview() {
 @Composable
 private fun EditPanelRgbPreview() {
     SampleEditPanel(openTool = EditTool.RGB, settings = EditSettings(red = 0.3f, blue = -0.4f))
+}
+
+/**
+ * The HSL sheet as it looks mid-edit, in light and in dark: Light green and Saturation chosen, and
+ * the one slider at 40.
+ */
+@PreviewLightDark
+@Composable
+private fun EditPanelHslPreview() {
+    SampleEditPanel(
+        openTool = EditTool.HSL,
+        settings = EditSettings(hsl = HslAdjustments.NEUTRAL.with(ColourRange.LIGHT_GREEN, HslChannel.SATURATION, 0.4f)),
+        hslRange = ColourRange.LIGHT_GREEN,
+        hslChannel = HslChannel.SATURATION,
+    )
 }
 
 /**

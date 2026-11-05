@@ -331,11 +331,11 @@ class StickerAddTest {
         assertEquals(EditSettings(), viewModel.state.value.settings)
     }
 
-    /** The sheet's nodes are gone and each of the eight tool entries is in the row. */
+    /** The sheet's nodes are gone and each of the nine tool entries is in the row. */
     private fun assertSheetClosedAndFiveToolsShown() {
         compose.onAllNodesWithTag(STICKERS_PANEL_TAG).assertCountEquals(0)
         compose.onAllNodesWithTag(EDIT_SHEET_TAG).assertCountEquals(0)
-        assertEquals(8, EditTool.entries.size)
+        assertEquals(9, EditTool.entries.size)
         // The row is lazy: an entry past its right edge exists once the row scrolls to it.
         EditTool.entries.forEach {
             compose.scrollToolRowTo(it)
@@ -345,6 +345,8 @@ class StickerAddTest {
 
     /** Taps the Stickers entry and waits until the sheet is open. */
     private fun openStickers(viewModel: ToolViewModel) {
+        // Nine entries no longer fit a phone-sized window: bring Stickers into view first.
+        compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).performClick()
         compose.waitForIdle()
         assertEquals(EditTool.STICKERS, viewModel.state.value.openTool)

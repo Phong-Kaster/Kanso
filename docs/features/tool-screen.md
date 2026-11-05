@@ -28,11 +28,11 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of five tools is its
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of nine tools (Crop, Rotate, Adjust, RGB, HSL, Filters, Stickers, Text, Date) is its
 `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
 photo never changes size, the photo has no Replace chip, Undo and Redo stay in the top bar beside Done, and
-a Compare switch is pinned at the right of the row. The fifth tool, **Stickers**, opens
-a sheet that replaces the row (the five entries and Compare are hidden while it is open); its cross, or the
+a Compare switch is pinned at the right of the row. **Stickers** (like Text and Date) opens
+a sheet that replaces the row (the entries and Compare are hidden while it is open); its cross, or the
 system Back, restores the settings and Undo steps from when it opened, and its tick keeps them. The
 "20 stickers at most" message is drawn on the photo's top edge by `ToolContent`
 (`StickerLimitMessage`) and hides itself after about 2.5 seconds. `ToolContent` also passes the sticker overlay's events (select,
@@ -57,6 +57,26 @@ flowchart TD
     KEEP --> DONE["Done: EditProcessor draws the stickers first"]
     ADD --> DONE
     COM --> DONE
+```
+
+The **HSL** tool (the ninth Edit tool, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md))
+uses the same sheet area as Adjust and RGB: the sheet is `HslPanel` (nine colour circles, three
+chips, one slider, exactly the 104 dp the 136 dp area leaves). The screen's part is small:
+`ToolUiState.hslRange` and `hslChannel` say which circle and chip are chosen
+(`ToolViewModel.chooseHslRange`, `chooseHslChannel`; choosing makes no Undo step), and the slider
+sends its 27-value setting through the same `previewSettings` while it moves and `commitSettings`
+when let go. Every HSL change then asks for a new preview render, because HSL is a per-pixel step,
+not part of the GPU colour matrix. The flow:
+
+```mermaid
+flowchart TD
+    HP["HslPanel: circle, chip, slider"] -->|"chooseHslRange / chooseHslChannel"| CH["ToolUiState.hslRange, hslChannel: no setting changes, no Undo entry"]
+    HP -->|"slider moves"| PRE2["previewSettings: EditSettings.hsl follows the finger"]
+    PRE2 --> RQ["requestPreview: conflated Channel"]
+    RQ --> FR["FilterPreviewRenderer on the 640 px copy: filter, then EditHsl.apply"]
+    FR --> LP["LivePreviewImage draws it, with the Adjust and RGB colour matrix on top"]
+    HP -->|"slider let go"| COM2["commitSettings: one Undo entry"]
+    COM2 --> DONE2["Done: EditProcessor runs filter, EditHsl.apply, colour matrix"]
 ```
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
