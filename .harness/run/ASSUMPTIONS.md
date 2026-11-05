@@ -14,8 +14,8 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1 (bootstrap), commit 77f828b
-- **First dependent checkpoint:** Phase 3's commit (T-003) — filled in after it lands
-- **Revert:** `git revert <sha>` of Phase 3
+- **First dependent checkpoint:** 8eac669 (Phase 3, T-003)
+- **Revert:** `git revert 8eac669` (Phase 3; later commits build on it, so revert e87271f..8eac669 newest first)
 - **Assumed DoD criteria:** -
 
 ### Question
@@ -43,8 +43,8 @@ the 48 dp touch rule. The nine circles scroll sideways on a screen narrower than
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1 (bootstrap), commit 77f828b
-- **First dependent checkpoint:** Phase 2's commit (T-002)
-- **Revert:** `git revert <sha>` of each Phase
+- **First dependent checkpoint:** cb1107b (Phase 2, T-002)
+- **Revert:** `git revert --no-commit e87271f 06ca3d8 4a868b5 13cc612 8eac669 cb1107b acee217` (each Phase touches README.md)
 - **Assumed DoD criteria:** -
 
 ### Question
@@ -68,8 +68,8 @@ render step (HSL row "not wired"), Phase 3 the working tool, Phase 4 the ADR lin
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1 (bootstrap), commit 77f828b
-- **First dependent checkpoint:** Phase 1's commit (T-001)
-- **Revert:** `git revert <sha>` of Phase 1 and every later Phase
+- **First dependent checkpoint:** acee217 (Phase 1, T-001)
+- **Revert:** `git revert --no-commit e87271f 06ca3d8 4a868b5 13cc612 8eac669 cb1107b acee217` (Phase 1 and every later Phase)
 - **Assumed DoD criteria:** -
 
 ### Question
@@ -93,8 +93,8 @@ Option 2. Stored from -1 to 1 like RGB's values; the slider shows -100..+100.
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 1 (bootstrap), commit 77f828b
-- **First dependent checkpoint:** Phase 1's commit (T-001)
-- **Revert:** `git revert <sha>` of Phase 1 and every later Phase
+- **First dependent checkpoint:** acee217 (Phase 1, T-001)
+- **Revert:** `git revert --no-commit e87271f 06ca3d8 4a868b5 13cc612 8eac669 cb1107b acee217` (Phase 1 and every later Phase)
 - **Assumed DoD criteria:** -
 
 ### Question
@@ -122,4 +122,4 @@ pure black or white. ADR-008 records it.
 **Question:** DoD 21 wants every circle, chip and the slider to be at least 48 dp to touch, but circles are 40 dp apart and the sheet's rows 36 dp apart, so 48 dp touch areas overlap their neighbours (review B3).
 **Options:** (1) keep 32 dp cells with 48 dp touch boxes that overlap by 8 dp / 4 dp; (2) 48 dp pitch, which does not fit the 136 dp sheet (A-001) or 411 dp width.
 **Taken:** option 1, the same pattern as the existing `ColourCircle`; each control's own touch box measures >= 48 dp (tested). The owner should judge feel on a phone (DoD 24).
-**Depends on:** Iteration 5 (phase-3 checkpoint).
+**Depends on:** 8eac669 (phase-3 checkpoint). Revert: `git revert 8eac669` (with every later commit, newest first).

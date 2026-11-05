@@ -6,11 +6,11 @@
 ## Current
 
 - **Run:** 11 — HSL on the Edit screen. Run Mode: Autonomous. Base commit `8b2b0f2`.
-- **Stage:** build — Phase 6 (T-006) complete; criteria 23-26 need a person
+- **Stage:** verified — DONE_PARTIAL (Verifier, Iteration 9, 2026-11-05): every machine criterion re-proved; criteria 23-26 await a person
 - **Loop Branch:** loop/kanso-hsl
 - **Next Phase:** none executable
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes - criteria 23-26 await a person's signature (cleared earlier by the Verifier, Iteration 7: the 4 Sticker pictures are on the owner's Baselines list; T-006 filed)
+- **PARTIAL-candidate:** yes - reported DONE_PARTIAL at Iteration 9; criteria 23-26 await a person's signature (23 pre-checked: all 25 pairs differ only in the tool row; 24 not driven: A13 locked, no emulator)
 
 ## Progress
 

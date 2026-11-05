@@ -2,8 +2,8 @@
 
 > Derived cache, never a source of truth. On disagreement with task files or git, this is wrong.
 
-- **Stage:** build - all tasks complete (T-001..T-006); full tests, lint, verifyRoborazziDebug green. PARTIAL-candidate set; next invocation is the Verifier (re-prove machine criteria, drive machine-then-human, report DONE_PARTIAL).
-- **Next Phase:** none (Verifier next)
+- **Stage:** verified - DONE_PARTIAL reported by the Verifier, Iteration 9 (2026-11-05). Build, 1212 tests (0 skipped/failed), lint, verifyRoborazziDebug all exit 0 (`evidence/v8-*.log`). Only criteria 23-26 remain, all needing a person (`.harness/ISSUES.md`, "Awaiting a person, Run 11"). A later invocation acts only on a human answer in DECISIONS.md.
+- **Next Phase:** none
 - **DoD cited by T-006:**
   - 23. [machine-then-human] Pictures that changed only because the row gained a tool really differ only in the row.
   - 28. [machine] The other eight tools render exactly as before and every test that existed before this run still passes.
