@@ -1,5 +1,12 @@
 # ISSUES
 
+## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: ESCALATE, Iteration 1 (bootstrap)
+
+- Queued decision **D-001** (blocks T-001): approve the DoD, the four layout choices a-d in its "How the
+  row will look" block, the icon, the `## Baselines` re-record list, and the Gradle build/test/lint grant.
+- `.harness/archive/` is still unwritable (PROJECT.md Constraint, Suggestion S-013), so earlier runs'
+  sections below stay in this file.
+
 ## Run 12 (Curves on the Edit screen), loop/kanso-curves: DONE_PARTIAL, Iteration 7 (Verifier)
 
 Every `machine` criterion (1-14, 18-21, 23) was re-proved at `9227792` plus re-recorded pictures 99/100. Evidence is in
