@@ -96,7 +96,7 @@ yet.
 | Edit: Crop | Works | `core/imagecrop`'s cropper on the original photo: handles, drag, pinch; Free or a locked shape. One finished gesture is one Undo step. |
 | Edit: Rotate and flip | Works | Quarter turns left and right, flip across, flip upside down. |
 | Edit: Adjust | Works | Brightness, contrast, saturation and warmth: four tiles over one slider for the chosen tile. Drawn live on the GPU as a colour matrix. |
-| Edit: RGB | Works | Red, Green and Blue: three tiles over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
+| Edit: RGB | Works | Red, Green and Blue: three colour circles with no text, drawn and coloured like HSL's Red, Green and Blue circles, over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A, 2026-11-03 (works as expected, x2 kept); not yet on the Galaxy A13. |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Not yet tried on a phone; its cost on the Galaxy A13 is not measured. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
@@ -204,8 +204,10 @@ or `app/src/main/res/`.
 8. **RGB, end to end** (plan `docs/plans/rgb-tool.md`, owner's decisions of 2026-11-03).
    - *Screen and ViewModel.* RGB is the fourth entry of the row (`EditTool.RGB`, icon
      `ic_palette`, name "RGB"), between Adjust and Filters. Its sheet (`EditPanel.kt`'s
-     `EditTool.RGB` branch) shows `editpanel/RgbChips.kt`, three tiles Red, Green and Blue each
-     with a dot in its channel's colour (`ui/tool/model/RgbChannel.kt`), over ONE
+     `EditTool.RGB` branch) shows `editpanel/RgbChips.kt`, three colour circles with no text,
+     Red, Green and Blue: HSL's own `ColourRangeCircle` for the colour range of the same name
+     (`RgbChannel.range`, `ui/tool/model/RgbChannel.kt`), so the three colours, the ring and the
+     check mark match the HSL sheet, and a screen reader hears each circle's name; over ONE
      `LabelledSlider` for the chosen channel. Its track and thumb are tinted in that channel's
      colour, a deep shade on a light theme and a pale one on a dark theme
      (`RgbChannel.tintOn`, at least 3:1 against the sheet). The chosen channel is

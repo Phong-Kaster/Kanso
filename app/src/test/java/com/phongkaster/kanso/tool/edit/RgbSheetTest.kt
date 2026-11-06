@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
@@ -81,7 +82,7 @@ class RgbSheetTest {
     /** How many times `onCommit` was called. */
     private var commits = 0
 
-    /** The three channels, with the slider tag and the name shown on the chip and beside the slider. */
+    /** The three channels, with the slider tag and the name beside the slider and on the circle's description. */
     private val channels = listOf(
         Triple(RgbChannel.RED, EDIT_RED_TAG, "Red"),
         Triple(RgbChannel.GREEN, EDIT_GREEN_TAG, "Green"),
@@ -89,9 +90,10 @@ class RgbSheetTest {
     )
 
     /**
-     * The sheet holds three named chips and exactly one slider. Tapping a chip selects it and shows
-     * that channel's slider in place of the others, with its name beside it (so the name is shown
-     * twice: on the chip and by the slider). Choosing a chip never changes the settings.
+     * The sheet holds three colour circles with no text and exactly one slider. Tapping a circle
+     * selects it and shows that channel's slider in place of the others, with its name beside it:
+     * the name is shown once, by the slider, and the circle carries it only as its description for
+     * screen readers. Choosing a circle never changes the settings.
      */
     @Test
     fun rgb_has_three_chips_and_one_slider_for_the_chosen_one() {
@@ -108,7 +110,8 @@ class RgbSheetTest {
                 channels.filter(predicate = { it.second != tag }).forEach(
                     action = { other -> compose.onNodeWithTag(other.second).assertDoesNotExist() },
                 )
-                compose.onAllNodesWithText(name).assertCountEquals(2)
+                compose.onAllNodesWithText(name).assertCountEquals(1)
+                compose.onNodeWithTag(editRgbChipTag(chosen)).assertContentDescriptionEquals(name)
             },
         )
         compose.onAllNodesWithText("Opacity").assertCountEquals(0)
