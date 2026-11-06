@@ -94,7 +94,7 @@ class TextSheetTest {
     /**
      * Bug found on the Galaxy A13: with the keyboard asked for but not on screen, the sheet filled
      * the whole screen and hid its rows. Now the tabs stay until a keyboard really shows, the sheet
-     * is never taller than the row and panel area it replaces (208 dp here), the photo stays in sight
+     * is never taller than the row and panel area it replaces (292 dp here: the 220 dp panel area and the 72 dp row), the photo stays in sight
      * above it, and typing still puts the words on the photo. (Robolectric shows no keyboard, which
      * is exactly that case.)
      */
@@ -107,8 +107,8 @@ class TextSheetTest {
         TextTab.entries.forEach { compose.onNodeWithTag(layerTabTag(it)).assertExists() }
         val sheet = compose.onNodeWithTag(EDIT_SHEET_TAG).fetchSemanticsNode().boundsInRoot
         val photo = compose.onNodeWithTag(TOOL_CARD_TAG).fetchSemanticsNode().boundsInRoot
-        val maxSheet = with(compose.density) { 208.dp.toPx() }
-        assertTrue("the sheet is ${sheet.height} px tall, more than 208 dp", sheet.height <= maxSheet + 1f)
+        val maxSheet = with(compose.density) { 292.dp.toPx() }
+        assertTrue("the sheet is ${sheet.height} px tall, more than 292 dp", sheet.height <= maxSheet + 1f)
         assertTrue("the photo is hidden (${photo.height} px)", photo.height > maxSheet)
 
         compose.onNodeWithTag(TEXT_FIELD_TAG).performTextInput("Xin chào")

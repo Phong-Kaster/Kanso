@@ -148,8 +148,10 @@ or `app/src/main/res/`.
    `StateFlow<ToolUiState>` (`ui/tool/ToolUiState.kt`). The Edit layout is a `Scaffold` whose
    `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
-   so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 136 dp sheet area
-   (`editbottombar/EditSheet.kt`) for Crop, Rotate, Adjust, RGB, HSL and Filters, which never changes height.
+   so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 220 dp sheet area
+   (`editbottombar/EditSheet.kt`, `EDIT_SHEET_HEIGHT`) for Crop, Rotate, Adjust, RGB, HSL and Filters, which never changes height.
+   It was 136 dp until 2026-11-06, when the owner found the photo took too much of the screen and the
+   tools too little; on a Galaxy A13 the photo went from about 523 dp to 434 dp tall.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
    bottom bar. The sheet is a plain `Surface`, not a `ModalBottomSheet`, so the row stays usable.
    A **layer sheet** (Stickers, Text or Date) takes the row's place instead, in exactly the height of
@@ -230,8 +232,8 @@ or `app/src/main/res/`.
 9. **HSL, end to end** (the row's fifth entry, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
    between RGB and Filters).
    - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.HSL` branch) is
-     `editpanel/hslpanel/HslPanel.kt`: three rows of 32 dp with 4 dp gaps, exactly the 104 dp the
-     136 dp sheet leaves, so nothing scrolls. Row 1 is nine circles
+     `editpanel/hslpanel/HslPanel.kt`: three rows of 32 dp with 20 dp gaps (136 dp), well inside the
+     188 dp the 220 dp sheet leaves, so nothing scrolls. Row 1 is nine circles
      (`hslpanel/colourrangerow/ColourRangeRow.kt` and `ColourRangeCircle.kt`) filled with their
      colours, in order 40 degrees apart: Red 0, Orange 40, Light green 80, Green 120, Light blue
      160, Blue 200, Navy blue 240, Purple 280, Pink 320 (`data/edit/edit/ColourRange.kt`); the chosen

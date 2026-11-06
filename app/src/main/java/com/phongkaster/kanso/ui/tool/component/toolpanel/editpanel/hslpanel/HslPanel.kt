@@ -3,13 +3,11 @@ package com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.EditSettings
@@ -19,10 +17,11 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.colourrangerow.ColourRangeRow
 
 /**
- * The HSL sheet: three rows of 32 dp with 4 dp between them (104 dp, exactly the room the 136 dp
- * edit sheet leaves for its content), so the whole sheet needs no scrolling. The circles and the
- * slider are 48 dp to touch: their touch areas overflow their 32 dp rows (see [ColourRangeRow] and
- * [HslSlider]) without changing the layout.
+ * The HSL sheet: three rows of 32 dp with 20 dp between them (136 dp, well inside the 188 dp the
+ * 220 dp edit sheet leaves for its content), so the whole sheet needs no scrolling. The circles
+ * and the slider are 48 dp to touch: their touch areas overflow their 32 dp rows by 8 dp (see
+ * [ColourRangeRow] and [HslSlider]) without changing the layout, and the 20 dp gaps keep those
+ * touch areas off the chips' row.
  *
  * 1. the nine colour-range circles ([ColourRangeRow]), the [range] chosen marked;
  * 2. three chips, Hue, Saturation and Lightness ([HslChips]), the [channel] chosen marked;
@@ -52,13 +51,11 @@ internal fun HslPanel(
     enabled: Boolean = true,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().height(104.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         ColourRangeRow(chosen = range, onChosen = onRangeChosen, enabled = enabled)
-        // The circles' and the slider's 48 dp touch areas overflow their 32 dp rows into the
-        // chips' row by 4 dp. Raising the chips makes a touch on a chip reach the chip first.
-        HslChips(selected = channel, onSelected = onChannelChosen, enabled = enabled, modifier = Modifier.zIndex(1f))
+        HslChips(selected = channel, onSelected = onChannelChosen, enabled = enabled)
         HslSlider(
             range = range,
             channel = channel,

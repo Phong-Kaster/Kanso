@@ -61,7 +61,7 @@ flowchart TD
 
 The **HSL** tool (the ninth Edit tool, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md))
 uses the same sheet area as Adjust and RGB: the sheet is `HslPanel` (nine colour circles, three
-chips, one slider, exactly the 104 dp the 136 dp area leaves). The screen's part is small:
+chips, one slider, 136 dp with 20 dp gaps, well inside the 188 dp the 220 dp area leaves). The screen's part is small:
 `ToolUiState.hslRange` and `hslChannel` say which circle and chip are chosen
 (`ToolViewModel.chooseHslRange`, `chooseHslChannel`; choosing makes no Undo step), and the slider
 sends its 27-value setting through the same `previewSettings` while it moves and `commitSettings`

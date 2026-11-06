@@ -186,7 +186,7 @@ flowchart TD
    and opens the group's first tool. The rows slide sideways with `AnimatedContent`. A new face
    tool joins the group by naming it in `BeautifyTool`. Every entry is the Edit screen's own
    `EditToolEntry`; Face's and Body's icons (`ic_face_group.xml`, `ic_body_group.xml`) are drawn for Kanso. Above the row, in Edit's own panel area
-   (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
+   (`EditSheet`, generic over the kind of tool, cross-fading; 136 dp tall here, `BEAUTIFY_SHEET_HEIGHT`, while Edit's is 220 dp), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
    right end (the face and body tools -100..100, smoothing
    0..100). The open group, the open tool and every value are kept with `rememberSaveable` (they survive a

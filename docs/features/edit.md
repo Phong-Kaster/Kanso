@@ -167,7 +167,7 @@ flowchart TD
    or the cropper, filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
    [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
-   height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
+   height (220 dp, `EDIT_SHEET_HEIGHT`; 136 dp until 2026-11-06), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
    [`ui/tool/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/AdjustSlider.kt);
    the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`; RGB
