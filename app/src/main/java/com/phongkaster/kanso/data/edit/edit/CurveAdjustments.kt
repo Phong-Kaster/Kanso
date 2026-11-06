@@ -1,8 +1,9 @@
 package com.phongkaster.kanso.data.edit.edit
 
 /**
- * The Curves tool's four curves: the master [rgb] curve and one each for [red], [green] and [blue].
- * Each starts as the straight diagonal ([ToneCurve.NEUTRAL]), which changes nothing.
+ * The Curves tool's five curves: the master [rgb] curve, one each for [red], [green] and [blue], and
+ * a [lightness] curve. Each starts as the straight diagonal ([ToneCurve.NEUTRAL]), which changes
+ * nothing.
  *
  * The value is immutable: [with] makes a new one, which is what [EditSettings] wants for state.
  */
@@ -15,6 +16,8 @@ data class CurveAdjustments(
     val green: ToneCurve = ToneCurve.NEUTRAL,
     /** The blue channel's own curve. */
     val blue: ToneCurve = ToneCurve.NEUTRAL,
+    /** The lightness (L of HSL) curve, applied after the four colour curves. */
+    val lightness: ToneCurve = ToneCurve.NEUTRAL,
 ) {
 
     /** The curve stored for [channel]. */
@@ -23,23 +26,25 @@ data class CurveAdjustments(
         CurveChannel.RED -> red
         CurveChannel.GREEN -> green
         CurveChannel.BLUE -> blue
+        CurveChannel.LIGHTNESS -> lightness
     }
 
-    /** A copy with [channel]'s curve replaced by [curve]; the other three are kept. */
+    /** A copy with [channel]'s curve replaced by [curve]; the other four are kept. */
     fun with(channel: CurveChannel, curve: ToneCurve): CurveAdjustments = when (channel) {
         CurveChannel.RGB -> copy(rgb = curve)
         CurveChannel.RED -> copy(red = curve)
         CurveChannel.GREEN -> copy(green = curve)
         CurveChannel.BLUE -> copy(blue = curve)
+        CurveChannel.LIGHTNESS -> copy(lightness = curve)
     }
 
-    /** True when all four curves are the straight diagonal, so the tool changes nothing. */
+    /** True when all five curves are the straight diagonal, so the tool changes nothing. */
     val isNeutral: Boolean
-        get() = rgb.isNeutral && red.isNeutral && green.isNeutral && blue.isNeutral
+        get() = rgb.isNeutral && red.isNeutral && green.isNeutral && blue.isNeutral && lightness.isNeutral
 
     /** The shared neutral value. */
     companion object {
-        /** All four curves straight: nothing changed. */
+        /** All five curves straight: nothing changed. */
         val NEUTRAL = CurveAdjustments()
     }
 }

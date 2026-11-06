@@ -3,7 +3,7 @@
 > A derived cache; on any disagreement with task files or git, this file is wrong.
 
 - **Stage:** build (Run Mode Autonomous)
-- **Next Phase:** Phase 4 - T-004 (Lightness chip + L curve), scope in `TASKS/T-004.md`. CurveChips.kt and CurveGraph.kt exist (FilterChip chips, `curveChipTag`, `curveChannelLabelRes`, `curveLineColor` in CurvesPanel.kt). README Curves row says Lightness is not there: update when it lands. Picture 97/98 S-curve taps need a check.
+- **Next Phase:** none. All tasks done; PARTIAL-candidate set (pictures 97/98 not on the Baselines list, red). Next invocation is the Verifier (§11, §14.4).
 - **Queued decisions:** none (D-003 answered)
 - **Abandoned / unreachable:** none
 - **Verified commands:** `cd /d/Valve/Personal/Kanso && timeout 3000 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --continue` | pictures: `./gradlew :app:verifyRoborazziDebug` (green) | new baselines: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app`

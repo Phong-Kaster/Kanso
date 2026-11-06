@@ -7,6 +7,12 @@
 - Assumptions: none. Nothing awaits a signature yet (criteria 15-17, 22 are for the Verifier and a person).
 
 
+## Run 12, Iteration 4 (T-004 Lightness)
+
+- Lightness chip, L curve, tests and pictures 99/100 done; assemble, unit tests, lint green (`evidence/p4-build.log`).
+- [ ] Run 12 Pictures 97 and 98 (`edit_curves_red_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`evidence/p4-verify.log`): the fifth chip, Lightness, changed the chip row. They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/97_..._compare.png`, and if the chip row is the only change, add both paths to `## Baselines`.
+- Review notes still open (Phase 2): long-press on a resting finger removes a middle point instead of dragging (owner call).
+
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 
 - **Settled by the owner, 2026-11-06:** criteria 23-26 checked on the Galaxy A13 and the vivo V2408A; HSL works as expected. The owner also signed off every earlier run's "Awaiting a person" item (Runs 7 and 8: Home, Gallery, Camera, My edits, Save/Share, Settings, the tool screens, Remove background, Enhance, Beautify, Artistic) and RGB on the Galaxy A13; the feature docs now say so. HSL's time per frame on the A13 is still not measured.

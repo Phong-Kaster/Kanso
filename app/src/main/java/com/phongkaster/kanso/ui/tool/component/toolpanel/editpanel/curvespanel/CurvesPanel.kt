@@ -31,7 +31,7 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
  * (about 132 dp). The graph is where a person bends the master (RGB) curve: it starts as a
  * straight diagonal and a drag on it moves a point.
  *
- * The top row holds four chips ([CurveChips]) choosing which curve is edited: [curveChannel], with
+ * The top row holds the channel chips ([CurveChips]) choosing which curve is edited: [curveChannel], with
  * [onCurveChannel] called on a chip tap (which changes nothing in the photo). The graph reports a
  * change as a new [ToneCurve]; this panel puts it into a copy of [settings] with
  * `curves.with(channel, ...)`, so the caller only deals with whole [EditSettings] values, like every
@@ -108,7 +108,7 @@ internal fun CurvesPanel(
 }
 
 /**
- * Returns the colour of [channel]'s curve line: the theme's text colour for the master curve, and a
+ * Returns the colour of [channel]'s curve line: the theme's text colour for the master (RGB) and Lightness curves, and a
  * clearly red, green or blue tone for the others. The tone is darker on a light sheet and lighter
  * on a dark one, so it stays visible against either background.
  */
@@ -116,7 +116,7 @@ internal fun CurvesPanel(
 internal fun curveLineColor(channel: CurveChannel): Color {
     val scheme = MaterialTheme.colorScheme
     val hue = when (channel) {
-        CurveChannel.RGB -> return scheme.onSurface
+        CurveChannel.RGB, CurveChannel.LIGHTNESS -> return scheme.onSurface
         CurveChannel.RED -> 0f
         CurveChannel.GREEN -> 120f
         CurveChannel.BLUE -> 220f

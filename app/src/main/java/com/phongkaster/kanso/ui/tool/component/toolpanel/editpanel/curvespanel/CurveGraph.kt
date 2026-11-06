@@ -112,7 +112,8 @@ internal fun CurveGraph(
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val guideColor = MaterialTheme.colorScheme.outline
     val ringColor = MaterialTheme.colorScheme.surface
-    val shown = working ?: curve
+    // While disabled the graph shows only the caller's curve, never a finger's working copy.
+    val shown = if (enabled) working ?: curve else curve
 
     Canvas(
         modifier = modifier
@@ -122,6 +123,9 @@ internal fun CurveGraph(
             // Keyed on [enabled]: switching it restarts the handler, which drops any gesture in
             // progress; while disabled it installs no handler, so every touch is ignored.
             .pointerInput(enabled) {
+                // A gesture cut short (the handler restarts when [enabled] flips) must not leave the
+                // finger's working copy behind, or the line would stay where the finger left it.
+                working = null
                 if (!enabled) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown()

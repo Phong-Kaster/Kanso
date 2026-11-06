@@ -22,3 +22,6 @@
 
 ### Iteration 4 - 2026-11-06 (Phase 3, T-003)
 Red/Green/Blue chips: curveChannel state, CurveChips, per-channel graph and Reset, graph ignores gestures when disabled, tests, docs, pictures 97/98 recorded, 95/96 re-recorded (D-003 approved). Build, tests, lint green. Amendment: EditPanel.kt added to slice 2 scope.
+
+## Iteration 4 (Phase 4, T-004)
+Lightness curve (HSL L, greys follow, L 0..1), fifth chip, CurveGraph disabled fix, tests, README/docs. Tier-1 amendment: CurvesPanel.kt added to scope. Chip label wrapped in picture 99; fixed and re-recorded 99/100, 95/96 re-recorded with approval. 97/98 red, awaiting owner listing.

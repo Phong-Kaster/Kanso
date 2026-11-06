@@ -469,10 +469,29 @@ class ToolScreenshotTest {
         capture("98_edit_curves_red_s_curve_dark.png")
     }
 
+    /** Picture 99: the Curves sheet with the Lightness chip chosen and an S-curve on Lightness, light. */
+    @Test
+    fun edit_curves_lightness_s_curve_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        drawSCurve(CurveChannel.LIGHTNESS)
+        capture("99_edit_curves_lightness_s_curve_light.png")
+    }
+
+    /** Picture 100: the Curves sheet with an S-curve on Lightness, dark. */
+    @Test
+    fun edit_curves_lightness_s_curve_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        drawSCurve(CurveChannel.LIGHTNESS)
+        capture("100_edit_curves_lightness_s_curve_dark.png")
+    }
+
     /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
-    private fun drawRedSCurve() {
+    private fun drawRedSCurve() = drawSCurve(CurveChannel.RED)
+
+    /** Opens Curves, chooses the [channel] chip and taps two points on the graph that make an S shape. */
+    private fun drawSCurve(channel: CurveChannel) {
         openSheet(EditTool.CURVES)
-        compose.onNodeWithTag(curveChipTag(CurveChannel.RED)).performClick()
+        compose.onNodeWithTag(curveChipTag(channel)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
             val pad = CURVE_GRAPH_PADDING_DP * density
