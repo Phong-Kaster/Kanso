@@ -36,3 +36,11 @@ Paths under `app/src/main/java/com/phongkaster/kanso/` (main) or `app/src/test/j
 - Docs mentioning the row: README :56, :99-102, :116-129, :154-157, :212, :239, :285, :431;
   `docs/features/edit.md` :1, :36-76; `docs/features/tool-screen.md` :31, :311; `docs/features/beautify.md`
   :107, :185. Next ADR number is 010.
+
+## Built in Run 13 (Iteration 2)
+
+- `scrollToolRowTo(tool)` (test/tool/edit/ToolRowScrolling.kt) now changes layers: RGB/HSL/CURVES tap Colour first; any other tool taps Back first if the group row shows (that closes an open colour sheet).
+- `StateRestorationTester` for a compose rule is `androidx.compose.ui.test.junit4.StateRestorationTester`.
+- `EditToolEntry` sets `maxLines = 1` with ellipsis, so a one-line check must also assert `!isLineEllipsized(0)`.
+- A Worker's shell allows only the compile command (no grep/sed/python): use Edit and Grep.
+- Files: `ui/tool/model/EditToolGroup.kt`, `EditRowEntry.kt`; `ui/tool/component/GroupBackEntry.kt`, `GroupRowTransition.kt`; `edittoolrow/EditToolRow.kt`, `ToolRowEntry.kt`, `CompareEntry.kt`, `EditColourGroupRow.kt`. Pictures 101-104 added; 43 re-recorded. Full suite 1282 tests green.

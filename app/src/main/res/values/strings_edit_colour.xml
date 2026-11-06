@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The label of the Colour entry on the Edit screen's top row, which opens RGB, HSL and Curves. -->
+    <string name="edit_colour_group">Colour</string>
+</resources>

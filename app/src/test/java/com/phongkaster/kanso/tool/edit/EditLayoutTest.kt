@@ -42,7 +42,9 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CANCEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.LAYER_SHEET_CONFIRM_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.STICKERS_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editGroupTag
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.model.EditToolGroup
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
@@ -196,9 +198,14 @@ class EditLayoutTest {
         // The row now holds nine entries and scrolls, so on this window only the first four are
         // surely on screen; every other entry is scrolled to first (a lazy row has no node for an
         // entry past its edge) and is then displayed.
-        val alwaysShown = listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB)
+        val alwaysShown = listOf(EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST)
         alwaysShown.forEach(action = { compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed() })
-        EditTool.entries.filter(predicate = { it !in alwaysShown }).forEach(
+        // Colour (RGB, HSL and Curves' group) is the fourth entry, also surely on screen.
+        compose.onNodeWithTag(editGroupTag(EditToolGroup.COLOUR)).assertIsDisplayed()
+        // The first row's other tools first, then the three colour tools (scrollToolRowTo opens
+        // the Colour group's row for those, and returns to the first row for Stickers below).
+        val others = EditTool.entries.filter(predicate = { it !in alwaysShown && it !in EditToolGroup.COLOUR.tools })
+        (others + EditToolGroup.COLOUR.tools).forEach(
             action = {
                 compose.scrollToolRowTo(it)
                 compose.onNodeWithTag(editToolTag(it)).assertIsDisplayed()

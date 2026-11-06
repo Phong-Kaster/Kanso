@@ -7,7 +7,9 @@ package com.phongkaster.kanso.data.edit.edit
  *
  * The enum holds no words and no pictures: each tool's name and icon on screen are chosen by the
  * Edit screen's composables in `ui/tool`, so this file stays free of Android resources and can be
- * used by the ViewModel and its tests alone. The order of the cases is the order of the row.
+ * used by the ViewModel and its tests alone. The order of the cases is NOT the order of the row: RGB, HSL and Curves
+ * sit together on the row's second layer, behind a Colour entry that is a group, not a tool (see
+ * `EditToolGroup` and `EditRowEntry` in `ui/tool/model`).
  */
 enum class EditTool {
 

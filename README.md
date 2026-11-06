@@ -53,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Eight tools in a row under the photo (Crop, Rotate, Adjust, RGB, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; the red, green and blue channels each turned down or up; one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Eight entries in a row under the photo (Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date) with Compare pinned at the right; tapping Colour swaps the row for Back, RGB, HSL and Curves (with Compare still at the right), and Back returns to the first row. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; the red, green and blue channels each turned down or up (RGB, reached through Colour, as are HSL and Curves); one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift, Temple, Cheekbones, Chin length, Hairline and a pinned Back; Body, with Waist, Arms, Chest and Legs; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), and [Temple, Cheekbones, Chin length, Hairline](docs/features/face-shape.md) (each -100..+100, measured against Meitu), where MediaPipe's 478 face landmarks drive a Kotlin warp of the face's outline; Waist, Arms and Legs (-100..+100, slimmer to the right) and Chest (-100..+100, fuller to the right), where MediaPipe's pose model (33 body points and a person mask) places them for the same warp (Chest grows the pixels instead of sliding them); and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
@@ -116,17 +116,20 @@ yet.
 - The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28,
   with seven tools) Crop to Stickers and Compare were in view and Text was hidden past the right
   edge until the row was swiped left; Date sits further right still and is reached the same way.
-  RGB, added after Adjust (2026-11-03), pushes every later tool one place right: on a 411 dp wide
-  screen Crop to Filters and Compare were in view, and Stickers, Text and Date were one swipe away.
-  HSL, added after RGB, pushes every tool after it one more place right; the row is then nine
-  entries long. Six 60 dp tools plus Compare's 68 dp make 428 dp, wider than 411 dp, so on a 411 dp
-  screen only Crop, Adjust and RGB are guaranteed in view, and HSL, Filters, Stickers, Text and Date
-  are one swipe away (`EditToolRowTest`; seen by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06).
-  Curves, added after HSL and before Filters, makes the row ten entries long: Crop, Rotate, Adjust,
-  RGB, HSL, Curves, Filters, Stickers, Text, Date, with Compare pinned at the right. Seven 60 dp
-  tools plus Compare's 68 dp are wider than 411 dp, so Filters, Stickers, Text and Date are now one
-  swipe away or more (not yet looked at on a phone). This replaces the old rule that every tool fits
-  without scrolling (DoD 2), which held for five tools.
+  Since Run 13 (2026-11-06) the first row holds eight entries (Crop, Rotate, Adjust, Colour,
+  Filters, Stickers, Text, Date) with Compare pinned at the right, because RGB, HSL and Curves moved
+  into the Colour group. That is fewer swipes than the ten-entry flat row needed, but eight 60 dp
+  entries plus Compare's 68 dp are still wider than a 411 dp screen: Stickers is partly cut and
+  Text and Date are off screen until the row is swiped left (not yet looked at on a phone). The
+  Colour layer is Back (at least 72 dp, `BACK_ENTRY_MIN_WIDTH` in `GroupBackEntry.kt`), three 60 dp
+  entries (RGB, HSL, Curves), a divider and Compare's 68 dp: 72 + 3 x 60 + 68 = 320 dp plus
+  spacing, which fits a 411 dp screen without scrolling. This replaces the older notes about the flat row growing to nine and ten
+  entries, and the old rule that every tool fits without scrolling (DoD 2), which held for five tools.
+- **The Colour group's row is a view, not a state.** Whether the second layer shows is a
+  `rememberSaveable` flag inside `EditToolRow` (it survives a rotation, is not in `ToolUiState` or the
+  ViewModel, and is lost when Stickers, Text or Date replace the row, or when a sticker or text layer is touched
+  on the photo: its sheet replaces the row, and after Confirm the row is back on layer 1). The phone's Back gesture is
+  unchanged: it closes an open sheet, then asks to discard or leave; it does not step back to layer 1.
 - **HSL limits** (decision record: [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)).
   Hue turns by at most 20 degrees at +-100, so a colour cannot be swapped for a far one. Greys,
   white, black and near-greys are never changed (a gate in `EditHsl.kt` skips them), so no tint
@@ -155,6 +158,16 @@ or `app/src/main/res/`.
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
    so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 220 dp sheet area
    (`editbottombar/EditSheet.kt`, `EDIT_SHEET_HEIGHT`) for Crop, Rotate, Adjust, RGB, HSL, Curves and Filters, which never changes height.
+   The row has two layers. Layer 1 is Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date, then
+   Compare; **Colour** (`EditToolGroup.COLOUR` in `ui/tool/model/EditToolGroup.kt`, entries listed by
+   `model/EditRowEntry.kt`, palette icon `ic_palette`, name from `strings_edit_colour.xml`) opens no tool: it
+   swaps the row for layer 2 (`edittoolrow/EditColourGroupRow.kt`), Back pinned at the left, then RGB, HSL,
+   Curves, then Compare. Colour and each of the three keep a "changed" dot while their settings change the
+   photo. Back closes an open colour sheet (the change is kept) and returns to layer 1; tapping Colour while
+   another tool's sheet is open closes that sheet; while Compare is held every entry but Compare is disabled.
+   The Back entry and the sideways slide between layers are shared pieces, `ui/tool/component/GroupBackEntry.kt`
+   and `GroupRowTransition.kt` (`groupRowTransition`), also used by Beautify's row
+   (`beautifypanel/BeautifyToolRow.kt`, which looks and works as before).
    It was 136 dp until 2026-11-06, when the owner found the photo took too much of the screen and the
    tools too little; on a Galaxy A13 the photo went from about 523 dp to 434 dp tall.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
@@ -209,8 +222,8 @@ or `app/src/main/res/`.
    draws the original without the filter or the resting layers; Done is unaffected. After a process
    kill, Result shows "Nothing to show" and Edit reopens with no changes.
 8. **RGB, end to end** (plan `docs/plans/rgb-tool.md`, owner's decisions of 2026-11-03).
-   - *Screen and ViewModel.* RGB is the fourth entry of the row (`EditTool.RGB`, icon
-     `ic_palette`, name "RGB"), between Adjust and Filters. Its sheet (`EditPanel.kt`'s
+   - *Screen and ViewModel.* RGB is the first tool on the row's second layer, reached by tapping Colour
+     (`EditTool.RGB`, icon `ic_instant_mix`, name "RGB"; Colour itself has the palette icon `ic_palette`). Its sheet (`EditPanel.kt`'s
      `EditTool.RGB` branch) shows `editpanel/RgbChips.kt`, three colour circles with no text,
      Red, Green and Blue: HSL's own `ColourRangeCircle` for the colour range of the same name
      (`RgbChannel.range`, `ui/tool/model/RgbChannel.kt`), so the three colours, the ring and the
@@ -236,8 +249,8 @@ or `app/src/main/res/`.
      clamped to 0..255. The output is the Edit output: a JPEG at quality 100, at most 3000 px.
      Compare shows the original without RGB. A Done render that fails is the Edit failure above;
      RGB adds no failure of its own.
-9. **HSL, end to end** (the row's fifth entry, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
-   between RGB and Filters).
+9. **HSL, end to end** (the second tool on the Colour layer, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
+   between RGB and Curves).
    - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.HSL` branch) is
      `editpanel/hslpanel/HslPanel.kt`: three rows of 32 dp with 20 dp gaps (136 dp), well inside the
      188 dp the 220 dp sheet leaves, so nothing scrolls. Row 1 is nine circles
@@ -282,8 +295,8 @@ or `app/src/main/res/`.
      The output is the Edit output: a JPEG at quality 100, at most 3000 px, saved from Result into
      `Pictures/Kanso`. A Done render that fails is the Edit failure above; HSL adds no failure of
      its own.
-10. **Curves, end to end** (the row's sixth entry, `EditTool.CURVES`, icon `ic_show_chart`, name
-    "Curves", between HSL and Filters). State: partial, see the table in section 2.
+10. **Curves, end to end** (the third tool on the Colour layer, `EditTool.CURVES`, icon `ic_show_chart`, name
+    "Curves", after HSL). State: partial, see the table in section 2.
     - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.CURVES` branch) is
       `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the five chips
       (`CurveChips.kt`), and under it the graph (`CurveGraph.kt`) filling the rest of the 188 dp the
@@ -428,7 +441,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 
 ### 3.4 Text
 
-1. **Screen.** Text is the eighth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
+1. **Screen.** Text is the seventh entry of the first row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
    it opens the Text sheet in place of the row; `ToolScreen.kt` fills it with
    `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`: the pinned top bar (✕, "Text",
    ✓), the tabs **Text | Font | Size | Colour | Background | Opacity**, and the chosen tab's control:

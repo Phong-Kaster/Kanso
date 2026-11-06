@@ -44,7 +44,9 @@ import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editGroupTag
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolDotTag
+import com.phongkaster.kanso.ui.tool.model.EditToolGroup
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
@@ -122,8 +124,8 @@ class EditToolRowTest {
 
     /**
      * On a window wide enough for every entry (the row is a `LazyRow`, which composes only the
-     * entries on screen), the row holds nine entries, Crop, Rotate, Adjust, RGB, HSL, Filters, Stickers, Text and Date, in that order from
-     * left to right, each named by its text and with its icon drawn above the name: the name starts at
+     * entries on screen), the first row holds eight entries (Crop, Rotate, Adjust, Colour, Filters, Stickers, Text and Date, in that order from
+     * left to right; RGB, HSL and Curves live inside the Colour group's second layer), each named by its text and with its icon drawn above the name: the name starts at
      * least an icon's height (24 dp) below the entry's top, and the band above the name holds
      * drawn ink.
      */
@@ -131,7 +133,8 @@ class EditToolRowTest {
     @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
     fun the_row_shows_eight_tools_in_order_each_an_icon_over_its_name() {
         showEdit()
-        compose.onAllNodes(isRowEntry()).assertCountEquals(EditTool.entries.size)
+        // RGB, HSL and Curves moved into the Colour group's row: the first row holds the seven others.
+        compose.onAllNodes(isRowEntry()).assertCountEquals(FIRST_ROW_TOOLS.size)
         assertEquals(
             listOf(
                 EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.HSL, EditTool.CURVES,
@@ -140,7 +143,7 @@ class EditToolRowTest {
             EditTool.entries,
         )
 
-        val lefts = EditTool.entries.map { tool ->
+        val lefts = FIRST_ROW_TOOLS.map { tool ->
             val name = context.getString(nameOf(tool))
             compose.onNodeWithTag(editToolTag(tool)).assert(hasText(name))
             val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
@@ -224,7 +227,10 @@ class EditToolRowTest {
             }
             // The highlight is measured first, while the entry is still where it was drawn closed.
             assertNotEquals("$tool's entry is not highlighted", closedColour, pixelAt(highlightX, highlightY))
-            EditTool.entries.forEach { other ->
+            // Only the entries of the open tool's own layer are on screen (the colour tools are
+            // in the Colour group's row, the others in the first row).
+            val sameLayer = if (tool in EditToolGroup.COLOUR.tools) EditToolGroup.COLOUR.tools else FIRST_ROW_TOOLS
+            sameLayer.forEach { other ->
                 compose.scrollToolRowTo(other)
                 val node = compose.onNodeWithTag(editToolTag(other))
                 if (other == tool) node.assertIsSelected() else node.assertIsNotSelected()
@@ -269,10 +275,11 @@ class EditToolRowTest {
 
     /**
      * DoD 1 (Run 11: six tools; Date added after them, ADR-006; RGB after Adjust, plan
-     * `docs/plans/rgb-tool.md`; HSL after RGB in Run 11): with a photo loaded and no change made,
-     * the row holds nine entries tagged for Crop, Rotate, Adjust, RGB, HSL, Filters, Stickers,
-     * Text and Date, and they stand in that order from left to right by their `positionInRoot`.
-     * Drawn on a window wide enough for all nine, since a lazy row composes only the entries on screen.
+     * `docs/plans/rgb-tool.md`; HSL after RGB in Run 11; RGB, HSL and Curves moved into the Colour
+     * group in Run 13): with a photo loaded and no change made, the first row holds eight entries
+     * tagged for Crop, Rotate, Adjust, Colour, Filters, Stickers, Text and Date, and they stand in
+     * that order from left to right by their `positionInRoot`.
+     * Drawn on a window wide enough for all eight, since a lazy row composes only the entries on screen.
      */
     @Test
     @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
@@ -285,9 +292,12 @@ class EditToolRowTest {
             ),
             EditTool.entries,
         )
-        compose.onAllNodes(isRowEntry()).assertCountEquals(10)
-        val lefts = EditTool.entries.map { tool ->
-            compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode().positionInRoot.x
+        compose.onAllNodes(isRowEntry()).assertCountEquals(FIRST_ROW_TOOLS.size)
+        // The first row: Crop, Rotate, Adjust, then the Colour group in RGB, HSL and Curves' place, then the rest.
+        val tags = FIRST_ROW_TOOLS.map { editToolTag(it) }.toMutableList()
+        tags.add(FIRST_ROW_TOOLS.indexOf(EditTool.FILTERS), editGroupTag(EditToolGroup.COLOUR))
+        val lefts = tags.map { tag ->
+            compose.onNodeWithTag(tag).fetchSemanticsNode().positionInRoot.x
         }
         lefts.zipWithNext().forEachIndexed { index, (a, b) ->
             assertTrue("entry ${index + 1} ($b) is not right of entry $index ($a)", b > a)
@@ -295,10 +305,10 @@ class EditToolRowTest {
     }
 
     /**
-     * DoD 2, amended in Run 11 and for RGB and HSL: on the 411 x 891 dp screen the first four entries
-     * (Crop, Rotate, Adjust, RGB) lie inside the row's bounds (and left of the pinned
-     * Compare entry) with the row unscrolled; the last five, HSL, Filters, Stickers, Text and Date, are
-     * a swipe or two away (the tools scroll sideways by design, Compare
+     * DoD 2, amended in Run 11 and for the Colour group: on the 411 x 891 dp screen the entries that
+     * are not in `SWIPE_AWAY` (Crop, Rotate, Adjust and Colour) lie inside the row's bounds (and left
+     * of the pinned Compare entry) with the row unscrolled; the rest, Filters, Stickers, Text and
+     * Date, may be partly or wholly off screen and are a swipe or two away (the tools scroll sideways by design, Compare
      * stays put), and once scrolled to each lies inside the row and left of Compare too. Bounds come from `positionInRoot`
      * and the size, never from `boundsInRoot`, which clips a scrolled node.
      */
@@ -307,8 +317,10 @@ class EditToolRowTest {
         showEdit()
         val row = bounds(compose.onNodeWithTag(EDIT_TOOL_ROW_TAG).fetchSemanticsNode())
         val compare = bounds(compose.onNodeWithTag(EDIT_COMPARE_TAG).fetchSemanticsNode())
-        EditTool.entries.filter { it !in SWIPE_AWAY }.forEach { tool ->
-            val entry = bounds(compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode())
+        // Crop, Rotate, Adjust and the Colour group's entry are the first four of the first row.
+        val fitting = FIRST_ROW_TOOLS.filter { it !in SWIPE_AWAY }.map { editToolTag(it) } + editGroupTag(EditToolGroup.COLOUR)
+        fitting.forEach { tool ->
+            val entry = bounds(compose.onNodeWithTag(tool).fetchSemanticsNode())
             assertTrue(
                 "$tool $entry is not inside the row $row",
                 entry.left >= row.left - 0.5f && entry.right <= row.right + 0.5f &&
@@ -359,7 +371,7 @@ class EditToolRowTest {
     @Test
     fun the_stickers_dot_is_absent_then_present_after_one_sticker_then_absent_after_undo() {
         val viewModel = showEdit()
-        // The row is a lazy list: Stickers, past the right edge of the window since HSL made nine entries, has no node (and no dot)
+        // The row is a lazy list: Stickers, possibly past the right edge of the window on this narrow screen, has no node (and no dot)
         // until the row is scrolled to it, so each dot check scrolls first or it proves nothing.
         compose.scrollToolRowTo(EditTool.STICKERS)
         compose.onNodeWithTag(editToolTag(EditTool.STICKERS)).assertExists()
@@ -606,9 +618,12 @@ class EditToolRowTest {
         const val PHOTO_URI = "content://media/external/images/media/42"
 
         /**
-         * The tools past the fourth entry, which on a 411 dp phone may sit beyond the row's edge
-         * until it is swiped: HSL, Filters, Stickers, Text and Date.
+         * The tools past the fourth entry of the first row (Crop, Rotate, Adjust, Colour), which on a
+         * 411 dp phone may sit beyond the row's edge until it is swiped: Filters, Stickers, Text and Date.
          */
-        val SWIPE_AWAY = listOf(EditTool.HSL, EditTool.CURVES, EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
+        val SWIPE_AWAY = listOf(EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
+
+        /** The tools of the first row: every tool but the three inside the Colour group. */
+        val FIRST_ROW_TOOLS = EditTool.entries.filter { it !in EditToolGroup.COLOUR.tools }
     }
 }

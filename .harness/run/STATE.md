@@ -5,19 +5,19 @@
 
 ## Current
 
-- **Stage:** escalated (bootstrap done; waiting on D-001, DoD approval)
+- **Stage:** build (Phase 1 done; Verifier next)
 - **Run:** 13 — Colour group on the Edit screen
-- **Run Mode:** Collaborative
+- **Run Mode:** Autonomous
 - **Loop Branch:** loop/kanso-colour-group (from `772e6dd`)
-- **Next Phase:** 1 — T-001 (after D-001)
+- **Next Phase:** none - Verifier
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** no
+- **PARTIAL-candidate:** yes (criterion 11 and the human-only reads await a signature)
 
 ## Progress
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | deferred (D-001) | slices A-D, 22 files (see TASKS/T-001.md) | - |
+| T-001 | done (Iteration 2) | 22+ files | evidence/p1-final.log |
 
 ## Assumptions
 

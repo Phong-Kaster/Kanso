@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, RGB, HSL, curves, filters, stickers, text and date
+# Edit: crop, rotate, adjust, colour (RGB, HSL, curves), filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -62,17 +62,34 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > CPU stage). A screen reader hears the
 > graph ("Red curve, N points"), the chips and Reset but cannot move points. Traced end to end in the README,
 > [section 3.1, step 10](../../README.md#31-the-edit-screen).
+>
+> **The Colour group (Run 13).** The row above is no longer flat. Layer 1 reads Crop, Rotate, Adjust,
+> **Colour**, Filters, Stickers, Text, Date, with Compare pinned at the right. **Colour** (palette icon,
+> `ic_palette`) is a group, not a tool: tapping it opens no sheet and swaps the row for layer 2, **Back**
+> (pinned at the left), **RGB**, **HSL**, **Curves**, then Compare. Colour carries the "changed" dot while
+> RGB, HSL or Curves holds a change, and each of the three keeps its own dot. Back closes an open colour
+> sheet (the change is kept) and returns to layer 1; tapping Colour while another tool's sheet is open
+> closes that sheet; while Compare is held every entry but Compare is disabled. The phone's Back
+> gesture is unchanged (it closes an open sheet, then asks to discard or leave; it does not step back to
+> layer 1). RGB's icon is now `ic_instant_mix`; HSL and Curves keep theirs. Whether layer 2 shows is a
+> `rememberSaveable` flag in `EditToolRow` (it survives rotation; it is not in the ViewModel and is lost
+> when Stickers, Text or Date replace the row). Back and the sideways slide are the shared
+> `GroupBackEntry` and `groupRowTransition`, also used by Beautify. Nothing about how RGB, HSL and
+> Curves process the photo changed. The "row" sentences in the older notes above describe the order
+> before this change; the notes on RGB, HSL and Curves about their place "between" other tools are
+> superseded by this one.
 
 ---
 
 ## What it is
 
-Edit is Kanso's general editor. At the bottom of the screen sits a row of five tools, **Crop**,
-**Rotate**, **Adjust**, **Filters** and **Stickers**; tapping one opens its sheet just above the row, as in Adobe
+Edit is Kanso's general editor. At the bottom of the screen sits a row of tools, **Crop**,
+**Rotate**, **Adjust**, **Colour** (which swaps the row for Back, RGB, HSL and Curves), **Filters**,
+**Stickers**, **Text** and **Date**; tapping a tool opens its sheet just above the row, as in Adobe
 Lightroom (tapping it again closes it). The Stickers sheet is the exception: it takes the row's place
-(see below). Each tool is 60 dp wide with a 28 dp icon, so all five fit beside Compare on a
-411 dp wide phone without scrolling; the row scrolls sideways only on a narrower screen, where a
-tool past the edge is reached with a swipe. **Compare** stays
+(see below). Each tool is 60 dp wide with a 28 dp icon, so the eight entries and Compare do not all fit on a
+411 dp wide phone: Stickers is partly cut and Text and Date are reached with a swipe. The Colour
+layer (Back, three tools, Compare) fits without scrolling. **Compare** stays
 pinned at the right, behind a thin divider, and never scrolls away. **Undo** (↶) and **Redo** (↷),
 two arrow icons, sit at the top right next to **Done**; Undo is there on the other tools too, Redo
 only on Edit.

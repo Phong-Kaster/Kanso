@@ -43,7 +43,9 @@ import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EDIT_SHEET_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EditToolRow
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editGroupTag
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.model.EditToolGroup
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HSL_CHIPS_TAG
@@ -72,7 +74,7 @@ import org.robolectric.annotation.Config
  *   `boundsInRoot`);
  * - dragging the slider reports live previews and letting go reports one commit;
  * - there is no reset button;
- * - the tool row holds an HSL entry, right after RGB and before Filters.
+ * - the tool row holds an HSL entry, in the Colour group's row, right after RGB and before Curves.
  *
  * The test holds the settings and the chosen range and channel itself in `mutableStateOf`s, as the
  * ViewModel holds them for the real screen. No ViewModel, Koin or photo is involved.
@@ -398,24 +400,24 @@ class HslSheetTest {
     }
 
     /**
-     * On a window wide enough to hold every entry, HSL sits right after RGB and before Filters, by
-     * `positionInRoot` from left to right (a lazy row composes only what is on screen, hence the
-     * wide window).
+     * Run 13: RGB, HSL and Curves live in the Colour group's row. With Colour opened, HSL sits right
+     * after RGB and before Curves, by `positionInRoot` from left to right (a wide window, so the
+     * row holds every entry).
      */
     @Test
     @Config(sdk = [35], qualifiers = "w900dp-h891dp-xxhdpi")
-    fun the_hsl_entry_sits_between_rgb_and_filters() {
+    fun the_hsl_entry_sits_between_rgb_and_curves() {
         showRow()
         val tools = EditTool.entries
         assertEquals(tools.indexOf(EditTool.RGB) + 1, tools.indexOf(EditTool.HSL))
-        // Curves sits right after HSL, and Filters right after Curves.
         assertEquals(tools.indexOf(EditTool.HSL) + 1, tools.indexOf(EditTool.CURVES))
-        assertEquals(tools.indexOf(EditTool.CURVES) + 1, tools.indexOf(EditTool.FILTERS))
+        compose.onNodeWithTag(editGroupTag(EditToolGroup.COLOUR)).performClick()
+        compose.waitForIdle()
         val rgb = compose.onNodeWithTag(editToolTag(EditTool.RGB)).fetchSemanticsNode().positionInRoot.x
         val hsl = compose.onNodeWithTag(editToolTag(EditTool.HSL)).fetchSemanticsNode().positionInRoot.x
-        val filters = compose.onNodeWithTag(editToolTag(EditTool.CURVES)).fetchSemanticsNode().positionInRoot.x
+        val curves = compose.onNodeWithTag(editToolTag(EditTool.CURVES)).fetchSemanticsNode().positionInRoot.x
         assertTrue("HSL ($hsl) is not right of RGB ($rgb)", hsl > rgb)
-        assertTrue("Filters ($filters) is not right of HSL ($hsl)", filters > hsl)
+        assertTrue("Curves ($curves) is not right of HSL ($hsl)", curves > hsl)
     }
 
     // --- Helpers -----------------------------------------------------------------------------

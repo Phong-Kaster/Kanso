@@ -28,8 +28,11 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of ten tools (Crop, Rotate, Adjust, RGB, HSL, Curves, Filters, Stickers, Text, Date) is its
-`Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of eight entries (Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date) is its
+`Scaffold` bottom bar (Colour is a group: tapping it swaps the row for Back, RGB, HSL, Curves and
+Compare, and Back returns to the first row; the row's two layers are `EditToolRow` and
+`EditColourGroupRow`, with the Back entry and the slide shared with Beautify as `GroupBackEntry` and
+`groupRowTransition`), a tapped tool's sheet opens in a fixed-height area just above the row so the
 photo never changes size, the photo has no Replace chip, Undo and Redo stay in the top bar beside Done, and
 a Compare switch is pinned at the right of the row. **Stickers** (like Text and Date) opens
 a sheet that replaces the row (the entries and Compare are hidden while it is open); its cross, or the

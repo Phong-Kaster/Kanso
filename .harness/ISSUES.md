@@ -1,9 +1,15 @@
 # ISSUES
 
-## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: ESCALATE, Iteration 1 (bootstrap)
+## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: Iteration 2 (Phase 1)
 
-- Queued decision **D-001** (blocks T-001): approve the DoD, the four layout choices a-d in its "How the
-  row will look" block, the icon, the `## Baselines` re-record list, and the Gradle build/test/lint grant.
+- D-001 answered (approved); no queued decisions, nothing abandoned.
+- Review findings N8 (the Colour-open flag is lost when a touched sticker/text layer's sheet replaces the row; the row returns on layer 1) and N9 (`GroupBackEntry` keeps its own 72 dp constant beside Beautify's `ENTRY_MIN_WIDTH`) are recorded, not fixed: N8 is documented in README/KDoc, N9 would touch Beautify's pixels.
+- Assumed: README's layer-2 width ("72 + 3 x 60 + 68 = 320 dp plus spacing, fits 411 dp") is arithmetic, not looked at on a phone.
+
+### Awaiting a person (Run 13)
+
+- [ ] Run 13 criterion 11 - Open `app/src/test/screenshots/101_edit_colour_row_light.png`, `102_…dark`, `103_edit_colour_group_light.png`, `104_…dark`. Expect: "Colour" on one line under its palette icon with the changed dot, Back easy to find at the left of the group, the HSL dot visible, in light and dark. Also glance at the re-recorded pictures 55/56 and 83/84.
+
 - `.harness/archive/` is still unwritable (PROJECT.md Constraint, Suggestion S-013), so earlier runs'
   sections below stay in this file.
 

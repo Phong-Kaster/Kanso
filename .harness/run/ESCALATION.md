@@ -14,7 +14,7 @@
 
 ## D-001 - Approve the Definition of Done for the Colour group, the pictures that may change, and the build commands
 
-- **Status:** pending
+- **Status:** answered - approved by the owner 2026-11-06 (DECISIONS.md D-001); applied in Iteration 2
 - **Type:** DoD approval + Capability grant
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-11-06

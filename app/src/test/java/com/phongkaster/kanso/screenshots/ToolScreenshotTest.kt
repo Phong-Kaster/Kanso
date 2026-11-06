@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_GROUP_BACK_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
 import androidx.compose.ui.test.hasTestTag
@@ -341,7 +342,11 @@ class ToolScreenshotTest {
         capture("68_edit_pill_dark.png")
     }
 
-    /** Picture 83: the row of tools scrolled so HSL, the ninth tool, is in view, light. Run 11: DoD 18. */
+    /**
+     * Picture 83: the Colour group's row (Back, RGB, HSL, Curves, Compare) reached by tapping Colour,
+     * light. Run 13 (R2): this picture used to show the flat row scrolled to HSL; HSL now lives in the
+     * Colour group, so the row shows that group instead.
+     */
     @Test
     fun edit_tool_row_hsl_light() {
         showTool(Tool.EDIT, ThemeMode.Light)
@@ -349,7 +354,7 @@ class ToolScreenshotTest {
         capture("83_edit_tool_row_hsl_light.png")
     }
 
-    /** Picture 84: the row of tools scrolled so HSL is in view, dark. */
+    /** Picture 84: the Colour group's row, reached through Colour, dark (Run 13, R2). */
     @Test
     fun edit_tool_row_hsl_dark() {
         showTool(Tool.EDIT, ThemeMode.Dark)
@@ -485,6 +490,55 @@ class ToolScreenshotTest {
         capture("100_edit_curves_lightness_s_curve_dark.png")
     }
 
+    /**
+     * Picture 101: the Edit screen's first row (Colour not opened, so Crop, Rotate, Adjust, Colour,
+     * Filters ...) after an HSL change, light. Run 13, DoD 11: Colour on one line under its icon and
+     * its "changed" dot visible.
+     */
+    @Test
+    fun edit_colour_row_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHslThenBackToFirstRow()
+        capture("101_edit_colour_row_light.png")
+    }
+
+    /** Picture 102: the first row with the Colour dot showing after an HSL change, dark (Run 13, DoD 11). */
+    @Test
+    fun edit_colour_row_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHslThenBackToFirstRow()
+        capture("102_edit_colour_row_dark.png")
+    }
+
+    /**
+     * Picture 103: the Colour group's row (Back at the left, RGB, HSL, Curves) with the HSL sheet open
+     * after an HSL change, so HSL's own dot shows, light. Run 13, DoD 11: Back easy to find, dots visible.
+     */
+    @Test
+    fun edit_colour_group_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("103_edit_colour_group_light.png")
+    }
+
+    /** Picture 104: the Colour group's row with the HSL sheet open and HSL's dot showing, dark (Run 13, DoD 11). */
+    @Test
+    fun edit_colour_group_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("104_edit_colour_group_dark.png")
+    }
+
+    /**
+     * Makes an HSL change (Red hue +60) through the Colour group, then taps Back: the sheet closes,
+     * the change is kept and the first row returns with its Colour entry carrying the dot.
+     */
+    private fun setHslThenBackToFirstRow() {
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        compose.onNodeWithTag(EDIT_GROUP_BACK_TAG).performClick()
+        compose.waitForIdle()
+    }
+
     /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
     private fun drawRedSCurve() = drawSCurve(CurveChannel.RED)
 
@@ -548,7 +602,8 @@ class ToolScreenshotTest {
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
     private fun openSheet(tool: EditTool) {
-        // The row has ten entries: scroll to the one to tap, as a lazy row has no node past its edge.
+        // Run 13: scrollToolRowTo opens the Colour group first for RGB, HSL and Curves (and taps Back
+        // for any other tool); a lazy row has no node past its edge, hence the scroll.
         compose.scrollToolRowTo(tool)
         compose.onNodeWithTag(editToolTag(tool)).performClick()
         compose.waitForIdle()
