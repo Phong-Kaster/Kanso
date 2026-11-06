@@ -61,7 +61,7 @@ flowchart TD
 
 The **HSL** tool (the ninth Edit tool, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md))
 uses the same sheet area as Adjust and RGB: the sheet is `HslPanel` (nine colour circles, three
-chips, one slider, exactly the 104 dp the 136 dp area leaves). The screen's part is small:
+chips, one slider, 136 dp with 20 dp gaps, well inside the 188 dp the 220 dp area leaves). The screen's part is small:
 `ToolUiState.hslRange` and `hslChannel` say which circle and chip are chosen
 (`ToolViewModel.chooseHslRange`, `chooseHslChannel`; choosing makes no Undo step), and the slider
 sends its 27-value setting through the same `previewSettings` while it moves and `commitSettings`
@@ -315,7 +315,7 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
   the photo again without the edits.
 - **An untouched photo shared from Result is the screen-sized decode**, not the original file
   (Save copies the original; Share sends the in-memory picture).
-- **Awaiting a person, Run 8:** item 24 (each tool's layout in light and dark on a phone), item 26
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 8):** item 24 (each tool's layout in light and dark on a phone), item 26
   (progress visible on a large photo), item 35 (all five tools on the Galaxy A13, saved result
   shown in My edits).
 

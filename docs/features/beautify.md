@@ -126,8 +126,8 @@ Limits, from the code:
 
 **Seen on the Galaxy A13 (32-bit `armeabi-v7a`), 2026-10-28**, debug build, a standing portrait
 with a small face: Face width +87 with Smoothing 11% took about 13 seconds; the cheeks and jaw came
-in visibly while the eyes, nose and mouth kept their shape, and nothing crashed. Not yet compared
-side by side with Meitu at the same value. Later the same day, with the row of tools and the zoom:
+in visibly while the eyes, nose and mouth kept their shape, and nothing crashed. On 2026-11-06 the owner
+checked Beautify on the Galaxy A13 and vivo V2408A and found it runs as expected. Later the same day, with the row of tools and the zoom:
 the card glided onto the face once the photo opened; Face width let go at +91 took about 16
 seconds and the narrower jaw was plain to see in the zoom. Later still, with the live look drawn
 through a mesh: dragging Face width from 21 to 100, the jaw narrowed frame by frame with no
@@ -186,7 +186,7 @@ flowchart TD
    and opens the group's first tool. The rows slide sideways with `AnimatedContent`. A new face
    tool joins the group by naming it in `BeautifyTool`. Every entry is the Edit screen's own
    `EditToolEntry`; Face's and Body's icons (`ic_face_group.xml`, `ic_body_group.xml`) are drawn for Kanso. Above the row, in Edit's own panel area
-   (`EditSheet`, generic over the kind of tool, 136 dp tall, cross-fading), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
+   (`EditSheet`, generic over the kind of tool, cross-fading; 136 dp tall here, `BEAUTIFY_SHEET_HEIGHT`, while Edit's is 220 dp), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):
    its name on a line of its own and the slider the panel's full width under it, its number at the
    right end (the face and body tools -100..100, smoothing
    0..100). The open group, the open tool and every value are kept with `rememberSaveable` (they survive a
@@ -519,12 +519,12 @@ stay as they were.
 - How many live frames a second the A13 draws has not been measured.
 - No BG Lock: the background right beside the cheeks bends with them.
 - The width numbers (0.12, the weights, 0.22) are first guesses, not yet tuned against Meitu.
-- The lift numbers (0.05, 0.06 and both weight lists) are first guesses too, and **Face lift has
-  not been tried on a phone yet**: only the JVM tests cover it.
+- The lift numbers (0.05, 0.06 and both weight lists) are first guesses too, and Face lift was
+  checked by the owner on the Galaxy A13 and vivo V2408A (2026-11-06) and runs as expected.
 - The waist numbers (the four levels and weights, 0.12, 0.3, the guesses 0.4 and 0.8) are first
   guesses. On the Galaxy A13 (2026-10-29), Waist at +92 on a standing portrait narrowed the belt
-  from about 56 to 41 screen pixels, rendered in about 15 s, with no crash; whether it looks right
-  next to Meitu at the same value is for the owner to judge.
+  from about 56 to 41 screen pixels, rendered in about 15 s, with no crash; the owner checked it on
+  the Galaxy A13 and vivo V2408A (2026-11-06) and it looks as expected.
 - Waist bends what lies beside the waist (background, an arm resting on it), like Width and Lift.
 - The pose model adds 9.4 MB to the app.
 - The arms numbers (the levels and weights, 0.15, 0.3, the guesses 0.17 and 0.12) and the chest
@@ -532,11 +532,11 @@ stay as they were.
   guesses 0.2 and 0.13) are first guesses too. On the Galaxy A13 (2026-10-29), Arms at 99
   changed only the arms (a screen-pixel comparison found every change between the shoulders and
   the forearms on the railing), Chest at ±100 (after the strength fix) only the bust, clearly fuller or flatter, and Legs at 100, on a photo cut above the knees, only the thighs
-  (and the railing right beside them); none crashed. Whether they look
-  right next to Meitu is for the owner to judge.
-- **Whether the face boxes and the OpenCV settings look right has not been judged by a person**
+  (and the railing right beside them); none crashed. The owner checked them
+  on the Galaxy A13 and vivo V2408A (2026-11-06) and they look as expected.
+- **The face boxes and the OpenCV settings were judged by the owner on 2026-11-06: they look right**
   (`.harness/ISSUES.md`, Run 8 Phase 3 review).
-- **Awaiting a person, Run 8:** item 11 (a one-face portrait at maximum strength: smoother skin
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 8):** item 11 (a one-face portrait at maximum strength: smoother skin
   with the eyes still sharp; a landscape gives the no-face message).
 
 [Back to README](../../README.md)

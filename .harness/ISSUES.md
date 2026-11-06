@@ -2,6 +2,7 @@
 
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 
+- **Settled by the owner, 2026-11-06:** criteria 23-26 checked on the Galaxy A13 and the vivo V2408A; HSL works as expected. The owner also signed off every earlier run's "Awaiting a person" item (Runs 7 and 8: Home, Gallery, Camera, My edits, Save/Share, Settings, the tool screens, Remove background, Enhance, Beautify, Artistic) and RGB on the Galaxy A13; the feature docs now say so. HSL's time per frame on the A13 is still not measured.
 - **Verifier, Iteration 9 (2026-11-05): DONE_PARTIAL.** Every `machine` criterion holds on fresh evidence: assemble exit 0 (`.harness/run/evidence/v8-build.log`), 1212 unit tests, 0 skipped, 0 failed (`v8-test.log`), lint exit 0 (`v8-lint.log`), `verifyRoborazziDebug` exit 0 (`v8-verify.log`). No gap this run can close. Only criteria 23-26 stand between this run and `DONE`, and they need a person (below). `.harness/run/` is kept, with no Cleanup Commit.
 - Criterion 37, by the letter: the old copies of the 21 pictures re-recorded in Phase 5 are named `old_<name>.png`, not `<name>.old.png` as the DoD says (the four Sticker pictures do use `.old.png`). All 25 changed baselines are on `## Baselines` and every one has its old copy. The Verifier counts this as met.
 - Housekeeping not done: the settled Run 10 section below should move to `.harness/archive/ISSUES-run-10.md`, but the engine is refused both writing and listing `.harness/archive/`. Move it by hand, or grant that write.

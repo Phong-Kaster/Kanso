@@ -118,6 +118,6 @@ flowchart TD
 - **Home and My edits never ask for photo access.** On Android 8.1 and 9, and after a reinstall on
   Android 10+, they show their empty message until access is granted here
   (`.harness/ISSUES.md`, Run 7, assumption A-011).
-- **Awaiting a person, Run 7:** item 29c (gallery pictures, rounded tiles under album chips).
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 29c (gallery pictures, rounded tiles under album chips).
 
 [Back to README](../../README.md)

@@ -240,6 +240,6 @@ Both end in `shareChooserIntent`: an `ACTION_SEND` intent of that type with the 
 - The last shared copy stays in the app's cache (`shared/`) until the next share or until Android
   clears the cache.
 - The hand-off store lives only in memory: after process death Result has nothing to show.
-- **Awaiting a person, Run 7:** item 29e (pictures of this screen and of the viewer on a phone).
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 29e (pictures of this screen and of the viewer on a phone).
 
 [Back to README](../../README.md)

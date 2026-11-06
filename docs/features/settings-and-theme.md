@@ -138,7 +138,7 @@ flowchart TD
 
 ## Known limits and open items
 
-- **Awaiting a person, Run 7:** item 29f (Settings pictures), item 30 (typing `2E7D32` turns the
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 29f (Settings pictures), item 30 (typing `2E7D32` turns the
   app green on the Galaxy A13, with the box visible above the keyboard).
 
 [Back to README](../../README.md)
