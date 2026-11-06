@@ -3,9 +3,12 @@ package com.phongkaster.kanso.tool.edit
 import com.phongkaster.kanso.data.edit.edit.CurveAdjustments
 import com.phongkaster.kanso.data.edit.edit.CurvePoint
 import com.phongkaster.kanso.data.edit.edit.EditCurves
+import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -98,6 +101,49 @@ class CurveFormulaTest {
         val end = curve.moved(3, 0.1f, 2f)
         assertEquals(1f, end.points.last().x, 0f)
         assertEquals(1f, end.points.last().y, 0f)
+    }
+
+    /**
+     * Pinning a point against its neighbour, then the next point against that one, can leave the
+     * outer two a float hair under two gaps apart (most often where the numbers cross 0.5, a power
+     * of two, and the rounding step doubles). Moving the middle point again must then not throw
+     * (it did: `coerceIn` refuses an empty range), and the curve must keep its rules.
+     */
+    @Test
+    fun moving_a_point_squeezed_between_pinned_neighbours_never_throws() {
+        var squeezed = 0
+        for (k in 0..2000) {
+            val base = 0.4f + k * 0.00005f
+            // [0, base, 0.9, 1], then 0.9 is dragged left until it stops one gap after base.
+            val pinnedOnce = curveOf(CurvePoint(base, 0.5f), CurvePoint(0.9f, 0.5f)).moved(2, 0f, 0.5f)
+            // Add 0.95 and drag it left until it stops one gap after the point just pinned.
+            val pinnedTwice = pinnedOnce.added(CurvePoint(0.95f, 0.5f)).moved(3, 0f, 0.5f)
+            assertEquals("setup at base $base", 5, pinnedTwice.points.size)
+            val xs = pinnedTwice.points.map { it.x }
+            if (xs[1] + ToneCurve.MIN_GAP > xs[3] - ToneCurve.MIN_GAP) squeezed++
+
+            for (target in listOf(0f, 0.5f, 1f)) {
+                val moved = pinnedTwice.moved(2, target, 0.3f)
+                val x = moved.points[2].x
+                assertTrue("passed the left neighbour at base $base", x > moved.points[1].x)
+                assertTrue("passed the right neighbour at base $base", x < moved.points[3].x)
+                assertEquals(0.3f, moved.points[2].y, 0f)
+            }
+        }
+        assertTrue("no case left the neighbours under two gaps apart, so nothing was tested", squeezed > 0)
+    }
+
+    /**
+     * A point placed exactly on the diagonal still counts as a change (3 points), so it gets an
+     * Undo step and Reset stays enabled.
+     */
+    @Test
+    fun a_point_on_the_diagonal_counts_as_a_change() {
+        val onDiagonal = ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.5f))
+        assertEquals(3, onDiagonal.points.size)
+        assertNotEquals(ToneCurve.NEUTRAL, onDiagonal)
+        assertFalse(onDiagonal.isNeutral)
+        assertTrue(EditSettings(curves = CurveAdjustments(rgb = onDiagonal)).hasCurveChange)
     }
 
     /** Removing a middle point drops it; the two end points cannot be removed. */

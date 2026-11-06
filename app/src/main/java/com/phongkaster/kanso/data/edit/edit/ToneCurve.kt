@@ -35,9 +35,12 @@ data class ToneCurve(
         }
     }
 
-    /** True when this is the straight diagonal, so the curve changes nothing. */
-    val isNeutral: Boolean
-        get() = points == NEUTRAL_POINTS
+    /**
+     * True when the curve is exactly the untouched two-point diagonal. A curve with an extra point
+     * counts as changed, even if that point sits on the diagonal, so it gets an Undo step and
+     * Reset stays enabled.
+     */
+    val isNeutral: Boolean get() = points == NEUTRAL_POINTS
 
     /**
      * The 256-entry lookup table of this curve: entry `i` is the output (0..255) for input `i`.
@@ -45,10 +48,11 @@ data class ToneCurve(
      * It uses monotone cubic interpolation (Fritsch-Carlson): a smooth curve that passes exactly
      * through every point and never overshoots between two points, so it can never dip below the
      * lower neighbour or rise above the higher one (no halos, and never darker than black or
-     * brighter than white). Every entry is also clamped to 0..255.
+     * brighter than white). Every entry is also clamped to 0..255. Each call returns a new array,
+     * so a caller may change it freely.
      */
     fun table(): IntArray {
-        if (isNeutral) return IntArray(TABLE_SIZE) { it }
+        if (points == NEUTRAL_POINTS) return IntArray(TABLE_SIZE) { it }
         val n = points.size
         val xs = FloatArray(n) { points[it].x }
         val ys = FloatArray(n) { points[it].y }
@@ -92,6 +96,10 @@ data class ToneCurve(
      * A copy with the point at [index] moved to ([x], [y]). The y is clamped to 0..1. The x is kept
      * at least [MIN_GAP] away from both neighbours, so a point can never pass one; the two end
      * points keep their x and only move up and down. An index out of range changes nothing.
+     *
+     * When the two neighbours are themselves less than two gaps apart (float rounding can leave
+     * them a hair short, which the rules allow), there is no x that keeps a full gap on both sides;
+     * the point then keeps its own x, which is already a valid place, and only its y moves.
      */
     fun moved(index: Int, x: Float, y: Float): ToneCurve {
         if (index !in points.indices || x.isNaN() || y.isNaN()) return this
@@ -99,7 +107,10 @@ data class ToneCurve(
         val newX = if (index == 0 || index == points.lastIndex) {
             points[index].x
         } else {
-            x.coerceIn(points[index - 1].x + MIN_GAP, points[index + 1].x - MIN_GAP)
+            val lowest = points[index - 1].x + MIN_GAP
+            val highest = points[index + 1].x - MIN_GAP
+            // coerceIn throws on an empty range, so an empty one keeps the current x instead.
+            if (lowest <= highest) x.coerceIn(lowest, highest) else points[index].x
         }
         val changed = points.toMutableList()
         changed[index] = CurvePoint(newX, newY)

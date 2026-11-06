@@ -18,6 +18,7 @@ import com.phongkaster.kanso.data.edit.edit.CatalogSticker
 import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.DateFormat
+import com.phongkaster.kanso.data.edit.edit.CurveAdjustments
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -164,7 +165,7 @@ class ToolViewModel(
             // to the newly decoded original now; everything else the screen draws by itself.
             if (tool == Tool.EDIT && photo != null &&
                 (session.settings.hasFilter || session.settings.hasHslChange ||
-                    session.settings.layers.isNotEmpty())
+                    session.settings.hasCurveChange || session.settings.layers.isNotEmpty())
             ) {
                 requestPreview()
             }
@@ -1417,8 +1418,8 @@ class ToolViewModel(
 
     /**
      * What a preview request is made of: the filter and its strength (none and 0 without a
-     * filter), the HSL values and the layers drawn into the small copy, never the one under a
-     * finger. Two
+     * filter), the HSL values, the tone curves and the layers drawn into the small copy, never the
+     * one under a finger. Two
      * requests with an equal key would give the same picture, so the second is not rendered.
      */
     private data class PreviewKey(
@@ -1426,6 +1427,7 @@ class ToolViewModel(
         val intensity: Float,
         val layers: List<Layer>,
         val hsl: HslAdjustments,
+        val curves: CurveAdjustments,
     )
 
     /** The key last asked for, so an unchanged request is not rendered again. */
@@ -1438,10 +1440,11 @@ class ToolViewModel(
     private var previewRendererRecipe: ((EditSettings) -> ToolProcessor)? = null
 
     /**
-     * Asks for the session's current filter, HSL change and layers to be drawn on the small
-     * preview copy (HSL is computed on this CPU copy; the GPU colour matrix goes on top of it).
+     * Asks for the session's current filter, HSL change, curve change and layers to be drawn on
+     * the small preview copy (HSL and the curves are computed on this CPU copy; the GPU colour
+     * matrix goes on top of it).
      *
-     * With no filter, no HSL change and no layer there is nothing to compute:
+     * With no filter, no HSL change, no curve change and no layer there is nothing to compute:
      * [ToolUiState.filterPreview] becomes null at once and the screen draws the original. With
      * any of them, the settings go into [previewRequests],
      * where a newer request replaces an older one still waiting. Nothing here marks the screen as
@@ -1454,20 +1457,23 @@ class ToolViewModel(
         val touched = mutableState.value.touchedLayerKey
         val full = session.settings
         val settings = full.copy(layers = full.layers.filter { it.key != touched })
-        if (!settings.hasFilter && !settings.hasHslChange && settings.layers.isEmpty()) {
+        if (!settings.hasFilter && !settings.hasHslChange && !settings.hasCurveChange &&
+            settings.layers.isEmpty()
+        ) {
             lastPreviewKey = null
             mutableState.update { it.copy(filterPreview = null) }
             return
         }
-        // A colour slider, turn or crop leaves the filter, the HSL values and the layers as they
-        // were: the preview is still right, so no render is repeated (it would only cost memory and
-        // a redraw during a drag). The key is the filter, its strength, the HSL values and the
-        // untouched layers.
+        // A colour slider, turn or crop leaves the filter, the HSL values, the curves and the
+        // layers as they were: the preview is still right, so no render is repeated (it would only
+        // cost memory and a redraw during a drag). The key is the filter, its strength, the HSL
+        // values, the curves and the untouched layers.
         val key = PreviewKey(
             filter = if (settings.hasFilter) settings.filter else FilterPreset.NONE,
             intensity = if (settings.hasFilter) settings.filterIntensity else 0f,
             layers = settings.layers,
             hsl = settings.hsl,
+            curves = settings.curves,
         )
         if (key == lastPreviewKey) return
         lastPreviewKey = key
@@ -1484,10 +1490,10 @@ class ToolViewModel(
 
     /**
      * Renders [requested] on the small preview copy of the original, in the background: the
-     * filter, the HSL change and the layers, in that order (HSL is computed on this CPU copy; the
-     * screen's colour matrix goes on top of it). It publishes the picture unless a newer request
-     * has replaced it meanwhile (the newer one is then already waiting in [previewRequests]), or
-     * the filter, the HSL change and the layers were all removed (the preview then stays null). A
+     * filter, the HSL change, the curve change and the layers (HSL and the curves are computed on
+     * this CPU copy; the screen's colour matrix goes on top of it). It publishes the picture unless
+     * a newer request has replaced it meanwhile (the newer one is then already waiting in
+     * [previewRequests]), or the filter, the HSL change, the curves and the layers were all removed (the preview then stays null). A
      * preview that fails shows the plain photo: the full render at the end reports a real failure.
      */
     private suspend fun renderPreview(requested: EditSettings) {
@@ -1513,14 +1519,14 @@ class ToolViewModel(
         // intensity has moved on since, so a drag keeps changing the photo; the newer request is
         // already queued and replaces it. A failed render shows the plain photo rather than the
         // previous filter's look.
-        // HSL values that moved on since are no reason to drop the frame either: like the
-        // intensity, they are replaced by the newer request already queued.
+        // HSL values or curves that moved on since are no reason to drop the frame either: like
+        // the intensity, they are replaced by the newer request already queued.
         val stillWanted = if (requested.hasFilter) {
             now.hasFilter && now.filter == requested.filter
         } else {
             val touched = mutableState.value.touchedLayerKey
             !now.hasFilter &&
-                (now.hasHslChange || now.layers.any { it.key != touched })
+                (now.hasHslChange || now.hasCurveChange || now.layers.any { it.key != touched })
         }
         if (stillWanted) {
             mutableState.update { it.copy(filterPreview = rendered) }

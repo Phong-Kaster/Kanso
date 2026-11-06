@@ -55,8 +55,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > (the two end points only up and down), a long press removes a middle one, and Reset (disabled
 > while the curve is straight) straightens it; each gesture is one Undo step. Done applies the
 > curve on the CPU (`data/edit/edit/EditCurves.kt`) after HSL and before the colour matrix, so the
-> **saved picture has it**. The **live preview does not show it yet** (the preview path comes in a
-> later task), and Red, Green, Blue and Lightness curves are not there yet. A screen reader hears the
+> **saved picture has it**. The **live preview follows it** while a point is dragged (a CPU copy, filter, HSL,
+> curves, then the colour matrix on top, as Done does; a sticker under a finger is drawn without that
+> CPU stage), and Red, Green, Blue and Lightness curves are not there yet. A screen reader hears the
 > graph and Reset but cannot move points. Traced end to end in the README,
 > [section 3.1, step 10](../../README.md#31-the-edit-screen).
 
@@ -105,8 +106,9 @@ network are used. You can:
   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
 - **Curves** (partial): a graph with the master curve, a straight diagonal at first. Tap empty space
   to add a point (up to 10), drag a point to move it, long press a middle point to remove it, and
-  press **Reset** (disabled while the curve is straight) to straighten it. The photo on screen does
-  **not** follow the finger yet; the curve shows in the picture Done renders.
+  press **Reset** (disabled while the curve is straight) to straighten it. The photo on screen
+  follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
+  under a finger is drawn without the curve until it is let go.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
   and Autumn, each a text-only pill (`editpanel/FilterChips.kt`, Material `FilterChip`s, no icon), with an **Intensity** slider (0 to 100) that is usable while a filter is chosen. Choosing a filter
   **replaces** the one before; filters never pile up.
@@ -515,7 +517,7 @@ flowchart TD
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
 - **Curves.** Partial: only the master curve is editable, at most 10 points, points at least 0.02
-  apart. The saved picture has the curve; the live preview does not show it yet. Not measured on
+  apart. The saved picture has the curve and the live preview follows it. Not measured on
   any phone.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.

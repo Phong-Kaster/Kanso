@@ -38,6 +38,19 @@
 Rationale: the engine's recommendation; one editor and one formula covers "RGB" and the L of "HSL"
 without removing tools the owner signed off on 2026-11-06.
 
+
+## D-002
+
+**Approved by the owner, 2026-11-06.** Re-record both pictures. Checked against the Roborazzi
+compare image before approving: only the tool row differs (the Curves entry now sits before
+Filters, and the row scrolls so Filters stays in view); the photo and the Filters sheet are
+identical.
+
+## Baselines
+
+- `app/src/test/screenshots/63_edit_filters_1977_light.png`
+- `app/src/test/screenshots/64_edit_filters_1977_dark.png`
+
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty
 checklist under the entry's id; you change `[ ]` to `[x]` for each item you have confirmed, and add a

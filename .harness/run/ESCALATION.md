@@ -90,7 +90,7 @@ Curves editor exists.
 
 ## D-002 - Re-record pictures 63 and 64 (Autonomous: informational, nothing blocked)
 
-- **Status:** pending
+- **Status:** answered (approved 2026-11-06; re-recorded in Iteration 3)
 - **Type:** baseline approval
 - **Iteration:** 2
 - **Blocks tasks:** none (work continues)
