@@ -54,12 +54,33 @@ top row. (2) The RGB curve's line and points are now white (neutral) instead of 
 blue; the engine's entry mentioned only the chips. Keep the neutral master curve, so the Red,
 Green and Blue curves can show their own colours.
 
+## D-004
+
+**Raised by the owner, 2026-11-06, after Iteration 5 (not an engine entry).** Pictures 97 and 98
+(`97_edit_curves_red_s_curve_light/dark`) show a defect, not just a new chip: the fifth chip,
+"Lightness", wraps to two lines ("Lightne / ss") and pushes the Reset button out of the Curves
+sheet, so Reset is not visible on any curve. That breaks criteria 6, 14 and 15.
+
+Decision: **fix it in this run, before the Verifier.** The owner added DoD criterion 23 (every chip
+on one line, Reset always visible and tappable, at 360 dp and 411 dp, light and dark). Open a fix
+task for it, prove it with a test, then re-record 97 and 98 (and any other Curves picture that
+moves, 95-100). How to fit the row is the engine's choice within Kanso's conventions; for example
+a horizontally scrolling chip row with Reset kept outside the scroll, Reset moved to its own place
+in the sheet, or a shorter label, but the chip must still read "Lightness" to a screen reader.
+
+97, 98, 99 and 100 are listed under `## Baselines` below **only so the fixed version can be recorded** (99/100 added 16:07, after the owner saw the fixed 97: same sheet, same fix). Do not
+re-record them while the chip still wraps or Reset is hidden.
+
 ## Baselines
 
 - `app/src/test/screenshots/63_edit_filters_1977_light.png`
 - `app/src/test/screenshots/64_edit_filters_1977_dark.png`
 - `app/src/test/screenshots/95_edit_curves_master_straight_light.png`
 - `app/src/test/screenshots/96_edit_curves_master_straight_dark.png`
+- `app/src/test/screenshots/97_edit_curves_red_s_curve_light.png`
+- `app/src/test/screenshots/98_edit_curves_red_s_curve_dark.png`
+- `app/src/test/screenshots/99_edit_curves_lightness_s_curve_light.png`
+- `app/src/test/screenshots/100_edit_curves_lightness_s_curve_dark.png`
 
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty

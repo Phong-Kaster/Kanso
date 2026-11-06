@@ -14,3 +14,7 @@
 - CurvesSheetTest `tapping_a_chip_chooses_it_and_the_graph_names_it`: added `CurveChannel.LIGHTNESS -> "Lightness"` branch (when must be exhaustive). Nothing weakened.
 - CurvesSheetTest: renamed `the_four_chips_...` to `the_five_chips_...`, added assertion on the channel list. No check removed.
 - ToolScreenshotTest: `drawRedSCurve()` now delegates to `drawSCurve(channel)`, shared by pictures 97-100.
+
+## T-006
+- Added `CurveChipRowTest` (4 tests: 360 dp and 411 dp, light and dark; every curve bent, then for each of the five curves: each chip label is the whole name on one line, not ellipsized, its drawn line inside its box; at 411 dp every chip inside the sheet; Reset displayed, clickable, enabled, inside sheet and window, and tapping it straightens that curve). Reason: DoD 23 (D-004). `@GraphicsMode(NATIVE)` so text is measured with real fonts. Width judged by `getLineLeft/Right(0)`, not `didOverflowWidth`/`hasVisualOverflow` (with `softWrap = false` the paragraph is laid out 2904 px wide, so those are true for every label). No existing test changed.
+- `CurveChipRowTest` (review fix): added Reset >= 48 x 48 dp (touch and laid-out), Reset label whole on one line, each chip touch area >= 48 dp. Reason: reviewer showed a squeezed Reset would pass.

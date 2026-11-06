@@ -10,8 +10,15 @@
 ## Run 12, Iteration 4 (T-004 Lightness)
 
 - Lightness chip, L curve, tests and pictures 99/100 done; assemble, unit tests, lint green (`evidence/p4-build.log`).
-- [ ] Run 12 Pictures 97 and 98 (`edit_curves_red_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`evidence/p4-verify.log`): the fifth chip, Lightness, changed the chip row. They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/97_..._compare.png`, and if the chip row is the only change, add both paths to `## Baselines`.
+- [x] Run 12 Pictures 97 and 98 (`edit_curves_red_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`evidence/p4-verify.log`): the fifth chip, Lightness, changed the chip row. They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/97_..._compare.png`, and if the chip row is the only change, add both paths to `## Baselines`.
 - Review notes still open (Phase 2): long-press on a resting finger removes a middle point instead of dragging (owner call).
+
+## Run 12, Iteration 6 (T-006, D-004: chips on one line, Reset always visible)
+
+- [ ] Run 12 Pictures 99 and 100 (`edit_curves_lightness_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`.harness/run/evidence/p5-verify.log`). Their baselines show the original bug (Reset missing from the sheet); the new pictures show the fix (all five chips on one line, Reset beside the graph). They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/99_edit_curves_lightness_s_curve_light_compare.png`, and if only the chip row and Reset moved, add both paths to `## Baselines`.
+- Pictures 95-98 re-recorded with the owner's approval (D-003, D-004); 97 checked: every chip on one line, Reset visible.
+- Review note not fixed: `CurveChipRowTest` was never run against the old layout to show it going red; the test checks Reset's laid-out and touch size (>= 48 dp) and its label on one line, which a squeezed Reset would fail.
+- Open from Iteration 4 (`ToolScreenshotTest.drawRedSCurve`): pictures 97/98 still show only one middle point, so the "S-curve" is a single bend.
 
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 

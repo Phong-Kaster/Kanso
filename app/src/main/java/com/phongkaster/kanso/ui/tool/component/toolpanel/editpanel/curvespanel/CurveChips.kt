@@ -49,8 +49,11 @@ internal fun CurveChips(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        // Scrollable only as a safety net on very narrow screens or large font sizes; at 411 dp
-        // all five chips fit without scrolling.
+        // The row has the sheet's whole width (Reset lives beside the graph, not here). At 411 dp
+        // all five chips fit with room to spare; on a narrower phone, or with a larger font, the
+        // last chip may reach past the edge and the row scrolls sideways, so a chip is never
+        // squeezed and its name never wraps or is cut short. horizontalScroll lets each chip be as
+        // wide as its name needs.
         modifier = modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -60,8 +63,8 @@ internal fun CurveChips(
                 selected = channel == chosen,
                 onClick = { onChoose(channel) },
                 label = {
-                    // One line always: a label never wraps (no "Lightne/ss"); the smaller
-                    // labelMedium text keeps the whole row on screen.
+                    // One line always: a label never wraps (no "Lightne/ss"). In the scrolling row
+                    // the chip is as wide as its name, so the line is never cut short either.
                     Text(
                         text = stringResource(curveChannelLabelRes(channel)),
                         style = MaterialTheme.typography.labelMedium,

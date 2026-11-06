@@ -27,3 +27,8 @@ Corrections to `run11-facts.md` and facts a Curves tool depends on. Paths under
 - No ledger grants Gradle assemble/test/lint (`.harness/loop/capabilities/baseline.json` grants only
   verify/compare Roborazzi, the record wrapper, the compile check and the device wrapper).
 - Next ADR number is 009.
+
+## Iteration 6 (T-006)
+- Curves sheet layout now: chips alone in the first 48 dp row (horizontalScroll, full width); below, graph (weighted) and Reset (top right). At 360 dp the chip row may scroll sideways; at 411 dp all five fit.
+- `CurveChipRowTest` (360/411 dp, light/dark) pins DoD 23: chip and Reset labels on one whole line, 48 dp touch and laid-out sizes, Reset inside sheet and window.
+- The record wrapper re-records only files listed under `## Baselines`; Worker-scope check flags those PNGs (expected when the Iteration ran the wrapper).

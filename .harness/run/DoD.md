@@ -85,6 +85,12 @@
     Proof: `git diff main --stat -- reference/ core/ opencv/ libs/ app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditHsl.kt` is empty; the HSL tests and pictures 83-94 pass unchanged unless listed under `## Baselines`.
 
 22. [machine-then-human] The docs tell the truth about Curves.
+
+23. [machine] Added by the owner, 2026-11-06 (D-004). On every curve (RGB, Red, Green, Blue,
+    Lightness), each of the five chips shows its name on a single line, and Reset stays fully visible
+    and tappable in the sheet, on a 411 dp wide phone and on a 360 dp wide one, in light and in dark,
+    at the default text size. Found in pictures 97/98 at Iteration 5: "Lightness" wrapped to two
+    lines ("Lightne / ss") and pushed Reset out of the sheet.
     Proof: the README's "Editing features" table has a Curves row with its real state, its limits, and a "Curves, end to end" section (screen and ViewModel, each step in order, CPU path and threading, live preview size, Done output, what happens on failure, file paths); `docs/features/edit.md` and `docs/features/tool-screen.md` describe Curves; `docs/adr/ADR-009-…` records why curves run on the CPU after HSL. Pre-check: every `app/src/…` path the README names exists. Then the owner reads them, uses Curves, and notes any untrue sentence.
 
 ## Removals
@@ -112,3 +118,4 @@ Questions (product repositories only): none.
 | 17 | human-only | on the A13, full-size photo, drag a point end to end on RGB, Red, Lightness: smooth | ☐ |
 | 18-21 | machine | assemble, test, lint, verifyRoborazzi exit 0; the `git diff` checks above print nothing | n/a |
 | 22 | machine-then-human | README Curves row and "Curves, end to end", `docs/features/edit.md`, `tool-screen.md`, ADR-009: no untrue sentence | ☐ |
+| 23 | machine | a Compose test at 360 dp and 411 dp: every chip's text is one line, Reset is displayed and clickable, on all five curves; pictures 97-100 show it | n/a |

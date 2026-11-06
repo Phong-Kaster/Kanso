@@ -25,3 +25,9 @@ Red/Green/Blue chips: curveChannel state, CurveChips, per-channel graph and Rese
 
 ## Iteration 4 (Phase 4, T-004)
 Lightness curve (HSL L, greys follow, L 0..1), fifth chip, CurveGraph disabled fix, tests, README/docs. Tier-1 amendment: CurvesPanel.kt added to scope. Chip label wrapped in picture 99; fixed and re-recorded 99/100, 95/96 re-recorded with approval. 97/98 red, awaiting owner listing.
+
+## Iteration 6 (Phase 5, T-006)
+- Recovered: untracked `evidence/v-build.log` from a killed Verifier run (incomplete, "out of disk space?" in a test thread; D: and C: now have space) - removed as debris.
+- Consumed D-004 (owner-raised; DoD 23 added by the owner): Lightness chip wrapped, Reset pushed off the sheet. Added T-006, cleared PARTIAL-candidate for the Phase.
+- T-006: attempts 1 and 2 failed on an unsound test check (`didOverflowWidth` with `softWrap = false`), attempt 3 green. Reviewer: README row 102 and a KDoc untrue, test-edits.md missing, Reset size unchecked - all fixed in one review-fix dispatch; rebuilt green (`p5-build4.log`). Pictures 95-98 re-recorded through the wrapper; 99/100 red (not on `## Baselines`).
+- Learned (Constraints): softWrap=false makes overflow flags meaningless; un-weighted horizontalScroll Row starves siblings.
