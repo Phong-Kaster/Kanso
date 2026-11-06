@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** bootstrap (awaiting D-001)
-- **Run Mode:** Collaborative
+- **Stage:** build
+- **Run Mode:** Autonomous
 - **Loop Branch:** loop/kanso-curves (from `main` at `069b5c3`)
-- **Next Phase:** Phase 1 — Wiring (`ic_show_chart.xml`, ADR-009), then T-001
+- **Next Phase:** Phase 2 - T-002 (live preview)
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -15,11 +15,10 @@
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | deferred (D-001) | data/edit/edit curve model + EditTool/EditSettings/EditProcessor, EditPanel, EditToolRow, curvespanel/*, 9 tests, README, docs (24 files) | - |
-| T-002 | deferred (D-001) | FilterPreviewRenderer, ToolViewModel, 2 tests, README, edit.md | - |
-| T-003 | deferred (D-001) | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
-| T-004 | deferred (D-001) | CurveChannel, CurveAdjustments, EditCurves, CurveChips, CurveGraph, strings, tests, README, edit.md (12 files) | - |
-| T-005 | deferred (D-001; optional) | hue curves (13 files) | - |
+| T-001 | done (63, 64 red: D-002) | data/edit/edit curve model + EditTool/EditSettings/EditProcessor, EditPanel, EditToolRow, curvespanel/*, 9 tests, README, docs (24 files) | - |
+| T-002 | pending | FilterPreviewRenderer, ToolViewModel, 2 tests, README, edit.md | - |
+| T-003 | pending | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
+| T-004 | pending | CurveChannel, CurveAdjustments, EditCurves, CurveChips, CurveGraph, strings, tests, README, edit.md (12 files) | - |
 
 ## Assumptions
 

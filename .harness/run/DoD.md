@@ -6,8 +6,7 @@
 > PRD, verbatim: "plan, write code and test on galaxy a13 to build curve feature which relate with RGB , HSL".
 > Reading taken (approve or change it in D-001): a new **Curves** tool on the Edit screen, right after
 > HSL, with one tone curve each for **RGB** (all colours), **Red**, **Green**, **Blue** and **Lightness**
-> (the L of HSL). Hue curves are an optional extra at the end of this file: delete that section to leave
-> them out.
+> (the L of HSL). Hue curves were left out by the owner (D-001); they can be a later run.
 
 ## Status
 
@@ -88,14 +87,6 @@
 22. [machine-then-human] The docs tell the truth about Curves.
     Proof: the README's "Editing features" table has a Curves row with its real state, its limits, and a "Curves, end to end" section (screen and ViewModel, each step in order, CPU path and threading, live preview size, Done output, what happens on failure, file paths); `docs/features/edit.md` and `docs/features/tool-screen.md` describe Curves; `docs/adr/ADR-009-…` records why curves run on the CPU after HSL. Pre-check: every `app/src/…` path the README names exists. Then the owner reads them, uses Curves, and notes any untrue sentence.
 
-### Optional: hue curves (delete this whole section to leave them out)
-
-23. [machine] Two more chips, Hue → Saturation and Hue → Lightness, show a flat line across a rainbow strip; raising the line over a hue makes that hue more saturated (or lighter), the two ends of the strip are the same hue, and greys are left alone.
-    Proof: `CurveFormulaTest`, driven from synthetic pixels: a point raised over blue (240°) raises the saturation (lightness) of blue pixels and leaves red pixels within 0.02; a point at 0° and 360° hold the same value; a grey pixel is byte-equal; a flat line changes nothing; `CurvesSheetTest` shows the two chips.
-
-24. [machine-then-human] The hue strip under the hue curves is easy to read in light and in dark.
-    Proof: two more `ToolScreenshotTest` pictures (light, dark) of Hue → Saturation with a raised point, recorded through the wrapper and judged by the Iteration; then a person signs.
-
 ## Removals
 
 None. Kanso is a product, and Curves replaces nothing: RGB and HSL stay as they are.
@@ -121,5 +112,3 @@ Questions (product repositories only): none.
 | 17 | human-only | on the A13, full-size photo, drag a point end to end on RGB, Red, Lightness: smooth | ☐ |
 | 18-21 | machine | assemble, test, lint, verifyRoborazzi exit 0; the `git diff` checks above print nothing | n/a |
 | 22 | machine-then-human | README Curves row and "Curves, end to end", `docs/features/edit.md`, `tool-screen.md`, ADR-009: no untrue sentence | ☐ |
-| 23 | machine | (optional) `CurveFormulaTest` hue cases | n/a |
-| 24 | machine-then-human | (optional) the two hue-strip pictures | ☐ |

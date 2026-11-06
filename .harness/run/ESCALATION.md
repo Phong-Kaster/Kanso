@@ -11,7 +11,7 @@
 
 ## D-001 - Approve the Curves Definition of Done, its scope, and the standing build commands
 
-- **Status:** pending
+- **Status:** answered (D-001, 2026-11-06: approved, option 1, capability approved)
 - **Type:** DoD approval
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-11-06
@@ -85,3 +85,18 @@ Curves editor exists.
 
 <!-- Answer in `.harness/run/DECISIONS.md` under `## D-001`. For example: "Approved, option 1,
      capability approved." -->
+
+---
+
+## D-002 - Re-record pictures 63 and 64 (Autonomous: informational, nothing blocked)
+
+- **Status:** pending
+- **Type:** baseline approval
+- **Iteration:** 2
+- **Blocks tasks:** none (work continues)
+
+### Question
+Adding the Curves entry moves the tool row in `app/src/test/screenshots/63_edit_filters_1977_light.png` and `64_edit_filters_1977_dark.png` (the row scrolls so the selected Filters stays in view). The engine may not overwrite an existing baseline. To approve re-recording, list both under a `## Baselines` heading in `.harness/run/DECISIONS.md`.
+
+### Engine Recommendation
+Approve both; the change is the tool row only.

@@ -39,6 +39,7 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.component.EditCropper
 import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CurvesPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HslPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
@@ -237,7 +238,8 @@ fun EditPanelContent(
     // HSL does not either: its three 32 dp rows and two 20 dp gaps (136 dp) fit well inside
     // the 188 dp the sheet leaves, so nothing needs to scroll.
     val scrolling = when (openTool) {
-        EditTool.STICKERS, EditTool.HSL -> Modifier
+        // Curves is exempt too: a vertical drag on its graph moves a point, not the sheet.
+        EditTool.STICKERS, EditTool.HSL, EditTool.CURVES -> Modifier
         else -> Modifier.verticalScroll(rememberScrollState())
     }
     Column(
@@ -320,6 +322,16 @@ fun EditPanelContent(
                 // letting go makes the whole drag one Undo step.
                 onValueChange = { onPreview(settings.copy(hsl = settings.hsl.with(hslRange, hslChannel, it))) },
                 onValueChangeFinished = onCommit,
+                enabled = enabled,
+            )
+            EditTool.CURVES -> CurvesPanel(
+                settings = settings,
+                // The graph previews while a point is dragged and commits once per gesture, like
+                // the sliders above.
+                onPreview = onPreview,
+                onCommit = onCommit,
+                // Reset is a single button press, so it commits at once like a chip.
+                onChange = onChange,
                 enabled = enabled,
             )
             // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text

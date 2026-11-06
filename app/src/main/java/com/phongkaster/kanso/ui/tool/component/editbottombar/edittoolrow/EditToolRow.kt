@@ -162,6 +162,7 @@ private fun toolIcon(tool: EditTool): Int = when (tool) {
     EditTool.ADJUST -> R.drawable.ic_tune
     EditTool.RGB -> R.drawable.ic_palette
     EditTool.HSL -> R.drawable.ic_invert_colors
+    EditTool.CURVES -> R.drawable.ic_show_chart
     EditTool.FILTERS -> R.drawable.ic_filter_vintage
     EditTool.STICKERS -> R.drawable.ic_stickers
     EditTool.TEXT -> R.drawable.ic_text_fields
@@ -176,6 +177,7 @@ private fun toolName(tool: EditTool): Int = when (tool) {
     EditTool.ADJUST -> R.string.edit_layout_adjust
     EditTool.RGB -> R.string.edit_layout_rgb
     EditTool.HSL -> R.string.edit_hsl_label
+    EditTool.CURVES -> R.string.edit_curves_tool_name
     EditTool.FILTERS -> R.string.edit_layout_filters
     EditTool.STICKERS -> R.string.stickers_tool_label
     EditTool.TEXT -> R.string.text_tool_label

@@ -408,10 +408,12 @@ class HslSheetTest {
         showRow()
         val tools = EditTool.entries
         assertEquals(tools.indexOf(EditTool.RGB) + 1, tools.indexOf(EditTool.HSL))
-        assertEquals(tools.indexOf(EditTool.HSL) + 1, tools.indexOf(EditTool.FILTERS))
+        // Curves sits right after HSL, and Filters right after Curves.
+        assertEquals(tools.indexOf(EditTool.HSL) + 1, tools.indexOf(EditTool.CURVES))
+        assertEquals(tools.indexOf(EditTool.CURVES) + 1, tools.indexOf(EditTool.FILTERS))
         val rgb = compose.onNodeWithTag(editToolTag(EditTool.RGB)).fetchSemanticsNode().positionInRoot.x
         val hsl = compose.onNodeWithTag(editToolTag(EditTool.HSL)).fetchSemanticsNode().positionInRoot.x
-        val filters = compose.onNodeWithTag(editToolTag(EditTool.FILTERS)).fetchSemanticsNode().positionInRoot.x
+        val filters = compose.onNodeWithTag(editToolTag(EditTool.CURVES)).fetchSemanticsNode().positionInRoot.x
         assertTrue("HSL ($hsl) is not right of RGB ($rgb)", hsl > rgb)
         assertTrue("Filters ($filters) is not right of HSL ($hsl)", filters > hsl)
     }

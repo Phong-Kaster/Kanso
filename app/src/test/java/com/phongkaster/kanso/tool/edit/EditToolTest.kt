@@ -344,6 +344,8 @@ class EditToolTest {
 
         setHeld(EditSettings(brightness = 0.4f))
         assertDots(setOf(EditTool.ADJUST))
+        // assertDots left the row scrolled to its last entry; bring ADJUST's dot back into the row.
+        compose.scrollToolRowTo(EditTool.ADJUST)
         compose.onNodeWithTag(editToolDotTag(EditTool.ADJUST), useUnmergedTree = true)
             .assert(hasContentDescription("Changed"))
 
@@ -431,6 +433,8 @@ class EditToolTest {
     /** Asserts that the row of tools shows a dot on exactly the tools in [expected]. */
     private fun assertDots(expected: Set<EditTool>) {
         EditTool.entries.forEach { tool ->
+            // The row is lazy: an entry past the right edge has no node until the row scrolls to it.
+            compose.scrollToolRowTo(tool)
             val dot = compose.onNodeWithTag(editToolDotTag(tool), useUnmergedTree = true)
             if (tool in expected) dot.assertExists("$tool should carry a dot") else dot.assertDoesNotExist()
         }

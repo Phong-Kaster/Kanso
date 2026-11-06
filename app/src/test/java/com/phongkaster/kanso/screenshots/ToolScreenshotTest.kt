@@ -430,6 +430,22 @@ class ToolScreenshotTest {
         capture("94_edit_hsl_orange_after_dark.png")
     }
 
+    /** Picture 95: the Edit screen with the Curves sheet open on the straight master curve, light. */
+    @Test
+    fun edit_curves_master_straight_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.CURVES)
+        capture("95_edit_curves_master_straight_light.png")
+    }
+
+    /** Picture 96: the Curves sheet on the straight master curve, dark. */
+    @Test
+    fun edit_curves_master_straight_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.CURVES)
+        capture("96_edit_curves_master_straight_dark.png")
+    }
+
     /**
      * Opens the HSL sheet, taps the [range] circle and the [channel] chip, then sets the slider to
      * [value] (from -1 to 1) through its semantics, and gives the live preview's background render
@@ -474,7 +490,7 @@ class ToolScreenshotTest {
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
     private fun openSheet(tool: EditTool) {
-        // The row has nine entries: scroll to the one to tap, as a lazy row has no node past its edge.
+        // The row has ten entries: scroll to the one to tap, as a lazy row has no node past its edge.
         compose.scrollToolRowTo(tool)
         compose.onNodeWithTag(editToolTag(tool)).performClick()
         compose.waitForIdle()

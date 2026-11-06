@@ -80,7 +80,16 @@ data class EditSettings(
      * from -1 through 0 (unchanged) to 1. [HslAdjustments.NEUTRAL] changes nothing.
      */
     val hsl: HslAdjustments = HslAdjustments.NEUTRAL,
+    /**
+     * The Curves tool's four tone curves (master, red, green, blue). [CurveAdjustments.NEUTRAL]
+     * (four straight diagonals) changes nothing.
+     */
+    val curves: CurveAdjustments = CurveAdjustments.NEUTRAL,
 ) {
+
+    /** True when at least one of the four tone curves is bent away from the straight diagonal. */
+    val hasCurveChange: Boolean
+        get() = !curves.isNeutral
 
     /** True when at least one of the HSL tool's 27 values is away from 0. */
     val hasHslChange: Boolean
@@ -127,6 +136,7 @@ data class EditSettings(
      * - [EditTool.ADJUST]: all four sliders sit at their middle;
      * - [EditTool.RGB]: all three channels sit at their middle;
      * - [EditTool.HSL]: all 27 values sit at 0;
+     * - [EditTool.CURVES]: all four curves are straight diagonals;
      * - [EditTool.FILTERS]: no filter, or one at intensity 0;
      * - [EditTool.STICKERS]: no sticker is on the photo;
      * - [EditTool.TEXT]: no text is on the photo;
@@ -138,6 +148,7 @@ data class EditSettings(
         EditTool.ADJUST -> !hasAdjustChange
         EditTool.RGB -> !hasRgbChange
         EditTool.HSL -> !hasHslChange
+        EditTool.CURVES -> !hasCurveChange
         EditTool.FILTERS -> !hasFilter
         EditTool.STICKERS -> layers.none { it.content is LayerContent.Picture }
         EditTool.TEXT -> layers.none { it.content is LayerContent.Text }

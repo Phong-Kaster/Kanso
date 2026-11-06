@@ -99,6 +99,7 @@ yet.
 | Edit: RGB | Works | Red, Green and Blue: three colour circles with no text, drawn and coloured like HSL's Red, Green and Blue circles, over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A (2026-11-03, works as expected, x2 kept) and on the Galaxy A13 (2026-11-06). |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (works as expected); its time per frame on the Galaxy A13 is not measured. |
+| Edit: Curves | Partial | Only the master (RGB, all colours) curve exists, in a graph (`editpanel/curvespanel/`): tap empty space to add a point (at most 10), drag a point to move it, long press a middle point to remove it; the two end points move only up and down; Reset (disabled while the curve is straight). Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from monotone cubic interpolation, [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview does not show the curve yet**: while you drag, the photo on screen does not change, and it only appears in the saved picture (the preview path arrives in a later task). Red, Green, Blue and Lightness curves are not there yet (the render already accepts them; no screen edits them). A screen reader hears the graph ("RGB curve, N points") and Reset, but cannot move points. Not measured on any phone. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -120,7 +121,11 @@ yet.
   HSL, added after RGB, pushes every tool after it one more place right; the row is then nine
   entries long. Six 60 dp tools plus Compare's 68 dp make 428 dp, wider than 411 dp, so on a 411 dp
   screen only Crop, Adjust and RGB are guaranteed in view, and HSL, Filters, Stickers, Text and Date
-  are one swipe away (`EditToolRowTest`; seen by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06). This replaces the old rule that every tool fits
+  are one swipe away (`EditToolRowTest`; seen by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06).
+  Curves, added after HSL and before Filters, makes the row ten entries long: Crop, Rotate, Adjust,
+  RGB, HSL, Curves, Filters, Stickers, Text, Date, with Compare pinned at the right. Seven 60 dp
+  tools plus Compare's 68 dp are wider than 411 dp, so Filters, Stickers, Text and Date are now one
+  swipe away or more (not yet looked at on a phone). This replaces the old rule that every tool fits
   without scrolling (DoD 2), which held for five tools.
 - **HSL limits** (decision record: [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)).
   Hue turns by at most 20 degrees at +-100, so a colour cannot be swapped for a far one. Greys,
@@ -149,7 +154,7 @@ or `app/src/main/res/`.
    `bottomBar` is `ui/tool/component/editbottombar/EditBottomBar.kt`: the row of tools
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
    so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 220 dp sheet area
-   (`editbottombar/EditSheet.kt`, `EDIT_SHEET_HEIGHT`) for Crop, Rotate, Adjust, RGB, HSL and Filters, which never changes height.
+   (`editbottombar/EditSheet.kt`, `EDIT_SHEET_HEIGHT`) for Crop, Rotate, Adjust, RGB, HSL, Curves and Filters, which never changes height.
    It was 136 dp until 2026-11-06, when the owner found the photo took too much of the screen and the
    tools too little; on a Galaxy A13 the photo went from about 523 dp to 434 dp tall.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
@@ -277,6 +282,44 @@ or `app/src/main/res/`.
      The output is the Edit output: a JPEG at quality 100, at most 3000 px, saved from Result into
      `Pictures/Kanso`. A Done render that fails is the Edit failure above; HSL adds no failure of
      its own.
+10. **Curves, end to end** (the row's sixth entry, `EditTool.CURVES`, icon `ic_show_chart`, name
+    "Curves", between HSL and Filters). State: partial, see the table in section 2.
+    - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.CURVES` branch) is
+      `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row with the Reset button
+      (`CurveResetButton.kt`) at its end, and under it the graph (`CurveGraph.kt`) filling the width
+      and the rest of the 188 dp the sheet leaves. The graph draws a faint 4 by 4 grid, the straight
+      diagonal as a guide, the curve and a dot on each point. Only the master curve
+      (`CurveChannel.RGB`) can be edited; there are no Red, Green, Blue or Lightness curves on the
+      screen yet. A tap on empty space adds a point (the nearest existing point within 24 dp counts as
+      a hit, so a tap there adds nothing); dragging a point moves it (an end point only up and down,
+      and a point never passes its neighbours, which stay at least 0.02 apart); a long press on a
+      middle point removes it; at most 10 points. A vertical drag that starts on a point is claimed
+      by the graph, so the sheet does not take it. Reset is disabled while the curve is straight, and
+      the graph ignores touches while Compare is on or Done is rendering. A screen reader hears the
+      graph as "RGB curve, N points" and Reset; it cannot move points (no TalkBack point editing).
+    - *ViewModel.* No Curves-specific state in `ToolUiState`. The graph reports a drag through
+      `previewSettings` while the finger moves and `commitSettings` when it lifts, so one drag is one
+      Undo step; a tap, a long press and Reset are one commit each. Redo brings each back.
+    - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): four `ToneCurve`s
+      (master, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), first point at
+      x = 0 and last at x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
+      any curve is bent (`hasCurveChange`, `EditSettings.isNeutral(EditTool.CURVES)`); Back with only
+      a curve change asks to discard it; Compare shows the original without it.
+    - *The step* (`data/edit/edit/EditCurves.kt`, plain Kotlin on ARGB ints, on the CPU). Each curve
+      becomes a 256-entry table by monotone cubic interpolation (Fritsch-Carlson), which passes
+      through every point and never overshoots between two. A pixel's red, green and blue each go
+      through their own channel's table and then through the master table; alpha is kept. When every
+      curve is straight the step is skipped and no pixel changes.
+    - *Live preview.* Not wired yet. `FilterPreviewRenderer` and `ToolViewModel`'s preview request
+      carry the filter, the HSL values and the layers only, never `EditSettings.curves`, and a
+      change in the curves alone asks for no preview render. So while a point is dragged, and after,
+      the photo on screen does not show the curve; the Curves graph is the only thing that moves.
+    - *Done and output.* `EditProcessor.render`, on `Dispatchers.Default`, in this order: layers,
+      crop, quarter turns, flips, filter, HSL, **curves** (`EditCurves.apply`, only when a curve is
+      bent), colour matrix, every pixel made opaque. The output is the Edit output: a JPEG at quality
+      100, at most 3000 px, saved from Result into `Pictures/Kanso`. Cancellation is checked after the
+      step. A Done render that fails is the Edit failure above; Curves adds no failure of its own.
+    - *Decision record:* [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
 
 ### 3.2 Layers: what stickers, text and dates share
 
@@ -622,6 +665,7 @@ only on a device or an emulator.
 | [ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md) | A date is its own layer kind, not a text: it keeps its moment and format, so the pickers and tap-to-cycle work on it. |
 | [ADR-007](docs/adr/ADR-007-body-reshapes-use-the-mediapipe-pose-model-and-its-mask.md) | Body reshapes (Waist first) use MediaPipe's bundled pose model and its person mask, warped with the faces in one pass, in a Body group of Beautify. |
 | [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md) | HSL is computed on the CPU by one formula (`EditHsl`) for the preview and for Done; no shader, no look-up table. |
+| [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) | Curves run on the CPU (`EditCurves`) after HSL and before the colour matrix, through 256-entry tables. |
 
 ---
 

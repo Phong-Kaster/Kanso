@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The Curves tool's name under its icon in the Edit screen's tool row. -->
+    <string name="edit_curves_tool_name">Curves</string>
+    <!-- The name of the master curve, which bends all three colours together. -->
+    <string name="edit_curves_channel_rgb">RGB</string>
+    <!-- The graph's spoken description: the curve's name, then how many points it has. -->
+    <string name="edit_curves_graph_description">%1$s curve, %2$d points</string>
+    <!-- The Reset button's label: puts the curve on screen back to a straight diagonal. -->
+    <string name="edit_curves_reset">Reset</string>
+</resources>

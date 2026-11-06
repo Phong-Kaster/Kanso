@@ -1,9 +1,11 @@
 # ISSUES
 
-## Run 12 (Curves on the Edit screen), loop/kanso-curves: bootstrap, Iteration 1
+## Run 12 (Curves on the Edit screen), loop/kanso-curves: Iteration 2
 
-- **Queued decision D-001** (blocks every task): approve the DoD, choose the scope (delete or keep the optional hue curves, criteria 23-24), approve permanent Gradle assemble/test/lint rules. Answer in `.harness/run/DECISIONS.md` under `## D-001`.
-- Nothing built yet; no criterion awaits a signature yet.
+- **D-002 (informational, nothing blocked):** `verifyRoborazziDebug` is red for pictures 63 and 64 (`edit_filters_1977`, light and dark): the new Curves entry moves the tool row. To approve re-recording, list both under `## Baselines` in `.harness/run/DECISIONS.md`.
+- Review: not yet run for T-001 (the Reviewer runs when T-002 lands; recorded here so it is not lost). Run 11 note: stale KDoc comments in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63` remain for T-002.
+- Assumptions: none. Nothing awaits a signature yet (criteria 15-17, 22 are for the Verifier and a person).
+
 
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 
