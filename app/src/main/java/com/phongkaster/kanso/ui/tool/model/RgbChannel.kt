@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import com.phongkaster.kanso.R
+import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BLUE_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_GREEN_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_RED_TAG
@@ -13,26 +14,29 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_RED_TAG
  * single slider for the chosen one, the way Adjust does (see [AdjustSlider]), so its sheet is as
  * short as the others'.
  *
- * [labelRes] names the channel on its chip and beside its slider; [sliderTag] is the slider's
- * test tag. [lightTint] and [darkTint] colour the slider's track and thumb and the chip's dot
- * (see [tintOn]), so the person sees which channel they are moving without reading: a deep shade
- * on the light sheet, a pale one on the dark sheet, each chosen to stand out from the sheet by
- * at least the 3:1 contrast WCAG asks of graphics.
+ * [labelRes] names the channel beside its slider; [sliderTag] is the slider's test tag. [range]
+ * is the HSL colour range of the same name, whose circle RGB shows as the channel's chip, so red,
+ * green and blue look the same in the RGB and HSL sheets. [lightTint] and [darkTint] colour the
+ * slider's track and thumb (see [tintOn]), so the person sees which channel they are moving
+ * without reading: a deep shade on the light sheet, a pale one on the dark sheet, each chosen to
+ * stand out from the sheet by at least the 3:1 contrast WCAG asks of graphics. (HSL's circle
+ * colours cannot colour the slider: its green is about 1.7:1 on the light sheet.)
  */
 enum class RgbChannel(
     @StringRes val labelRes: Int,
     val sliderTag: String,
+    val range: ColourRange,
     val lightTint: Color,
     val darkTint: Color,
 ) {
     /** The red channel: lowering it pushes the photo towards cyan, raising it towards red. */
-    RED(R.string.edit_tool_red, EDIT_RED_TAG, lightTint = Color(0xFFC62828), darkTint = Color(0xFFFF8A80)),
+    RED(R.string.edit_tool_red, EDIT_RED_TAG, ColourRange.RED, lightTint = Color(0xFFC62828), darkTint = Color(0xFFFF8A80)),
 
     /** The green channel: lowering it pushes the photo towards magenta, raising it towards green. */
-    GREEN(R.string.edit_tool_green, EDIT_GREEN_TAG, lightTint = Color(0xFF2E7D32), darkTint = Color(0xFF81C784)),
+    GREEN(R.string.edit_tool_green, EDIT_GREEN_TAG, ColourRange.GREEN, lightTint = Color(0xFF2E7D32), darkTint = Color(0xFF81C784)),
 
     /** The blue channel: lowering it pushes the photo towards yellow, raising it towards blue. */
-    BLUE(R.string.edit_tool_blue, EDIT_BLUE_TAG, lightTint = Color(0xFF1565C0), darkTint = Color(0xFF64B5F6)),
+    BLUE(R.string.edit_tool_blue, EDIT_BLUE_TAG, ColourRange.BLUE, lightTint = Color(0xFF1565C0), darkTint = Color(0xFF64B5F6)),
     ;
 
     /**

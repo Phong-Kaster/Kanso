@@ -78,8 +78,9 @@ network are used. You can:
   +100, with the number beside the name. Choosing a chip changes nothing in the photo; the chip
   chosen last is shown again when Adjust is reopened. The photo follows the finger
   while it drags, and the slider stays where it is let go.
-- **RGB**: three chips, **Red**, **Green** and **Blue**, each with a dot in its colour, and one
-  slider for the chosen chip, tinted in that channel's colour. Each runs from -100 (the channel is
+- **RGB**: three colour circles with no text, **Red**, **Green** and **Blue**, drawn exactly like
+  HSL's colour-range circles and in the same colours as HSL's Red, Green and Blue, and one
+  slider for the chosen circle, tinted in that channel's colour. Each runs from -100 (the channel is
   gone: less red turns the photo cyan, less green magenta, less blue yellow) through 0 (no change)
   to +100 (the channel doubled). It works like Adjust in everything else: Red is chosen the first
   time, the chip chosen last comes back, choosing a chip changes nothing, each drag is one Undo
