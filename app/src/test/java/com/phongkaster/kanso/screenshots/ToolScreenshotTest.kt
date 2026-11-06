@@ -45,6 +45,13 @@ import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HSL_SLIDER_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.colourrangerow.hslRangeTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.hslChipTag
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.performTouchInput
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -444,6 +451,38 @@ class ToolScreenshotTest {
         showTool(Tool.EDIT, ThemeMode.Dark)
         openSheet(EditTool.CURVES)
         capture("96_edit_curves_master_straight_dark.png")
+    }
+
+    /** Picture 97: the Curves sheet with the Red chip chosen and an S-curve on Red, light. */
+    @Test
+    fun edit_curves_red_s_curve_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        drawRedSCurve()
+        capture("97_edit_curves_red_s_curve_light.png")
+    }
+
+    /** Picture 98: the Curves sheet with an S-curve on Red, dark. */
+    @Test
+    fun edit_curves_red_s_curve_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        drawRedSCurve()
+        capture("98_edit_curves_red_s_curve_dark.png")
+    }
+
+    /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
+    private fun drawRedSCurve() {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RED)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            click(spot(0.25f, 0.15f))
+            click(spot(0.75f, 0.85f))
+        }
+        compose.waitForIdle()
+        Thread.sleep(FILTER_SETTLE_MILLIS)
+        compose.waitForIdle()
     }
 
     /**

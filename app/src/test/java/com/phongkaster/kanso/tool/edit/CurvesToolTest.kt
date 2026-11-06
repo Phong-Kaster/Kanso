@@ -167,6 +167,40 @@ class CurvesToolTest {
         assertTrue(viewModel.state.value.discardPrompt)
     }
 
+    /** The first time, the RGB curve is chosen. */
+    @Test
+    fun the_curve_channel_starts_as_rgb() {
+        assertEquals(CurveChannel.RGB, loadedEditViewModel().state.value.curveChannel)
+    }
+
+    /** The chosen curve is remembered when the Curves sheet is closed and opened again. */
+    @Test
+    fun the_chosen_curve_is_remembered_when_the_sheet_reopens() {
+        val viewModel = loadedEditViewModel()
+        viewModel.openTool(EditTool.CURVES)
+        viewModel.chooseCurveChannel(CurveChannel.BLUE)
+        viewModel.openTool(EditTool.CURVES) // tapping the open tool again closes its sheet
+        assertNull(viewModel.state.value.openTool)
+        viewModel.openTool(EditTool.CURVES)
+
+        assertEquals(EditTool.CURVES, viewModel.state.value.openTool)
+        assertEquals(CurveChannel.BLUE, viewModel.state.value.curveChannel)
+    }
+
+    /** Choosing a curve changes no setting and makes no Undo step. */
+    @Test
+    fun choosing_a_curve_changes_nothing_and_adds_no_undo_step() {
+        val viewModel = loadedEditViewModel()
+        viewModel.openTool(EditTool.CURVES)
+
+        CurveChannel.entries.forEach(action = { channel -> viewModel.chooseCurveChannel(channel) })
+        runMainThread()
+
+        assertEquals("a choice changed the photo", EditSettings(), viewModel.state.value.settings)
+        assertFalse("a choice made an Undo step", viewModel.state.value.canUndo)
+        assertTrue(viewModel.state.value.settings.isNeutral(EditTool.CURVES))
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /** Settings whose master curve is [curve]. */

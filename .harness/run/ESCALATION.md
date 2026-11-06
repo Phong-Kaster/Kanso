@@ -100,3 +100,20 @@ Adding the Curves entry moves the tool row in `app/src/test/screenshots/63_edit_
 
 ### Engine Recommendation
 Approve both; the change is the tool row only.
+
+---
+
+## D-003 - Re-record pictures 95 and 96 (Autonomous: informational, nothing blocked)
+
+- **Status:** answered (approved by the owner 2026-11-06; re-recorded in Iteration 4)
+- **Type:** baseline approval
+- **Iteration:** 3
+- **Blocks tasks:** none (work continues)
+
+### Question
+The Curves chips (RGB, Red, Green, Blue) now sit in the sheet's top row, so `app/src/test/screenshots/95_edit_curves_master_straight_light.png` and `96_edit_curves_master_straight_dark.png` no longer match (`verifyRoborazziDebug` fails on them, evidence `p3-verify.txt`). The engine may not overwrite a baseline. To approve, list both under `## Baselines` in `.harness/run/DECISIONS.md`.
+
+### Engine Recommendation
+Approve both; the change is the chips row only.
+
+### Decision

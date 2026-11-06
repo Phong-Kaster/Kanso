@@ -3,8 +3,8 @@
 > A derived cache; on any disagreement with task files or git, this file is wrong.
 
 - **Stage:** build (Run Mode Autonomous)
-- **Next Phase:** Phase 3 - T-003 (Red/Green/Blue chips, 3 slices): scope in `TASKS/T-003.md`. Fold in review notes: CurveGraph must ignore gestures while disabled (T-004 scope includes CurveGraph; T-003 slice 2 also touches it). README Curves row says chips are not there yet: update when chips land.
-- **Queued decisions:** none (D-002 answered)
+- **Next Phase:** Phase 4 - T-004 (Lightness chip + L curve), scope in `TASKS/T-004.md`. CurveChips.kt and CurveGraph.kt exist (FilterChip chips, `curveChipTag`, `curveChannelLabelRes`, `curveLineColor` in CurvesPanel.kt). README Curves row says Lightness is not there: update when it lands. Picture 97/98 S-curve taps need a check.
+- **Queued decisions:** none (D-003 answered)
 - **Abandoned / unreachable:** none
 - **Verified commands:** `cd /d/Valve/Personal/Kanso && timeout 3000 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --continue` | pictures: `./gradlew :app:verifyRoborazziDebug` (green) | new baselines: `powershell -NoProfile -File .harness/loop/bin/foreman-record-baselines.ps1 -Module app`
 - **Criteria T-003 cites:** find by Grep on the number in `.harness/run/DoD.md` (9, 10, 14, 15 likely).

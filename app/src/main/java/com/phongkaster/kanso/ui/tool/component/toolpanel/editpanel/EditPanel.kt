@@ -43,6 +43,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.C
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HslPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.stickerspanel.StickersPanel
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
 import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.editProcessorFor
 
@@ -103,7 +104,8 @@ const val EDIT_INTENSITY_TAG = "edit-filter-intensity"
  * off mid-drag would flicker and lose the finger.
  *
  * [adjustSlider] is Adjust's chosen sub-tool (kept in the screen's state) and [onAdjustSlider] a
- * sub-tool chip tapped. [rgbChannel] and [onRgbChannel] are the same for RGB's channel chips.
+ * sub-tool chip tapped. [rgbChannel] and [onRgbChannel] are the same for RGB's channel chips, and
+ * [curveChannel] and [onCurveChannel] for the Curves sheet's chips (RGB, Red, Green, Blue).
  *
  * Stickers (the fifth tool): [stickerCategory] is the chosen chip, [onStickerCategoryChosen] a chip
  * tapped, [onStickerChosen] a grid tile tapped, [onStickersCancel] and [onStickersConfirm] the
@@ -128,6 +130,8 @@ fun EditPanel(
     onAdjustSlider: (AdjustSlider) -> Unit = {},
     rgbChannel: RgbChannel = RgbChannel.RED,
     onRgbChannel: (RgbChannel) -> Unit = {},
+    curveChannel: CurveChannel = CurveChannel.RGB,
+    onCurveChannel: (CurveChannel) -> Unit = {},
     stickerCategory: StickerCategory = StickerCategory.FOOD,
     onStickerCategoryChosen: (StickerCategory) -> Unit = {},
     onStickerChosen: (CatalogSticker) -> Unit = {},
@@ -165,6 +169,8 @@ fun EditPanel(
         onAdjustSlider = onAdjustSlider,
         rgbChannel = rgbChannel,
         onRgbChannel = onRgbChannel,
+        curveChannel = curveChannel,
+        onCurveChannel = onCurveChannel,
         stickerCategory = stickerCategory,
         onStickerCategoryChosen = onStickerCategoryChosen,
         onStickerChosen = onStickerChosen,
@@ -222,6 +228,8 @@ fun EditPanelContent(
     onAdjustSlider: (AdjustSlider) -> Unit = {},
     rgbChannel: RgbChannel = RgbChannel.RED,
     onRgbChannel: (RgbChannel) -> Unit = {},
+    curveChannel: CurveChannel = CurveChannel.RGB,
+    onCurveChannel: (CurveChannel) -> Unit = {},
     stickerCategory: StickerCategory = StickerCategory.FOOD,
     onStickerCategoryChosen: (StickerCategory) -> Unit = {},
     onStickerChosen: (CatalogSticker) -> Unit = {},
@@ -333,6 +341,8 @@ fun EditPanelContent(
                 // Reset is a single button press, so it commits at once like a chip.
                 onChange = onChange,
                 enabled = enabled,
+                curveChannel = curveChannel,
+                onCurveChannel = onCurveChannel,
             )
             // The Text sheet is drawn by the screen itself (TextPanel), with the ViewModel's text
             // calls; it never reaches this panel.

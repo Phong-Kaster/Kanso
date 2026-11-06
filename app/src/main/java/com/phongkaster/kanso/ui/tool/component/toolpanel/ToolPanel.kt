@@ -24,6 +24,7 @@ import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
 import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
 import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
@@ -65,7 +66,7 @@ const val ARTISTIC_PANEL_TAG = "artistic-panel"
  * (no sheet open) the Edit panel draws nothing, only its empty, tagged slot. [enabled] switches
  * the Edit controls off, which the screen does while an edit runs or while Compare shows the
  * original photo. [onEditAdjustSlider] is one of Adjust's sub-tool chips tapped and
- * [onEditRgbChannel] one of RGB's channel chips; [onEditHslRange] and [onEditHslChannel] are an HSL
+ * [onEditRgbChannel] one of RGB's channel chips; [onEditCurveChannel] one of Curves' channel chips;[onEditHslRange] and [onEditHslChannel] are an HSL
  * colour circle and an HSL chip tapped; the chosen ones come from [state]. The other four tools ignore all five.
  */
 @Composable
@@ -86,6 +87,7 @@ fun ToolPanel(
     onEditRatio: (CropRatio, (EditSettings) -> ToolProcessor) -> Unit = { _, _ -> },
     onEditAdjustSlider: (AdjustSlider) -> Unit = {},
     onEditRgbChannel: (RgbChannel) -> Unit = {},
+    onEditCurveChannel: (CurveChannel) -> Unit = {},
     onEditHslRange: (ColourRange) -> Unit = {},
     onEditHslChannel: (HslChannel) -> Unit = {},
 ) {
@@ -114,6 +116,8 @@ fun ToolPanel(
                 onAdjustSlider = onEditAdjustSlider,
                 rgbChannel = state.rgbChannel,
                 onRgbChannel = onEditRgbChannel,
+                curveChannel = state.curveChannel,
+                onCurveChannel = onEditCurveChannel,
                 hslRange = state.hslRange,
                 hslChannel = state.hslChannel,
                 onHslRange = onEditHslRange,

@@ -166,6 +166,50 @@ class CurveFormulaTest {
         assertEquals(0xFFFFFFFF.toInt(), pixels[2])
     }
 
+    /** A Green curve changes only green and a Blue curve only blue (DoD 10); the other two bytes stay as they were. */
+    @Test
+    fun a_green_or_blue_curve_changes_only_that_colour() {
+        val bend = curveOf(CurvePoint(0.5f, 0.8f))
+        val green = intArrayOf(0xFF404040.toInt())
+        EditCurves.apply(green, CurveAdjustments(green = bend))
+        assertEquals(0x40, (green[0] shr 16) and 0xFF)
+        assertTrue("green did not change", ((green[0] shr 8) and 0xFF) > 0x40)
+        assertEquals(0x40, green[0] and 0xFF)
+
+        val blue = intArrayOf(0xFF404040.toInt())
+        EditCurves.apply(blue, CurveAdjustments(blue = bend))
+        assertEquals(0x40, (blue[0] shr 16) and 0xFF)
+        assertEquals(0x40, (blue[0] shr 8) and 0xFF)
+        assertTrue("blue did not change", (blue[0] and 0xFF) > 0x40)
+    }
+
+    /** The master curve moves all three colours alike. */
+    @Test
+    fun the_rgb_curve_changes_all_three_colours_alike() {
+        val pixels = intArrayOf(0xFF404040.toInt())
+        EditCurves.apply(pixels, CurveAdjustments(rgb = curveOf(CurvePoint(0.25f, 0.6f))))
+        val r = (pixels[0] shr 16) and 0xFF
+        assertTrue("the master curve did not lift", r > 0x40)
+        assertEquals(r, (pixels[0] shr 8) and 0xFF)
+        assertEquals(r, pixels[0] and 0xFF)
+    }
+
+    /** The master curve runs after the single-colour one: the result is rgb(red(x)), not red(rgb(x)). */
+    @Test
+    fun the_rgb_curve_is_applied_after_the_single_colour_curve() {
+        val red = curveOf(at(64, 200))
+        val rgb = curveOf(at(128, 40))
+        val pixels = intArrayOf(0xFF404040.toInt())
+        EditCurves.apply(pixels, CurveAdjustments(rgb = rgb, red = red))
+
+        val redTable = red.table()
+        val rgbTable = rgb.table()
+        assertEquals(rgbTable[redTable[0x40]], (pixels[0] shr 16) and 0xFF)
+        assertEquals(rgbTable[0x40], (pixels[0] shr 8) and 0xFF)
+        assertEquals(rgbTable[0x40], pixels[0] and 0xFF)
+        assertNotEquals("the order cannot be told apart", rgbTable[redTable[0x40]], redTable[rgbTable[0x40]])
+    }
+
     /** A red-only curve changes the red channel and nothing else, and keeps alpha. */
     @Test
     fun a_red_curve_changes_only_red() {

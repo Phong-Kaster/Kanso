@@ -172,3 +172,7 @@ Unsigned items from Runs 2 to 8, moved here word for word when their runs' secti
 - Back-without-asking ignores HSL-only changes until T-003 wires `isNeutral`; stale preview comments in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63`; README layer notes (:285, :289) omit HSL. All carried into `TASKS/T-003.md`.
 
 Run 11 carry-over (not a signature): README "Known limits" row-width sentence (nine tools) not re-verified; stale KDocs in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63` are outside T-004's scope.
+
+## Run 12 (Curves)
+- [ ] Run 12 97/98 Red "S-curve" pictures show only one middle point (the first tap did not add one); look at them and fix `drawRedSCurve` in `ToolScreenshotTest.kt` if wanted. Chips at 320 dp unchecked.
+- [ ] Run 12 95/96 re-recorded pictures (chips row; neutral RGB line): not looked at by a person beyond the owner approval of D-003.

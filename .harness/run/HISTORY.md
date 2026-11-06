@@ -19,3 +19,6 @@
 - Consumed D-002 (approved): pictures 63/64 re-recorded through the wrapper.
 - T-002 done: curves in the live preview (FilterPreviewRenderer, ToolViewModel), CurvesPreviewTest, CurveParityTest, README/edit.md. Build, 1 unit-test run, lint and screenshot check green.
 - Reviewer: fixed a crash in `ToneCurve.moved` (empty coerceIn range) with a test, README Curves row corrected, test-edits.md completed. A change making diagonal-point curves neutral was tried and reverted (it would skip Undo and disable Reset).
+
+### Iteration 4 - 2026-11-06 (Phase 3, T-003)
+Red/Green/Blue chips: curveChannel state, CurveChips, per-channel graph and Reset, graph ignores gestures when disabled, tests, docs, pictures 97/98 recorded, 95/96 re-recorded (D-003 approved). Build, tests, lint green. Amendment: EditPanel.kt added to slice 2 scope.

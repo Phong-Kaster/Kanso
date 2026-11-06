@@ -7,7 +7,7 @@
 - **Stage:** build
 - **Run Mode:** Autonomous
 - **Loop Branch:** loop/kanso-curves (from `main` at `069b5c3`)
-- **Next Phase:** Phase 3 - T-003 (Red, Green, Blue chips)
+- **Next Phase:** Phase 4 - T-004 (Lightness)
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -17,7 +17,7 @@
 |---|---|---|---|
 | T-001 | done | data/edit/edit curve model + EditTool/EditSettings/EditProcessor, EditPanel, EditToolRow, curvespanel/*, 9 tests, README, docs (24 files) | - |
 | T-002 | done | FilterPreviewRenderer, ToolViewModel, 2 tests, README, edit.md | p2-build2.txt |
-| T-003 | pending | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
+| T-003 | done | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
 | T-004 | pending | CurveChannel, CurveAdjustments, EditCurves, CurveChips, CurveGraph, strings, tests, README, edit.md (12 files) | - |
 
 ## Assumptions

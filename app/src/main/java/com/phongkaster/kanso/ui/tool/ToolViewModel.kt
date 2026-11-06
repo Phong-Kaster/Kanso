@@ -19,6 +19,7 @@ import com.phongkaster.kanso.data.edit.edit.ColourRange
 import com.phongkaster.kanso.data.edit.edit.CropRatio
 import com.phongkaster.kanso.data.edit.edit.DateFormat
 import com.phongkaster.kanso.data.edit.edit.CurveAdjustments
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
 import com.phongkaster.kanso.data.edit.edit.EditSession
 import com.phongkaster.kanso.data.edit.edit.EditSettings
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -578,6 +579,15 @@ class ToolViewModel(
      */
     fun chooseRgbChannel(channel: RgbChannel) {
         mutableState.update { it.copy(rgbChannel = channel) }
+    }
+
+    /**
+     * Shows the Curves tool's [channel] (the master RGB curve, or red, green or blue) in place of
+     * the one shown. It only stores the choice: no setting and no photo change, so no Undo step;
+     * the choice is kept in the state, so reopening Curves shows it again.
+     */
+    fun chooseCurveChannel(channel: CurveChannel) {
+        mutableState.update { it.copy(curveChannel = channel) }
     }
 
     /**

@@ -46,10 +46,20 @@ compare image before approving: only the tool row differs (the Curves entry now 
 Filters, and the row scrolls so Filters stays in view); the photo and the Filters sheet are
 identical.
 
+## D-003
+
+**Approved by the owner, 2026-11-06.** Re-record both pictures. Checked against the Roborazzi
+compare image: two changes, both accepted. (1) The RGB / Red / Green / Blue chips in the sheet's
+top row. (2) The RGB curve's line and points are now white (neutral) instead of the theme's light
+blue; the engine's entry mentioned only the chips. Keep the neutral master curve, so the Red,
+Green and Blue curves can show their own colours.
+
 ## Baselines
 
 - `app/src/test/screenshots/63_edit_filters_1977_light.png`
 - `app/src/test/screenshots/64_edit_filters_1977_dark.png`
+- `app/src/test/screenshots/95_edit_curves_master_straight_light.png`
+- `app/src/test/screenshots/96_edit_curves_master_straight_dark.png`
 
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty

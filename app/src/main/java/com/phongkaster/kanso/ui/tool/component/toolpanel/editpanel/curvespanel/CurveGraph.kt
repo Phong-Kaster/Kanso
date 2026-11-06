@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
 import com.phongkaster.kanso.data.edit.edit.CurvePoint
 import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.data.settings.ThemeMode
@@ -80,7 +81,9 @@ private const val OUTCOME_CANCELLED = 3
  * There is no double tap on purpose: waiting to tell a double tap from a tap would delay every tap.
  *
  * While a finger is down the graph draws its own copy of the curve, so the line follows the finger
- * even before the caller has handed a new [curve] back. [description] is what a screen reader says.
+ * even before the caller has handed a new [curve] back. [description] is what a screen reader says
+ * (it names the curve, such as "Red curve, 3 points"). While [enabled] is false the graph still
+ * draws but ignores every touch.
  */
 @Composable
 internal fun CurveGraph(
@@ -90,6 +93,7 @@ internal fun CurveGraph(
     onPreview: (ToneCurve) -> Unit,
     onCommit: (ToneCurve) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     // The curve being edited by a finger right now, or null when no gesture is running.
     var working by remember { mutableStateOf<ToneCurve?>(null) }
@@ -115,7 +119,10 @@ internal fun CurveGraph(
             .background(MaterialTheme.colorScheme.surfaceContainerLowest, RoundedCornerShape(12.dp))
             .testTag(CURVE_GRAPH_TAG)
             .semantics { contentDescription = description }
-            .pointerInput(Unit) {
+            // Keyed on [enabled]: switching it restarts the handler, which drops any gesture in
+            // progress; while disabled it installs no handler, so every touch is ignored.
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown()
                     val plot = Size(size.width.toFloat(), size.height.toFloat())
@@ -253,8 +260,8 @@ private fun CurveGraphPreview() {
             Box(modifier = Modifier.fillMaxSize()) {
                 CurveGraph(
                     curve = bent,
-                    description = "RGB curve, 4 points",
-                    lineColor = MaterialTheme.colorScheme.primary,
+                    description = "Blue curve, 4 points",
+                    lineColor = curveLineColor(CurveChannel.BLUE),
                     onPreview = {},
                     onCommit = {},
                     modifier = Modifier.width(320.dp).height(140.dp),

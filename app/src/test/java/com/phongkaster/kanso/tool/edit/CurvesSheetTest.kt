@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -34,6 +36,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelCont
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_RESET_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -69,6 +72,12 @@ class CurvesSheetTest {
 
     /** How many times `onCommit` was called. */
     private var commits = 0
+
+    /** The curve the chips have chosen, as the ViewModel holds it in the app. */
+    private var channel by mutableStateOf(CurveChannel.RGB)
+
+    /** Every channel handed to `onCurveChannel`, in order. */
+    private val chosen = mutableListOf<CurveChannel>()
 
     /** The graph is drawn and has a spoken description naming the RGB curve; Reset is drawn too. */
     @Test
@@ -178,6 +187,72 @@ class CurvesSheetTest {
         assertEquals(ToneCurve.MAX_POINTS, settings.curves.rgb.points.size)
     }
 
+    /** The four chips are there with spoken names, RGB is chosen first, and each is at least 48 dp to touch. */
+    @Test
+    fun the_four_chips_have_names_and_are_at_least_48_dp() {
+        show()
+        val minPx = with(Density(compose.activity)) { TouchTargetCheck.MIN_SIZE.toPx() }
+        CurveChannel.entries.forEach { channel ->
+            val node = compose.onNodeWithTag(curveChipTag(channel)).fetchSemanticsNode()
+            assertTrue("the $channel chip has no spoken name", TouchTargetCheck.spokenName(node) != null)
+            val (width, height) = TouchTargetCheck.measuredSizePx(node)
+            assertTrue(
+                "the $channel chip is $width x $height px, under 48 dp ($minPx px)",
+                width + 0.5f >= minPx && height + 0.5f >= minPx,
+            )
+        }
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RGB)).assertIsSelected()
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RED)).assertIsNotSelected()
+    }
+
+    /** Tapping a chip hands its channel up, changes no setting and makes no commit; the graph names the chosen curve. */
+    @Test
+    fun tapping_a_chip_chooses_it_and_the_graph_names_it() {
+        show()
+        CurveChannel.entries.forEach { channel ->
+            compose.onNodeWithTag(curveChipTag(channel)).performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag(curveChipTag(channel)).assertIsSelected()
+            val description = compose.onNodeWithTag(CURVE_GRAPH_TAG).fetchSemanticsNode()
+                .config[SemanticsProperties.ContentDescription].joinToString(" ")
+            val name = when (channel) {
+                CurveChannel.RGB -> "RGB"
+                CurveChannel.RED -> "Red"
+                CurveChannel.GREEN -> "Green"
+                CurveChannel.BLUE -> "Blue"
+            }
+            assertTrue("the description is \"$description\"", description.contains(name))
+        }
+        assertEquals(CurveChannel.entries.toList(), chosen)
+        assertEquals(EditSettings(), settings)
+        assertEquals(0, commits)
+        assertTrue(changes.isEmpty() && previews.isEmpty())
+    }
+
+    /** Reset puts only the chosen curve back to straight, and is disabled while that curve is straight. */
+    @Test
+    fun reset_resets_only_the_chosen_curve() {
+        val bend = ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.75f))
+        settings = EditSettings(
+            curves = CurveAdjustments.NEUTRAL.with(CurveChannel.RGB, bend).with(CurveChannel.RED, bend),
+        )
+        channel = CurveChannel.RED
+        show()
+        compose.onNodeWithTag(CURVE_RESET_TAG).assertIsEnabled()
+        compose.onNodeWithTag(CURVE_RESET_TAG).performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, changes.size)
+        assertTrue(settings.curves.red.isNeutral)
+        assertEquals(bend, settings.curves.rgb)
+        compose.onNodeWithTag(CURVE_RESET_TAG).assertIsNotEnabled()
+
+        // The master curve is still bent, so Reset is enabled again once RGB is chosen.
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RGB)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_RESET_TAG).assertIsEnabled()
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
 
     /** Settings with a master curve holding one middle point at (0.5, 0.75). */
@@ -222,6 +297,11 @@ class CurvesSheetTest {
                                         },
                                         onCommit = { commits++ },
                                         onRatio = {},
+                                        curveChannel = channel,
+                                        onCurveChannel = { picked ->
+                                            chosen += picked
+                                            channel = picked
+                                        },
                                     )
                                 },
                             )
