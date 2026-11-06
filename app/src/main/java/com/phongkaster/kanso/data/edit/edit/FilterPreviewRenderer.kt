@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Builds the filter part of the Edit screen's live preview: a small copy of the original photo
- * with only the chosen filter applied.
+ * with only the CPU stage applied (the chosen filter, the HSL values and the tone curves).
  *
  * **How the live preview is put together.** The preview splits an edit into two kinds of work:
  *
@@ -17,9 +17,9 @@ import kotlinx.coroutines.withContext
  *   draws them itself every frame (the sliders as a `ColorFilter.colorMatrix` built by
  *   [EditColourMatrix.of], the same numbers Done uses). That is why the photo changes while a
  *   finger is still dragging a slider: no pixel is recomputed on the CPU.
- * - A filter is a look-up per pixel that Compose cannot draw, so this class computes it on the
- *   CPU, off the main thread, once per filter or intensity change, by running the real Done
- *   processor with only the filter set. Its result is the picture Compose then crops, turns, flips
+ * - A filter, the HSL values and the tone curves are per-pixel work that Compose cannot draw, so
+ *   this class computes them on the CPU, off the main thread, once per change, by running the
+ *   real Done processor with only those set. Its result is the picture Compose then crops, turns, flips
  *   and colours.
  *
  * **Always the original with every current setting.** [source] is the ORIGINAL photo (only made
@@ -44,12 +44,15 @@ class FilterPreviewRenderer(
 
     /**
      * Returns [source] with the layers of [settings] drawn on it, then the filter of
-     * [settings] at its intensity applied, then its HSL values, as a new bitmap the same size as
-     * [source], or null when [settings] has no filter, no HSL change and no sticker to draw (the
-     * preview then shows [source] itself) or when the work failed (a look-up image that cannot be read, or no memory left).
+     * [settings] at its intensity applied, then its HSL values, then its tone curves, as a new bitmap the same size as
+     * [source], or null when [settings] has no filter, no HSL change, no curve change and no
+     * sticker to draw (the preview then shows [source] itself) or when the work failed (a look-up
+     * image that cannot be read, or no memory left).
      *
      * The sticker whose key is [touchedLayerKey] (the one under a finger) is not drawn: the
-     * screen draws it live, so it joins this picture only when the finger lifts.
+     * screen draws it live, so it joins this picture only when the finger lifts. For the same
+     * reason the stickers and the CPU stage (filter, HSL, curves) are not applied to that live
+     * sticker: it is drawn without them until the finger lifts.
      *
      * Everything else in [settings] (crop, turns, flips, colour sliders, RGB) is deliberately left out:
      * Compose draws those on top, so they must not be applied twice.
@@ -61,18 +64,23 @@ class FilterPreviewRenderer(
         // The sticker under a finger is left out: the screen draws it live on top instead.
         val layers = settings.layers.filter { it.key != touchedLayerKey }
         // Nothing to bake in: no filter and no sticker, so the preview shows [source] itself.
-        if (!settings.hasFilter && !settings.hasHslChange && layers.isEmpty()) return null
-        // Only the filter, its strength, the HSL values and the layers: every other setting stays
-        // at its neutral default. The processor draws layers BEFORE the filter (as Done does), so a
-        // sticker under a filter comes out filtered, and the whole photo is kept (no crop), so
-        // the layers keep their place as fractions of the original. HSL runs after the filter
-        // inside the processor, so the copy holds filter then HSL, and Compose puts the colour
-        // matrix on top: the same order as Done.
+        if (!settings.hasFilter && !settings.hasHslChange && !settings.hasCurveChange &&
+            layers.isEmpty()
+        ) {
+            return null
+        }
+        // Only the filter, its strength, the HSL values, the curves and the layers: every other
+        // setting stays at its neutral default. The processor draws layers BEFORE the filter (as
+        // Done does), so a sticker under a filter comes out filtered, and the whole photo is kept
+        // (no crop), so the layers keep their place as fractions of the original. HSL and then the
+        // curves run after the filter inside the processor, so the copy holds filter, HSL, curves,
+        // and Compose puts the colour matrix on top: the same order as Done.
         val filterOnly = EditSettings(
             filter = settings.filter,
             filterIntensity = settings.filterIntensity,
             layers = layers,
             hsl = settings.hsl,
+            curves = settings.curves,
         )
         return withContext(Dispatchers.Default) {
             try {

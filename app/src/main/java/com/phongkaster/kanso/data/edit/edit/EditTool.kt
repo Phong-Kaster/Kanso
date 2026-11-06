@@ -32,6 +32,12 @@ enum class EditTool {
      */
     HSL,
 
+    /**
+     * Bending the photo's brightness with a curve: drag points on a line to lighten or darken the
+     * shadows, midtones and highlights, for all colours at once or for one colour channel.
+     */
+    CURVES,
+
     /** The ready-made looks (filters) and how strongly the chosen one is applied. */
     FILTERS,
 

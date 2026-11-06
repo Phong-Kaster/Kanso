@@ -28,7 +28,7 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of nine tools (Crop, Rotate, Adjust, RGB, HSL, Filters, Stickers, Text, Date) is its
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of ten tools (Crop, Rotate, Adjust, RGB, HSL, Curves, Filters, Stickers, Text, Date) is its
 `Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
 photo never changes size, the photo has no Replace chip, Undo and Redo stay in the top bar beside Done, and
 a Compare switch is pinned at the right of the row. **Stickers** (like Text and Date) opens
@@ -78,6 +78,16 @@ flowchart TD
     HP -->|"slider let go"| COM2["commitSettings: one Undo entry"]
     COM2 --> DONE2["Done: EditProcessor runs filter, EditHsl.apply, colour matrix"]
 ```
+
+The **Curves** tool (the tenth Edit tool, partial,
+[ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
+`CurvesPanel` (a 48 dp row with Reset at its end and the graph `CurveGraph` below it, inside the
+188 dp the 220 dp area leaves). It adds nothing to `ToolUiState`. A drag on the graph sends the new
+`EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
+lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Unlike HSL, a
+curve change asks for **no** preview render yet: `FilterPreviewRenderer` and the preview request do
+not carry the curves, so the photo on screen stays as it was while the curve changes. Only Done
+applies them: `EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix.
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and

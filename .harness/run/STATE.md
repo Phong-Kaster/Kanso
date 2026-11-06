@@ -1,32 +1,30 @@
 # STATE
 
 > Machine-owned execution memory. Updated every iteration; committed atomically with the code it describes.
-> Execution history lives in HISTORY.md, not here — this file must not grow with the run.
 
 ## Current
 
-- **Run:** 11 — HSL on the Edit screen. Run Mode: Autonomous. Base commit `8b2b0f2`.
-- **Stage:** verified — DONE_PARTIAL (Verifier, Iteration 9, 2026-11-05): every machine criterion re-proved; criteria 23-26 await a person
-- **Loop Branch:** loop/kanso-hsl
-- **Next Phase:** none executable
+- **Stage:** verify (ended DONE_PARTIAL, Iteration 7)
+- **Run Mode:** Autonomous
+- **Loop Branch:** loop/kanso-curves (from `main` at `069b5c3`)
+- **Next Phase:** none; run ended DONE_PARTIAL
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes - reported DONE_PARTIAL at Iteration 9; criteria 23-26 await a person's signature (23 pre-checked: all 25 pairs differ only in the tool row; 24 not driven: A13 locked, no emulator)
+- **PARTIAL-candidate:** yes - verified at Iteration 7: every machine criterion (1-14, 18-21, 23) re-proved (assemble, lint, 1267 tests 0 skipped, verifyRoborazziDebug green after 99/100 were re-recorded with the owner's `## Baselines` listing). Criteria 15, 16 (not driven: another app held the A13's screen), 17 and 22 await a person; see `.harness/ISSUES.md` "Awaiting a person, Run 12".
 
 ## Progress
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | complete (Phase 1) | `data/edit/edit/{ColourRange,HslChannel,HslAdjustments,EditHsl,EditSettings}.kt`, tests `HslRangeWeightTest`, `HslFormulaTest` | tests 31 pass, lint 0 |
-| T-002 | complete (Phase 2) | `EditProcessor`, `FilterPreviewRenderer`, `ToolViewModel` (preview), `LivePreviewImage` (KDoc), `README.md`, tests `EditProcessorTest`, `FilterPreviewRendererTest`, `HslParityTest` | full tests + lint green (`evidence/p2-full.log`) |
-| T-003 | complete (Phase 3), row pictures not re-recorded | 27 files, see `TASKS/T-003.md` | full tests + lint green (`evidence/p3-full-7.log`); pictures red, see ISSUES |
-| T-004 | complete (Phase 4) | `README.md`, `docs/features/{edit,tool-screen}.md`, `docs/adr/ADR-008-…`, `CONTEXT.md` | scope check passed; docs only |
-| T-006 | complete (Phase 6) | `screenshots/StickerScreenshotTest.kt`; baselines 69, 70, 81, 82 via the wrapper | full tests, lint, verifyRoborazzi all exit 0 (`evidence/t6-full.log`, `t6-lint.log`, `t6-verify.log`) |
-| T-005 | complete (Phase 5) | `screenshots/ToolScreenshotTest.kt`; 12 new pictures 83-94, listed baselines re-recorded (old ones in `evidence/baseline-diffs/`) | pictures recorded, 85, 87, 94 looked at; full suite not re-run |
+| T-001 | done | data/edit/edit curve model + EditTool/EditSettings/EditProcessor, EditPanel, EditToolRow, curvespanel/*, 9 tests, README, docs (24 files) | - |
+| T-002 | done | FilterPreviewRenderer, ToolViewModel, 2 tests, README, edit.md | p2-build2.txt |
+| T-003 | done | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
+| T-004 | done | CurveChannel, CurveAdjustments, EditCurves, CurveChips, CurveGraph, strings, tests, README, edit.md (12 files) | - |
+| T-006 | done | CurveChips, CurveResetButton, CurvesPanel, strings_edit_curves.xml, CurveChipRowTest (new), README (6 files) | p5-build4.log |
+
+## Signatures
+
+- None yet (criteria 15, 16, 17, 22 unsigned).
 
 ## Assumptions
 
-- A-001 to A-004 (Tier 2), see `ASSUMPTIONS.md`. No Tier-3 assumption; no assumed criterion.
-
-## Signed criteria
-
-- none
+- PRD read as a new Curves tool after HSL with RGB/Red/Green/Blue/Lightness curves; put to the human in D-001, not assumed.

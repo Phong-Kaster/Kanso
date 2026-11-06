@@ -50,6 +50,7 @@ import com.phongkaster.kanso.ui.tool.component.toolpanel.EDIT_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.ToolPanel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_RED_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HSL_SLIDER_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_ROTATE_LEFT_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanel
@@ -133,8 +134,8 @@ class EditToolRowTest {
         compose.onAllNodes(isRowEntry()).assertCountEquals(EditTool.entries.size)
         assertEquals(
             listOf(
-                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.HSL, EditTool.FILTERS,
-                EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.HSL, EditTool.CURVES,
+                EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
             ),
             EditTool.entries,
         )
@@ -279,12 +280,12 @@ class EditToolRowTest {
         showEdit()
         assertEquals(
             listOf(
-                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.HSL, EditTool.FILTERS,
-                EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
+                EditTool.CROP, EditTool.ROTATE, EditTool.ADJUST, EditTool.RGB, EditTool.HSL, EditTool.CURVES,
+                EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE,
             ),
             EditTool.entries,
         )
-        compose.onAllNodes(isRowEntry()).assertCountEquals(9)
+        compose.onAllNodes(isRowEntry()).assertCountEquals(10)
         val lefts = EditTool.entries.map { tool ->
             compose.onNodeWithTag(editToolTag(tool)).fetchSemanticsNode().positionInRoot.x
         }
@@ -510,6 +511,7 @@ class EditToolRowTest {
         EditTool.ADJUST -> R.string.edit_layout_adjust
         EditTool.RGB -> R.string.edit_layout_rgb
         EditTool.HSL -> R.string.edit_hsl_label
+        EditTool.CURVES -> R.string.edit_curves_tool_name
         EditTool.FILTERS -> R.string.edit_layout_filters
         EditTool.STICKERS -> R.string.stickers_tool_label
         EditTool.TEXT -> R.string.text_tool_label
@@ -523,6 +525,7 @@ class EditToolRowTest {
         EditTool.ADJUST -> EDIT_BRIGHTNESS_TAG
         EditTool.RGB -> EDIT_RED_TAG
         EditTool.HSL -> HSL_SLIDER_TAG
+        EditTool.CURVES -> CURVE_GRAPH_TAG
         EditTool.FILTERS -> editFilterTag(FilterPreset.KELVIN)
         EditTool.STICKERS -> STICKERS_PANEL_TAG
         EditTool.TEXT -> TEXT_PANEL_TAG
@@ -606,6 +609,6 @@ class EditToolRowTest {
          * The tools past the fourth entry, which on a 411 dp phone may sit beyond the row's edge
          * until it is swiped: HSL, Filters, Stickers, Text and Date.
          */
-        val SWIPE_AWAY = listOf(EditTool.HSL, EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
+        val SWIPE_AWAY = listOf(EditTool.HSL, EditTool.CURVES, EditTool.FILTERS, EditTool.STICKERS, EditTool.TEXT, EditTool.DATE)
     }
 }

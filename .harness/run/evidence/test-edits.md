@@ -1,20 +1,20 @@
-# Test edits (Run 11)
+# Test edits (Run 12)
+- `RgbMatrixTest.rgb_sits_right_after_adjust`: ten tools, CURVES between HSL and FILTERS.
+- `EditToolRowTest` (`nameOf`, `controlTagOf`, the order tests, the swipe-away test): CURVES added; count 9 → 10.
+- `CompareTest.compare_sits_in_the_tool_row_and_undo_beside_done`: scroll the row to FILTERS first (lazy row, ten entries).
+- `EditToolTest.a_dot_marks_only_the_tools_whose_settings_are_not_neutral` / `assertDots`: scroll each entry into view; scroll back to ADJUST before reading its dot.
+- `HslSheetTest.the_hsl_entry_sits_between_rgb_and_filters`: asserts HSL → CURVES → FILTERS.
+- `StickerAddTest.assertSheetClosedAndFiveToolsShown`: tool-entry count 9 → 10.
+- `ToolScreenshotTest`: pictures 95 and 96 added.
+- New test classes (no existing test changed): `CurveFormulaTest`, `CurvesSheetTest`, `CurvesToolTest`, `CurveParityTest` (preview vs Done, DoD 7/8), `CurvesPreviewTest` (curve-only preview, DoD 7).
+- Baselines `63_edit_filters_1977_light.png` and `64_edit_filters_1977_dark.png` re-recorded (D-002, owner-approved 2026-11-06): only the tool row differs (Curves entry before Filters; the row scrolls so Filters stays in view).
+- `CurveFormulaTest`: added `moving_a_point_squeezed_between_pinned_neighbours_never_throws` (reviewer crash finding) and `a_point_on_the_diagonal_counts_as_a_change`.
 
-Each test added, edited, renamed or removed, with its reason (PROJECT.md Constraint; DoD 35).
+## T-004
+- CurvesSheetTest `tapping_a_chip_chooses_it_and_the_graph_names_it`: added `CurveChannel.LIGHTNESS -> "Lightness"` branch (when must be exhaustive). Nothing weakened.
+- CurvesSheetTest: renamed `the_four_chips_...` to `the_five_chips_...`, added assertion on the channel list. No check removed.
+- ToolScreenshotTest: `drawRedSCurve()` now delegates to `drawSCurve(channel)`, shared by pictures 97-100.
 
-| Phase | Test file | Change | Reason |
-|---|---|---|---|
-| 1 | `app/src/test/java/com/phongkaster/kanso/tool/edit/HslRangeWeightTest.kt` | added (10 tests) | T-001: DoD 2 (range order and centres), DoD 7 (range weights, colourfulness gate) |
-| 1 | `app/src/test/java/com/phongkaster/kanso/tool/edit/HslFormulaTest.kt` | added (21 tests) | T-001: DoD 3 (27 values, clamping), 4 (hue), 5 (saturation), 6 (lightness), 8 (no banding), 9 (Blue leaves skin, red, greys) |
-| 2 | `.../tool/edit/EditProcessorTest.kt` | added 2 tests (+ helpers `hueRamp`, `matrixPixel`) | T-002: DoD 15 (HSL after filter, before colour matrix), DoD 27 (neutral HSL pixel-identical) |
-| 2 | `.../tool/edit/FilterPreviewRendererTest.kt` | added 1 test | T-002: DoD 17 (HSL-only change gives a changed preview) |
-| 2 | `.../tool/edit/HslParityTest.kt` | added (3 tests) | T-002: DoD 16 (preview and Done agree within 1/255) |
-| 3 | `.../tool/edit/HslToolTest.kt` | added | T-003: DoD 10 (first open, remembered), 11 (choosing changes nothing, no Undo), 12 (one drag one Undo step, Redo), 13 (dot), 14 (Compare, Back asks to discard, no reset) |
-| 3 | `.../tool/edit/HslSheetTest.kt` | added (incl. `a_disabled_sheet_cannot_be_used`) | T-003: DoD 2 (nine circles in order), 21 (136 dp, three rows, >= 48 dp), selection/radio roles, Compare/Done disable |
-| 3 | `.../a11y/ColourRangeMarkContrastTest.kt` | added | T-003: DoD 22 (mark contrast on all nine colours, light and dark) |
-| 3 | `.../tool/edit/EditToolRowTest.kt` | edited (8 -> 9 tools, `SWIPE_AWAY` gains HSL and FILTERS) | T-003: DoD 1; with HSL the row is 428 dp so Filters is no longer in view on 411 dp |
-| 3 | `.../tool/edit/RgbMatrixTest.kt` | edited (`rgb_sits_right_after_adjust`, counts) | T-003: ninth tool after RGB |
-| 3 | `.../tool/edit/EditLayoutTest.kt`, `ToolRowScrolling.kt` | edited | T-003: row has nine entries; scroll before tapping an entry that moved out of view |
-| 3 | `.../tool/edit/Sticker{Add,Compare,Frame,Gesture,Overlay,Selection}Test.kt`, `StickersPanelTest.kt` | edited (taps only: scroll to the Stickers entry first) | T-003: HSL pushes the Stickers entry off the 411 dp row |
-| 3 | `.../screenshots/ToolScreenshotTest.kt`, `StickerScreenshotTest.kt` | edited (taps only) | T-003: same, scroll before tapping a row entry |
-| 5 | `.../screenshots/ToolScreenshotTest.kt` | edited (14 new tests: pictures 83-94; no existing test changed) | T-005: DoD 18, 19, 20 |
+## T-006
+- Added `CurveChipRowTest` (4 tests: 360 dp and 411 dp, light and dark; every curve bent, then for each of the five curves: each chip label is the whole name on one line, not ellipsized, its drawn line inside its box; at 411 dp every chip inside the sheet; Reset displayed, clickable, enabled, inside sheet and window, and tapping it straightens that curve). Reason: DoD 23 (D-004). `@GraphicsMode(NATIVE)` so text is measured with real fonts. Width judged by `getLineLeft/Right(0)`, not `didOverflowWidth`/`hasVisualOverflow` (with `softWrap = false` the paragraph is laid out 2904 px wide, so those are true for every label). No existing test changed.
+- `CurveChipRowTest` (review fix): added Reset >= 48 x 48 dp (touch and laid-out), Reset label whole on one line, each chip touch area >= 48 dp. Reason: reviewer showed a squeezed Reset would pass.

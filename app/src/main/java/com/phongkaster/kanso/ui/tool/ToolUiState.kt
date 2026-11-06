@@ -11,6 +11,7 @@ import com.phongkaster.kanso.data.edit.edit.StickerCategory
 import com.phongkaster.kanso.data.edit.face.FaceFocus
 import com.phongkaster.kanso.navigation.Tool
 import com.phongkaster.kanso.ui.tool.model.AdjustSlider
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
 import com.phongkaster.kanso.ui.tool.model.RgbChannel
 import java.time.LocalDateTime
 
@@ -106,6 +107,12 @@ data class ToolUiState(
      * channel the person used last.
      */
     val rgbChannel: RgbChannel = RgbChannel.RED,
+    /**
+     * The curve the Curves sheet is editing: the master RGB curve or one colour's own. It is kept
+     * here so reopening Curves shows the curve the person used last; choosing a curve is not an
+     * edit, so it adds no Undo step.
+     */
+    val curveChannel: CurveChannel = CurveChannel.RGB,
     /**
      * The colour range the HSL sheet is editing (it shows one range at a time, picked by a row of
      * colour dots). Red at first; kept here so reopening HSL shows the range used last. Choosing

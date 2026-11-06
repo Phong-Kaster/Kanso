@@ -5,106 +5,115 @@
 > stops only when no executable task remains.
 >
 > This file is the engine's own log. **Answer in `.harness/run/DECISIONS.md`, never here** - copy an
-> entry's id as a heading there and write your decision underneath it, then re-run. The engine is
-> denied write access to `DECISIONS.md`, mechanically, so nothing it does here can ever race what you
-> write there. Answer any number of entries; unanswered ones stay queued and the tasks they name stay
-> unselectable.
+> entry's id as a heading there and write your decision underneath it, then re-run.
 
 ---
 
-## D-001 - Approve the Definition of Done for Run 11 (HSL), and the list of pictures to re-record
+## D-001 - Approve the Curves Definition of Done, its scope, and the standing build commands
 
-- **Status:** answered — approved by the owner in DECISIONS.md (2026-11-04), applied in Iteration 2
+- **Status:** answered (D-001, 2026-11-06: approved, option 1, capability approved)
 - **Type:** DoD approval
 - **Iteration:** 1 (bootstrap)
-- **Timestamp:** 2026-11-04
+- **Timestamp:** 2026-11-06
 - **Blocks tasks:** T-001, T-002, T-003, T-004, T-005
 
 ### Question
 
-1. Approve `.harness/run/DoD.md` (37 criteria, no removals). Edit any criterion before approving;
-   approval covers each criterion's class (machine / machine-then-human / human-only) too.
-2. **Pictures.** Your PRD approves re-recording pictures that change because the row gains a tool,
-   but the recording script keeps every existing picture unless it is listed under a
-   `## Baselines` heading in `DECISIONS.md`. Adding HSL can move the row in these 35 pictures. If you
-   agree, paste this list under `## Baselines` (remove any you do not want re-recorded):
-
-```
-## Baselines
-
-- 16_tool_photo_light.png
-- 17_tool_photo_dark.png
-- 40_tool_narrow_photo_light.png
-- 41_tool_narrow_photo_dark.png
-- 42_tool_narrow_photo_sdk30_light.png
-- 51_tool_edit_free_crop_light.png
-- 52_tool_edit_free_crop_dark.png
-- 55_edit_tool_row_light.png
-- 56_edit_tool_row_dark.png
-- 57_edit_crop_sheet_light.png
-- 58_edit_crop_sheet_dark.png
-- 59_edit_rotate_sheet_light.png
-- 60_edit_rotate_sheet_dark.png
-- 61_edit_adjust_brightness_light.png
-- 62_edit_adjust_brightness_dark.png
-- 63_edit_filters_1977_light.png
-- 64_edit_filters_1977_dark.png
-- 65_edit_compare_on_light.png
-- 66_edit_compare_on_dark.png
-- 67_edit_pill_light.png
-- 68_edit_pill_dark.png
-- 69_edit_stickers_row_light.png
-- 70_edit_stickers_row_dark.png
-- 71_edit_stickers_food_light.png
-- 72_edit_stickers_food_dark.png
-- 73_edit_stickers_mood_light.png
-- 74_edit_stickers_mood_dark.png
-- 75_edit_stickers_quote_light.png
-- 76_edit_stickers_quote_dark.png
-- 77_edit_stickers_emoji_light.png
-- 78_edit_stickers_emoji_dark.png
-- 79_edit_sticker_selected_light.png
-- 80_edit_sticker_selected_dark.png
-- 81_edit_stickers_crop_filter_light.png
-- 82_edit_stickers_crop_filter_dark.png
-```
-
-   (A listed picture whose row is hidden by its sheet simply comes out unchanged.) Each old version is kept as `<name>.old.png` in
-   `.harness/run/evidence/baseline-diffs/` for criterion 23.
+1. Approve `.harness/run/DoD.md` (edit it freely first).
+2. Which scope? Keep or delete the "Optional: hue curves" section (criteria 23-24).
+3. Approve the proposed standing build/test/lint capability below.
+4. Optionally, start a `## Baselines` list (see Context, point C).
 
 ### Context
 
-Run 11 adds HSL as the ninth Edit tool (PRD). Bootstrap fan-out: conventions survey, DoD proposal,
-task decomposition, conflict and tier analysis, and an independent critique. The plan has four
-Phases, one commit each, in the PRD's order. This is Autonomous mode: after this approval the run
-does not stop to ask again; every later choice is recorded in `ASSUMPTIONS.md`. Four were already
-taken while planning (A-001 to A-004) — read them before approving; any of them can be overturned
-here.
+The PRD is one line: "plan, write code and test on galaxy a13 to build curve feature which relate with
+RGB, HSL". The engine read it as **a new Curves tool on the Edit screen, right after HSL**, with one tone
+curve each for RGB (all colours), Red, Green, Blue and Lightness (the L of HSL).
 
-Worth your eye before approving:
-- **Criterion 21 (A-001):** your 136 dp sheet holds three rows only if each row is 40 dp tall, so
-  the circles, chips and slider are 40 dp on screen with a 48 dp touch area. The alternative was a
-  sheet that scrolls, or a taller sheet.
-- **Criteria 7–9:** the numbers ("hardly touched" ≤ 0.05, "unchanged" ≤ 1/255, no band = neighbours
-  within 12/255) are mine; change them if you want them stricter.
-- **Criterion 25** (no stutter on your A13) can only be signed by you on the phone.
+- **A. Where curves run.** A curve cannot be expressed as the colour matrix the GPU draws over the
+  photo, so it runs on the CPU like HSL: after the Filter and HSL, before Adjust and RGB. The live
+  preview and the saved photo then match. This will be written down as ADR-009.
+- **B. How you edit a curve.** Tap an empty spot to add a point. Drag a point to move it. Long-press a
+  middle point to remove it. You get at most 10 points per curve. Reset straightens the curve that is
+  on screen. Points can't be edited with TalkBack; the chips, Reset and the graph's description are
+  spoken.
+- **C. Pictures.** Adding a tenth tool can change existing screenshots that show the tool row beside
+  HSL (probably 83 and 84). The engine cannot overwrite an existing picture. When `verifyRoborazziDebug`
+  goes red, it will list the exact paths in a new decision, and you add them under `## Baselines`.
+- **D. The A13.** The Galaxy A13 is attached (SM-A135F). At the end, the Verifier drives Curves on it
+  through the device wrapper. It installs over the existing app and never clears the app's data
+  (criterion 16). Smoothness is yours to judge (criterion 17).
+- **E. Icon.** No curve icon exists. A Wiring Worker will write `ic_show_chart.xml` with the Material
+  "show chart" path, white fill and no tint, like the other icons. If you would rather supply the
+  Material Symbols Rounded file yourself, say so and drop it in `app/src/main/res/drawable/`.
+- **F. Build commands.** No ledger currently grants assemble, test or lint, and every run has had to ask
+  for them. The proposal makes them permanent.
 
 ### Options Considered
 
-1. Approve as written, with the `## Baselines` list - consequences: the run builds all four Phases
-   without stopping.
-2. Approve without the list - consequences: Phase 3 cannot pass the screenshot check (the old row
-   pictures stay), so the run ends `DONE_PARTIAL` with the pictures for you to re-record.
-3. Edit criteria, then approve.
+1. **RGB, Red, Green, Blue and Lightness curves** (delete criteria 23-24). This uses one editor and one
+   formula, covers "RGB" and the L of "HSL", and needs 4 tasks.
+2. **Option 1 plus Hue → Saturation and Hue → Lightness curves** (keep 23-24). This is closer to
+   Lightroom's HSL curves. It needs a second kind of graph (a hue axis that wraps around, with a flat
+   line that means "no change"), so it adds T-005 and two pictures.
+3. **Replace the RGB and HSL sliders with curves.** The engine does not recommend this: it would remove
+   working tools that you signed off on 2026-11-06.
 
 ### Engine Recommendation
 
-Option 1.
+Option 1. Delete the optional section and approve the rest. Hue curves can be a later run, once the
+Curves editor exists.
 
 ### Proposed Capabilities (if any)
 
-None: Autonomous mode runs under the Deny List.
+```json
+{
+  "intent": "Build, unit-test (with Robolectric and Roborazzi verify via the baseline ledger) and lint the app every Iteration, the verified toolchain recorded in knowledge/reference/build-and-environment.md. Asked for again at every run so far; permanent so it stops being re-asked.",
+  "command": "./gradlew :app:assembleDebug | ./gradlew :app:testDebugUnitTest [--tests <filter>] | ./gradlew :app:lintDebug, optionally prefixed by 'cd /d/Valve/Personal/Kanso &&' and 'timeout <n>'",
+  "scope": "this repository; reads sources, writes only Gradle build outputs under build/ and app/build/",
+  "lifetime": "permanent",
+  "allow": [
+    "Bash(*gradlew :app:assembleDebug*)",
+    "Bash(*gradlew :app:testDebugUnitTest*)",
+    "Bash(*gradlew :app:lintDebug*)"
+  ],
+  "target_ledger": ".harness/knowledge/capabilities.json"
+}
+```
 
 ### Decision
 
-<!-- Answered in `.harness/run/DECISIONS.md`, under a heading `## D-001` - never here. -->
+<!-- Answer in `.harness/run/DECISIONS.md` under `## D-001`. For example: "Approved, option 1,
+     capability approved." -->
+
+---
+
+## D-002 - Re-record pictures 63 and 64 (Autonomous: informational, nothing blocked)
+
+- **Status:** answered (approved 2026-11-06; re-recorded in Iteration 3)
+- **Type:** baseline approval
+- **Iteration:** 2
+- **Blocks tasks:** none (work continues)
+
+### Question
+Adding the Curves entry moves the tool row in `app/src/test/screenshots/63_edit_filters_1977_light.png` and `64_edit_filters_1977_dark.png` (the row scrolls so the selected Filters stays in view). The engine may not overwrite an existing baseline. To approve re-recording, list both under a `## Baselines` heading in `.harness/run/DECISIONS.md`.
+
+### Engine Recommendation
+Approve both; the change is the tool row only.
+
+---
+
+## D-003 - Re-record pictures 95 and 96 (Autonomous: informational, nothing blocked)
+
+- **Status:** answered (approved by the owner 2026-11-06; re-recorded in Iteration 4)
+- **Type:** baseline approval
+- **Iteration:** 3
+- **Blocks tasks:** none (work continues)
+
+### Question
+The Curves chips (RGB, Red, Green, Blue) now sit in the sheet's top row, so `app/src/test/screenshots/95_edit_curves_master_straight_light.png` and `96_edit_curves_master_straight_dark.png` no longer match (`verifyRoborazziDebug` fails on them, evidence `p3-verify.txt`). The engine may not overwrite a baseline. To approve, list both under `## Baselines` in `.harness/run/DECISIONS.md`.
+
+### Engine Recommendation
+Approve both; the change is the chips row only.
+
+### Decision

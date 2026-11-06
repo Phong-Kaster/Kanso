@@ -1,5 +1,52 @@
 # ISSUES
 
+## Run 12 (Curves on the Edit screen), loop/kanso-curves: DONE_PARTIAL, Iteration 7 (Verifier)
+
+Every `machine` criterion (1-14, 18-21, 23) was re-proved at `9227792` plus re-recorded pictures 99/100. Evidence is in
+`.harness/run/evidence/v-*.log`: assemble and lint exit 0. Unit tests: 1267 run, 0 skipped, 0 failed, matching 1267
+`@Test` annotations. `verifyRoborazziDebug` exit 0. The `git diff main` checks print nothing. The run is not `DONE`
+because criteria 15, 16, 17 and 22 need a person.
+
+- Pictures 99/100 were re-recorded through the wrapper after the owner put them on `## Baselines` (D-004). The
+  Verifier looked at both: all five chips on one line, "Lightness" selected and easy to see, Reset fully visible
+  beside the graph, in light and dark.
+- Flaky test, not part of Curves: `SettingsUiStateTest.state_follows_the_theme_mode_set_through_the_view_model`
+  failed once in the first full run (`SettingsUiStateTest.kt:175`, `evidence/v-build.log`). It passed when run alone
+  (`v-settings-rerun.log`) and again in a full `--rerun-tasks` run (`v-verify.log`). This branch does not change
+  Settings. It looks timing-dependent, so it is worth a look in a later run.
+- Stale paths in `docs/features/edit.md`, already there on `main`: seven paths under `ui/tool/components/…` and
+  `ui/tool/AdjustSlider.kt` no longer exist (the code uses `ui/tool/component/…`). Every path in the README exists.
+- Criterion 16 was **not driven**: the debug build installed on the A13 (`R58W1120QVA`) with `-Op install`, so your
+  data stays, and it started on Home. Then `com.selyn.aiphoto.editor` kept taking back the screen. The device
+  wrapper only touches Kanso, so the Verifier stopped there. It saw nothing of Curves on the phone.
+
+### Awaiting a person, Run 12
+
+- [ ] Run 12 criterion 15 - Open `app/src/test/screenshots/95_…` to `100_…` (master straight, Red S-curve, Lightness curve; light and dark). Expect: the graph, its line and points, the five chips and Reset clearly visible; the chosen chip obvious; nothing cut off; every chip label on one line. Machine pre-check: the Verifier opened 99/100 and they did not fail; 95-98 were judged in Iterations 4-6.
+- [ ] Run 12 criterion 16 - **Not driven on the device (see above).** On the Galaxy A13 (the debug build from this branch is already installed), open Kanso → Edit → pick a photo → scroll the bottom tool row to Curves → tap it. Tap the middle of the graph: a point appears. Drag it up: the photo gets lighter as you drag. On RGB, drag a low point down and a high point up (an S): contrast rises. Choose Red and raise its middle: the photo turns redder. Tap Done, then open My edits: the saved photo shows the change.
+- [ ] Run 12 criterion 17 - On the A13, open a full-size camera photo in Edit → Curves. On RGB, then Red, then Lightness, drag a middle point from bottom to top and back. Expect the photo to follow your finger smoothly with no stutter. A stutter is a failure.
+- [ ] Run 12 criterion 22 - Read the README's "Editing features" Curves row and its "Curves, end to end" section, the Curves parts of `docs/features/edit.md` and `docs/features/tool-screen.md`, and `docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md`. Use Curves on the phone and note any sentence that is untrue. Machine pre-check: every `app/src/…` path the README names exists.
+
+## Run 12 (Curves on the Edit screen), loop/kanso-curves: Iteration 3
+
+- D-002 answered by the owner; pictures 63 and 64 re-recorded, `verifyRoborazziDebug` green.
+- Review notes not fixed (Phase 2, Curves): `CurveGraph` still moves its line while disabled (Compare on / Done rendering) and the line snaps back (fix in T-004); a finger resting on a point longer than the long-press timeout removes a middle point instead of dragging it (DoD 4 asks for long-press removal; owner call); `HslSheetTest.the_hsl_entry_sits_between_rgb_and_filters` no longer checks Filters sits right of HSL by position (its variable now reads CURVES).
+- Assumptions: none. Nothing awaits a signature yet (criteria 15-17, 22 are for the Verifier and a person).
+
+
+## Run 12, Iteration 4 (T-004 Lightness)
+
+- Lightness chip, L curve, tests and pictures 99/100 done; assemble, unit tests, lint green (`evidence/p4-build.log`).
+- [x] Run 12 Pictures 97 and 98 (`edit_curves_red_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`evidence/p4-verify.log`): the fifth chip, Lightness, changed the chip row. They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/97_..._compare.png`, and if the chip row is the only change, add both paths to `## Baselines`.
+- Review notes still open (Phase 2): long-press on a resting finger removes a middle point instead of dragging (owner call).
+
+## Run 12, Iteration 6 (T-006, D-004: chips on one line, Reset always visible)
+
+- [x] Run 12 Pictures 99 and 100 (`edit_curves_lightness_s_curve_light/dark`) are red in `verifyRoborazziDebug` (`.harness/run/evidence/p5-verify.log`). Their baselines show the original bug (Reset missing from the sheet); the new pictures show the fix (all five chips on one line, Reset beside the graph). They are not on `## Baselines` in `DECISIONS.md`, so the wrapper put the old ones back. Look at `app/build/outputs/roborazzi/99_edit_curves_lightness_s_curve_light_compare.png`, and if only the chip row and Reset moved, add both paths to `## Baselines`.
+- Pictures 95-98 re-recorded with the owner's approval (D-003, D-004); 97 checked: every chip on one line, Reset visible.
+- Review note not fixed: `CurveChipRowTest` was never run against the old layout to show it going red; the test checks Reset's laid-out and touch size (>= 48 dp) and its label on one line, which a squeezed Reset would fail.
+- Open from Iteration 4 (`ToolScreenshotTest.drawRedSCurve`): pictures 97/98 still show only one middle point, so the "S-curve" is a single bend.
+
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 
 - **Settled by the owner, 2026-11-06:** criteria 23-26 checked on the Galaxy A13 and the vivo V2408A; HSL works as expected. The owner also signed off every earlier run's "Awaiting a person" item (Runs 7 and 8: Home, Gallery, Camera, My edits, Save/Share, Settings, the tool screens, Remove background, Enhance, Beautify, Artistic) and RGB on the Galaxy A13; the feature docs now say so. HSL's time per frame on the A13 is still not measured.
@@ -165,3 +212,7 @@ Unsigned items from Runs 2 to 8, moved here word for word when their runs' secti
 - Back-without-asking ignores HSL-only changes until T-003 wires `isNeutral`; stale preview comments in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63`; README layer notes (:285, :289) omit HSL. All carried into `TASKS/T-003.md`.
 
 Run 11 carry-over (not a signature): README "Known limits" row-width sentence (nine tools) not re-verified; stale KDocs in `ToolViewModel.kt` and `FilterPreviewRenderer.kt:63` are outside T-004's scope.
+
+## Run 12 (Curves)
+- [ ] Run 12 97/98 Red "S-curve" pictures show only one middle point (the first tap did not add one); look at them and fix `drawRedSCurve` in `ToolScreenshotTest.kt` if wanted. Chips at 320 dp unchecked.
+- [ ] Run 12 95/96 re-recorded pictures (chips row; neutral RGB line): not looked at by a person beyond the owner approval of D-003.

@@ -1,27 +1,5 @@
 # DECISIONS
 
-## Note from the owner, 2026-11-04 17:40 (facts for Phase 3, not an answer to a D- entry)
-
-The owner stopped Iteration 4 at 17:40 on purpose; it did not crash. Its partial Phase 3 work is
-in the working tree, so recover it as usual.
-
-Why it was stopped: the full unit-test runs `p3-full-2`, `-3` and `-4` did not fail on slow tests
-or a full disk. **They hang inside one test**, every time:
-
-- `HslSheetTest.tapping_a_circle_chooses_it_and_changes_nothing`, at `HslSheetTest.kt:180`,
-  `compose.onNodeWithTag(hslRangeTag(target)).performScrollTo()`.
-- Thread dump of the test JVM at 17:28 (`p3-full-3`, log silent for 7 min): the test thread loops in
-  `AndroidComposeUiTestEnvironment.waitForIdle` → `RobolectricIdlingStrategy.runUntilIdle` →
-  `ComposeIdlingResource.isIdleNow` → `MainTestClock.advanceTimeByFrame`, for ever: Compose never
-  becomes idle after scrolling to a colour-range circle.
-- `p3-full-3` exit 1 ("Gradle Test Executor 145 finished with non-zero exit value 1") was the
-  owner killing that hung JVM, not a disk or daemon problem.
-
-Fix that test (or what it drives in `ColourRangeRow` / `ColourRangeCircle`) before running the
-whole suite again, and run `HslSheetTest` on its own first, under a short `timeout`, to prove it
-ends.
-
-
 > Your answers go here, never in `.harness/run/ESCALATION.md`. That file is the engine's own log —
 > it may still be appending to it or rewriting it long after this file first appeared, because
 > queuing a decision does not stop the run (the engine keeps working on everything else it can).
@@ -41,48 +19,68 @@ ends.
 
 ## D-001
 
-Approved, option 1 (owner, 2026-11-04): the Definition of Done in `.harness/run/DoD.md` is approved
-as written, all 37 criteria with their verification classes, and assumptions A-001 to A-004 stand.
-The 35 existing pictures listed under `## Baselines` below may be re-recorded, each old version kept
-in `.harness/run/evidence/baseline-diffs/`.
+**Approved by the owner, 2026-11-06.**
+
+1. **DoD approved** as written in `.harness/run/DoD.md`, with the optional hue-curves section
+   (criteria 23-24) deleted, as point 2 below says.
+2. **Scope: option 1.** Five tone curves (RGB, Red, Green, Blue, Lightness) in a new Curves tool
+   right after HSL. The optional "hue curves" section is deleted from the DoD; hue curves can be a
+   later run once the Curves editor exists. RGB and HSL stay as they are.
+3. **Capability approved, permanent:** the standing assemble / testDebugUnitTest / lintDebug grant
+   proposed in D-001, into `.harness/knowledge/capabilities.json`.
+4. **No `## Baselines` list yet.** List the exact pictures in a new decision when
+   `verifyRoborazziDebug` goes red, as the engine proposed.
+5. **Icon:** the engine's proposal stands (a Wiring Worker writes `ic_show_chart.xml` with the
+   Material "show chart" path).
+6. **Mode:** the owner switches the run to Autonomous after this approval; decide the rest with
+   your own recommendations, recorded as assumptions.
+
+Rationale: the engine's recommendation; one editor and one formula covers "RGB" and the L of "HSL"
+without removing tools the owner signed off on 2026-11-06.
+
+
+## D-002
+
+**Approved by the owner, 2026-11-06.** Re-record both pictures. Checked against the Roborazzi
+compare image before approving: only the tool row differs (the Curves entry now sits before
+Filters, and the row scrolls so Filters stays in view); the photo and the Filters sheet are
+identical.
+
+## D-003
+
+**Approved by the owner, 2026-11-06.** Re-record both pictures. Checked against the Roborazzi
+compare image: two changes, both accepted. (1) The RGB / Red / Green / Blue chips in the sheet's
+top row. (2) The RGB curve's line and points are now white (neutral) instead of the theme's light
+blue; the engine's entry mentioned only the chips. Keep the neutral master curve, so the Red,
+Green and Blue curves can show their own colours.
+
+## D-004
+
+**Raised by the owner, 2026-11-06, after Iteration 5 (not an engine entry).** Pictures 97 and 98
+(`97_edit_curves_red_s_curve_light/dark`) show a defect, not just a new chip: the fifth chip,
+"Lightness", wraps to two lines ("Lightne / ss") and pushes the Reset button out of the Curves
+sheet, so Reset is not visible on any curve. That breaks criteria 6, 14 and 15.
+
+Decision: **fix it in this run, before the Verifier.** The owner added DoD criterion 23 (every chip
+on one line, Reset always visible and tappable, at 360 dp and 411 dp, light and dark). Open a fix
+task for it, prove it with a test, then re-record 97 and 98 (and any other Curves picture that
+moves, 95-100). How to fit the row is the engine's choice within Kanso's conventions; for example
+a horizontally scrolling chip row with Reset kept outside the scroll, Reset moved to its own place
+in the sheet, or a shorter label, but the chip must still read "Lightness" to a screen reader.
+
+97, 98, 99 and 100 are listed under `## Baselines` below **only so the fixed version can be recorded** (99/100 added 16:07, after the owner saw the fixed 97: same sheet, same fix). Do not
+re-record them while the chip still wraps or Reset is hidden.
 
 ## Baselines
 
-- app/src/test/screenshots/16_tool_photo_light.png
-- app/src/test/screenshots/17_tool_photo_dark.png
-- app/src/test/screenshots/40_tool_narrow_photo_light.png
-- app/src/test/screenshots/41_tool_narrow_photo_dark.png
-- app/src/test/screenshots/42_tool_narrow_photo_sdk30_light.png
-- app/src/test/screenshots/51_tool_edit_free_crop_light.png
-- app/src/test/screenshots/52_tool_edit_free_crop_dark.png
-- app/src/test/screenshots/55_edit_tool_row_light.png
-- app/src/test/screenshots/56_edit_tool_row_dark.png
-- app/src/test/screenshots/57_edit_crop_sheet_light.png
-- app/src/test/screenshots/58_edit_crop_sheet_dark.png
-- app/src/test/screenshots/59_edit_rotate_sheet_light.png
-- app/src/test/screenshots/60_edit_rotate_sheet_dark.png
-- app/src/test/screenshots/61_edit_adjust_brightness_light.png
-- app/src/test/screenshots/62_edit_adjust_brightness_dark.png
-- app/src/test/screenshots/63_edit_filters_1977_light.png
-- app/src/test/screenshots/64_edit_filters_1977_dark.png
-- app/src/test/screenshots/65_edit_compare_on_light.png
-- app/src/test/screenshots/66_edit_compare_on_dark.png
-- app/src/test/screenshots/67_edit_pill_light.png
-- app/src/test/screenshots/68_edit_pill_dark.png
-- app/src/test/screenshots/69_edit_stickers_row_light.png
-- app/src/test/screenshots/70_edit_stickers_row_dark.png
-- app/src/test/screenshots/71_edit_stickers_food_light.png
-- app/src/test/screenshots/72_edit_stickers_food_dark.png
-- app/src/test/screenshots/73_edit_stickers_mood_light.png
-- app/src/test/screenshots/74_edit_stickers_mood_dark.png
-- app/src/test/screenshots/75_edit_stickers_quote_light.png
-- app/src/test/screenshots/76_edit_stickers_quote_dark.png
-- app/src/test/screenshots/77_edit_stickers_emoji_light.png
-- app/src/test/screenshots/78_edit_stickers_emoji_dark.png
-- app/src/test/screenshots/79_edit_sticker_selected_light.png
-- app/src/test/screenshots/80_edit_sticker_selected_dark.png
-- app/src/test/screenshots/81_edit_stickers_crop_filter_light.png
-- app/src/test/screenshots/82_edit_stickers_crop_filter_dark.png
+- `app/src/test/screenshots/63_edit_filters_1977_light.png`
+- `app/src/test/screenshots/64_edit_filters_1977_dark.png`
+- `app/src/test/screenshots/95_edit_curves_master_straight_light.png`
+- `app/src/test/screenshots/96_edit_curves_master_straight_dark.png`
+- `app/src/test/screenshots/97_edit_curves_red_s_curve_light.png`
+- `app/src/test/screenshots/98_edit_curves_red_s_curve_dark.png`
+- `app/src/test/screenshots/99_edit_curves_lightness_s_curve_light.png`
+- `app/src/test/screenshots/100_edit_curves_lightness_s_curve_dark.png`
 
 <!--
 A Human Verification Request is answered by ticking, not by prose. The engine writes the empty

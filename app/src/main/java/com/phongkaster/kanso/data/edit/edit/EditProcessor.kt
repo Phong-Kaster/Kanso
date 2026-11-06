@@ -125,6 +125,14 @@ class EditProcessor(
             checkActive()
         }
 
+        // 4c. The tone curves: the master curve and the red, green and blue ones, as look-up
+        // tables. After HSL and before the colour matrix, and only when some curve is bent, so
+        // straight diagonals leave every pixel exactly as it was. The formula lives in EditCurves.
+        if (settings.hasCurveChange) {
+            EditCurves.apply(image.data, settings.curves)
+            checkActive()
+        }
+
         // 5. The colour sliders and the RGB channels, only when one is away from its middle, so all
         // of them at the middle leave every pixel exactly as it was. The matrix comes from EditColourMatrix, the same
         // builder the live preview hands to Compose, so the preview and Done agree.

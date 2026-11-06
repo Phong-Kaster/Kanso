@@ -248,6 +248,8 @@ class CompareTest {
             compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed()
             compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
 
+            // The row is lazy and now has ten entries: scroll to Filters so its node exists.
+            compose.scrollToolRowTo(EditTool.FILTERS)
             val filters = bounds(editToolTag(EditTool.FILTERS))
             val undo = bounds(TOOL_UNDO_TAG)
             val done = bounds(TOOL_DONE_TAG)

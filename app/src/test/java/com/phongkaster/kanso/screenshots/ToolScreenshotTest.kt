@@ -45,6 +45,13 @@ import com.phongkaster.kanso.data.edit.edit.HslChannel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.HSL_SLIDER_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.colourrangerow.hslRangeTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.hslpanel.hslChipTag
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.performTouchInput
+import com.phongkaster.kanso.data.edit.edit.CurveChannel
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -430,6 +437,73 @@ class ToolScreenshotTest {
         capture("94_edit_hsl_orange_after_dark.png")
     }
 
+    /** Picture 95: the Edit screen with the Curves sheet open on the straight master curve, light. */
+    @Test
+    fun edit_curves_master_straight_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        openSheet(EditTool.CURVES)
+        capture("95_edit_curves_master_straight_light.png")
+    }
+
+    /** Picture 96: the Curves sheet on the straight master curve, dark. */
+    @Test
+    fun edit_curves_master_straight_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        openSheet(EditTool.CURVES)
+        capture("96_edit_curves_master_straight_dark.png")
+    }
+
+    /** Picture 97: the Curves sheet with the Red chip chosen and an S-curve on Red, light. */
+    @Test
+    fun edit_curves_red_s_curve_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        drawRedSCurve()
+        capture("97_edit_curves_red_s_curve_light.png")
+    }
+
+    /** Picture 98: the Curves sheet with an S-curve on Red, dark. */
+    @Test
+    fun edit_curves_red_s_curve_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        drawRedSCurve()
+        capture("98_edit_curves_red_s_curve_dark.png")
+    }
+
+    /** Picture 99: the Curves sheet with the Lightness chip chosen and an S-curve on Lightness, light. */
+    @Test
+    fun edit_curves_lightness_s_curve_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        drawSCurve(CurveChannel.LIGHTNESS)
+        capture("99_edit_curves_lightness_s_curve_light.png")
+    }
+
+    /** Picture 100: the Curves sheet with an S-curve on Lightness, dark. */
+    @Test
+    fun edit_curves_lightness_s_curve_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        drawSCurve(CurveChannel.LIGHTNESS)
+        capture("100_edit_curves_lightness_s_curve_dark.png")
+    }
+
+    /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
+    private fun drawRedSCurve() = drawSCurve(CurveChannel.RED)
+
+    /** Opens Curves, chooses the [channel] chip and taps two points on the graph that make an S shape. */
+    private fun drawSCurve(channel: CurveChannel) {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(channel)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            click(spot(0.25f, 0.15f))
+            click(spot(0.75f, 0.85f))
+        }
+        compose.waitForIdle()
+        Thread.sleep(FILTER_SETTLE_MILLIS)
+        compose.waitForIdle()
+    }
+
     /**
      * Opens the HSL sheet, taps the [range] circle and the [channel] chip, then sets the slider to
      * [value] (from -1 to 1) through its semantics, and gives the live preview's background render
@@ -474,7 +548,7 @@ class ToolScreenshotTest {
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
     private fun openSheet(tool: EditTool) {
-        // The row has nine entries: scroll to the one to tap, as a lazy row has no node past its edge.
+        // The row has ten entries: scroll to the one to tap, as a lazy row has no node past its edge.
         compose.scrollToolRowTo(tool)
         compose.onNodeWithTag(editToolTag(tool)).performClick()
         compose.waitForIdle()

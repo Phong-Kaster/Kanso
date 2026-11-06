@@ -124,13 +124,14 @@ class RgbMatrixTest {
         assertTrue(EditSettings(red = 0f, green = 0f, blue = 0f).isNeutral)
     }
 
-    /** RGB is the fourth tool of the row, right after Adjust; HSL follows RGB and Filters follows HSL. */
+    /** RGB is the fourth tool of the row, right after Adjust; HSL follows RGB, Curves HSL and Filters Curves. */
     @Test
     fun rgb_sits_right_after_adjust() {
         assertEquals(EditTool.ADJUST.ordinal + 1, EditTool.RGB.ordinal)
         assertEquals(EditTool.RGB.ordinal + 1, EditTool.HSL.ordinal)
-        assertEquals(EditTool.HSL.ordinal + 1, EditTool.FILTERS.ordinal)
-        assertEquals(9, EditTool.entries.size)
+        assertEquals(EditTool.HSL.ordinal + 1, EditTool.CURVES.ordinal)
+        assertEquals(EditTool.CURVES.ordinal + 1, EditTool.FILTERS.ordinal)
+        assertEquals(10, EditTool.entries.size)
     }
 
     // --- Helpers -----------------------------------------------------------------------------

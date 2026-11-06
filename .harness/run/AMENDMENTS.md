@@ -1,21 +1,14 @@
 # AMENDMENTS
 
-> Every plan mutation (Tier 1) and every applied decision, with its rationale. Newest first.
+> Every plan mutation, newest first, with its tier and reason.
 
-## Iteration 2 — D-001 applied (2026-11-04)
+(none yet)
 
-Owner's answer: DoD approved as written (37 criteria, verification classes included); A-001..A-004 stand;
-the 35 pictures under `## Baselines` in DECISIONS.md may be re-recorded, old versions kept in
-`.harness/run/evidence/baseline-diffs/`. T-001..T-005 unblocked.
+- **Iteration 2 - D-001 consumed (human decision, 2026-11-06):** DoD approved as written, hue-curves section (criteria 23-24) deleted by the owner; scope option 1 (RGB, Red, Green, Blue, Lightness); permanent build/test/lint grant approved by the owner (ledger is the Runtime's to write); no `## Baselines` yet; icon proposal stands; run switched to Autonomous. Rationale: "one editor and one formula covers RGB and the L of HSL without removing tools the owner signed off on."
+- **Iteration 2 - Tier 1:** T-005 (hue curves) removed as obsolete (DoD 23-24 deleted).
+- **Iteration 3 - D-002 consumed (human decision, 2026-11-06):** re-record pictures 63 and 64; owner checked the compare image, only the tool row differs.
 
-## Iteration 2 — Tier 1: task scopes written with full paths
+- Iteration 4 (Tier 1): T-003 scope gained `EditPanel.kt` in slice 2a (forwarding the channel).
 
-`foreman-check-scope.ps1` does not expand `.../` in a Declared File Scope; T-001 and T-002 now name full paths. No scope changed.
-
-## Iteration 5 — Tier 1: Phase 3 recovered and closed (2026-11-05)
-
-Iteration 4 was stopped by the owner mid-Phase 3. Its tree was coherent; the hanging `performScrollTo` on a circle was already removed from `HslSheetTest`, which now ends in 47 s. Review fixes (HSL controls obey `enabled`, README Filters claim, stale test comments) made in two slices. D-001's `## Baselines` lists bare file names, but `foreman-record-baselines.ps1` matches repo-relative paths (`app/src/test/screenshots/<name>`), so it put all 25 changed pictures back unchanged (`evidence/record-p3.log`). Not routed around: see ISSUES.md.
-
-## Iteration 7 — Tier 1: T-006 added by the Verifier (2026-11-05)
-
-The Verifier found Iteration 6's PARTIAL reason wrong: pictures 69, 70, 81, 82 are on the owner's `## Baselines` list (`DECISIONS.md` lines 72, 73, 84, 85), so the gap can be closed. A full test run also shows `StickerScreenshotTest.kt:304` failing an assertion (81/82), so the test needs a fix before recording. Added T-006 (depends on T-005), Phase 6. PARTIAL-candidate cleared. PRD, DoD and architecture unchanged.
+- **Iteration 6 - D-004 consumed (owner-raised, 2026-11-06, no engine entry; DoD criterion 23 added by the owner):** the Lightness chip wrapped and pushed Reset out of the Curves sheet; fix before the Verifier. Rationale: "fix it in this run, before the Verifier"; 97/98 on `## Baselines` only for the fixed version.
+- **Iteration 6 - Tier 1:** T-006 added (DoD 23); PARTIAL-candidate cleared until T-006 is done. Note: the owner's DoD edit placed criterion 23 between criterion 22's text and its Proof line; DoD is immutable to the engine, so it stays as written and 22's Proof is read as 22's.
