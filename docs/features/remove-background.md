@@ -153,7 +153,7 @@ The photo and Undo stay as they were. Leaving the screen cancels the run.
   mask comes from brightness (`.harness/ISSUES.md`, Run 8 Phase 2 review, device check DoD 7). The
   emulator run shows the result works; it did not note which branch ran.
 - **The checkerboard also fills the letterbox margins** around the photo (Run 8 Phase 2 review).
-- **Awaiting a person, Run 8:** item 7 (a real person on the Galaxy A13: the cut edge around hair
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 8):** item 7 (a real person on the Galaxy A13: the cut edge around hair
   and shoulders, transparent corners in the saved PNG), item 26 (progress on a large photo and the
   checkerboard clearly visible).
 

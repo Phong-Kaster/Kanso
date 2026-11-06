@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.component.editbottombar.BEAUTIFY_SHEET_HEIGHT
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
 import com.phongkaster.kanso.ui.tool.component.toolpanel.BEAUTIFY_PANEL_TAG
 import com.phongkaster.kanso.ui.tool.model.BeautifyAmounts
@@ -137,6 +138,7 @@ fun BeautifyPanel(
             EditSheet(
                 openTool = openTool,
                 modifier = Modifier.padding(horizontal = 16.dp),
+                height = BEAUTIFY_SHEET_HEIGHT,
                 sheet = { tool ->
                     when (tool) {
                         BeautifyTool.SMOOTH -> BeautifySlider(

@@ -44,9 +44,6 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
 import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EditToolRow
 
-/** The height of the panel area above the row of tools (the same 136 dp as the fixed sheet in EditSheet). */
-private val SHEET_AREA_HEIGHT = 136.dp
-
 /** The row of tools' height when it has not been measured yet: a 64 dp entry plus 4 dp above and below. */
 private val DEFAULT_ROW_HEIGHT = 72.dp
 
@@ -128,7 +125,7 @@ fun EditBottomBar(
                             Modifier.wrapContentHeight()
                         } else {
                             // Exactly the panel area and the row: the bar keeps one height.
-                            Modifier.height(SHEET_AREA_HEIGHT + rowHeight)
+                            Modifier.height(EDIT_SHEET_HEIGHT + rowHeight)
                         },
                     )
                     .padding(bottom = 8.dp),

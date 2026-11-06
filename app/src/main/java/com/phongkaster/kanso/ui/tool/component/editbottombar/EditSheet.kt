@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.edit.edit.EditTool
@@ -31,15 +32,24 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
 const val EDIT_SHEET_TAG = "edit-sheet"
 
 /**
- * The fixed height of the panel area above the row of tools, open or not. It fits the tallest
- * panel, Adjust's or Filters' (a row of chips with a 48 dp touch target, plus one 48 dp slider
- * row), with the surface's padding and the gap above the row.
+ * The fixed height of the Edit screen's panel area above the row of tools, open or not: 220 dp.
+ * It was 136 dp, which squeezed HSL's three rows into 4 dp gaps and left the photo almost half the
+ * screen; the owner chose 220 dp (2026-11-06), so on a Galaxy A13 (917 dp tall) the photo gets
+ * about 354 dp and the tools get room. The layer sheets (Stickers, Text, Date) are sized from it
+ * too (see `EditBottomBar`), so they grow by the same amount.
  */
-private val SHEET_HEIGHT = 136.dp
+internal val EDIT_SHEET_HEIGHT = 220.dp
 
 /**
- * The open tool's panel, just above the row of tools, in an area of one fixed height
- * ([SHEET_HEIGHT]) whether a tool is open or not and whichever tool it is. That is what keeps the
+ * The fixed height of the Beautify screen's panel area: 136 dp, Edit's old height. Beautify shows
+ * one slider at a time, which 136 dp fits with room to spare; Edit's 220 dp would leave it empty.
+ */
+internal val BEAUTIFY_SHEET_HEIGHT = 136.dp
+
+/**
+ * The open tool's panel, just above the row of tools, in an area of one fixed [height]
+ * ([EDIT_SHEET_HEIGHT] on Edit, [BEAUTIFY_SHEET_HEIGHT] on Beautify) whether a tool is open or not
+ * and whichever tool it is. That is what keeps the
  * photo one size: the bottom bar never changes height, so the space `Scaffold` leaves the photo
  * never changes either. Every tool's controls are made to fit it (Adjust shows one slider at a
  * time, picked by chips); with very large text they scroll inside it rather than grow it.
@@ -60,6 +70,7 @@ internal fun <T : Any> EditSheet(
     openTool: T?,
     sheet: @Composable (T) -> Unit,
     modifier: Modifier = Modifier,
+    height: Dp = EDIT_SHEET_HEIGHT,
 ) {
     val sheetText = stringResource(R.string.edit_layout_sheet)
     AnimatedContent(
@@ -68,7 +79,7 @@ internal fun <T : Any> EditSheet(
         label = "edit-sheet",
         modifier = modifier
             .fillMaxWidth()
-            .height(SHEET_HEIGHT)
+            .height(height)
             .padding(bottom = 8.dp),
     ) { tool ->
         if (tool != null) {

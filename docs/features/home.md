@@ -116,7 +116,7 @@ flowchart TD
 
 ## Known limits and open items
 
-- **Awaiting a person, Run 7:** item 20 (motion on the phone, with and without Remove animations),
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 20 (motion on the phone, with and without Remove animations),
   item 28 (the carousel's snap, peek and readability), item 29a (Home pictures). Worth a look from
   Run 7: the peeking second banner shows a cut word.
 

@@ -60,14 +60,14 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Checks on Android 15 the Edit screen's HSL sheet, drawn inside the real 136 dp `EditSheet` by the
+ * Checks on Android 15 the Edit screen's HSL sheet, drawn inside the real 220 dp `EditSheet` by the
  * stateless `EditPanelContent` (DoD 2, 14, 17 and 21 of Run 11):
  *
  * - nine circles in the order Red 0, Orange 40, Light green 80, Green 120, Light blue 160, Blue 200,
  *   Navy blue 240, Purple 280 and Pink 320 degrees, each with its name; the chosen one is selected
  *   and a radio button; a tap chooses one and changes no setting;
  * - three chips, Hue, Saturation and Lightness, and one slider from -100 to 100;
- * - the sheet stays 136 dp tall with all three rows fully inside it, and every circle, chip and the
+ * - the sheet stays 220 dp tall with all three rows fully inside it, and every circle, chip and the
  *   slider is at least 48 dp to touch (measured as the accessibility walk does, never by the clipped
  *   `boundsInRoot`);
  * - dragging the slider reports live previews and letting go reports one commit;
@@ -240,7 +240,7 @@ class HslSheetTest {
     }
 
     /**
-     * DoD 21: the sheet is 136 dp tall, and the three rows (circles, chips, slider) lie inside it
+     * DoD 21: the sheet is 220 dp tall, and the three rows (circles, chips, slider) lie inside it
      * from top to bottom without overlapping. The rows are measured by the room each takes in the
      * layout (32 dp): the circles' and the slider's 48 dp touch areas are meant to overflow their
      * rows. Each circle lies inside the window's width and the
@@ -248,11 +248,11 @@ class HslSheetTest {
      * never from `boundsInRoot`.
      */
     @Test
-    fun the_sheet_is_136_dp_and_all_three_rows_are_fully_inside_it() {
+    fun the_sheet_is_220_dp_and_all_three_rows_are_fully_inside_it() {
         show()
         val density = Density(compose.activity).density
         val area = compose.onNodeWithTag(SHEET_AREA_TAG).fetchSemanticsNode()
-        assertEquals("the sheet area is not 136 dp tall", 136f, area.size.height / density, 0.5f)
+        assertEquals("the sheet area is not 220 dp tall", 220f, area.size.height / density, 0.5f)
 
         val sheet = bounds(compose.onNodeWithTag(EDIT_SHEET_TAG).fetchSemanticsNode())
         val rows = listOf(HSL_RANGE_ROW_TAG, HSL_CHIPS_TAG, HSL_SLIDER_ROW_TAG).map(
@@ -419,7 +419,7 @@ class HslSheetTest {
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
-     * Draws the HSL sheet inside the real 136 dp sheet area at the bottom of the window, from
+     * Draws the HSL sheet inside the real 220 dp sheet area at the bottom of the window, from
      * [settings], [range] and [channel]; every callback updates or records the test's state.
      * [enabled] false draws it as while Compare is on or Done renders.
      */
@@ -493,7 +493,7 @@ class HslSheetTest {
 
     /** Values shared by the tests. */
     private companion object {
-        /** The tag put on the 136 dp sheet area. */
+        /** The tag put on the 220 dp sheet area. */
         const val SHEET_AREA_TAG = "hsl-test-sheet-area"
 
         /** The number of moves in one drag. */

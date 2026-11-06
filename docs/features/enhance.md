@@ -149,7 +149,7 @@ The photo and Undo stay as they were. Leaving the screen cancels the run.
   `ModelUnavailable` (`.harness/ISSUES.md`, Run 8 Phase 2 review; device check DoD 9).
 - `AutoLighting.meanLuminance` is unused (Run 8 Phase 2 review).
 - The output-size limit and the "original" in the comparison, described above.
-- **Awaiting a person, Run 8:** item 9 (on a 4000 x 3000 photo: a saved file larger than 512 px,
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 8):** item 9 (on a 4000 x 3000 photo: a saved file larger than 512 px,
   and the detail looked at with the compare control; the emulator run did not record the output
   size), item 26 (the compare control easy to find).
 

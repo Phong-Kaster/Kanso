@@ -234,8 +234,8 @@ fun EditPanelContent(
 ) {
     // The other tools scroll when too tall for the sheet. Stickers does not: its grid is a lazy
     // list that scrolls itself, and a lazy list inside a scrolling column has no height to fill.
-    // HSL does not either: its three 32 dp rows and two 4 dp gaps are exactly the 104 dp the
-    // sheet leaves, so nothing needs to scroll.
+    // HSL does not either: its three 32 dp rows and two 20 dp gaps (136 dp) fit well inside
+    // the 188 dp the sheet leaves, so nothing needs to scroll.
     val scrolling = when (openTool) {
         EditTool.STICKERS, EditTool.HSL -> Modifier
         else -> Modifier.verticalScroll(rememberScrollState())

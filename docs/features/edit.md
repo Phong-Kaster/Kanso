@@ -167,7 +167,7 @@ flowchart TD
    or the cropper, filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
    [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
-   height (136 dp), open or not, so the photo above never changes size; every tool's controls fit
+   height (220 dp, `EDIT_SHEET_HEIGHT`; 136 dp until 2026-11-06), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
    [`ui/tool/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/AdjustSlider.kt);
    the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`; RGB
@@ -486,10 +486,10 @@ flowchart TD
   edge, so on screen a filtered photo holds less detail than the picture Done renders.
 - **RGB.** Each channel runs from x0 to x2. At +100 the bright parts of a photo can burn out
   (clamped at 255). The owner tried RGB on the vivo V2408A (2026-11-03), found it works as
-  expected and kept the x2 maximum. Not yet checked on the Galaxy A13.
+  expected and kept the x2 maximum; on 2026-11-06 the owner checked it on the Galaxy A13 too.
 - **HSL.** Hue turns at most 20 degrees at +-100; greys and near-greys are never changed; the
-  preview is computed on the 640 px copy, Done on up to 3000 px. Not yet tried on a phone, and its
-  cost on the Galaxy A13 is not measured (to be signed by the owner). A layer being dragged under a
+  preview is computed on the 640 px copy, Done on up to 3000 px. Checked by the owner on the Galaxy A13 and vivo V2408A
+  (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
@@ -569,6 +569,6 @@ and [`result/ResultScreenTest.kt`](../../app/src/test/java/com/phongkaster/kanso
 ## Known limits and open items
 
 - The limits above.
-- Not yet checked on the owner's phone, a Galaxy A13 (32-bit, `armeabi-v7a`).
+- Checked by the owner on the Galaxy A13 and vivo V2408A (2026-11-06): every tool runs as expected.
 
 [Back to README](../../README.md)
