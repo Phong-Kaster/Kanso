@@ -1,5 +1,10 @@
 # ISSUES
 
+## Run 12 (Curves on the Edit screen), loop/kanso-curves: bootstrap, Iteration 1
+
+- **Queued decision D-001** (blocks every task): approve the DoD, choose the scope (delete or keep the optional hue curves, criteria 23-24), approve permanent Gradle assemble/test/lint rules. Answer in `.harness/run/DECISIONS.md` under `## D-001`.
+- Nothing built yet; no criterion awaits a signature yet.
+
 ## Run 11 (HSL on the Edit screen), loop/kanso-hsl: DONE_PARTIAL, Iteration 9
 
 - **Settled by the owner, 2026-11-06:** criteria 23-26 checked on the Galaxy A13 and the vivo V2408A; HSL works as expected. The owner also signed off every earlier run's "Awaiting a person" item (Runs 7 and 8: Home, Gallery, Camera, My edits, Save/Share, Settings, the tool screens, Remove background, Enhance, Beautify, Artistic) and RGB on the Galaxy A13; the feature docs now say so. HSL's time per frame on the A13 is still not measured.
