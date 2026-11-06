@@ -31,3 +31,11 @@ Lightness curve (HSL L, greys follow, L 0..1), fifth chip, CurveGraph disabled f
 - Consumed D-004 (owner-raised; DoD 23 added by the owner): Lightness chip wrapped, Reset pushed off the sheet. Added T-006, cleared PARTIAL-candidate for the Phase.
 - T-006: attempts 1 and 2 failed on an unsound test check (`didOverflowWidth` with `softWrap = false`), attempt 3 green. Reviewer: README row 102 and a KDoc untrue, test-edits.md missing, Reset size unchecked - all fixed in one review-fix dispatch; rebuilt green (`p5-build4.log`). Pictures 95-98 re-recorded through the wrapper; 99/100 red (not on `## Baselines`).
 - Learned (Constraints): softWrap=false makes overflow flags meaningless; un-weighted horizontalScroll Row starves siblings.
+
+## Iteration 7 (Verifier, DONE_PARTIAL)
+- Recovered: clean apart from TELEMETRY.tsv. DECISIONS.md: no new ids; 99/100 are now on `## Baselines` (the owner added them 16:07).
+- Re-recorded 99/100 through the wrapper (`v-record.log`), opened both: chips on one line, Reset visible, light and dark.
+- Full Gradle run (`v-build.log`): assemble and lint passed; 1 failure in 1267 tests, `SettingsUiStateTest:175`, not on this branch. It passed alone (`v-settings-rerun.log`) and in a full `verifyRoborazziDebug --rerun-tasks` (`v-verify.log`: 1267 tests, 0 skipped, 0 failed, pictures green). Classified as a flaky test outside the feature: noted in ISSUES.
+- 19-21: `git diff main` checks are empty; no manifest change; strings are prefixed. README paths exist; `docs/features/edit.md` has 7 stale paths that predate this run (noted).
+- 16 not driven: the debug build installed on the A13 (no clear) and started on Home, but another app kept the screen; the wrapper refuses other apps.
+- Result: every machine criterion holds; 15, 16, 17 and 22 await a person, written to ISSUES "Awaiting a person, Run 12". No Cleanup Commit (Autonomous partial).

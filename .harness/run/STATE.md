@@ -4,12 +4,12 @@
 
 ## Current
 
-- **Stage:** build
+- **Stage:** verify (ended DONE_PARTIAL, Iteration 7)
 - **Run Mode:** Autonomous
 - **Loop Branch:** loop/kanso-curves (from `main` at `069b5c3`)
-- **Next Phase:** none; Verifier next
+- **Next Phase:** none; run ended DONE_PARTIAL
 - **DONE-candidate:** no
-- **PARTIAL-candidate:** yes - pictures 99/100 (Lightness S-curve) differ from their baselines (the old ones show the D-004 bug, Reset missing) and are not on the owner's `## Baselines` list, so the wrapper cannot re-record them; `verifyRoborazziDebug` is red on them until the owner lists them. Criteria 15-17 and 22 await a person.
+- **PARTIAL-candidate:** yes - verified at Iteration 7: every machine criterion (1-14, 18-21, 23) re-proved (assemble, lint, 1267 tests 0 skipped, verifyRoborazziDebug green after 99/100 were re-recorded with the owner's `## Baselines` listing). Criteria 15, 16 (not driven: another app held the A13's screen), 17 and 22 await a person; see `.harness/ISSUES.md` "Awaiting a person, Run 12".
 
 ## Progress
 
@@ -20,6 +20,10 @@
 | T-003 | done | ToolUiState, ToolViewModel, ToolPanel, ToolScreen, EditPanel, curvespanel/*, tests, README, edit.md (15 files) | - |
 | T-004 | done | CurveChannel, CurveAdjustments, EditCurves, CurveChips, CurveGraph, strings, tests, README, edit.md (12 files) | - |
 | T-006 | done | CurveChips, CurveResetButton, CurvesPanel, strings_edit_curves.xml, CurveChipRowTest (new), README (6 files) | p5-build4.log |
+
+## Signatures
+
+- None yet (criteria 15, 16, 17, 22 unsigned).
 
 ## Assumptions
 
