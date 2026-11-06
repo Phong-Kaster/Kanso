@@ -105,7 +105,7 @@ All with a fake `CameraController` that needs no hardware.
 ## Known limits and open items
 
 - `CameraXController` itself only runs on a device; the tests use the fake.
-- **Awaiting a person, Run 7:** item 29c notes the camera's title sits left beside its Back, where
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 29c notes the camera's title sits left beside its Back, where
   the other screens centre theirs.
 
 [Back to README](../../README.md)

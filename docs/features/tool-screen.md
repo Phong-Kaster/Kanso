@@ -315,7 +315,7 @@ All run on the computer (Robolectric, Compose UI test), with fakes instead of th
   the photo again without the edits.
 - **An untouched photo shared from Result is the screen-sized decode**, not the original file
   (Save copies the original; Share sends the in-memory picture).
-- **Awaiting a person, Run 8:** item 24 (each tool's layout in light and dark on a phone), item 26
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 8):** item 24 (each tool's layout in light and dark on a phone), item 26
   (progress visible on a large photo), item 35 (all five tools on the Galaxy A13, saved result
   shown in My edits).
 

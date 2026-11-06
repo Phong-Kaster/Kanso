@@ -156,12 +156,12 @@ The photo and Undo stay as they were. Leaving the screen cancels the run.
 
 ## Known limits and open items
 
-- **Ratio 0 was checked on the emulator, not yet on the Galaxy A13.** On the emulator
+- **Ratio 0, checked on the emulator and then by the owner on the Galaxy A13 and vivo V2408A (2026-11-06).** On the emulator
   (2026-10-14, API 34, x86_64), Warm wash at full strength painted the photo in warm orange
   washes and Ink turned it into a black ink drawing, each in about 9 s; the two pictures differ
   (mean difference of 261 per pixel over the photo, against 0 before the fix). Run 8 item 13
-  under "Awaiting a person" still asks for the same check on the phone, and for strength 0
-  giving the photo back, which was not tried.
+  asked for the same check on a phone, and for strength 0 giving the photo back; the owner did
+  both on 2026-11-06 and found Artistic runs as expected.
 - **The processor keeps its last painted picture** (it is an app-wide Koin single) until the next
   run (`.harness/ISSUES.md`, Run 8 Phase 3 review).
 - **Strength 0 gives the 1024 px copy**, not the photo at its opened size (Phase 3 review).

@@ -2,7 +2,7 @@
 
 **Status:** built (2026-11-03, `72e7174`): model, matrix step, sheet, tests and docs, all JVM
 tests green. Checked by the owner on the vivo V2408A the same day: works as expected, and the x2
-maximum stays. Not yet checked on the owner's Galaxy A13 (see
+maximum stays. Checked by the owner on the Galaxy A13 on 2026-11-06 as well (see
 [Still open](#4-still-open-to-settle-while-building-not-design-decisions)). Every decision below is
 the owner's (2026-11-03), reached in a question-by-question design session.
 
@@ -118,8 +118,8 @@ code lives today; check them again before starting.
   example to x1.5) is one number, not a design change.
 - **The three tint values.** Settled while building: deep red, green and blue on light themes, pale
   ones on dark themes (`RgbChannel`), each at least 3:1 on the sheet (`RgbTintContrastTest`).
-- **Checked on the owner's Galaxy A13** (32-bit, `armeabi-v7a`): not yet. The vivo V2408A
-  (64-bit) was checked on 2026-11-03.
+- **Checked on the owner's Galaxy A13** (32-bit, `armeabi-v7a`): yes, 2026-11-06, works as
+  expected. The vivo V2408A (64-bit) was checked on 2026-11-03.
 - **No ADR planned.** A separate tool is easy to change later and not surprising.
 
 ---

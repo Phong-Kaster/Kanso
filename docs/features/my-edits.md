@@ -98,6 +98,6 @@ flowchart TD
 - **No permission is asked here** (assumption A-011, `.harness/ISSUES.md`, Run 7): on Android 8.1
   and 9, and after a reinstall on Android 10+, the list stays empty until photo access is granted
   in a gallery.
-- **Awaiting a person, Run 7:** item 29b (My edits pictures), item 29e (viewer pictures).
+- **Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (Run 7):** item 29b (My edits pictures), item 29e (viewer pictures).
 
 [Back to README](../../README.md)
