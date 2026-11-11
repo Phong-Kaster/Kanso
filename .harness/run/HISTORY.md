@@ -43,3 +43,9 @@
 
 ## Iteration 6 (Phase 4, T-005)
 Docs-only fix of the three stale Curves passages (README row, README "Curves, end to end" slot line, docs/features/edit.md limits bullet). Grep for stale phrases clean. No code touched, so no Gradle run; Reviewer skipped as docs-only. DONE-candidate recorded.
+
+## Iteration 7 - Verifier (2026-11-11)
+
+- Recover: tree clean apart from TELEMETRY.tsv. No new decisions.
+- Full gradle (assemble, 1297 unit tests, lint, verifyRoborazziDebug): exit 0. R1-R10, DoD 25 greps clean; README paths exist.
+- DoD 26 gap: Proof grep still finds "long press" (README:102, tool-screen.md:91, both "a long press does nothing"); ADR-009:30 Fritsch bullet not marked inline. Filed T-006 (Tier 1), DONE-candidate cleared. Journeys 21/22 not driven.

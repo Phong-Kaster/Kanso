@@ -12,3 +12,5 @@
 ## Iteration 5 - Verifier files T-005 (2026-11-11)
 
 - Tier 1: added T-005 (Phase 4) - README.md:102 (Editing features Curves row), README.md:304 and docs/features/edit.md:548 still describe tap-empty-space, long-press-removes and a delete button "not built yet" (DoD 26). DONE-candidate cleared.
+
+- Iteration 7 (Tier 1): T-006 added by the Verifier for the DoD 26 grep gap ("long press" in README:102 and docs/features/tool-screen.md:91; ADR-009:30 inline supersession marker). Phase 5 = T-006.

@@ -57,6 +57,7 @@ files: the Wiring Worker of each Phase updates them for that Phase's behaviour, 
 | 2 | T-002, T-003 | after: README.md, `docs/features/edit.md`, `docs/features/tool-screen.md`, `docs/adr/ADR-011-…md` (new), `docs/adr/ADR-009-…md` |
 | 3 | T-004 | before: `app/src/main/res/drawable/ic_delete.xml` (new, Material Symbols Rounded "delete"); after: README.md, `docs/features/*`; Iteration records 95–98 (approved) and 105–108 |
 | 4 | T-005 | none (the two doc files are the task's own scope; no other task in the Phase) |
+| 5 | T-006 | none (the three doc files are the task's own scope; filed by the Verifier, Iteration 7) |
 
 ## Known Risks
 

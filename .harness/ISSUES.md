@@ -1,11 +1,10 @@
 # ISSUES
 
-## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: CONTINUE, Iteration 5 (Verifier)
+## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: CONTINUE, Iteration 7 (Verifier)
 
-- Verifier gap (DoD 26): the README "Editing features" Curves row (README.md:102) still says "tap empty
-  space to add a point", "long press a point to remove it" and that the delete button is "not built
-  yet"; README.md:304 and docs/features/edit.md:548 say the same about the delete button. Filed as
-  T-005; the app itself is unchanged.
+- Verifier gap (DoD 26): the DoD's grep still finds "long press" about Curves in README.md:102 and
+  docs/features/tool-screen.md:91 ("a long press does nothing"); ADR-009's Fritsch-Carlson bullet is
+  marked superseded only by its Status note. Filed as T-006; the app itself is unchanged.
 - Not driven yet: DoD 21 and 22 (Journeys on the Galaxy A13); the next Verifier drives them.
 - No test for Undo of another tool's change clearing the Curves selection (reviewed by reading only).
 - Pictures 105-108 were judged by the engine only.
