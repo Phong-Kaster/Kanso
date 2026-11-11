@@ -17,4 +17,6 @@
     <string name="edit_curves_graph_description">%1$s curve, %2$d points</string>
     <!-- The reset icon button's spoken name: puts the curve on screen back to a straight diagonal. -->
     <string name="edit_curves_reset">Reset</string>
+    <!-- The trash icon button's spoken name: deletes the selected point of the curve. -->
+    <string name="edit_curves_delete_point">Delete point</string>
 </resources>

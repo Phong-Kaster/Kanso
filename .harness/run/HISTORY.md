@@ -26,3 +26,10 @@
 - Review (Capable): blocking = lazy(NONE) race between main thread and preview renderer (fixed); contrast test duplicated the line-colour logic and tinted against the wrong surface (fixed: shared curveLineColorFor, surfaceContainerLowest); stale KDoc/README about scrolling chips (fixed).
 - Iteration wrote drawable/ic_delete.xml (Material Symbols delete) for T-004.
 - Build, full unit tests, lint green; verifyRoborazziDebug fails on 95-98 only (expected, re-recorded after Phase 3).
+
+## Iteration 4 - Phase 3: tap/drag on the line, selection, trash (2026-11-11)
+
+- T-004: Fast Worker slice A (CurveGraph, CurvesPanel, CurveDeleteButton, string), slice B (3 test files), Wiring Worker (README, edit.md, tool-screen.md, ADR-011). Scope check failed once on ellipsis paths in T-004.md; expanded (Tier 1), passed.
+- Full unit tests + lint green. Pictures 95-98 re-recorded (approved) and 105-108 added through foreman-record-baselines; looked at 97, 105, 108: selected point hollow, others filled, trash above Reset.
+- Review (Capable): blocking test-edits.md incomplete (fixed); Undo/Redo not clearing selection when the open curve is unchanged, plus a drag race (fixed: panel now tracks the settings it handed up, in a list); stale KDoc (fixed); drag swallowed at ten points (fixed). Wiring Worker edited ADR-011 (planned wiring scope; accepted as in Phase 1).
+- Not covered by a new test: Undo of another tool's change clearing the selection (logic reviewed only).

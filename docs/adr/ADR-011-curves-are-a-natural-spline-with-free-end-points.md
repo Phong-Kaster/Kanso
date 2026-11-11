@@ -27,6 +27,15 @@ after HSL and before the colour matrix) still stands.
 - **`table()` is unchanged in shape:** 256 entries, `round(255 x valueAt(i / 255))`. The step still runs
   on the CPU after HSL, and the saved photo matches the preview (`CurveParityTest`).
 
+## Selecting and deleting a point (Phase 3)
+
+- **Selection state lives in `CurvesPanel`** (`rememberSaveable`), not in `ToolViewModel` or `ToolUiState`: it is
+  a view detail that changes no setting and is no Undo step. It clears on channel switch, Undo, Redo and Reset.
+- **Delete is one `onChange`** (`CurveDeleteButton`, "Delete point"): the point is removed in a single commit, so one Undo step;
+  end points may be deleted while more than 2 remain, then the left neighbour (or the new first point) is selected.
+- **A point wins over the line within 24 dp.** A tap or drag near a point selects it; only away from every point does a tap
+  (or drag) near the line add a point exactly on the line. Tapping empty space adds nothing; a long press no longer removes a point.
+
 ## Why not the other ways
 
 - **Keep monotone interpolation.** It cannot overshoot, so it cannot reproduce the Meitu feel.

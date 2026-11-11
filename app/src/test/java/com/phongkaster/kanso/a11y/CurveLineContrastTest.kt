@@ -40,7 +40,42 @@ class CurveLineContrastTest {
         assertLinesReach(dark = true)
     }
 
+    /**
+     * The selected point is background inside a ring of the line's colour, so its ring must stand out
+     * 3:1 from the background (`surfaceContainerLowest`) in every light seed, for every channel.
+     */
+    @Test
+    fun light_selected_point_ring_reaches_3_to_1_on_the_background() {
+        assertSelectedRingReaches(dark = false)
+    }
+
+    /** The same ring check in every dark seed. */
+    @Test
+    fun dark_selected_point_ring_reaches_3_to_1_on_the_background() {
+        assertSelectedRingReaches(dark = true)
+    }
+
     // --- Helpers -----------------------------------------------------------------------------
+
+    /**
+     * Fails unless the selected point's ring (drawn in the line's colour, from `curveLineColorFor`)
+     * reaches [GRAPHICS_RATIO] against the background it sits inside and on; lists each shortfall.
+     */
+    private fun assertSelectedRingReaches(dark: Boolean) {
+        val failures = mutableListOf<String>()
+        SEEDS.forEach { (seedName, seed) ->
+            val scheme = seedColorScheme(seed, dark)
+            CurveChannel.entries.forEach { channel ->
+                val ring = curveLineColorFor(scheme, channel)
+                val ratio = contrastRatio(ring, scheme.surfaceContainerLowest)
+                if (ratio < GRAPHICS_RATIO) {
+                    failures += "$seedName ${if (dark) "dark" else "light"}: $channel selected ring " +
+                        "%.2f:1, needs %.1f:1".format(ratio, GRAPHICS_RATIO)
+                }
+            }
+        }
+        assertTrue("Selected rings below 3:1:\n" + failures.joinToString("\n"), failures.isEmpty())
+    }
 
     /** Fails unless every seed's every channel line reaches [GRAPHICS_RATIO]; lists each shortfall. */
     private fun assertLinesReach(dark: Boolean) {

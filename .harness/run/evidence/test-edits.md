@@ -29,3 +29,13 @@
 | CurvesToolTest | `four_curve_edits_undo_in_reverse_and_redo_in_order` | Added: Undo/Redo order over four curve edits. |
 | CurveChipRowTest | whole file | Rewritten for short labels, the icon Reset button, graph ratio 1.8 to 2.6 and the spoken names RGB, Red, Green, Blue. |
 | CurveLineContrastTest | new file | Added: the curve line has 3:1 contrast against surfaceContainerLowest, five seeds, light and dark. |
+
+## Phase 3 (T-004)
+- CurvesSheetTest `a_tap_on_empty_space_adds_a_point` -> rewritten as `a_tap_on_the_line_adds_a_point_on_the_line_and_selects_it` (a tap on empty space no longer adds; a tap on the line adds at the line's height).
+- `a_drag_moves_the_point_and_commits_once` now starts from an existing point (bentSettings) instead of a tap-added one; it expects exactly 1 commit.
+- `at_ten_points_a_tap_adds_nothing` re-aimed at the line with ten unevenly spaced points (gap ~190 dp).
+- `a_long_press_removes_a_middle_point` deleted, replaced by `a_long_press_keeps_the_point` (DoD R6 reverses the old behaviour, approved in the DoD).
+Reason for all: DoD criteria 1-4, 10, R6.
+- CurvesSheetTest, added (DoD 1-7): `a_tap_away_from_the_line_adds_nothing_and_clears_the_selection`, `a_tap_on_a_point_selects_it`, `a_point_within_reach_wins_over_the_line`, `a_drag_from_the_line_adds_a_point_and_commits_once`, `delete_is_disabled_with_nothing_selected_and_with_two_points`, `delete_removes_the_selected_point_and_selects_the_left_neighbour`, `deleting_the_first_point_selects_the_new_first_point`, `reset_clears_the_selection`, `undo_redo_and_a_channel_change_clear_the_selection`; new helper `curvesSettings(points)`.
+- CurveLineContrastTest, added (DoD 18): `light_selected_point_ring_reaches_3_to_1_on_the_background`, `dark_selected_point_ring_reaches_3_to_1_on_the_background`.
+- ToolScreenshotTest (DoD 20): `drawSCurve` now drags from the line instead of two clicks (pictures 95-98 re-recorded, approved under Baselines); added `edit_curves_rgb_overshoot_light/_dark` (105/106) and `edit_curves_blue_moved_ends_light/_dark` (107/108); helpers `pullRgbPointHigh`, `moveBlueEnds`, `settleCurves`.

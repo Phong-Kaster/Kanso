@@ -311,17 +311,22 @@ or `app/src/main/res/`.
       and three vertical lines, then the curve and a dot on each point: no diagonal guide, no horizontal lines.
       The chips pick the curve the graph edits (`CurveChannel`); the line is the theme's `onSurface` for RGB and
       the RGB sheet's tints (`RgbChannel.tintOn`) for R, G and B (`CurveLineContrastTest` checks 3:1 against the graph's
-      background for five seeds, light and dark). A tap on empty space adds a point (the nearest existing point within 24 dp counts as
-      a hit, so a tap there adds nothing; a tap beyond the first or last point makes a new end point); dragging a point moves it (the first point
-      slides from 0 up to 0.02 short of the next point, the last mirrors it, and no point passes its neighbours, which stay
-      at least 0.02 apart); a long press on a point removes it, any point while more than 2 remain; at most 10 points.
+      background for five seeds, light and dark). A tap within 24 dp of a point selects it (a point wins over the line); a tap within 24 dp of the drawn line adds a point exactly
+      on the line, at the line's own height, and selects it (one Undo step); a tap elsewhere adds nothing and only clears the selection.
+      A drag that starts on a point selects and moves it; a drag that starts on the line, away from any point, adds a point there and drags it
+      (the first point slides from 0 up to 0.02 short of the next point, the last mirrors it, and no point passes its neighbours, which stay
+      at least 0.02 apart); one Undo step on lift. A long press does nothing (it no longer removes a point). At most 10 points: at ten, a tap on the line adds nothing.
+      One point at most is selected: it is drawn filled with the background colour inside a thicker ring of the line colour, the others filled with the line colour inside a
+      background-colour ring. The selection clears on a channel switch, Undo, Redo and Reset; it lives in `CurvesPanel` (`rememberSaveable`), not in the ViewModel or `ToolUiState`.
+      A trash icon button (`curvespanel/CurveDeleteButton.kt`, spoken name "Delete point") sits above Reset in the column beside the graph, both at least 48 dp; it deletes the selected point
+      (end points too) in one Undo step, then selects the left neighbour (or the new first point if the first was deleted); it is disabled with nothing selected or with two points left.
       Left of the first point and right of the last the line is flat at that point's height. A vertical drag that starts on a point is claimed
       by the graph, so the sheet does not take it. Reset straightens only the chosen curve and is disabled while that curve is straight, and
       the graph ignores touches while Compare is on or Done is rendering (while disabled it also stops moving: it shows the saved curve, not a half-made drag). A screen reader hears the
       graph as "<Channel> curve, N points", the chips and Reset; it cannot move points (no TalkBack point editing).
     - *ViewModel.* `ToolUiState.curveChannel` (RGB at first) is the chosen chip; `ToolViewModel.chooseCurveChannel` sets it, it is kept so reopening Curves shows the last curve used, and it is not an Undo step and changes no setting. The graph reports a drag through
       `previewSettings` while the finger moves and `commitSettings` when it lifts, so one drag is one
-      Undo step; a tap, a long press and Reset are one commit each. Redo brings each back.
+      Undo step; adding a point by a tap, a delete and Reset are one commit each (selecting alone commits nothing). Redo brings each back.
     - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): four `ToneCurve`s
       (rgb, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), sorted and at least
       0.02 apart; the end points are free and need not sit at x = 0 and x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while

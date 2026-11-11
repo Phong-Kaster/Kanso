@@ -85,11 +85,13 @@ flowchart TD
 The **Curves** tool (the tenth Edit tool, partial,
 [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
 `CurvesPanel` (a 48 dp row of chips, and under it the wide graph `CurveGraph` with a column on its
-right holding an empty 48 dp slot reserved for a delete button and the 48 dp Reset icon button, inside the
-188 dp the 220 dp area leaves). `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
+right holding the 48 dp-or-larger trash button `CurveDeleteButton` ("Delete point") above the Reset icon button, inside the
+188 dp the 220 dp area leaves). The selected point lives in `CurvesPanel` (`rememberSaveable`), not in the ViewModel, and clears on a channel
+switch, Undo, Redo and Reset. A tap within 24 dp of a point selects it; within 24 dp of the line adds a point on the line and selects it; elsewhere
+only clears the selection; a drag from a point moves it, from the line adds a point and drags it; a long press does nothing; delete removes the selected point in one Undo step. `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
 not an Undo step). A drag on the graph sends the new
 `EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
-lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Like HSL, a
+lifts (one Undo step); a tap that adds a point, a delete and Reset are one `commitSettings` each. Like HSL, a
 curve change asks for a preview render: `FilterPreviewRenderer` and the preview request carry the curves
 (`PreviewKey.curves`), so the photo follows the finger. Done runs the same code:
 `EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix. The line is a natural cubic spline

@@ -50,6 +50,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import com.phongkaster.kanso.data.edit.edit.CurveChannel
+import com.phongkaster.kanso.data.edit.edit.CurvePoint
+import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
@@ -526,17 +528,103 @@ class ToolScreenshotTest {
     /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
     private fun drawRedSCurve() = drawSCurve(CurveChannel.RED)
 
-    /** Opens Curves, chooses the [channel] chip and taps two points on the graph that make an S shape. */
-    private fun drawSCurve(channel: CurveChannel) {
+    /**
+     * Picture 105: the RGB curve with one point pulled from (0.25, 0.25) up to (0.25, 0.75), so the
+     * curve overshoots to a flat white top; the point stays selected. Light.
+     */
+    @Test
+    fun edit_curves_rgb_overshoot_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        pullRgbPointHigh()
+        capture("105_edit_curves_rgb_overshoot_light.png")
+    }
+
+    /** Picture 106: the same overshooting RGB curve with its point selected, dark. */
+    @Test
+    fun edit_curves_rgb_overshoot_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        pullRgbPointHigh()
+        capture("106_edit_curves_rgb_overshoot_dark.png")
+    }
+
+    /** Picture 107: the Blue curve with both end points moved in, first to (0.2, 0.1), last to (0.8, 0.9). Light. */
+    @Test
+    fun edit_curves_blue_moved_ends_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        moveBlueEnds()
+        capture("107_edit_curves_blue_moved_ends_light.png")
+    }
+
+    /** Picture 108: the Blue curve with both end points moved in, dark. */
+    @Test
+    fun edit_curves_blue_moved_ends_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        moveBlueEnds()
+        capture("108_edit_curves_blue_moved_ends_dark.png")
+    }
+
+    /** Opens Curves (RGB) and drags a point added on the line at x = 0.25 from height 0.25 up to 0.75. */
+    private fun pullRgbPointHigh() {
         openSheet(EditTool.CURVES)
-        compose.onNodeWithTag(curveChipTag(channel)).performClick()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            down(spot(0.25f, 0.25f))
+            moveTo(spot(0.25f, 0.5f))
+            moveTo(spot(0.25f, 0.75f))
+            up()
+        }
+        settleCurves()
+    }
+
+    /** Opens Curves, chooses Blue and drags the first point to (0.2, 0.1) and the last to (0.8, 0.9). */
+    private fun moveBlueEnds() {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(CurveChannel.BLUE)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
             val pad = CURVE_GRAPH_PADDING_DP * density
             fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
-            click(spot(0.25f, 0.15f))
-            click(spot(0.75f, 0.85f))
+            down(spot(0f, 0f))
+            moveTo(spot(0.1f, 0.05f))
+            moveTo(spot(0.2f, 0.1f))
+            up()
+            down(spot(1f, 1f))
+            moveTo(spot(0.9f, 0.95f))
+            moveTo(spot(0.8f, 0.9f))
+            up()
         }
+        settleCurves()
+    }
+
+    /**
+     * Opens Curves, chooses the [channel] chip and drags two points off the line to make an S shape:
+     * the first press is on the straight line at x = 0.25 and moves down to y = 0.15, the second is on
+     * the bent line at x = 0.75 and moves up to y = 0.85, so the last point stays selected.
+     */
+    private fun drawSCurve(channel: CurveChannel) {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(channel)).performClick()
+        compose.waitForIdle()
+        // Where the line is at x = 0.75 once the first point sits at (0.25, 0.15), so the second press lands on it.
+        val secondLineY = ToneCurve.NEUTRAL.added(CurvePoint(0.25f, 0.15f)).valueAt(0.75f)
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            down(spot(0.25f, 0.25f))
+            moveTo(spot(0.25f, 0.2f))
+            moveTo(spot(0.25f, 0.15f))
+            up()
+            down(spot(0.75f, secondLineY))
+            moveTo(spot(0.75f, (secondLineY + 0.85f) / 2f))
+            moveTo(spot(0.75f, 0.85f))
+            up()
+        }
+        settleCurves()
+    }
+
+    /** Waits for the sheet and gives the live preview's background render a short real-time settle. */
+    private fun settleCurves() {
         compose.waitForIdle()
         Thread.sleep(FILTER_SETTLE_MILLIS)
         compose.waitForIdle()

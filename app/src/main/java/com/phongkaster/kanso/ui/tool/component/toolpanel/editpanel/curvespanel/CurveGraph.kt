@@ -38,7 +38,6 @@ import com.phongkaster.kanso.data.edit.edit.CurvePoint
 import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** The test tag of the graph. */
 internal const val CURVE_GRAPH_TAG = "curve-graph"
@@ -72,12 +71,18 @@ private const val OUTCOME_CANCELLED = 3
  *
  * One touch handler does everything (Compose lets one `pointerInput` read the whole gesture):
  *
- * - **tap on empty space** adds a point there, reported with [onCommit] once;
- * - **drag from a point** (the nearest one within 24 dp of the finger) moves it. The two end points
- *   move sideways as well as up and down, and a point cannot pass its neighbours (the curve's own
- *   rules in [ToneCurve.moved]). [onPreview] is called at every step so the photo follows the finger, and
- *   [onCommit] once, with the final curve, when the finger lifts: the whole drag is one Undo step;
- * - **long press on a point** removes it (while more than 2 remain), reported with [onCommit] once.
+ * - **tap on a point** (within 24 dp) selects it ([onSelect]); a point wins over the line;
+ * - **tap on the line** (within 24 dp of the drawn line) adds a point there, at the line's own
+ *   height, selects it and reports [onCommit] once. At ten points nothing is added;
+ * - **tap anywhere else** only clears the selection ([onSelect] with null);
+ * - **drag from a point**, or from the line away from any point (which adds one first), selects that
+ *   point and moves it. The two end points move sideways as well as up and down, and a point cannot
+ *   pass its neighbours (the curve's own rules in [ToneCurve.moved]). [onPreview] is called at every
+ *   step so the photo follows the finger, and [onCommit] once, with the final curve, when the finger
+ *   lifts: the whole drag is one Undo step.
+ *
+ * A long press does nothing. The point at [selected] is drawn as background inside a ring of the
+ * line's colour; the others as the line's colour inside a ring of the background.
  *
  * There is no double tap on purpose: waiting to tell a double tap from a tap would delay every tap.
  *
@@ -95,6 +100,8 @@ internal fun CurveGraph(
     onCommit: (ToneCurve) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    selected: Int? = null,
+    onSelect: (Int?) -> Unit = {},
 ) {
     // The curve being edited by a finger right now, or null when no gesture is running.
     var working by remember { mutableStateOf<ToneCurve?>(null) }
@@ -102,6 +109,7 @@ internal fun CurveGraph(
     val latestCurve by rememberUpdatedState(curve)
     val latestPreview by rememberUpdatedState(onPreview)
     val latestCommit by rememberUpdatedState(onCommit)
+    val latestSelect by rememberUpdatedState(onSelect)
 
     val density = LocalDensity.current
     val padPx = with(density) { CURVE_GRAPH_PADDING_DP.dp.toPx() }
@@ -135,73 +143,90 @@ internal fun CurveGraph(
                     val hit = start.points.indices
                         .minByOrNull { (toScreen(start.points[it], plot, padPx) - down.position).getDistance() }
                         ?.takeIf { (toScreen(start.points[it], plot, padPx) - down.position).getDistance() <= hitPx }
+                    // Whether the finger landed on the drawn line (only matters when no point was hit).
+                    val onLine = hit == null &&
+                        distanceToLine(start, down.position, plot, padPx, hitPx) <= hitPx
+                    val grabs = hit != null || (onLine && start.points.size < ToneCurve.MAX_POINTS)
 
                     // Phase one: wait to see what the finger does. Lifting means a tap, moving beyond the
-                    // touch slop means a drag, and staying still until the long-press time runs out
-                    // means a long press (withTimeoutOrNull then gives null).
+                    // touch slop means a drag. There is no long press any more, so there is no timeout.
                     var lastPosition = down.position
-                    val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                        var result: Int? = null
-                        while (result == null) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            result = when {
-                                change == null || change.isConsumed -> OUTCOME_CANCELLED
-                                change.changedToUpIgnoreConsumed() -> OUTCOME_UP
-                                (change.position - down.position).getDistance() > viewConfiguration.touchSlop -> {
-                                    lastPosition = change.position
-                                    // Claim a drag that starts on a point, so a parent that scrolls
-                                    // vertically does not take it over.
-                                    if (hit != null) change.consume()
-                                    OUTCOME_MOVED
-                                }
-                                else -> null
+                    var outcome: Int? = null
+                    while (outcome == null) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        outcome = when {
+                            change == null || change.isConsumed -> OUTCOME_CANCELLED
+                            change.changedToUpIgnoreConsumed() -> OUTCOME_UP
+                            (change.position - down.position).getDistance() > viewConfiguration.touchSlop -> {
+                                lastPosition = change.position
+                                // Claim a drag that starts on a point or the line, so a parent that
+                                // scrolls vertically does not take it over.
+                                if (grabs) change.consume()
+                                OUTCOME_MOVED
                             }
+                            else -> null
                         }
-                        result
                     }
 
                     when (outcome) {
-                        OUTCOME_UP -> if (hit == null) {
-                            // A tap on empty space: add a point where the finger was.
-                            val added = start.added(fromScreen(down.position, plot, padPx))
-                            if (added != start) latestCommit(added)
+                        OUTCOME_UP -> {
+                            if (hit != null) {
+                                // A tap on a point selects it; the curve does not change.
+                                latestSelect(hit)
+                            } else if (onLine) {
+                                // A tap on the line adds a point on the line (at the line's own height,
+                                // not the finger's) and selects it: one commit.
+                                val added = addOnLine(start, down.position, plot, padPx)
+                                if (added != null) {
+                                    latestCommit(added.first)
+                                    latestSelect(added.second)
+                                }
+                            } else {
+                                // A tap on empty space only clears the selection.
+                                latestSelect(null)
+                            }
                             down.consume()
                         }
-                        OUTCOME_MOVED -> if (hit != null) {
+                        OUTCOME_MOVED -> {
+                            // The curve to drag and the index of the point the finger carries: a point
+                            // under the finger, or a new point added on the line where the finger landed.
                             var work = start
-                            /**
-                             * Moves the grabbed point to the finger's [position] and reports the new curve.
-                             * It runs on every drag event so the preview updates while the finger moves.
-                             */
-                            fun follow(position: Offset) {
-                                val at = fromScreen(position, plot, padPx)
-                                work = work.moved(hit, at.x, at.y)
-                                working = work
-                                latestPreview(work)
+                            var index: Int? = hit
+                            if (hit == null && onLine) {
+                                val added = addOnLine(start, down.position, plot, padPx)
+                                if (added != null) {
+                                    work = added.first
+                                    index = added.second
+                                }
                             }
-                            follow(lastPosition)
-                            drag(down.id) { change ->
-                                follow(change.position)
-                                change.consume()
+                            val grabbed = index
+                            if (grabbed != null) {
+                                latestSelect(grabbed)
+                                /**
+                                 * Moves the grabbed point to the finger's [position] and reports the new curve.
+                                 * It runs on every drag event so the preview updates while the finger moves.
+                                 */
+                                fun follow(position: Offset) {
+                                    val at = fromScreen(position, plot, padPx)
+                                    work = work.moved(grabbed, at.x, at.y)
+                                    working = work
+                                    latestPreview(work)
+                                }
+                                follow(lastPosition)
+                                drag(down.id) { change ->
+                                    follow(change.position)
+                                    change.consume()
+                                }
+                                // One commit with the final curve: the drag is one Undo step.
+                                if (work != start) latestCommit(work)
+                                working = null
+                            } else {
+                                // A swipe over empty space does nothing; let the finger finish.
+                                waitForUpOrCancellation()
                             }
-                            // One commit with the final curve: the drag is one Undo step.
-                            if (work != start) latestCommit(work)
-                            working = null
-                        } else {
-                            // A swipe over empty space does nothing; let the finger finish.
-                            waitForUpOrCancellation()
                         }
-                        OUTCOME_CANCELLED -> Unit
-                        else -> {
-                            // The finger stayed down: a long press. On any point it removes it, while more than 2 remain.
-                            if (hit != null) {
-                                val removed = start.removed(hit)
-                                if (removed != start) latestCommit(removed)
-                                down.consume()
-                            }
-                            waitForUpOrCancellation()
-                        }
+                        else -> Unit
                     }
                 }
             },
@@ -229,12 +254,50 @@ internal fun CurveGraph(
         drawPath(path, lineColor, style = Stroke(width = strokePx))
         // The control points, all in one style: filled with the line colour, ringed in the sheet's
         // lowest surface colour so each stands out from the line.
-        shown.points.forEach { point ->
+        shown.points.forEachIndexed { i, point ->
             val centre = toScreen(point, plot, padPx)
-            drawCircle(ringColor, pointRadiusPx + hairlinePx * 2, centre)
-            drawCircle(lineColor, pointRadiusPx, centre)
+            val outer = pointRadiusPx + hairlinePx * 2
+            if (i == selected) {
+                // The selected point is the reverse: background inside a thicker ring of the line's colour.
+                drawCircle(lineColor, outer, centre)
+                drawCircle(ringColor, outer - strokePx, centre)
+            } else {
+                drawCircle(ringColor, outer, centre)
+                drawCircle(lineColor, pointRadiusPx, centre)
+            }
         }
     }
+}
+
+/**
+ * How far, in pixels, [position] is from the drawn line of [curve] (flat end parts included), looking
+ * only [reach] pixels to each side. It samples the curve every 2 px and returns the smallest distance,
+ * or [Float.MAX_VALUE] when the plot has no x inside that window. [ToneCurve.valueAt] gives the height.
+ */
+private fun distanceToLine(curve: ToneCurve, position: Offset, plot: Size, pad: Float, reach: Float): Float {
+    var best = Float.MAX_VALUE
+    var x = (position.x - reach).coerceAtLeast(pad)
+    val end = (position.x + reach).coerceAtMost(plot.width - pad)
+    while (x <= end) {
+        val cx = fromScreen(Offset(x, 0f), plot, pad).x
+        val on = toScreen(CurvePoint(cx, curve.valueAt(cx)), plot, pad)
+        best = minOf(best, (on - position).getDistance())
+        x += 2f
+    }
+    return best
+}
+
+/**
+ * Adds a point on [curve]'s line at the x of [position], at the line's own height. Returns the new
+ * curve with the new point's index after sorting, or null when nothing was added (ten points already,
+ * or too close to a neighbour).
+ */
+private fun addOnLine(curve: ToneCurve, position: Offset, plot: Size, pad: Float): Pair<ToneCurve, Int>? {
+    val x = fromScreen(position, plot, pad).x
+    val added = curve.added(CurvePoint(x, curve.valueAt(x)))
+    if (added == curve) return null
+    val index = added.points.indices.minByOrNull { kotlin.math.abs(added.points[it].x - x) } ?: return null
+    return added to index
 }
 
 /** The plot is divided into this many columns by vertical lines (so three lines inside the frame). */

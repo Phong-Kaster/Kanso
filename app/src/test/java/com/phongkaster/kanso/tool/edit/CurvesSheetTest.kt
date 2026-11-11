@@ -33,6 +33,7 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_DELETE_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_RESET_TAG
@@ -46,10 +47,12 @@ import org.robolectric.annotation.Config
 
 /**
  * Checks on Android 15 the Edit screen's Curves sheet, drawn inside the real `EditSheet` by the
- * stateless `EditPanelContent` (DoD 3, 4, 5, 6 and 14 of Run 12): the graph and Reset are there, the
- * graph has a spoken description naming the RGB curve, Reset is at least 48 dp and is disabled while
- * the curve is straight, a tap on empty space adds a point, a drag moves the point and commits once
- * when the finger lifts, a long press removes a middle point, and at ten points a tap adds nothing.
+ * stateless `EditPanelContent`: the graph and Reset are there, the graph has a spoken description
+ * naming the RGB curve, Reset is at least 48 dp and is disabled while the curve is straight, a tap on
+ * the line adds and selects a point on the line, a tap away adds nothing and clears the selection, a
+ * point within reach wins over the line, a drag from a point or from the line commits once when the
+ * finger lifts, a long press keeps the point, at ten points a tap on the line adds nothing, and the
+ * delete button works on the selected point (disabled with nothing selected or two points).
  *
  * The test holds the settings itself in a `mutableStateOf`, as the ViewModel holds them in the app.
  */
@@ -120,31 +123,81 @@ class CurvesSheetTest {
         assertTrue(graph.size.width > minPx * 4 && graph.size.height > minPx)
     }
 
-    /** A tap on an empty spot adds a point there: one commit, and the callbacks hold a 3-point curve. */
+    /**
+     * A tap near the straight line (a little above it, so the finger is not exactly on it) adds a point
+     * at the line's own height, not the finger's: one commit, a 3-point curve, and the new point is
+     * selected (so the delete button is enabled).
+     */
     @Test
-    fun a_tap_on_empty_space_adds_a_point() {
+    fun a_tap_on_the_line_adds_a_point_on_the_line_and_selects_it() {
         show()
-        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.8f)) }
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.58f)) }
         compose.waitForIdle()
 
         assertEquals(1, commits)
         assertEquals(3, previews.last().curves.rgb.points.size)
         val added = settings.curves.rgb.points[1]
         assertEquals(0.5f, added.x, 0.03f)
-        assertEquals(0.8f, added.y, 0.03f)
+        // The straight line is at 0.5 there; the finger was at 0.58.
+        assertEquals(0.5f, added.y, 0.02f)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
     }
 
-    /** Dragging the middle point moves it: previews while moving, one commit at the end, final y where the finger let go. */
+    /** A tap far from the line and from every point adds nothing, commits nothing and clears the selection. */
+    @Test
+    fun a_tap_away_from_the_line_adds_nothing_and_clears_the_selection() {
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.5f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+        val commitsBefore = commits
+
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.97f)) }
+        compose.waitForIdle()
+
+        assertEquals(commitsBefore, commits)
+        assertEquals(3, settings.curves.rgb.points.size)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+    }
+
+    /** Tapping exactly on a point selects it and changes nothing else. */
+    @Test
+    fun a_tap_on_a_point_selects_it() {
+        settings = bentSettings()
+        show()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.75f)) }
+        compose.waitForIdle()
+
+        assertEquals(0, commits)
+        assertEquals(bentSettings(), settings)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+    }
+
+    /** A tap that is within reach of both a point and the line picks the point: no new point is added. */
+    @Test
+    fun a_point_within_reach_wins_over_the_line() {
+        settings = bentSettings()
+        show()
+        // About 0.08 below the point is under 24 dp from it and also from the line.
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.67f)) }
+        compose.waitForIdle()
+
+        assertEquals(0, commits)
+        assertEquals(3, settings.curves.rgb.points.size)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+    }
+
+    /** Dragging from a point moves it: previews while moving, one commit at the end, final y where the finger let go. */
     @Test
     fun a_drag_moves_the_point_and_commits_once() {
+        settings = bentSettings()
         show()
-        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.8f)) }
-        compose.waitForIdle()
-        val commitsBefore = commits
         val previewsBefore = previews.size
 
         compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
-            down(spot(0.5f, 0.8f))
+            down(spot(0.5f, 0.75f))
             moveTo(spot(0.5f, 0.55f))
             moveTo(spot(0.5f, 0.3f))
             up()
@@ -152,39 +205,164 @@ class CurvesSheetTest {
         compose.waitForIdle()
 
         assertTrue("no live preview while dragging", previews.size > previewsBefore)
-        assertEquals("the drag was not one commit", commitsBefore + 1, commits)
+        assertEquals("the drag was not one commit", 1, commits)
         assertEquals(3, settings.curves.rgb.points.size)
         assertEquals(0.3f, settings.curves.rgb.points[1].y, 0.03f)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
     }
 
-    /** A long press on the middle point removes it, with one commit. */
+    /** A drag that starts on the line away from any point adds a point, the previews follow, and lifting is one commit. */
     @Test
-    fun a_long_press_removes_a_middle_point() {
+    fun a_drag_from_the_line_adds_a_point_and_commits_once() {
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            down(spot(0.5f, 0.5f))
+            moveTo(spot(0.5f, 0.7f))
+            moveTo(spot(0.5f, 0.9f))
+            up()
+        }
+        compose.waitForIdle()
+
+        assertTrue("the previews did not follow the finger", previews.size >= 2)
+        assertEquals("the drag was not one commit", 1, commits)
+        assertEquals(3, settings.curves.rgb.points.size)
+        assertEquals(0.9f, settings.curves.rgb.points[1].y, 0.03f)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+    }
+
+    /** A long press no longer removes a point: the point stays, nothing is committed, and it is selected. */
+    @Test
+    fun a_long_press_keeps_the_point() {
         settings = bentSettings()
         show()
         compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { longClick(spot(0.5f, 0.75f)) }
         compose.waitForIdle()
 
-        assertEquals(1, commits)
-        assertTrue(settings.curves.rgb.isNeutral)
+        assertEquals(0, commits)
+        assertTrue(changes.isEmpty())
+        assertEquals(bentSettings(), settings)
     }
 
-    /** With ten points a tap on empty space adds nothing and commits nothing. */
+    /**
+     * With ten unevenly spaced points (nine close together, then a gap far wider than 48 dp) a tap on
+     * the line inside the gap adds nothing and commits nothing.
+     */
     @Test
     fun at_ten_points_a_tap_adds_nothing() {
         val ten = ToneCurve(
             List(ToneCurve.MAX_POINTS) { i ->
-                val x = i / (ToneCurve.MAX_POINTS - 1).toFloat()
+                val x = if (i < ToneCurve.MAX_POINTS - 1) i * 0.05f else 1f
                 CurvePoint(x, 0.25f + 0.5f * x)
             },
         )
         settings = EditSettings(curves = CurveAdjustments.NEUTRAL.with(CurveChannel.RGB, ten))
         show()
-        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.55f, 0.97f)) }
+        val lineY = ten.valueAt(0.7f)
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.7f, lineY)) }
         compose.waitForIdle()
 
         assertEquals(0, commits)
         assertEquals(ToneCurve.MAX_POINTS, settings.curves.rgb.points.size)
+    }
+
+    /** The delete button is disabled with nothing selected, and with only two points even when an end is selected. */
+    @Test
+    fun delete_is_disabled_with_nothing_selected_and_with_two_points() {
+        settings = bentSettings()
+        show()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+
+        settings = EditSettings()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0f, 0f)) }
+        compose.waitForIdle()
+        assertEquals(2, settings.curves.rgb.points.size)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+    }
+
+    /** Delete removes the selected middle point in one change, and selects its left neighbour. */
+    @Test
+    fun delete_removes_the_selected_point_and_selects_the_left_neighbour() {
+        val points = listOf(CurvePoint(0f, 0f), CurvePoint(0.3f, 0.4f), CurvePoint(0.7f, 0.6f), CurvePoint(1f, 1f))
+        settings = curvesSettings(points)
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.7f, 0.6f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, changes.size)
+        assertEquals(listOf(points[0], points[1], points[3]), settings.curves.rgb.points)
+
+        // The left neighbour (0.3, 0.4) is selected now: a second delete removes it, not the last point.
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).performClick()
+        compose.waitForIdle()
+        assertEquals(2, changes.size)
+        assertEquals(listOf(points[0], points[3]), settings.curves.rgb.points)
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+    }
+
+    /** Deleting the first point selects the new first point, so a second delete removes that one. */
+    @Test
+    fun deleting_the_first_point_selects_the_new_first_point() {
+        val points = listOf(CurvePoint(0f, 0f), CurvePoint(0.3f, 0.4f), CurvePoint(0.7f, 0.6f), CurvePoint(1f, 1f))
+        settings = curvesSettings(points)
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0f, 0f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(points[1], points[2], points[3]), settings.curves.rgb.points)
+
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(points[2], points[3]), settings.curves.rgb.points)
+    }
+
+    /** Reset clears the selection as well as straightening the curve. */
+    @Test
+    fun reset_clears_the_selection() {
+        settings = bentSettings()
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.75f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+
+        compose.onNodeWithTag(CURVE_RESET_TAG).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+        compose.onNodeWithTag(CURVE_RESET_TAG).assertIsNotEnabled()
+    }
+
+    /** A change that did not come from the graph (Undo or Redo) and a channel change both clear the selection. */
+    @Test
+    fun undo_redo_and_a_channel_change_clear_the_selection() {
+        settings = bentSettings()
+        show()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.5f, 0.75f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+
+        // Somebody else (Undo) puts a different curve in.
+        settings = EditSettings(
+            curves = CurveAdjustments.NEUTRAL.with(
+                CurveChannel.RGB,
+                ToneCurve.NEUTRAL.added(CurvePoint(0.4f, 0.6f)),
+            ),
+        )
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
+
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput { click(spot(0.4f, 0.6f)) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsEnabled()
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RED)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(curveChipTag(CurveChannel.RGB)).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CURVE_DELETE_TAG).assertIsNotEnabled()
     }
 
     /** The four chips are there with spoken names, RGB is chosen first, and each is at least 48 dp to touch. */
@@ -265,6 +443,11 @@ class CurvesSheetTest {
             CurveChannel.RGB,
             ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.75f)),
         ),
+    )
+
+    /** Settings whose master curve holds exactly [points]. */
+    private fun curvesSettings(points: List<CurvePoint>): EditSettings = EditSettings(
+        curves = CurveAdjustments.NEUTRAL.with(CurveChannel.RGB, ToneCurve(points)),
     )
 
     /** The touch position, in the graph's own pixels, of curve coordinates ([x], [y]); y is up. */

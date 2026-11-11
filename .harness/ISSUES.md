@@ -2,6 +2,7 @@
 
 ## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: ESCALATE, Iteration 1 (bootstrap)
 
+- Iteration 4 (Phase 3): all tasks complete, DONE-candidate recorded. Review items fixed. No test yet for Undo of another tool's change clearing the selection. Pictures 105-108 looked at by the engine only.
 - Iteration 3 (Phase 2): no queued decisions, nothing abandoned. Pictures 95-98 differ from their baselines until re-recorded after Phase 3. The RGB colour dot sweeps the RGB sheet fixed tints (not scheme roles), as T-003 asks.
 
 - Queued: **D-001** — approve the Definition of Done, choose the spline (natural cubic proposed; the
