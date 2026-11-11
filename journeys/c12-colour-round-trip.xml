@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Run 13, DoD criterion 12: the Colour round trip on the Edit screen.
+  Device: the owner's Galaxy A13 (R58W1120QVA) only. Start state: the debug build freshly installed
+  (no photo permission yet), app opened on Home.
+-->
+<journey name="Edit: Colour group round trip">
+  <action>Tap "Edit" on Home. When the system asks for photo access, choose "Allow all".</action>
+  <action>Tap a photo in "Edit: choose a photo".</action>
+  <check>The Edit tool row shows Crop, Rotate, Adjust, Colour, Filters and Compare without swiping; "Colour" sits under a palette icon.</check>
+  <action>Tap Colour.</action>
+  <check>The row shows Back at the left, then RGB, HSL, Curves, and Compare at the right; no tool sheet is open.</check>
+  <action>Tap HSL, choose the Saturation chip, drag the slider to the right.</action>
+  <check>The slider value is no longer 0 and HSL shows its small "changed" dot.</check>
+  <action>Tap Back on the row.</action>
+  <verify>The HSL sheet is closed, the first row is back, and Colour shows the "changed" dot.</verify>
+  <action>Tap Compare.</action>
+  <verify>The photo shows the original, every tool entry is disabled and only Compare is enabled. Tap Compare again to turn it off.</verify>
+  <action>Press the phone's Back.</action>
+  <verify>A dialog asks "Discard your changes?" with Discard and Keep editing. Tap Keep editing.</verify>
+  <action>Tap Done, then Save.</action>
+  <verify>"Your photo is saved in Pictures/Kanso." shows; the saved photo carries the saturation change.</verify>
+</journey>

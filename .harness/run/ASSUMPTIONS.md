@@ -9,8 +9,8 @@
 
 - **Tier:** 2 (plan/architecture)
 - **Iteration:** 2
-- **First dependent checkpoint:** Iteration 2's checkpoint (SHA filled in by the next Iteration)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `390856c` (Iteration 2, Phase 1)
+- **Revert:** `git revert 390856c` (undoes the whole Colour group; the assumption itself changed no code)
 
 ### Question
 
