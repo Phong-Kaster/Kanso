@@ -56,7 +56,11 @@ import com.phongkaster.kanso.ui.tool.ToolUiState
 import com.phongkaster.kanso.ui.tool.ToolViewModel
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editRatioTag
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_LIST_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editGroupTag
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.editToolTag
+import com.phongkaster.kanso.ui.tool.model.EditToolGroup
+import androidx.compose.ui.test.performScrollToNode
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -248,9 +252,16 @@ class CompareTest {
             compose.onNodeWithTag(TOOL_UNDO_TAG).assertIsDisplayed()
             compose.onNode(hasTestTag(EDIT_COMPARE_TAG) and hasAnyAncestor(hasTestTag(EDIT_TOOL_ROW_TAG))).assertIsDisplayed()
 
-            // The row is lazy and now has ten entries: scroll to Filters so its node exists.
-            compose.scrollToolRowTo(EditTool.FILTERS)
-            val filters = bounds(editToolTag(EditTool.FILTERS))
+            // The row is lazy: scroll to Filters so its node exists. With RGB, HSL or Curves open the
+            // Colour group's row is showing instead (Filters is not in it), and its own entry for the
+            // open tool is the one level with Compare; scrolling to Filters would tap Back and close it.
+            val anchorTag = if (open != null && open in EditToolGroup.COLOUR.tools) {
+                editToolTag(open)
+            } else {
+                compose.scrollToolRowTo(EditTool.FILTERS)
+                editToolTag(EditTool.FILTERS)
+            }
+            val filters = bounds(anchorTag)
             val undo = bounds(TOOL_UNDO_TAG)
             val done = bounds(TOOL_DONE_TAG)
             val compare = bounds(EDIT_COMPARE_TAG)
@@ -388,12 +399,21 @@ class CompareTest {
      * or all disabled ([enabled] false).
      */
     private fun assertEditingEnabled(enabled: Boolean) {
+        // RGB, HSL and Curves now sit behind the Colour entry; a disabled Colour cannot be tapped
+        // open, so the Colour entry stands for the three here (their own sheets are tested elsewhere).
+        val rowTools = EditTool.entries.filter { it !in EditToolGroup.COLOUR.tools }
+        val groupTag = editGroupTag(EditToolGroup.COLOUR)
         val tags = listOf(EDIT_BRIGHTNESS_TAG, TOOL_UNDO_TAG) +
             AdjustSlider.entries.map(::editAdjustChipTag) +
-            EditTool.entries.map(::editToolTag)
+            rowTools.map(::editToolTag) + groupTag
         tags.forEach { tag ->
             // An entry past the row's right edge has no node until the lazy row scrolls to it.
-            EditTool.entries.firstOrNull { editToolTag(it) == tag }?.let { compose.scrollToolRowTo(it) }
+            val tool = rowTools.firstOrNull { editToolTag(it) == tag }
+            if (tool != null) {
+                compose.scrollToolRowTo(tool)
+            } else if (tag == groupTag) {
+                compose.onNodeWithTag(EDIT_TOOL_LIST_TAG).performScrollToNode(hasTestTag(groupTag))
+            }
             val node = compose.onNodeWithTag(tag)
             if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
         }

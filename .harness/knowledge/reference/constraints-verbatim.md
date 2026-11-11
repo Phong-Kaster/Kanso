@@ -1,4 +1,4 @@
-# Constraints (verbatim copy of PROJECT.md '## Constraints', for Worker Briefs; regenerate, never edit)
+# Constraints (verbatim copy of PROJECT.md '## Constraints' and '## Constraints (continued)', for Worker Briefs; regenerate, never edit)
 
 
 - **Never** edit anything under `reference/` or import from it, because the PRD makes it read-only and DoD 27 diffs it against `a0d9a79`. Since Run 10 this includes `reference/pinity-stickers/` (Pinity's sticker code and pictures, added in `8114d3d`): read it to port from, never build or import it; Run 10's DoD 33 diffs `reference/` against `fadd7c4`.
@@ -69,3 +69,7 @@
 
 - **Never** call `FileProvider.getUriForFile` in a JVM test on Windows (it compares paths with `/` and throws `Failed to find configured root`); pass `HOST_URI` (`app/src/test/.../result/HostFileUri.kt`) to `shareableBitmapUri` / `ResultScreen(shareFileUri = ...)`. Also: a new `Bitmap.createBitmap(ARGB_8888)` reports `hasAlpha() == true`, so Save/Share write a PNG unless the test calls `setHasAlpha(false)`. The Saved screen is `Result` since Run 9 (preview names `ResultPreview`, `ResultMarkPreview`; tags `RESULT_*`) - evidence: Run 9 Phase 5.
 
+
+- **Never** call `performScrollTo()` on a node inside a row that fits the screen without scrolling (the nine HSL range circles take 368 dp of 411 dp): Compose's test clock never goes idle and the whole Roborazzi recording stalls with no error (`HslSheetTest.tapping_a_circle_chooses_it_and_changes_nothing` records the same trap; T-005 attempt 1 recorded only 7 of 12 pictures before two 10-minute stalls, `evidence/p5-record*.log`). Tap such a node where it is.
+- **Never** judge whether a one-line label fits with `TextLayoutResult.didOverflowWidth`, `hasVisualOverflow` or `multiParagraph.width` when the Text has `softWrap = false`: Compose lays the paragraph out at a huge width (2904 px for "RGB" in a 74 px box), so they say "overflow" for every label. Use `lineCount`, `getLineEnd(0)`, `isLineEllipsized(0)` and `getLineLeft/Right(0)` against the box, and run such a test with `@GraphicsMode(NATIVE)` (legacy mode does not measure real fonts). Evidence: T-006 attempts 1-2 (`evidence/p5-build.log`, `p5-build2.log`).
+- **Never** put a `horizontalScroll` Row, un-weighted, beside another control in one Row: it takes all the width and starves what follows (Curves' Reset vanished, D-004). Give it `weight(1f)` or its own row.

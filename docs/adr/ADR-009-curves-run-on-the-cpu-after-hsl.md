@@ -1,11 +1,13 @@
 # Curves run on the CPU after HSL, through 256-entry tables
 
 The owner wanted a Curves tool in Edit, as in Lightroom: a tone curve for all colours, one for each of
-red, green and blue, and one for lightness. This record keeps where the step runs, how a curve becomes
+red, green and blue. This record keeps where the step runs, how a curve becomes
 pixels, how the live preview and the saved photo stay identical, and what it costs. A source path below
 without a prefix is under `app/src/main/java/com/phongkaster/kanso/`.
 
-Status: accepted.
+Status: accepted. **Partly superseded by [ADR-011](ADR-011-curves-are-a-natural-spline-with-free-end-points.md):**
+the monotone interpolation and the fixed end points (x = 0 and x = 1) below no longer hold; a curve is now a
+natural cubic spline that may overshoot (clipped to 0..1) with free end points. Where the step runs is unchanged.
 
 ## Context
 
@@ -25,12 +27,10 @@ Status: accepted.
   `LivePreviewImage` draws the colour matrix on top. So the preview and the saved photo match.
 - **A curve is a `ToneCurve`** of 2 to 10 `CurvePoint`s. Each point has x and y in 0..1. The points are
   sorted by x, the first is at x = 0 and the last at x = 1, and neighbours are at least 0.02 apart.
-- **A curve becomes a 256-entry table** by monotone cubic interpolation (Fritsch-Carlson). The curve
+- **A curve becomes a 256-entry table** by monotone cubic interpolation (Fritsch-Carlson) *(superseded by ADR-011: now a natural cubic spline, clipped to 0..1)*. The curve
   passes through every point, never overshoots between points, and stays within 0..255.
-- **Per pixel**: `r' = rgbTable[redTable[r]]`, and the same for green and blue. Then the Lightness
-  curve: convert RGB to HSL, `L' = lightTable(L)`, convert back to RGB. The RGB/HSL conversion is
-  copied into the curves code and not shared with `EditHsl`, so neither tool changes when the other
-  does.
+- **Per pixel**: `r' = rgbTable[redTable[r]]`, and the same for green and blue. That is the
+  whole step: table reads only, no colour-space conversion, alpha kept.
 - **A straight diagonal is a no-op.** A curve with points only on the diagonal gives a table equal to
   the identity, so the photo is byte-identical and the step is skipped.
 

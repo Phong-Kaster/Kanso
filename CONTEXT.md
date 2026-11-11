@@ -22,7 +22,7 @@ and one slider for the chosen one, from -100 (the channel gone) through 0 (no ch
 channel doubled). Used to fix a colour cast or tint a photo. *Not* Adjust's Warmth, which shifts
 red against blue together, and not a filter, which is a fixed look.
 
-**HSL tool** - The Edit tool (between RGB and Filters) that changes the hue, the saturation and the
+**HSL tool** - The Edit tool (in the Colour group, between RGB and Curves, reached through Colour) that changes the hue, the saturation and the
 lightness of one **colour range** at a time: nine circles pick the range, three chips pick Hue,
 Saturation or Lightness, and one slider from -100 to +100 sets that one of its 27 values. Applied
 by `EditHsl` after the filter and before the colour matrix. *Not* Adjust's Saturation, which acts on

@@ -57,14 +57,12 @@ class CurveParityTest {
         assertParity(EditSettings(curves = curves))
     }
 
-    /** A Lightness curve (alone and with the colour curves) gives the same picture in the preview and Done. */
+    /** An overshooting curve (clipped to white) and a curve with moved end points match Done too. */
     @Test
-    fun a_lightness_curve_matches_done() {
-        assertParity(EditSettings(curves = CurveAdjustments.NEUTRAL.with(CurveChannel.LIGHTNESS, bend(0.5f, 0.2f))))
-        val curves = CurveAdjustments.NEUTRAL
-            .with(CurveChannel.RGB, bend(0.6f, 0.5f))
-            .with(CurveChannel.LIGHTNESS, bend(0.3f, 0.6f).added(CurvePoint(0.7f, 0.4f)))
-        assertParity(EditSettings(curves = curves, brightness = 0.2f))
+    fun overshooting_and_moved_end_curves_match_done() {
+        assertParity(EditSettings(curves = master(bend(0.25f, 0.75f))))
+        val movedEnds = ToneCurve(listOf(CurvePoint(0.2f, 0.1f), CurvePoint(0.8f, 0.9f)))
+        assertParity(EditSettings(curves = master(movedEnds)))
     }
 
     /**

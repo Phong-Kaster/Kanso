@@ -3,11 +3,6 @@ package com.phongkaster.kanso.ui.tool.component.toolpanel.beautifypanel
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.phongkaster.kanso.R
 import com.phongkaster.kanso.data.settings.ThemeMode
 import com.phongkaster.kanso.ui.theme.KansoTheme
+import com.phongkaster.kanso.ui.tool.component.GroupBackEntry
+import com.phongkaster.kanso.ui.tool.component.groupRowTransition
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EditToolEntry
 import com.phongkaster.kanso.ui.tool.model.BeautifyEntry
 import com.phongkaster.kanso.ui.tool.model.BeautifyGroup
@@ -71,12 +68,8 @@ fun BeautifyToolRow(
 ) {
     AnimatedContent(
         targetState = openGroup,
-        transitionSpec = {
-            // Into a group: the new row comes from the right; back out: from the left.
-            val inward = targetState != null
-            (slideInHorizontally(initialOffsetX = { if (inward) it else -it }) + fadeIn()) togetherWith
-                (slideOutHorizontally(targetOffsetX = { if (inward) -it else it }) + fadeOut())
-        },
+        // Into a group: the new row comes from the right; back out: from the left.
+        transitionSpec = { groupRowTransition(inward = targetState != null) },
         label = "beautify-row",
         modifier = modifier.fillMaxWidth(),
         content = { group ->
@@ -150,7 +143,7 @@ private fun GroupRow(
             )
             // A thin line separates the tools (which scroll) from Back (which stays put).
             VerticalDivider(modifier = Modifier.padding(horizontal = 4.dp).height(40.dp))
-            BackEntry(enabled = enabled, onBack = onBack)
+            GroupBackEntry(enabled = enabled, onClick = onBack, modifier = Modifier, testTag = BEAUTIFY_BACK_TAG)
         },
     )
 }
@@ -183,18 +176,6 @@ private fun GroupEntry(group: BeautifyGroup, changed: Boolean, enabled: Boolean,
         changed = changed,
         dotTag = "beautify-group-dot-${group.name}",
         tap = { Modifier.clickable(enabled = enabled, role = Role.Button, onClick = { onOpen(group) }) },
-    )
-}
-
-/** The Back entry at the end of a group's row: a button that returns to the top row. */
-@Composable
-private fun BackEntry(enabled: Boolean, onBack: () -> Unit) {
-    EditToolEntry(
-        icon = R.drawable.ic_arrow_back,
-        title = R.string.back,
-        modifier = Modifier.widthIn(min = ENTRY_MIN_WIDTH).testTag(BEAUTIFY_BACK_TAG),
-        enabled = enabled,
-        tap = { Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onBack) },
     )
 }
 
@@ -284,17 +265,6 @@ private fun GroupEntryPreview() {
     KansoTheme(themeMode = ThemeMode.System) {
         Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
             GroupEntry(group = BeautifyGroup.FACE, changed = false, enabled = true, onOpen = {})
-        }
-    }
-}
-
-/** The Back entry, in light and in dark. */
-@PreviewLightDark
-@Composable
-private fun BackEntryPreview() {
-    KansoTheme(themeMode = ThemeMode.System) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-            BackEntry(enabled = true, onBack = {})
         }
     }
 }

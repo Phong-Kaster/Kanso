@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import com.phongkaster.kanso.data.edit.edit.FilterPreset
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EDIT_BRIGHTNESS_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_COMPARE_TAG
+import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_GROUP_BACK_TAG
 import com.phongkaster.kanso.ui.tool.component.editbottombar.edittoolrow.EDIT_TOOL_ROW_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.editFilterTag
 import androidx.compose.ui.test.hasTestTag
@@ -49,6 +50,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import com.phongkaster.kanso.data.edit.edit.CurveChannel
+import com.phongkaster.kanso.data.edit.edit.CurvePoint
+import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_PADDING_DP
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
@@ -341,7 +344,11 @@ class ToolScreenshotTest {
         capture("68_edit_pill_dark.png")
     }
 
-    /** Picture 83: the row of tools scrolled so HSL, the ninth tool, is in view, light. Run 11: DoD 18. */
+    /**
+     * Picture 83: the Colour group's row (Back, RGB, HSL, Curves, Compare) reached by tapping Colour,
+     * light. Run 13 (R2): this picture used to show the flat row scrolled to HSL; HSL now lives in the
+     * Colour group, so the row shows that group instead.
+     */
     @Test
     fun edit_tool_row_hsl_light() {
         showTool(Tool.EDIT, ThemeMode.Light)
@@ -349,7 +356,7 @@ class ToolScreenshotTest {
         capture("83_edit_tool_row_hsl_light.png")
     }
 
-    /** Picture 84: the row of tools scrolled so HSL is in view, dark. */
+    /** Picture 84: the Colour group's row, reached through Colour, dark (Run 13, R2). */
     @Test
     fun edit_tool_row_hsl_dark() {
         showTool(Tool.EDIT, ThemeMode.Dark)
@@ -469,36 +476,155 @@ class ToolScreenshotTest {
         capture("98_edit_curves_red_s_curve_dark.png")
     }
 
-    /** Picture 99: the Curves sheet with the Lightness chip chosen and an S-curve on Lightness, light. */
+    /**
+     * Picture 101: the Edit screen's first row (Colour not opened, so Crop, Rotate, Adjust, Colour,
+     * Filters ...) after an HSL change, light. Run 13, DoD 11: Colour on one line under its icon and
+     * its "changed" dot visible.
+     */
     @Test
-    fun edit_curves_lightness_s_curve_light() {
+    fun edit_colour_row_light() {
         showTool(Tool.EDIT, ThemeMode.Light)
-        drawSCurve(CurveChannel.LIGHTNESS)
-        capture("99_edit_curves_lightness_s_curve_light.png")
+        setHslThenBackToFirstRow()
+        capture("101_edit_colour_row_light.png")
     }
 
-    /** Picture 100: the Curves sheet with an S-curve on Lightness, dark. */
+    /** Picture 102: the first row with the Colour dot showing after an HSL change, dark (Run 13, DoD 11). */
     @Test
-    fun edit_curves_lightness_s_curve_dark() {
+    fun edit_colour_row_dark() {
         showTool(Tool.EDIT, ThemeMode.Dark)
-        drawSCurve(CurveChannel.LIGHTNESS)
-        capture("100_edit_curves_lightness_s_curve_dark.png")
+        setHslThenBackToFirstRow()
+        capture("102_edit_colour_row_dark.png")
+    }
+
+    /**
+     * Picture 103: the Colour group's row (Back at the left, RGB, HSL, Curves) with the HSL sheet open
+     * after an HSL change, so HSL's own dot shows, light. Run 13, DoD 11: Back easy to find, dots visible.
+     */
+    @Test
+    fun edit_colour_group_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("103_edit_colour_group_light.png")
+    }
+
+    /** Picture 104: the Colour group's row with the HSL sheet open and HSL's dot showing, dark (Run 13, DoD 11). */
+    @Test
+    fun edit_colour_group_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        capture("104_edit_colour_group_dark.png")
+    }
+
+    /**
+     * Makes an HSL change (Red hue +60) through the Colour group, then taps Back: the sheet closes,
+     * the change is kept and the first row returns with its Colour entry carrying the dot.
+     */
+    private fun setHslThenBackToFirstRow() {
+        setHsl(ColourRange.RED, HslChannel.HUE, 0.6f)
+        compose.onNodeWithTag(EDIT_GROUP_BACK_TAG).performClick()
+        compose.waitForIdle()
     }
 
     /** Opens Curves, chooses the Red chip and taps two points on the graph that make an S shape. */
     private fun drawRedSCurve() = drawSCurve(CurveChannel.RED)
 
-    /** Opens Curves, chooses the [channel] chip and taps two points on the graph that make an S shape. */
-    private fun drawSCurve(channel: CurveChannel) {
+    /**
+     * Picture 105: the RGB curve with one point pulled from (0.25, 0.25) up to (0.25, 0.75), so the
+     * curve overshoots to a flat white top; the point stays selected. Light.
+     */
+    @Test
+    fun edit_curves_rgb_overshoot_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        pullRgbPointHigh()
+        capture("105_edit_curves_rgb_overshoot_light.png")
+    }
+
+    /** Picture 106: the same overshooting RGB curve with its point selected, dark. */
+    @Test
+    fun edit_curves_rgb_overshoot_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        pullRgbPointHigh()
+        capture("106_edit_curves_rgb_overshoot_dark.png")
+    }
+
+    /** Picture 107: the Blue curve with both end points moved in, first to (0.2, 0.1), last to (0.8, 0.9). Light. */
+    @Test
+    fun edit_curves_blue_moved_ends_light() {
+        showTool(Tool.EDIT, ThemeMode.Light)
+        moveBlueEnds()
+        capture("107_edit_curves_blue_moved_ends_light.png")
+    }
+
+    /** Picture 108: the Blue curve with both end points moved in, dark. */
+    @Test
+    fun edit_curves_blue_moved_ends_dark() {
+        showTool(Tool.EDIT, ThemeMode.Dark)
+        moveBlueEnds()
+        capture("108_edit_curves_blue_moved_ends_dark.png")
+    }
+
+    /** Opens Curves (RGB) and drags a point added on the line at x = 0.25 from height 0.25 up to 0.75. */
+    private fun pullRgbPointHigh() {
         openSheet(EditTool.CURVES)
-        compose.onNodeWithTag(curveChipTag(channel)).performClick()
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            down(spot(0.25f, 0.25f))
+            moveTo(spot(0.25f, 0.5f))
+            moveTo(spot(0.25f, 0.75f))
+            up()
+        }
+        settleCurves()
+    }
+
+    /** Opens Curves, chooses Blue and drags the first point to (0.2, 0.1) and the last to (0.8, 0.9). */
+    private fun moveBlueEnds() {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(CurveChannel.BLUE)).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
             val pad = CURVE_GRAPH_PADDING_DP * density
             fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
-            click(spot(0.25f, 0.15f))
-            click(spot(0.75f, 0.85f))
+            down(spot(0f, 0f))
+            moveTo(spot(0.1f, 0.05f))
+            moveTo(spot(0.2f, 0.1f))
+            up()
+            down(spot(1f, 1f))
+            moveTo(spot(0.9f, 0.95f))
+            moveTo(spot(0.8f, 0.9f))
+            up()
         }
+        settleCurves()
+    }
+
+    /**
+     * Opens Curves, chooses the [channel] chip and drags two points off the line to make an S shape:
+     * the first press is on the straight line at x = 0.25 and moves down to y = 0.15, the second is on
+     * the bent line at x = 0.75 and moves up to y = 0.85, so the last point stays selected.
+     */
+    private fun drawSCurve(channel: CurveChannel) {
+        openSheet(EditTool.CURVES)
+        compose.onNodeWithTag(curveChipTag(channel)).performClick()
+        compose.waitForIdle()
+        // Where the line is at x = 0.75 once the first point sits at (0.25, 0.15), so the second press lands on it.
+        val secondLineY = ToneCurve.NEUTRAL.added(CurvePoint(0.25f, 0.15f)).valueAt(0.75f)
+        compose.onNodeWithTag(CURVE_GRAPH_TAG).performTouchInput {
+            val pad = CURVE_GRAPH_PADDING_DP * density
+            fun spot(x: Float, y: Float) = Offset(pad + x * (width - 2 * pad), pad + (1f - y) * (height - 2 * pad))
+            down(spot(0.25f, 0.25f))
+            moveTo(spot(0.25f, 0.2f))
+            moveTo(spot(0.25f, 0.15f))
+            up()
+            down(spot(0.75f, secondLineY))
+            moveTo(spot(0.75f, (secondLineY + 0.85f) / 2f))
+            moveTo(spot(0.75f, 0.85f))
+            up()
+        }
+        settleCurves()
+    }
+
+    /** Waits for the sheet and gives the live preview's background render a short real-time settle. */
+    private fun settleCurves() {
         compose.waitForIdle()
         Thread.sleep(FILTER_SETTLE_MILLIS)
         compose.waitForIdle()
@@ -548,7 +674,8 @@ class ToolScreenshotTest {
 
     /** Taps [tool]'s entry in the row so its sheet opens. Run 9: the sheets are opened by the real UI. */
     private fun openSheet(tool: EditTool) {
-        // The row has ten entries: scroll to the one to tap, as a lazy row has no node past its edge.
+        // Run 13: scrollToolRowTo opens the Colour group first for RGB, HSL and Curves (and taps Back
+        // for any other tool); a lazy row has no node past its edge, hence the scroll.
         compose.scrollToolRowTo(tool)
         compose.onNodeWithTag(editToolTag(tool)).performClick()
         compose.waitForIdle()

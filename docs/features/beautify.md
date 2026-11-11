@@ -105,7 +105,8 @@ Limits, from the code:
 - Wait a moment for the zoom onto the face (none happens if no face is found).
 - The top row shows **Face**, **Body** and **Smooth**. Tap **Face** to swap the row for Face's
   tools: **Width** (its slider opens at once) and **Lift** on the left, and **Back** pinned at the
-  right end; Back returns to the top row. Tap **Body** for **Waist** (its slider opens at once,
+  right end; Back returns to the top row (the Back entry and the sideways slide are shared with the
+  Edit screen's Colour group). Tap **Body** for **Waist** (its slider opens at once,
   and the photo zooms out to show the whole body), **Arms**, **Chest** and **Legs**. Temple joins Face's
   row once it is built.
 - Tap **Width**, **Lift**, **Waist**, **Arms**, **Chest**, **Legs** or **Smooth** to open its slider and drag it: the photo changes
@@ -183,7 +184,10 @@ flowchart TD
    Smooth); tapping Face shows Face's tools (every `BeautifyTool` whose `group` is `FACE`; Body's
    likewise, `BODY`: Waist) in a
    `LazyRow` on the left and Back pinned at the right end behind a divider, as Edit pins Compare,
-   and opens the group's first tool. The rows slide sideways with `AnimatedContent`. A new face
+   and opens the group's first tool. The rows slide sideways with `AnimatedContent`. The Back entry
+   and that slide are shared pieces (`ui/tool/component/GroupBackEntry.kt` and `GroupRowTransition.kt`,
+   `groupRowTransition`) that the Edit screen's Colour group also uses; Beautify itself looks and works
+   as before. A new face
    tool joins the group by naming it in `BeautifyTool`. Every entry is the Edit screen's own
    `EditToolEntry`; Face's and Body's icons (`ic_face_group.xml`, `ic_body_group.xml`) are drawn for Kanso. Above the row, in Edit's own panel area
    (`EditSheet`, generic over the kind of tool, cross-fading; 136 dp tall here, `BEAUTIFY_SHEET_HEIGHT`, while Edit's is 220 dp), the open tool's slider, a [`BeautifySlider`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/beautifypanel/BeautifySlider.kt):

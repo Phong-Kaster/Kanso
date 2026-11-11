@@ -49,29 +49,65 @@ class CurveFormulaTest {
         assertEquals(255, table[255])
     }
 
-    /** Between two points the table stays between their two outputs: no overshoot, no halo. */
-    @Test
-    fun the_table_never_overshoots_between_two_points() {
-        val curve = curveOf(at(51, 20), at(102, 220), at(153, 225), at(204, 100))
-        val table = curve.table()
-        val xs = curve.points.map { Math.round(it.x * 255f) }
-        val ys = curve.points.map { Math.round(it.y * 255f) }
-        for (segment in 0 until xs.lastIndex) {
-            val low = minOf(ys[segment], ys[segment + 1])
-            val high = maxOf(ys[segment], ys[segment + 1])
-            for (i in xs[segment]..xs[segment + 1]) {
-                assertTrue("entry $i is ${table[i]}, outside $low..$high", table[i] in low..high)
-            }
+    /** Asserts the natural spline's value at each of [xs] is the matching [expected], within 1/255. */
+    private fun assertValues(curve: ToneCurve, xs: List<Float>, expected: List<Float>) {
+        xs.indices.forEach { i ->
+            assertEquals("at ${xs[i]}", expected[i], curve.valueAt(xs[i]), 1f / 255f)
         }
     }
 
-    /** A steep S-curve stays inside 0..255 in every entry and never goes down while the points rise. */
+    /** The natural cubic spline through (0,0), (0.5,0.75), (1,1) has these known values. */
     @Test
-    fun a_steep_s_curve_stays_inside_black_and_white_and_rises() {
+    fun a_natural_spline_through_three_points_has_the_known_values() {
+        val curve = curveOf(CurvePoint(0.5f, 0.75f))
+        assertValues(
+            curve,
+            listOf(0.125f, 0.25f, 0.375f, 0.625f, 0.75f, 0.875f),
+            listOf(0.2168f, 0.4219f, 0.6035f, 0.8535f, 0.9219f, 0.9668f),
+        )
+    }
+
+    /** The same for four points (0,0), (0.25,0.15), (0.75,0.85), (1,1). */
+    @Test
+    fun a_natural_spline_through_four_points_has_the_known_values() {
+        val curve = curveOf(CurvePoint(0.25f, 0.15f), CurvePoint(0.75f, 0.85f))
+        assertValues(curve, listOf(0.125f, 0.375f, 0.625f, 0.875f), listOf(0.0563f, 0.3063f, 0.6938f, 0.9438f))
+    }
+
+    /** A spline that overshoots white is clipped: every entry from x = 0.40 on is 255. */
+    @Test
+    fun an_overshoot_is_clipped_to_white() {
+        val table = curveOf(CurvePoint(0.25f, 0.75f)).table()
+        for (i in 102..255) assertEquals("entry $i", 255, table[i])
+    }
+
+    /** A steep S-curve overshoots, but is clipped so every entry stays inside 0..255 (not a rising check any more). */
+    @Test
+    fun a_steep_s_curve_stays_inside_black_and_white() {
         val table = curveOf(CurvePoint(0.4f, 0.02f), CurvePoint(0.6f, 0.98f)).table()
         assertEquals(256, table.size)
         table.forEach { assertTrue("entry $it is outside 0..255", it in 0..255) }
-        for (i in 1 until table.size) assertTrue("the table falls at $i", table[i] >= table[i - 1])
+    }
+
+    /** End points may sit away from 0 and 1; the curve is flat beyond them and a line between two. */
+    @Test
+    fun the_curve_is_flat_beyond_its_end_points() {
+        val curve = ToneCurve(listOf(CurvePoint(0.2f, 0.1f), CurvePoint(0.8f, 0.9f)))
+        assertEquals(0.1f, curve.valueAt(0f), 0f)
+        assertEquals(0.1f, curve.valueAt(0.2f), 0f)
+        assertEquals(0.5f, curve.valueAt(0.5f), 1e-5f)
+        assertEquals(0.9f, curve.valueAt(1f), 0f)
+        val table = curve.table()
+        assertEquals(Math.round(0.1f * 255f), table[0])
+        assertEquals(Math.round(0.9f * 255f), table[255])
+    }
+
+    /** A point added left of the first or right of the last becomes the new end point. */
+    @Test
+    fun added_beyond_the_ends_makes_a_new_end_point() {
+        val inner = ToneCurve(listOf(CurvePoint(0.3f, 0.3f), CurvePoint(0.7f, 0.7f)))
+        val wider = inner.added(CurvePoint(0.1f, 0.2f)).added(CurvePoint(0.9f, 0.8f))
+        assertEquals(listOf(0.1f, 0.3f, 0.7f, 0.9f), wider.points.map { it.x })
     }
 
     /** A curve never holds more than ten points, and a point too close to another is not added. */
@@ -87,21 +123,28 @@ class CurveFormulaTest {
         assertEquals(listOf(0f, 0.5f, 1f), two.points.map { it.x })
     }
 
-    /** A moved point cannot pass its neighbours, and the end points only move up and down. */
+    /** A moved point cannot pass its neighbours, and the end points slide sideways within their limits. */
     @Test
-    fun moved_cannot_pass_a_neighbour_and_ends_keep_their_x() {
+    fun moved_cannot_pass_a_neighbour_and_ends_move_sideways() {
         val curve = curveOf(CurvePoint(0.3f, 0.3f), CurvePoint(0.7f, 0.7f))
         val far = curve.moved(1, 5f, 0.4f)
         assertTrue(far.points[1].x <= far.points[2].x - ToneCurve.MIN_GAP + 1e-6f)
         val back = curve.moved(2, -5f, 0.4f)
         assertTrue(back.points[2].x >= back.points[1].x + ToneCurve.MIN_GAP - 1e-6f)
 
-        val start = curve.moved(0, 0.5f, 0.25f)
-        assertEquals(0f, start.points.first().x, 0f)
+        val start = curve.moved(0, 0.2f, 0.25f)
+        assertEquals(0.2f, start.points.first().x, 0f)
         assertEquals(0.25f, start.points.first().y, 0f)
-        val end = curve.moved(3, 0.1f, 2f)
-        assertEquals(1f, end.points.last().x, 0f)
+        val startFar = curve.moved(0, 0.9f, 0.25f)
+        assertEquals(0.3f - ToneCurve.MIN_GAP, startFar.points.first().x, 1e-6f)
+        assertEquals(0f, curve.moved(0, -3f, 0f).points.first().x, 0f)
+
+        val end = curve.moved(3, 0.85f, 2f)
+        assertEquals(0.85f, end.points.last().x, 0f)
         assertEquals(1f, end.points.last().y, 0f)
+        val endFar = curve.moved(3, 0.1f, 0.5f)
+        assertEquals(0.7f + ToneCurve.MIN_GAP, endFar.points.last().x, 1e-6f)
+        assertEquals(1f, curve.moved(3, 9f, 0.5f).points.last().x, 0f)
     }
 
     /**
@@ -147,13 +190,17 @@ class CurveFormulaTest {
         assertTrue(EditSettings(curves = CurveAdjustments(rgb = onDiagonal)).hasCurveChange)
     }
 
-    /** Removing a middle point drops it; the two end points cannot be removed. */
+    /** Any point can be removed while three or more remain; a two-point curve is returned as it is. */
     @Test
-    fun removed_ignores_the_end_points() {
+    fun removed_keeps_at_least_two_points() {
         val curve = curveOf(CurvePoint(0.5f, 0.7f))
-        assertSame(curve, curve.removed(0))
-        assertSame(curve, curve.removed(curve.points.lastIndex))
         assertTrue(curve.removed(1).isNeutral)
+        val withoutFirst = curve.removed(0)
+        assertEquals(listOf(0.5f, 1f), withoutFirst.points.map { it.x })
+        val withoutLast = curve.removed(curve.points.lastIndex)
+        assertEquals(listOf(0f, 0.5f), withoutLast.points.map { it.x })
+        assertSame(withoutFirst, withoutFirst.removed(0))
+        assertSame(ToneCurve.NEUTRAL, ToneCurve.NEUTRAL.removed(1))
     }
 
     /** A master curve that lifts the middle brightens grey, and leaves black and white alone. */
@@ -209,71 +256,6 @@ class CurveFormulaTest {
         assertEquals(rgbTable[0x40], (pixels[0] shr 8) and 0xFF)
         assertEquals(rgbTable[0x40], pixels[0] and 0xFF)
         assertNotEquals("the order cannot be told apart", rgbTable[redTable[0x40]], redTable[rgbTable[0x40]])
-    }
-
-    /** The Lightness curve of the given points, alone. */
-    private fun lightness(vararg middle: CurvePoint) =
-        CurveAdjustments.NEUTRAL.with(CurveChannel.LIGHTNESS, curveOf(*middle))
-
-    /** Hue (degrees) and HSL saturation of an ARGB int, for comparing before and after. */
-    private fun hueAndSaturation(argb: Int): Pair<Float, Float> {
-        val r = ((argb shr 16) and 0xFF) / 255f
-        val g = ((argb shr 8) and 0xFF) / 255f
-        val b = (argb and 0xFF) / 255f
-        val max = maxOf(r, g, b)
-        val min = minOf(r, g, b)
-        val delta = max - min
-        val l = (max + min) / 2f
-        val s = if (delta == 0f) 0f else delta / (1f - Math.abs(2f * l - 1f))
-        val h = when {
-            delta == 0f -> 0f
-            max == r -> 60f * (((g - b) / delta + 6f) % 6f)
-            max == g -> 60f * ((b - r) / delta + 2f)
-            else -> 60f * ((r - g) / delta + 4f)
-        }
-        return h to s
-    }
-
-    /** A Lightness curve changes how light coloured pixels are but keeps their hue and saturation (DoD 11). */
-    @Test
-    fun a_lightness_curve_keeps_hue_and_saturation() {
-        val colours = intArrayOf(0xFFC04030.toInt(), 0xFF30A050.toInt(), 0xFF3050C0.toInt(), 0xFFB0A040.toInt())
-        val pixels = colours.copyOf()
-        EditCurves.apply(pixels, lightness(at(128, 90)))
-        for (i in colours.indices) {
-            val (h0, s0) = hueAndSaturation(colours[i])
-            val (h1, s1) = hueAndSaturation(pixels[i])
-            assertNotEquals("pixel $i did not change", colours[i], pixels[i])
-            assertEquals("hue of pixel $i", h0, h1, 4f)
-            assertEquals("saturation of pixel $i", s0, s1, 0.06f)
-        }
-    }
-
-    /** Greys follow the Lightness curve: the grey level comes out as the table says, and stays grey. */
-    @Test
-    fun greys_follow_the_lightness_curve() {
-        val curve = curveOf(at(128, 60))
-        val table = curve.table()
-        val pixels = intArrayOf(0xFF808080.toInt(), 0xFF404040.toInt())
-        EditCurves.apply(pixels, CurveAdjustments.NEUTRAL.with(CurveChannel.LIGHTNESS, curve))
-        for ((index, level) in intArrayOf(0x80, 0x40).withIndex()) {
-            val v = pixels[index] and 0xFF
-            assertEquals((pixels[index] shr 8) and 0xFF, v)
-            assertEquals((pixels[index] shr 16) and 0xFF, v)
-            assertTrue("grey $level came out $v, the table says ${table[level]}", Math.abs(table[level] - v) <= 1)
-        }
-    }
-
-    /** The Lightness curve can reach pure black and pure white, for greys and for colours. */
-    @Test
-    fun a_lightness_curve_can_reach_pure_black_and_pure_white() {
-        val toBlack = intArrayOf(0xFF808080.toInt(), 0xFFC04030.toInt())
-        EditCurves.apply(toBlack, lightness(at(128, 0), at(192, 0), at(100, 0)))
-        toBlack.forEach { assertEquals(0xFF000000.toInt(), it) }
-
-        val toWhite = intArrayOf(0xFF808080.toInt(), 0xFFC04030.toInt())
-        EditCurves.apply(toWhite, lightness(at(100, 255), at(128, 255), at(192, 255)))
-        toWhite.forEach { assertEquals(0xFFFFFFFF.toInt(), it) }
     }
 
     /** A red-only curve changes the red channel and nothing else, and keeps alpha. */

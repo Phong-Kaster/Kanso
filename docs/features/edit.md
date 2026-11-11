@@ -1,4 +1,4 @@
-# Edit: crop, rotate, adjust, RGB, HSL, curves, filters, stickers, text and date
+# Edit: crop, rotate, adjust, colour (RGB, HSL, curves), filters, stickers, text and date
 
 [Back to README](../../README.md)
 
@@ -50,29 +50,50 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 >
 > **Curves ([ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)).** A tenth tool,
 > **Curves**, sits between HSL and Filters, so the row now holds Crop, Rotate, Adjust, RGB, HSL,
-> Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green, Blue and Lightness
+> Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green and Blue
 > choose the curve the graph edits (RGB first, the last choice is remembered, choosing is not an Undo
-> step and changes nothing in the photo). Lightness changes only how light the photo is: colours keep their hue and
-> saturation, greys follow it, and it can reach pure black and white. On the graph, a tap on empty space adds a point (at most 10), a drag moves one
-> (the two end points only up and down), a long press removes a middle one, and Reset (disabled
-> while the chosen curve is straight) straightens only that curve; each gesture is one Undo step. Done applies the
+> step and changes nothing in the photo); the chips read RGB, R, G, B, each with a colour dot. The graph is wide
+> (about 2:1) with only a frame and three vertical lines. On it, a tap near a point (24 dp) selects it, a tap near the line (24 dp) adds a point on the line and selects it (at most 10),
+> a tap elsewhere adds nothing, a drag from a point moves it (the end points move sideways too), a drag from the line adds a point and moves it,
+> the trash button (spoken "Delete point", above Reset) removes the selected point (any, while more than 2 remain)
+> and selects its left neighbour, and the Reset
+> icon button, right of the graph (disabled while the chosen curve is straight), straightens only that curve; each change
+> is one Undo step. Selection is kept in the panel and clears on a channel switch, Undo, Redo and Reset. The line is a natural cubic spline that may overshoot, clipped to black and white, flat beyond
+> the end points ([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)). Done applies the
 > curve on the CPU (`data/edit/edit/EditCurves.kt`) after HSL and before the colour matrix, so the
 > **saved picture has it**. The **live preview follows it** while a point is dragged (a CPU copy, filter, HSL,
 > curves, then the colour matrix on top, as Done does; a sticker under a finger is drawn without that
 > CPU stage). A screen reader hears the
 > graph ("Red curve, N points"), the chips and Reset but cannot move points. Traced end to end in the README,
 > [section 3.1, step 10](../../README.md#31-the-edit-screen).
+>
+> **The Colour group (Run 13).** The row above is no longer flat. Layer 1 reads Crop, Rotate, Adjust,
+> **Colour**, Filters, Stickers, Text, Date, with Compare pinned at the right. **Colour** (palette icon,
+> `ic_palette`) is a group, not a tool: tapping it opens no sheet and swaps the row for layer 2, **Back**
+> (pinned at the left), **RGB**, **HSL**, **Curves**, then Compare. Colour carries the "changed" dot while
+> RGB, HSL or Curves holds a change, and each of the three keeps its own dot. Back closes an open colour
+> sheet (the change is kept) and returns to layer 1; tapping Colour while another tool's sheet is open
+> closes that sheet; while Compare is held every entry but Compare is disabled. The phone's Back
+> gesture is unchanged (it closes an open sheet, then asks to discard or leave; it does not step back to
+> layer 1). RGB's icon is now `ic_instant_mix`; HSL and Curves keep theirs. Whether layer 2 shows is a
+> `rememberSaveable` flag in `EditToolRow` (it survives rotation; it is not in the ViewModel and is lost
+> when Stickers, Text or Date replace the row). Back and the sideways slide are the shared
+> `GroupBackEntry` and `groupRowTransition`, also used by Beautify. Nothing about how RGB, HSL and
+> Curves process the photo changed. The "row" sentences in the older notes above describe the order
+> before this change; the notes on RGB, HSL and Curves about their place "between" other tools are
+> superseded by this one.
 
 ---
 
 ## What it is
 
-Edit is Kanso's general editor. At the bottom of the screen sits a row of five tools, **Crop**,
-**Rotate**, **Adjust**, **Filters** and **Stickers**; tapping one opens its sheet just above the row, as in Adobe
+Edit is Kanso's general editor. At the bottom of the screen sits a row of tools, **Crop**,
+**Rotate**, **Adjust**, **Colour** (which swaps the row for Back, RGB, HSL and Curves), **Filters**,
+**Stickers**, **Text** and **Date**; tapping a tool opens its sheet just above the row, as in Adobe
 Lightroom (tapping it again closes it). The Stickers sheet is the exception: it takes the row's place
-(see below). Each tool is 60 dp wide with a 28 dp icon, so all five fit beside Compare on a
-411 dp wide phone without scrolling; the row scrolls sideways only on a narrower screen, where a
-tool past the edge is reached with a swipe. **Compare** stays
+(see below). Each tool is 60 dp wide with a 28 dp icon, so the eight entries and Compare do not all fit on a
+411 dp wide phone: Stickers is partly cut and Text and Date are reached with a swipe. The Colour
+layer (Back, three tools, Compare) fits without scrolling. **Compare** stays
 pinned at the right, behind a thin divider, and never scrolls away. **Undo** (↶) and **Redo** (↷),
 two arrow icons, sit at the top right next to **Done**; Undo is there on the other tools too, Redo
 only on Edit.
@@ -106,11 +127,12 @@ network are used. You can:
   all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
   the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
-- **Curves** (partial): chips **RGB**, **Red**, **Green**, **Blue**, **Lightness** pick the curve (RGB first; the last
-  choice is remembered; no Undo step) and a graph shows it, a straight diagonal at first. The Lightness
-  curve keeps each colour's hue and saturation, moves greys too and can reach pure black and white. Tap empty space
-  to add a point (up to 10), drag a point to move it, long press a middle point to remove it, and
-  press **Reset** (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
+- **Curves** (partial): chips **RGB**, **R**, **G** and **B**, each with a colour dot, pick the curve (RGB first; the last
+  choice is remembered; no Undo step) and a wide graph shows it (a frame and three vertical lines; the line starts
+  straight). Tap a point to select it, tap the line to add a point on it (up to 10; empty space adds nothing), drag a point to move it
+  (end points move sideways too; a drag from the line adds a point and moves it), press the trash button ("Delete point") to remove the
+  selected point (while more than 2 remain, and
+  press the **Reset** icon button (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
   follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
   under a finger is drawn without the curve until it is let go.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
@@ -418,13 +440,12 @@ flowchart TD
       [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md).
    3c. **Curves**, when any tone curve is bent (`EditSettings.hasCurveChange`): `EditCurves.apply`
       ([`data/edit/edit/EditCurves.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditCurves.kt))
-      turns each curve into a 256-entry table (monotone cubic interpolation, `ToneCurve.table`) and
-      sends each pixel's red, green and blue through their own channel's table and then the master
-      table, alpha kept. Then, when the Lightness curve is bent, each pixel's HSL lightness goes
-      through the Lightness table with hue and saturation kept (no grey gate, no clamp: lightness
-      reaches 0 and 1; the HSL formula is copied into `EditCurves.kt`, not shared with `EditHsl.kt`).
+      turns each curve into a 256-entry table (natural cubic spline, clipped to 0..1, flat beyond the end points, `ToneCurve.table`) and
+      sends each pixel's red, green and blue through their own channel's table and then the RGB
+      (master) table, alpha kept; that is the whole step, with no colour-space conversion.
       It comes after HSL and before the colour matrix. All curves straight: skipped.
-      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
+      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) and
+      [ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md).
    4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
       `EditColourMatrix.of`, in this order: contrast scales each channel around mid-grey 128 (up to
       x2, down to x0.2), saturation uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to
@@ -523,8 +544,8 @@ flowchart TD
   preview is computed on the 640 px copy, Done on up to 3000 px. Checked by the owner on the Galaxy A13 and vivo V2408A
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
-- **Curves.** Partial: the RGB, Red, Green, Blue and Lightness curves are editable, at most 10 points, points at least 0.02
-  apart. The saved picture has the curve and the live preview follows it. Not measured on
+- **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
+  apart; the line may overshoot between points (clipped to black and white), and the trash button deletes the selected point (end points too) while more than two remain. The saved picture has the curve and the live preview follows it. Not measured on
   any phone.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.

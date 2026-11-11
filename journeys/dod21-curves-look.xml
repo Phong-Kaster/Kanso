@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Run 14, DoD criterion 21: the Curves sheet has Meitu's arrangement in Kanso's colours, light and dark.
+  Device: the owner's Galaxy A13 (R58W1120QVA) only. Start state: this branch's debug build installed
+  over the existing one (-Op install, data kept), photo access already granted, theme "System default"
+  with the phone in light mode, app opened on Home.
+-->
+<journey name="Edit: Curves look, light and dark">
+  <action>On Home, scroll until the shortcut row shows, tap "Edit", then tap a photo in "Edit: choose a photo".</action>
+  <action>Tap Colour, then Curves.</action>
+  <check>The graph is wide (clearly wider than tall), with only a frame and three vertical lines: no diagonal guide, no horizontal lines.</check>
+  <check>Above it four entries read RGB, R, G, B, each with a colour dot; RGB's dot shows three colours; RGB is chosen.</check>
+  <check>The RGB line is the normal text colour and easy to see against the graph's background.</check>
+  <check>A trash icon and a Reset icon sit in a column right of the graph, trash above Reset, both fully on screen; nothing in the sheet is cut off.</check>
+  <action>Tap on the line about 40% of the way across.</action>
+  <verify>A third point appears on the line and is drawn differently from the end points (hollow, with a thicker ring of the line's colour); the trash icon becomes enabled.</verify>
+  <action>Tap R.</action>
+  <verify>The line and points turn red, nothing is selected, and the trash and Reset icons are disabled.</verify>
+  <action>Leave Edit (Back, Discard), open Settings, Theme mode, Dark; go Home and repeat every step above.</action>
+  <verify>In dark the same arrangement holds: wide graph, four entries with dots, light line for RGB and a light red line for R, the selected point stands out, both icons beside the graph; nothing cut off, nothing hard to see.</verify>
+  <action>Discard the edit and set Theme mode back to System default.</action>
+</journey>

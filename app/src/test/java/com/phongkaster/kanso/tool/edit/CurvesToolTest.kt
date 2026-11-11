@@ -95,6 +95,41 @@ class CurvesToolTest {
         assertEquals(afterDrag, viewModel.state.value.settings)
     }
 
+    /** Add, drag and delete on Red, then add on Blue: four Undo steps back in reverse order, four Redos replay them. */
+    @Test
+    fun four_curve_edits_undo_in_reverse_and_redo_in_order() {
+        val viewModel = loadedEditViewModel()
+        viewModel.openTool(EditTool.CURVES)
+        val added = ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.5f))
+        val dragged = added.moved(1, 0.5f, 0.8f)
+        val deleted = dragged.removed(1)
+        val blue = ToneCurve.NEUTRAL.added(CurvePoint(0.4f, 0.2f))
+        fun settings(red: ToneCurve, blueCurve: ToneCurve = ToneCurve.NEUTRAL) = EditSettings(
+            curves = CurveAdjustments.NEUTRAL.with(CurveChannel.RED, red).with(CurveChannel.BLUE, blueCurve),
+        )
+        val states = listOf(
+            settings(added),
+            settings(dragged),
+            settings(deleted),
+            settings(deleted, blue),
+        )
+        states.forEach { commit(viewModel, it) }
+        assertEquals(states.last(), viewModel.state.value.settings)
+
+        for (expected in listOf(states[2], states[1], states[0], EditSettings())) {
+            viewModel.undo()
+            runMainThread()
+            assertEquals(expected, viewModel.state.value.settings)
+        }
+        assertFalse(viewModel.state.value.canUndo)
+
+        for (expected in states) {
+            viewModel.redo()
+            runMainThread()
+            assertEquals(expected, viewModel.state.value.settings)
+        }
+    }
+
     /** Two separate bends are two Undo steps, undone one at a time. */
     @Test
     fun two_commits_are_two_undo_steps() {

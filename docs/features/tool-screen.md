@@ -28,8 +28,11 @@ A tool screen shows, from top to bottom:
 There is no bar at the bottom: the finished picture leaves the screen through Done. The tool screen
 never writes a file; saving and sharing happen on the Result screen.
 
-The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of ten tools (Crop, Rotate, Adjust, RGB, HSL, Curves, Filters, Stickers, Text, Date) is its
-`Scaffold` bottom bar, a tapped tool's sheet opens in a fixed-height area just above the row so the
+The **Edit** screen is laid out differently (see [Edit](edit.md)): a row of eight entries (Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date) is its
+`Scaffold` bottom bar (Colour is a group: tapping it swaps the row for Back, RGB, HSL, Curves and
+Compare, and Back returns to the first row; the row's two layers are `EditToolRow` and
+`EditColourGroupRow`, with the Back entry and the slide shared with Beautify as `GroupBackEntry` and
+`groupRowTransition`), a tapped tool's sheet opens in a fixed-height area just above the row so the
 photo never changes size, the photo has no Replace chip, Undo and Redo stay in the top bar beside Done, and
 a Compare switch is pinned at the right of the row. **Stickers** (like Text and Date) opens
 a sheet that replaces the row (the entries and Compare are hidden while it is open); its cross, or the
@@ -81,13 +84,18 @@ flowchart TD
 
 The **Curves** tool (the tenth Edit tool, partial,
 [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
-`CurvesPanel` (a 48 dp row with Reset at its end and the graph `CurveGraph` below it, inside the
-188 dp the 220 dp area leaves). It adds nothing to `ToolUiState`. A drag on the graph sends the new
+`CurvesPanel` (a 48 dp row of chips, and under it the wide graph `CurveGraph` with a column on its
+right holding the 48 dp-or-larger trash button `CurveDeleteButton` ("Delete point") above the Reset icon button, inside the
+188 dp the 220 dp area leaves). The selected point lives in `CurvesPanel` (`rememberSaveable`), not in the ViewModel, and clears on a channel
+switch, Undo, Redo and Reset. A tap within 24 dp of a point selects it; within 24 dp of the line adds a point on the line and selects it; elsewhere
+only clears the selection; a drag from a point moves it, from the line adds a point and drags it; delete removes the selected point in one Undo step. `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
+not an Undo step). A drag on the graph sends the new
 `EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
-lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Unlike HSL, a
-curve change asks for **no** preview render yet: `FilterPreviewRenderer` and the preview request do
-not carry the curves, so the photo on screen stays as it was while the curve changes. Only Done
-applies them: `EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix.
+lifts (one Undo step); a tap that adds a point, a delete and Reset are one `commitSettings` each. Like HSL, a
+curve change asks for a preview render: `FilterPreviewRenderer` and the preview request carry the curves
+(`PreviewKey.curves`), so the photo follows the finger. Done runs the same code:
+`EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix. The line is a natural cubic spline
+([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)).
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and

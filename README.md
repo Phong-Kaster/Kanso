@@ -53,7 +53,7 @@ the working size, progress, Undo, failures and Done.
 
 | Tool | What it does | Saved as |
 |---|---|---|
-| [Edit](docs/features/edit.md) | Eight tools in a row under the photo (Crop, Rotate, Adjust, RGB, Filters, Stickers, Text, Date) with Compare pinned at the right. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; the red, green and blue channels each turned down or up; one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
+| [Edit](docs/features/edit.md) | Eight entries in a row under the photo (Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date) with Compare pinned at the right; tapping Colour swaps the row for Back, RGB, HSL and Curves (with Compare still at the right), and Back returns to the first row. Crop with handles, pinch and seven shapes; quarter turns and flips; brightness, contrast, saturation and warmth; the red, green and blue channels each turned down or up (RGB, reached through Colour, as are HSL and Curves); one of eight filters with an intensity; up to 20 **layers** (catalogue stickers, typed texts and dates together), each moved, pinched, turned, resized, faded, duplicated and deleted on the photo. The photo is a live preview; Done renders it once. | JPEG quality 100, at most 3000 px (an untouched photo: its own file) |
 | [Remove background](docs/features/remove-background.md) | Cuts the person out with ML Kit's bundled selfie-segmentation model and makes the rest transparent, shown over a checkerboard. People only, in practice. | PNG with transparency, at most 2000 px |
 | [Enhance](docs/features/enhance.md) | Shrinks the photo to 512 px, upscales it four times with the bundled Real-ESRGAN model and brightens it if it is dark; hold to compare with the original. | JPEG, at most 2048 px |
 | [Beautify](docs/features/beautify.md) | Zooms onto the largest face, then a two-level row of tools like Meitu's (Face, with Width, Lift, Temple, Cheekbones, Chin length, Hairline and a pinned Back; Body, with Waist, Arms, Chest and Legs; Smooth): Face width (-100..+100) and Face lift (-100..+100, the jowls and jaw dropped or raised and tightened), and [Temple, Cheekbones, Chin length, Hairline](docs/features/face-shape.md) (each -100..+100, measured against Meitu), where MediaPipe's 478 face landmarks drive a Kotlin warp of the face's outline; Waist, Arms and Legs (-100..+100, slimmer to the right) and Chest (-100..+100, fuller to the right), where MediaPipe's pose model (33 body points and a person mask) places them for the same warp (Chest grows the pixels instead of sliding them); and Smooth (OpenCV's bilateral filter, 0..100). The photo follows the slider live while dragging (a mesh warp on the GPU); letting go renders both at full quality quietly in the background. | JPEG, at most 2000 px |
@@ -99,7 +99,7 @@ yet.
 | Edit: RGB | Works | Red, Green and Blue: three colour circles with no text, drawn and coloured like HSL's Red, Green and Blue circles, over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A (2026-11-03, works as expected, x2 kept) and on the Galaxy A13 (2026-11-06). |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (works as expected); its time per frame on the Galaxy A13 is not measured. |
-| Edit: Curves | Partial | Five chips alone in the top row, which scrolls sideways only if the phone is too narrow (**RGB**, **Red**, **Green**, **Blue**, **Lightness**, `CurveChips.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) draws and edits that curve (RGB and Lightness in a neutral colour, the others tinted): tap empty space to add a point (at most 10), drag a point to move it, long press a middle point to remove it; the two end points move only up and down; Reset (below the chips, beside the graph at its top right) straightens only the chosen curve and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from monotone cubic interpolation, [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. The **Lightness** curve changes only how light the photo is: it runs after the RGB curves, on each pixel's HSL lightness, so colours keep their hue and saturation, greys follow it too, and it can reach pure black and pure white (the 0.05 to 0.95 limit of the HSL tool does not apply). A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
+| Edit: Curves | Partial | Four chips alone in the top row, four equal-width entries that share the width and never scroll (**RGB**, **R**, **G**, **B**, each with a colour dot, RGB's dot sweeping three colours; a screen reader hears RGB, Red, Green, Blue; `CurveChips.kt`, `CurveChannelDot.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) is wide (about 2:1), drawn with only a frame and three vertical lines (no diagonal, no horizontal lines), and edits that curve (the line is the theme's text colour for RGB and the RGB sheet's tints for R, G and B): a tap within 24 dp of a point selects it, a tap within 24 dp of the drawn line adds a point on the line and selects it (at most 10), a tap elsewhere only clears the selection, a drag from a point moves it and a drag from the line adds a point and drags it (the first and last points move sideways too), and the trash button (`CurveDeleteButton.kt`, spoken "Delete point") deletes the selected point, end points too, while more than 2 remain; the line is a natural cubic spline that may overshoot between points and is clipped to pure black and white, and it is flat left of the first point and right of the last; Reset is a 48 dp icon button in a column right of the graph (the trash button sits above it) and straightens only the chosen curve, and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from a natural cubic spline, [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md), [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -116,17 +116,20 @@ yet.
 - The row of tools scrolls sideways. On the owner's Galaxy A13 (checked on the phone, 2026-10-28,
   with seven tools) Crop to Stickers and Compare were in view and Text was hidden past the right
   edge until the row was swiped left; Date sits further right still and is reached the same way.
-  RGB, added after Adjust (2026-11-03), pushes every later tool one place right: on a 411 dp wide
-  screen Crop to Filters and Compare were in view, and Stickers, Text and Date were one swipe away.
-  HSL, added after RGB, pushes every tool after it one more place right; the row is then nine
-  entries long. Six 60 dp tools plus Compare's 68 dp make 428 dp, wider than 411 dp, so on a 411 dp
-  screen only Crop, Adjust and RGB are guaranteed in view, and HSL, Filters, Stickers, Text and Date
-  are one swipe away (`EditToolRowTest`; seen by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06).
-  Curves, added after HSL and before Filters, makes the row ten entries long: Crop, Rotate, Adjust,
-  RGB, HSL, Curves, Filters, Stickers, Text, Date, with Compare pinned at the right. Seven 60 dp
-  tools plus Compare's 68 dp are wider than 411 dp, so Filters, Stickers, Text and Date are now one
-  swipe away or more (not yet looked at on a phone). This replaces the old rule that every tool fits
-  without scrolling (DoD 2), which held for five tools.
+  Since Run 13 (2026-11-06) the first row holds eight entries (Crop, Rotate, Adjust, Colour,
+  Filters, Stickers, Text, Date) with Compare pinned at the right, because RGB, HSL and Curves moved
+  into the Colour group. That is fewer swipes than the ten-entry flat row needed, but eight 60 dp
+  entries plus Compare's 68 dp are still wider than a 411 dp screen: Stickers is partly cut and
+  Text and Date are off screen until the row is swiped left (not yet looked at on a phone). The
+  Colour layer is Back (at least 72 dp, `BACK_ENTRY_MIN_WIDTH` in `GroupBackEntry.kt`), three 60 dp
+  entries (RGB, HSL, Curves), a divider and Compare's 68 dp: 72 + 3 x 60 + 68 = 320 dp plus
+  spacing, which fits a 411 dp screen without scrolling. This replaces the older notes about the flat row growing to nine and ten
+  entries, and the old rule that every tool fits without scrolling (DoD 2), which held for five tools.
+- **The Colour group's row is a view, not a state.** Whether the second layer shows is a
+  `rememberSaveable` flag inside `EditToolRow` (it survives a rotation, is not in `ToolUiState` or the
+  ViewModel, and is lost when Stickers, Text or Date replace the row, or when a sticker or text layer is touched
+  on the photo: its sheet replaces the row, and after Confirm the row is back on layer 1). The phone's Back gesture is
+  unchanged: it closes an open sheet, then asks to discard or leave; it does not step back to layer 1.
 - **HSL limits** (decision record: [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)).
   Hue turns by at most 20 degrees at +-100, so a colour cannot be swapped for a far one. Greys,
   white, black and near-greys are never changed (a gate in `EditHsl.kt` skips them), so no tint
@@ -155,6 +158,16 @@ or `app/src/main/res/`.
    (`editbottombar/edittoolrow/EditToolRow.kt`, a `LazyRow` of 60 dp entries that scrolls sideways,
    so more tools can be added later, with Compare pinned outside it at the right) with, just above it, a 220 dp sheet area
    (`editbottombar/EditSheet.kt`, `EDIT_SHEET_HEIGHT`) for Crop, Rotate, Adjust, RGB, HSL, Curves and Filters, which never changes height.
+   The row has two layers. Layer 1 is Crop, Rotate, Adjust, Colour, Filters, Stickers, Text, Date, then
+   Compare; **Colour** (`EditToolGroup.COLOUR` in `ui/tool/model/EditToolGroup.kt`, entries listed by
+   `model/EditRowEntry.kt`, palette icon `ic_palette`, name from `strings_edit_colour.xml`) opens no tool: it
+   swaps the row for layer 2 (`edittoolrow/EditColourGroupRow.kt`), Back pinned at the left, then RGB, HSL,
+   Curves, then Compare. Colour and each of the three keep a "changed" dot while their settings change the
+   photo. Back closes an open colour sheet (the change is kept) and returns to layer 1; tapping Colour while
+   another tool's sheet is open closes that sheet; while Compare is held every entry but Compare is disabled.
+   The Back entry and the sideways slide between layers are shared pieces, `ui/tool/component/GroupBackEntry.kt`
+   and `GroupRowTransition.kt` (`groupRowTransition`), also used by Beautify's row
+   (`beautifypanel/BeautifyToolRow.kt`, which looks and works as before).
    It was 136 dp until 2026-11-06, when the owner found the photo took too much of the screen and the
    tools too little; on a Galaxy A13 the photo went from about 523 dp to 434 dp tall.
    The photo (`ui/tool/component/EditPhotoArea.kt`) fills the space between the top bar and the
@@ -209,8 +222,8 @@ or `app/src/main/res/`.
    draws the original without the filter or the resting layers; Done is unaffected. After a process
    kill, Result shows "Nothing to show" and Edit reopens with no changes.
 8. **RGB, end to end** (plan `docs/plans/rgb-tool.md`, owner's decisions of 2026-11-03).
-   - *Screen and ViewModel.* RGB is the fourth entry of the row (`EditTool.RGB`, icon
-     `ic_palette`, name "RGB"), between Adjust and Filters. Its sheet (`EditPanel.kt`'s
+   - *Screen and ViewModel.* RGB is the first tool on the row's second layer, reached by tapping Colour
+     (`EditTool.RGB`, icon `ic_instant_mix`, name "RGB"; Colour itself has the palette icon `ic_palette`). Its sheet (`EditPanel.kt`'s
      `EditTool.RGB` branch) shows `editpanel/RgbChips.kt`, three colour circles with no text,
      Red, Green and Blue: HSL's own `ColourRangeCircle` for the colour range of the same name
      (`RgbChannel.range`, `ui/tool/model/RgbChannel.kt`), so the three colours, the ring and the
@@ -236,8 +249,8 @@ or `app/src/main/res/`.
      clamped to 0..255. The output is the Edit output: a JPEG at quality 100, at most 3000 px.
      Compare shows the original without RGB. A Done render that fails is the Edit failure above;
      RGB adds no failure of its own.
-9. **HSL, end to end** (the row's fifth entry, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
-   between RGB and Filters).
+9. **HSL, end to end** (the second tool on the Colour layer, `EditTool.HSL`, icon `ic_invert_colors`, name "HSL",
+   between RGB and Curves).
    - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.HSL` branch) is
      `editpanel/hslpanel/HslPanel.kt`: three rows of 32 dp with 20 dp gaps (136 dp), well inside the
      188 dp the 220 dp sheet leaves, so nothing scrolls. Row 1 is nine circles
@@ -282,43 +295,50 @@ or `app/src/main/res/`.
      The output is the Edit output: a JPEG at quality 100, at most 3000 px, saved from Result into
      `Pictures/Kanso`. A Done render that fails is the Edit failure above; HSL adds no failure of
      its own.
-10. **Curves, end to end** (the row's sixth entry, `EditTool.CURVES`, icon `ic_show_chart`, name
-    "Curves", between HSL and Filters). State: partial, see the table in section 2.
+10. **Curves, end to end** (the third tool on the Colour layer, `EditTool.CURVES`, icon `ic_show_chart`, name
+    "Curves", after HSL). State: partial, see the table in section 2.
     - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.CURVES` branch) is
-      `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the five chips
-      (`CurveChips.kt`), and under it the graph (`CurveGraph.kt`) filling the rest of the 188 dp the
-      sheet leaves, with the Reset button (`CurveResetButton.kt`) at its top right, beside the graph.
-      Reset left the chips' row because the chips and Reset did not fit side by side (on a phone
-      "Lightness" wrapped and Reset was pushed off the sheet). Each chip's name is always one whole
-      line; at 411 dp all five chips fit, and on a narrower phone the row scrolls sideways if they do
-      not (`CurveChipRowTest` checks 411 dp and 360 dp). The graph draws a faint 4 by 4 grid, the straight
-      diagonal as a guide, the curve and a dot on each point. The chips RGB, Red, Green,
-      Blue and Lightness pick the curve the graph edits (`CurveChannel`); RGB and Lightness are drawn in a neutral colour, Red,
-      Green and Blue tinted. A tap on empty space adds a point (the nearest existing point within 24 dp counts as
-      a hit, so a tap there adds nothing); dragging a point moves it (an end point only up and down,
-      and a point never passes its neighbours, which stay at least 0.02 apart); a long press on a
-      middle point removes it; at most 10 points. A vertical drag that starts on a point is claimed
+      `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the four chips
+      (`CurveChips.kt`, each with a colour dot from `CurveChannelDot.kt`), and under it a row with the
+      graph (`CurveGraph.kt`) filling the rest of the 188 dp the sheet leaves and a column of buttons
+      to its right: the trash (delete point) button at the top and
+      under it the Reset icon button (`CurveResetButton.kt`, 48 dp).
+      Reset is not in the chips' row because the chips and Reset did not fit side by side (on a phone
+      a chip's name wrapped and Reset was pushed off the sheet). The chips are short labels
+      (RGB, R, G, B); the four entries share the row's width equally and the row never scrolls
+      (`CurveChipRowTest` checks 411 dp and 360 dp, the graph's width to height ratio between 1.8 and 2.6, and the spoken names
+      RGB, Red, Green, Blue). RGB's dot sweeps three colours. The graph is wide (about 2:1) and draws only a frame
+      and three vertical lines, then the curve and a dot on each point: no diagonal guide, no horizontal lines.
+      The chips pick the curve the graph edits (`CurveChannel`); the line is the theme's `onSurface` for RGB and
+      the RGB sheet's tints (`RgbChannel.tintOn`) for R, G and B (`CurveLineContrastTest` checks 3:1 against the graph's
+      background for five seeds, light and dark). A tap within 24 dp of a point selects it (a point wins over the line); a tap within 24 dp of the drawn line adds a point exactly
+      on the line, at the line's own height, and selects it (one Undo step); a tap elsewhere adds nothing and only clears the selection.
+      A drag that starts on a point selects and moves it; a drag that starts on the line, away from any point, adds a point there and drags it
+      (the first point slides from 0 up to 0.02 short of the next point, the last mirrors it, and no point passes its neighbours, which stay
+      at least 0.02 apart); one Undo step on lift. At most 10 points: at ten, a tap on the line adds nothing.
+      One point at most is selected: it is drawn filled with the background colour inside a thicker ring of the line colour, the others filled with the line colour inside a
+      background-colour ring. The selection clears on a channel switch, Undo, Redo and Reset; it lives in `CurvesPanel` (`rememberSaveable`), not in the ViewModel or `ToolUiState`.
+      A trash icon button (`curvespanel/CurveDeleteButton.kt`, spoken name "Delete point") sits above Reset in the column beside the graph, both at least 48 dp; it deletes the selected point
+      (end points too) in one Undo step, then selects the left neighbour (or the new first point if the first was deleted); it is disabled with nothing selected or with two points left.
+      Left of the first point and right of the last the line is flat at that point's height. A vertical drag that starts on a point is claimed
       by the graph, so the sheet does not take it. Reset straightens only the chosen curve and is disabled while that curve is straight, and
       the graph ignores touches while Compare is on or Done is rendering (while disabled it also stops moving: it shows the saved curve, not a half-made drag). A screen reader hears the
       graph as "<Channel> curve, N points", the chips and Reset; it cannot move points (no TalkBack point editing).
     - *ViewModel.* `ToolUiState.curveChannel` (RGB at first) is the chosen chip; `ToolViewModel.chooseCurveChannel` sets it, it is kept so reopening Curves shows the last curve used, and it is not an Undo step and changes no setting. The graph reports a drag through
       `previewSettings` while the finger moves and `commitSettings` when it lifts, so one drag is one
-      Undo step; a tap, a long press and Reset are one commit each. Redo brings each back.
-    - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): five `ToneCurve`s
-      (master, red, green, blue, lightness), each from 2 to 10 `CurvePoint`s (x and y in 0..1), first point at
-      x = 0 and last at x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
+      Undo step; adding a point by a tap, a delete and Reset are one commit each (selecting alone commits nothing). Redo brings each back.
+    - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): four `ToneCurve`s
+      (rgb, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), sorted and at least
+      0.02 apart; the end points are free and need not sit at x = 0 and x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
       any curve is bent (`hasCurveChange`, `EditSettings.isNeutral(EditTool.CURVES)`); Back with only
       a curve change asks to discard it; Compare shows the original without it.
     - *The step* (`data/edit/edit/EditCurves.kt`, plain Kotlin on ARGB ints, on the CPU). Each curve
-      becomes a 256-entry table by monotone cubic interpolation (Fritsch-Carlson), which passes
-      through every point and never overshoots between two. A pixel's red, green and blue each go
-      through their own channel's table and then through the master table; alpha is kept. Then, only
-      when the Lightness curve is bent, each pixel is turned into hue, saturation and HSL lightness,
-      the lightness is looked up in the Lightness table (interpolating between two entries) and the
-      pixel is turned back with the same hue and saturation. There is no grey gate (a grey takes the
-      new level and stays grey) and no clamp, so lightness can reach 0 and 1 and the photo can reach
-      pure black and pure white. The HSL formula is copied into `EditCurves.kt`, not shared with `EditHsl.kt`,
-      which is untouched. When every curve is straight the step is skipped and no pixel changes.
+      becomes a 256-entry table, `round(255 x valueAt(i / 255))`, where `valueAt` is a natural cubic
+      spline (zero second derivative at both ends): it passes through every point, may overshoot between
+      points, is clipped to 0..1 (pure black or white), and is flat beyond the first and last point. A pixel's red, green and blue each go
+      through their own channel's table and then through the RGB (master) table; alpha is kept. That is the
+      whole step: a loop of table reads over the pixels, with no colour-space conversion and no
+      other pass. When every curve is straight the step is skipped and no pixel changes.
     - *Live preview.* `FilterPreviewRenderer` and `ToolViewModel`'s preview request carry the
       filter, the HSL values, the curves and the layers (`PreviewKey.curves`); a curve change alone
       asks for a preview render, so with no filter chosen the photo still follows the finger. The
@@ -330,7 +350,8 @@ or `app/src/main/res/`.
       bent), colour matrix, every pixel made opaque. The output is the Edit output: a JPEG at quality
       100, at most 3000 px, saved from Result into `Pictures/Kanso`. Cancellation is checked after the
       step. A Done render that fails is the Edit failure above; Curves adds no failure of its own.
-    - *Decision record:* [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
+    - *Decision records:* [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) (where the step runs),
+      [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md) (the spline and free end points).
 
 ### 3.2 Layers: what stickers, text and dates share
 
@@ -428,7 +449,7 @@ differs ([ADR-005](docs/adr/ADR-005-stickers-and-text-are-layers.md),
 
 ### 3.4 Text
 
-1. **Screen.** Text is the eighth entry of the row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
+1. **Screen.** Text is the seventh entry of the first row (`EditTool.TEXT`, icon `ic_text_fields`). Tapping
    it opens the Text sheet in place of the row; `ToolScreen.kt` fills it with
    `ui/tool/component/toolpanel/editpanel/textpanel/TextPanel.kt`: the pinned top bar (✕, "Text",
    ✓), the tabs **Text | Font | Size | Colour | Background | Opacity**, and the chosen tab's control:
@@ -677,6 +698,7 @@ only on a device or an emulator.
 | [ADR-007](docs/adr/ADR-007-body-reshapes-use-the-mediapipe-pose-model-and-its-mask.md) | Body reshapes (Waist first) use MediaPipe's bundled pose model and its person mask, warped with the faces in one pass, in a Body group of Beautify. |
 | [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md) | HSL is computed on the CPU by one formula (`EditHsl`) for the preview and for Done; no shader, no look-up table. |
 | [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) | Curves run on the CPU (`EditCurves`) after HSL and before the colour matrix, through 256-entry tables. |
+| [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md) | A curve is a natural cubic spline that may overshoot (clipped to 0..1), with free end points; supersedes ADR-009's interpolation and end-point decisions. |
 
 ---
 

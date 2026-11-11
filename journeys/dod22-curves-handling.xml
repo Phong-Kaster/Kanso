@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Run 14, DoD criterion 22: the curve handles well on the phone.
+  Device: the owner's Galaxy A13 (R58W1120QVA) only. Start state: this branch's debug build installed
+  over the existing one (-Op install, data kept), photo access granted, a full-size camera photo open in
+  Edit, Colour, Curves, RGB chosen and the curve straight.
+-->
+<journey name="Edit: Curves handling round trip">
+  <action>Tap on the line about 40% of the way across.</action>
+  <check>On the first try a point appears on the line there (not at the finger's height) and is selected; Undo becomes enabled.</check>
+  <action>Tap about 1 cm below the line at 70% across, away from every point.</action>
+  <check>No point is added and the selection clears (trash disabled).</check>
+  <action>Press on the line at 70% across and drag upward, then lift.</action>
+  <check>A point is added there and follows the finger; the photo follows the drag; the curve now has four points.</check>
+  <action>Tap the point at 40% to select it. Then press the first (left end) point and drag it to the right.</action>
+  <check>The tap selects the point; the drag selects the end point and moves it sideways, and the line is flat to its left.</check>
+  <action>Tap the trash icon.</action>
+  <check>The end point is deleted, its right neighbour becomes selected, and the line is flat left of it.</check>
+  <action>Drag the selected point up to the top of the graph.</action>
+  <check>The line overshoots into a flat white top beside it (clipped at the frame).</check>
+  <action>Tap R, then RGB.</action>
+  <check>R shows its own straight red curve with nothing selected; RGB comes back with its curve and nothing selected.</check>
+  <action>Tap Undo four times, then Redo four times.</action>
+  <verify>Each Undo steps back one gesture (point counts 3, 4, 4, 3) and each Redo replays it; after the fourth Redo the curve is the pulled-high one and Redo is disabled.</verify>
+  <action>Tap Done, then Save.</action>
+  <verify>"Your photo is saved in Pictures/Kanso." shows, and the result is visibly brightened by the curve. The person also judges: tapping the line never needed a second try, the 1 cm tap felt neither too strict nor too loose, and dragging had no stutter.</verify>
+</journey>
