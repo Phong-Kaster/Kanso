@@ -9,10 +9,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 
 > **Run 11 (ADR-005): layers and Text.** A sticker is now a **layer** (`data/edit/edit/Layer.kt`,
 > content `LayerContent.Picture`), and the sixth tool, **Text**, adds layers of the text kind. The
-> sections below were written for Run 10 and still say "sticker", `Sticker`, `StickerOverlay` and
-> `ui/tool/components/`; the code now names them `Layer`, `LayerOverlay` (in
-> `ui/tool/component/photocard/layeroverlay/`), `LayerMapping`, `LayerPictures` and
-> `ui/tool/component/`. What changed in behaviour since Run 10:
+> sections below were written for Run 10 and still say "sticker", `Sticker` and `StickerOverlay`;
+> the code now names them `Layer`, `LayerOverlay` (in
+> `ui/tool/component/photocard/layeroverlay/`), `LayerMapping` and `LayerPictures`. What changed in behaviour since Run 10:
 >
 > - Every layer has an opacity (10–100%) and both layer sheets have Size and Opacity sliders.
 > - A layer sheet takes exactly the row's and sheet area's height, so the photo never changes size;
@@ -127,7 +126,7 @@ network are used. You can:
   all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
   the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
-- **Curves** (partial): chips **RGB**, **R**, **G** and **B**, each with a colour dot, pick the curve (RGB first; the last
+- **Curves**: chips **RGB**, **R**, **G** and **B**, each with a colour dot, pick the curve (RGB first; the last
   choice is remembered; no Undo step) and a wide graph shows it (a frame and three vertical lines; the line starts
   straight). Tap a point to select it, tap the line to add a point on it (up to 10; empty space adds nothing), drag a point to move it
   (end points move sideways too; a drag from the line adds a point and moves it), press the trash button ("Delete point") to remove the
@@ -204,17 +203,17 @@ flowchart TD
 1. **The screen and its state.** The Edit screen is
    [`ui/tool/ToolScreen.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/ToolScreen.kt)
    (`ToolScreen`, `ToolContent`) with
-   [`ui/tool/components/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/EditBottomBar.kt)
+   [`ui/tool/component/editbottombar/EditBottomBar.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/editbottombar/EditBottomBar.kt)
    for its layout: `EditPhotoArea`
-   ([`ui/tool/components/EditPhotoArea.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditPhotoArea.kt)),
+   ([`ui/tool/component/EditPhotoArea.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/EditPhotoArea.kt)),
    which draws the photo card
-   ([`ui/tool/components/photocard/PhotoCard.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/photocard/PhotoCard.kt))
+   ([`ui/tool/component/photocard/PhotoCard.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/photocard/PhotoCard.kt))
    or the cropper, filling the `Scaffold`'s body; and `EditBottomBar`, the `Scaffold`'s `bottomBar`, holding the
-   [`ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/editbottombar/edittoolrow/EditToolRow.kt)
+   [`ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/editbottombar/edittoolrow/EditToolRow.kt)
    at the very bottom and the open tool's sheet just above it. The sheet area is one fixed
    height (220 dp, `EDIT_SHEET_HEIGHT`; 136 dp until 2026-11-06), open or not, so the photo above never changes size; every tool's controls fit
    it (Adjust shows four sub-tool chips and one slider, see
-   [`ui/tool/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/AdjustSlider.kt);
+   [`ui/tool/model/AdjustSlider.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/AdjustSlider.kt);
    the chosen chip is `ToolUiState.adjustSlider`, set by `ToolViewModel.chooseAdjustSlider`; RGB
    does the same with three channel chips, see
    [`ui/tool/model/RgbChannel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/model/RgbChannel.kt),
@@ -246,12 +245,12 @@ flowchart TD
    slider move pass a complete new `EditSettings`; a crop chip passes only a `CropRatio`, which
    `EditSession.cropRatioChosen` turns into the rectangle; the cropper passes a `CropRect`; and a
    slider release (`commitSettings`) passes nothing, it just closes the drag as one undo step:
-   - [`ui/tool/components/toolpanel/editpanel/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/toolpanel/editpanel/EditPanel.kt)
+   - [`ui/tool/component/toolpanel/editpanel/EditPanel.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/EditPanel.kt)
      draws the open sheet from the session's settings (it keeps no state of its own, so a slider
      reopens where it was left). A turn, a flip or a filter chip calls `changeSettings`; a crop
      shape calls `chooseCropRatio`; a slider calls `previewSettings` while it moves and
      `commitSettings` when let go.
-   - [`ui/tool/components/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/components/EditCropper.kt)
+   - [`ui/tool/component/EditCropper.kt`](../../app/src/main/java/com/phongkaster/kanso/ui/tool/component/EditCropper.kt)
      wraps `core/imagecrop`'s `CropperPreview` (package `com.mr0xf00.easycrop`,
      [`core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt`](../../core/imagecrop/src/main/java/com/mr0xf00/easycrop/ui/CropperPreview.kt)).
      It shows the decoded photo with the stickers drawn into a copy of it (on the main
@@ -271,7 +270,7 @@ flowchart TD
      side when the photo has an odd number of quarter turns, so the turned picture comes out in the
      shape chosen; `undo` goes back to the last entry. There is no redo.
 4. **The live preview.** The photo card draws
-   `LivePreviewImage` (in `ui/tool/components/photocard/LivePreviewImage.kt`) whenever Compare is off and the Crop sheet
+   `LivePreviewImage` (in `ui/tool/component/photocard/LivePreviewImage.kt`) whenever Compare is off and the Crop sheet
    is closed. It is a Compose `Canvas` that, every frame, takes only the crop rectangle from the
    bitmap (rounded exactly as the final render rounds it), turns it, mirrors it, fits it inside the
    card, and draws it through `ColorFilter.colorMatrix` with the matrix of the four sliders and the three RGB channels from
@@ -341,7 +340,7 @@ flowchart TD
   (one Undo step) and selects it (`selectedStickerKey`). The processor recipe passed in is the one
   from `editProcessorFor(context)` and becomes the recipe Done renders with. At 20 stickers the
   settings are untouched and `stickerLimitShown` shows `StickerLimitMessage`
-  (`ui/tool/components/StickerLimitMessage.kt`) on the photo's top edge with the text "A photo can
+  (`ui/tool/component/StickerLimitMessage.kt`) on the photo's top edge with the text "A photo can
   hold 20 stickers at most" (`stickers_limit_message`, `res/values/strings_stickers.xml`) for
   about 2.5 s, then `onStickerLimitMessageShown` clears it.
 - **Tick** (`confirmStickers`): forgets the snapshot, closes the sheet, clears the selection.
@@ -544,9 +543,10 @@ flowchart TD
   preview is computed on the 640 px copy, Done on up to 3000 px. Checked by the owner on the Galaxy A13 and vivo V2408A
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
-- **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
-  apart; the line may overshoot between points (clipped to black and white), and the trash button deletes the selected point (end points too) while more than two remain. The saved picture has the curve and the live preview follows it. Not measured on
-  any phone.
+- **Curves.** Works: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
+  apart; the line may overshoot between points (clipped to black and white), and the trash button deletes the selected point (end points too) while more than two remain. The saved picture has the curve and the live preview follows it. Checked by the owner on
+  the `photoedit_test` emulator (2026-11-11): works as expected. Not yet tried with a finger on a phone; its time per
+  frame on the Galaxy A13 is not measured. In landscape the sheet covers the whole photo.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
 - **Crop.** The cropper shows the photo, with the stickers drawn in (without them if copying the

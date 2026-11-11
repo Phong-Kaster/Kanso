@@ -62,7 +62,7 @@ flowchart TD
     COM --> DONE
 ```
 
-The **HSL** tool (the ninth Edit tool, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md))
+The **HSL** tool (the second tool in the Colour group, [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md))
 uses the same sheet area as Adjust and RGB: the sheet is `HslPanel` (nine colour circles, three
 chips, one slider, 136 dp with 20 dp gaps, well inside the 188 dp the 220 dp area leaves). The screen's part is small:
 `ToolUiState.hslRange` and `hslChannel` say which circle and chip are chosen
@@ -82,7 +82,7 @@ flowchart TD
     COM2 --> DONE2["Done: EditProcessor runs filter, EditHsl.apply, colour matrix"]
 ```
 
-The **Curves** tool (the tenth Edit tool, partial,
+The **Curves** tool (the third tool in the Colour group,
 [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
 `CurvesPanel` (a 48 dp row of chips, and under it the wide graph `CurveGraph` with a column on its
 right holding the 48 dp-or-larger trash button `CurveDeleteButton` ("Delete point") above the Reset icon button, inside the
