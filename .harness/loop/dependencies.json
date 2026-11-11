@@ -1,5 +1,5 @@
 {
-  "_comment": "Every third-party tool and library Foreman relies on, in two groups that never mix (ADR-036). 'foreman' is what Foreman itself runs on the machine it is launched from; the /foreman skill checks these before every launch, fetches the ones npx can fetch, and asks before installing anything else. 'consumer' is what the engine adds to a consumer repository's own build, by stack, at Bootstrap - test-only. Entries marked default are added without asking (decided by the human, 2026-10-05) unless PRD.md or DOMAIN.md forbids new dependencies; any other entry is proposed in the DoD. README.md and docs/index.html show both tables; a test keeps them in step with this file.",
+  "_comment": "Every third-party tool and library Foreman relies on, in two groups that never mix (ADR-036). 'foreman' is what Foreman itself runs on the machine it is launched from; the /foreman skill checks these before every launch, fetches the ones npx can fetch, and asks before installing anything else. 'consumer' is what the engine adds to a consumer repository's own build, by stack, at Bootstrap - test-only. A 'foreman' entry with 'only_when' is checked only in a repository whose root holds that file. Entries marked default are added without asking (decided by the human, 2026-10-05) unless PRD.md or DOMAIN.md forbids new dependencies; any other entry is proposed in the DoD. README.md and docs/index.html show both tables; a test keeps them in step with this file.",
 
   "foreman": [
     {
@@ -64,6 +64,16 @@
       "install": "winget install --id Google.PlatformTools -e",
       "auto": false,
       "required": false
+    },
+    {
+      "name": "Android CLI",
+      "repo": "https://developer.android.com/tools/agents/android-cli",
+      "why": "Google's command-line entry point for agents building Android apps. In an Android repository /foreman updates it on every launch and installs its android-cli skill into the repository, so the engine and its subagents know the tool (ADR-047).",
+      "check": "android --version",
+      "install": "cmd /c \"curl -fsSL https://dl.google.com/android/cli/latest/windows_x86_64/install.cmd -o %TEMP%\\i.cmd && %TEMP%\\i.cmd\"",
+      "auto": false,
+      "required": false,
+      "only_when": "build.gradle.kts"
     },
     {
       "name": "Pester",
