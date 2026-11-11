@@ -62,21 +62,22 @@ private const val OUTCOME_MOVED = 2
 private const val OUTCOME_CANCELLED = 3
 
 /**
- * The curve editor: a square-ish plot where the horizontal axis is the brightness going in (left is
- * black) and the vertical axis the brightness coming out (up is brighter).
+ * The curve editor: a wide plot (about twice as wide as tall) where the horizontal axis is the
+ * brightness going in (left is black) and the vertical axis the brightness coming out (up is
+ * brighter).
  *
- * It draws, from the back: a faint 4 by 4 grid, the straight diagonal as a guide (what "no change"
- * looks like), [curve] as a smooth line, and each control point as a circle. All colours are
+ * It draws, from the back: a frame with three vertical lines (four columns), [curve] as a line
+ * (flat beyond its first and last point), and each control point as a circle. All colours are
  * roles of the current Material theme, and the curve itself takes [lineColor].
  *
  * One touch handler does everything (Compose lets one `pointerInput` read the whole gesture):
  *
  * - **tap on empty space** adds a point there, reported with [onCommit] once;
  * - **drag from a point** (the nearest one within 24 dp of the finger) moves it. The two end points
- *   move only up and down, and a middle point cannot pass its neighbours (the curve's own rules in
- *   [ToneCurve.moved]). [onPreview] is called at every step so the photo follows the finger, and
+ *   move sideways as well as up and down, and a point cannot pass its neighbours (the curve's own
+ *   rules in [ToneCurve.moved]). [onPreview] is called at every step so the photo follows the finger, and
  *   [onCommit] once, with the final curve, when the finger lifts: the whole drag is one Undo step;
- * - **long press on a middle point** removes it, reported with [onCommit] once.
+ * - **long press on a point** removes it (while more than 2 remain), reported with [onCommit] once.
  *
  * There is no double tap on purpose: waiting to tell a double tap from a tap would delay every tap.
  *
@@ -110,8 +111,7 @@ internal fun CurveGraph(
     val hairlinePx = with(density) { 1.dp.toPx() }
 
     val gridColor = MaterialTheme.colorScheme.outlineVariant
-    val guideColor = MaterialTheme.colorScheme.outline
-    val ringColor = MaterialTheme.colorScheme.surface
+    val ringColor = MaterialTheme.colorScheme.surfaceContainerLowest
     // While disabled the graph shows only the caller's curve, never a finger's working copy.
     val shown = if (enabled) working ?: curve else curve
 
@@ -194,7 +194,7 @@ internal fun CurveGraph(
                         }
                         OUTCOME_CANCELLED -> Unit
                         else -> {
-                            // The finger stayed down: a long press. On a middle point it removes it.
+                            // The finger stayed down: a long press. On any point it removes it, while more than 2 remain.
                             if (hit != null) {
                                 val removed = start.removed(hit)
                                 if (removed != start) latestCommit(removed)
@@ -207,21 +207,18 @@ internal fun CurveGraph(
             },
     ) {
         val plot = Size(size.width, size.height)
-        // The faint 4 by 4 grid: five lines each way, the outer ones being the plot's frame.
-        for (i in 0..GRID_CELLS) {
-            val fraction = i / GRID_CELLS.toFloat()
-            val x = padPx + fraction * (plot.width - 2 * padPx)
-            val y = padPx + fraction * (plot.height - 2 * padPx)
-            drawLine(gridColor, Offset(x, padPx), Offset(x, plot.height - padPx), hairlinePx)
-            drawLine(gridColor, Offset(padPx, y), Offset(plot.width - padPx, y), hairlinePx)
-        }
-        // The straight diagonal: what "no change" looks like.
-        drawLine(
-            guideColor,
-            toScreen(CurvePoint(0f, 0f), plot, padPx),
-            toScreen(CurvePoint(1f, 1f), plot, padPx),
-            hairlinePx,
+        // The frame, and three vertical lines inside it (four columns). No horizontal lines and no
+        // diagonal guide: the plot stays quiet so the curve is what the eye finds.
+        drawRect(
+            gridColor,
+            topLeft = Offset(padPx, padPx),
+            size = Size(plot.width - 2 * padPx, plot.height - 2 * padPx),
+            style = Stroke(width = hairlinePx),
         )
+        for (i in 1 until GRID_COLUMNS) {
+            val x = padPx + i / GRID_COLUMNS.toFloat() * (plot.width - 2 * padPx)
+            drawLine(gridColor, Offset(x, padPx), Offset(x, plot.height - padPx), hairlinePx)
+        }
         // The curve: its 256-entry table drawn as one connected line.
         val table = shown.table()
         val path = Path()
@@ -230,7 +227,8 @@ internal fun CurveGraph(
             if (i == 0) path.moveTo(at.x, at.y) else path.lineTo(at.x, at.y)
         }
         drawPath(path, lineColor, style = Stroke(width = strokePx))
-        // The control points: a filled circle with a ring in the surface colour so it stands out.
+        // The control points, all in one style: filled with the line colour, ringed in the sheet's
+        // lowest surface colour so each stands out from the line.
         shown.points.forEach { point ->
             val centre = toScreen(point, plot, padPx)
             drawCircle(ringColor, pointRadiusPx + hairlinePx * 2, centre)
@@ -239,8 +237,8 @@ internal fun CurveGraph(
     }
 }
 
-/** The grid has this many cells along each side. */
-private const val GRID_CELLS = 4
+/** The plot is divided into this many columns by vertical lines (so three lines inside the frame). */
+private const val GRID_COLUMNS = 4
 
 /** Where [point] is on screen: x grows to the right, y is flipped because up is brighter. */
 private fun toScreen(point: CurvePoint, plot: Size, pad: Float): Offset = Offset(

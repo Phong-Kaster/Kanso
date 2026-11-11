@@ -15,6 +15,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -39,8 +41,10 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
 import com.phongkaster.kanso.data.edit.edit.ToneCurve
 import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_RESET_TAG
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChannelLabelRes
+import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChannelShortRes
 import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,19 +56,21 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks DoD 23 of Run 12 (owner, D-004): on every curve (RGB, Red, Green, Blue) each of
- * the four chips shows its whole name on one line, and Reset is fully visible and tappable inside
- * the sheet, on a 411 dp wide phone and on a 360 dp wide one, in light and in dark, at the default
- * text size.
+ * Checks the Curves chip row after the Meitu-style rework: on every curve (RGB, Red, Green, Blue)
+ * each of the four entries shows its short label (RGB, R, G, B) on one line and speaks its full
+ * name (RGB, Red, Green, Blue); Reset is an icon button (no "Reset" text), fully visible and
+ * tappable inside the sheet and the window, to the right of the graph; and the plot is between
+ * 1.8 and 2.6 times as wide as it is tall. This runs on a 411 dp and a 360 dp wide phone, in light
+ * and in dark, at the default text size. There is no Lightness chip any more.
  *
- * The owner saw a long chip name wrap onto two lines and Reset pushed off the sheet (pictures 97/98).
+ * The owner once saw a long chip name wrap onto two lines and Reset pushed off the sheet.
  * `maxLines = 1` alone does not prove a fix, since a one-line label can still be cut short,
- * so each chip's text is checked through its laid-out text: one line holding the whole name, not
+ * so each chip's text is checked through its laid-out text: one line holding the whole label, not
  * ellipsized, the drawn line starting and ending inside its box, its line not taller than its box,
  * and the box inside the chip; each chip's touch area is at least 48 x 48 dp. Reset is checked by
- * where it is (on screen and inside both the sheet and the window), by its size (laid out and
- * touchable at 48 x 48 dp or more, so a squeezed Reset fails) and by its label (the whole word on
- * one line, checked like a chip's); a tap on it must straighten the chosen bent curve.
+ * where it is (inside both the sheet and the window, right of the graph) and by its size (laid out
+ * and touchable at 48 x 48 dp or more, so a squeezed Reset fails); a tap on it must straighten the
+ * chosen bent curve.
  *
  * Text is measured with Robolectric's real drawing code (`GraphicsMode.Mode.NATIVE`): in the default
  * legacy mode a text's width is not its real width, so a too-long label would never wrap and the
@@ -159,7 +165,10 @@ class CurveChipRowTest {
      * is chosen; with [mustFit] the chip also lies wholly inside the sheet.
      */
     private fun assertChipLabelIsWhole(chip: CurveChannel, curve: CurveChannel, mustFit: Boolean) {
-        val name = compose.activity.getString(curveChannelLabelRes(chip))
+        val name = compose.activity.getString(curveChannelShortRes(chip))
+        val spoken = compose.activity.getString(curveChannelLabelRes(chip))
+        assertEquals("the $chip chip's spoken name", SPOKEN.getValue(chip), spoken)
+        compose.onNodeWithTag(curveChipTag(chip)).assertContentDescriptionEquals(spoken)
         val chipNode = compose.onNodeWithTag(curveChipTag(chip)).fetchSemanticsNode()
         val text = assertOneWholeLine(
             what = "the $chip chip with $curve chosen",
@@ -208,13 +217,20 @@ class CurveChipRowTest {
             node.size.width + SLACK >= minPx && node.size.height + SLACK >= minPx,
         )
 
-        // The label sits inside the button's merged node, so it is found in the unmerged tree.
-        val label = assertOneWholeLine(
-            what = where,
-            name = compose.activity.getString(R.string.edit_curves_reset),
-            ownerTag = CURVE_RESET_TAG,
+        // Reset is an icon: its spoken name is the word, but no text node shows it.
+        val word = compose.activity.getString(R.string.edit_curves_reset)
+        reset.assertContentDescriptionEquals(word)
+        compose.onAllNodes(hasText(word), useUnmergedTree = true).assertCountEquals(0)
+
+        // Reset sits to the right of the graph, not over it.
+        val graph = boundsOf(compose.onNodeWithTag(CURVE_GRAPH_TAG).fetchSemanticsNode())
+        assertTrue(
+            "$where: $bounds is not to the right of the graph $graph",
+            bounds.left + SLACK >= graph.right,
         )
-        assertInside("$where: the label in the button", boundsOf(label), bounds)
+        // The plot is wide, not squeezed into a narrow strip.
+        val ratio = graph.width / graph.height
+        assertTrue("$where: the plot is ${graph.width} x ${graph.height} px, ratio $ratio", ratio in 1.8f..2.6f)
     }
 
     /**
@@ -338,5 +354,13 @@ class CurveChipRowTest {
 
         /** Half a pixel of rounding allowed when comparing laid-out sizes and positions. */
         const val SLACK = 0.5f
+
+        /** The names a screen reader speaks for the four chips. */
+        val SPOKEN = mapOf(
+            CurveChannel.RGB to "RGB",
+            CurveChannel.RED to "Red",
+            CurveChannel.GREEN to "Green",
+            CurveChannel.BLUE to "Blue",
+        )
     }
 }

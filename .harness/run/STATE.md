@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** build (Phase 1 done)
+- **Stage:** build (Phase 2 done)
 - **Loop Branch:** loop/kanso-curves-meitu
 - **Run Mode:** Autonomous
-- **Next Phase:** Phase 2 - T-002, T-003
+- **Next Phase:** Phase 3 - T-004
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -16,8 +16,8 @@
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
 | T-001 | complete | Lightness removed (10 files, 2 slices) + strings/docs wiring | evidence/phase1-build.txt |
-| T-002 | pending | `ToneCurve.kt`, CurveFormula/CurveParity/CurvesTool tests | - |
-| T-003 | pending | curvespanel graph/chips/reset/panel/dot, strings, CurveChipRow + contrast tests (2 slices) | - |
+| T-002 | complete | `ToneCurve.kt`, CurveFormula/CurveParity/CurvesTool tests | - |
+| T-003 | complete | curvespanel graph/chips/reset/panel/dot, strings, CurveChipRow + contrast tests (2 slices) | - |
 | T-004 | pending | CurveGraph, CurvesPanel, CurveDeleteButton, strings, CurvesSheet/contrast/screenshot tests (2 slices) | - |
 
 ## Assumptions

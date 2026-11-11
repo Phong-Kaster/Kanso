@@ -84,13 +84,16 @@ flowchart TD
 
 The **Curves** tool (the tenth Edit tool, partial,
 [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
-`CurvesPanel` (a 48 dp row with Reset at its end and the graph `CurveGraph` below it, inside the
-188 dp the 220 dp area leaves). It adds nothing to `ToolUiState`. A drag on the graph sends the new
+`CurvesPanel` (a 48 dp row of chips, and under it the wide graph `CurveGraph` with a column on its
+right holding an empty 48 dp slot reserved for a delete button and the 48 dp Reset icon button, inside the
+188 dp the 220 dp area leaves). `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
+not an Undo step). A drag on the graph sends the new
 `EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
-lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Unlike HSL, a
-curve change asks for **no** preview render yet: `FilterPreviewRenderer` and the preview request do
-not carry the curves, so the photo on screen stays as it was while the curve changes. Only Done
-applies them: `EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix.
+lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Like HSL, a
+curve change asks for a preview render: `FilterPreviewRenderer` and the preview request carry the curves
+(`PreviewKey.curves`), so the photo follows the finger. Done runs the same code:
+`EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix. The line is a natural cubic spline
+([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)).
 
 While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
 Replace are switched off. When an edit fails, a short message at the top of the card says why, and

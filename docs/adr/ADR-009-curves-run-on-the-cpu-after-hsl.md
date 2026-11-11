@@ -5,7 +5,9 @@ red, green and blue. This record keeps where the step runs, how a curve becomes
 pixels, how the live preview and the saved photo stay identical, and what it costs. A source path below
 without a prefix is under `app/src/main/java/com/phongkaster/kanso/`.
 
-Status: accepted.
+Status: accepted. **Partly superseded by [ADR-011](ADR-011-curves-are-a-natural-spline-with-free-end-points.md):**
+the monotone interpolation and the fixed end points (x = 0 and x = 1) below no longer hold; a curve is now a
+natural cubic spline that may overshoot (clipped to 0..1) with free end points. Where the step runs is unchanged.
 
 ## Context
 

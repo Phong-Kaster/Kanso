@@ -52,9 +52,13 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > **Curves**, sits between HSL and Filters, so the row now holds Crop, Rotate, Adjust, RGB, HSL,
 > Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green and Blue
 > choose the curve the graph edits (RGB first, the last choice is remembered, choosing is not an Undo
-> step and changes nothing in the photo). On the graph, a tap on empty space adds a point (at most 10), a drag moves one
-> (the two end points only up and down), a long press removes a middle one, and Reset (disabled
-> while the chosen curve is straight) straightens only that curve; each gesture is one Undo step. Done applies the
+> step and changes nothing in the photo); the chips read RGB, R, G, B, each with a colour dot. The graph is wide
+> (about 2:1) with only a frame and three vertical lines. On it, a tap on empty space adds a point (at most 10), a drag moves one
+> (the end points move sideways too), a long press removes a point (any, while more than 2 remain), and the Reset
+> icon button, right of the graph (disabled while the chosen curve is straight), straightens only that curve; each gesture
+> is one Undo step. The line is a natural cubic spline that may overshoot, clipped to black and white, flat beyond
+> the end points ([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)). An empty 48 dp slot above Reset is
+> kept for a delete button that is not built yet. Done applies the
 > curve on the CPU (`data/edit/edit/EditCurves.kt`) after HSL and before the colour matrix, so the
 > **saved picture has it**. The **live preview follows it** while a point is dragged (a CPU copy, filter, HSL,
 > curves, then the colour matrix on top, as Done does; a sticker under a finger is drawn without that
@@ -122,10 +126,11 @@ network are used. You can:
   all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
   the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
-- **Curves** (partial): chips **RGB**, **Red**, **Green** and **Blue** pick the curve (RGB first; the last
-  choice is remembered; no Undo step) and a graph shows it, a straight diagonal at first. Tap empty space
-  to add a point (up to 10), drag a point to move it, long press a middle point to remove it, and
-  press **Reset** (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
+- **Curves** (partial): chips **RGB**, **R**, **G** and **B**, each with a colour dot, pick the curve (RGB first; the last
+  choice is remembered; no Undo step) and a wide graph shows it (a frame and three vertical lines; the line starts
+  straight). Tap empty space to add a point (up to 10), drag a point to move it (end points move sideways too),
+  long press a point to remove it (while more than 2 remain), and
+  press the **Reset** icon button (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
   follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
   under a finger is drawn without the curve until it is let go.
 - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
@@ -433,11 +438,12 @@ flowchart TD
       [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md).
    3c. **Curves**, when any tone curve is bent (`EditSettings.hasCurveChange`): `EditCurves.apply`
       ([`data/edit/edit/EditCurves.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditCurves.kt))
-      turns each curve into a 256-entry table (monotone cubic interpolation, `ToneCurve.table`) and
+      turns each curve into a 256-entry table (natural cubic spline, clipped to 0..1, flat beyond the end points, `ToneCurve.table`) and
       sends each pixel's red, green and blue through their own channel's table and then the RGB
       (master) table, alpha kept; that is the whole step, with no colour-space conversion.
       It comes after HSL and before the colour matrix. All curves straight: skipped.
-      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
+      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) and
+      [ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md).
    4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
       `EditColourMatrix.of`, in this order: contrast scales each channel around mid-grey 128 (up to
       x2, down to x0.2), saturation uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to
@@ -537,7 +543,7 @@ flowchart TD
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
 - **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
-  apart. The saved picture has the curve and the live preview follows it. Not measured on
+  apart; the line may overshoot between points (clipped to black and white), and a delete button is not built yet. The saved picture has the curve and the live preview follows it. Not measured on
   any phone.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.

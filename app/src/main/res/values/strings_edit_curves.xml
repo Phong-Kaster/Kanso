@@ -4,12 +4,17 @@
     <string name="edit_curves_tool_name">Curves</string>
     <!-- The name of the master curve, which bends all three colours together. -->
     <string name="edit_curves_channel_rgb">RGB</string>
-    <!-- The names of the three single-colour curves, used by the chips and the graph's description. -->
+    <!-- The names of the three single-colour curves, used as the entries' spoken names and the graph's description. -->
     <string name="edit_curves_channel_red">Red</string>
     <string name="edit_curves_channel_green">Green</string>
     <string name="edit_curves_channel_blue">Blue</string>
+    <!-- The short visible labels beside each channel's coloured dot in the Curves sheet. -->
+    <string name="edit_curves_short_rgb">RGB</string>
+    <string name="edit_curves_short_red">R</string>
+    <string name="edit_curves_short_green">G</string>
+    <string name="edit_curves_short_blue">B</string>
     <!-- The graph's spoken description: the curve's name, then how many points it has. -->
     <string name="edit_curves_graph_description">%1$s curve, %2$d points</string>
-    <!-- The Reset button's label: puts the curve on screen back to a straight diagonal. -->
+    <!-- The reset icon button's spoken name: puts the curve on screen back to a straight diagonal. -->
     <string name="edit_curves_reset">Reset</string>
 </resources>

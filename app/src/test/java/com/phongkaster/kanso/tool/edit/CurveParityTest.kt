@@ -57,6 +57,14 @@ class CurveParityTest {
         assertParity(EditSettings(curves = curves))
     }
 
+    /** An overshooting curve (clipped to white) and a curve with moved end points match Done too. */
+    @Test
+    fun overshooting_and_moved_end_curves_match_done() {
+        assertParity(EditSettings(curves = master(bend(0.25f, 0.75f))))
+        val movedEnds = ToneCurve(listOf(CurvePoint(0.2f, 0.1f), CurvePoint(0.8f, 0.9f)))
+        assertParity(EditSettings(curves = master(movedEnds)))
+    }
+
     /**
      * Filter, HSL, curves and the colour sliders together (a combination whose steps do not
      * commute) give the same picture in the preview and in Done.

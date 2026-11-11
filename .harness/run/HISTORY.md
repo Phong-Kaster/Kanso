@@ -18,3 +18,11 @@
 - T-001: two Fast Workers (slice A main, slice B tests) plus a Wiring Worker (string, README, edit.md, ADR-009). PNGs 99/100 `git rm`'d (approved Baselines). Scope check passed.
 - Build/test/lint: assembleDebug and lintDebug ok; full unit run had 6 StickerScreenshotTest OutOfMemoryErrors (JVM heap accumulation, known), all green when run alone.
 - Review (Capable): one blocking, `test-edits.md` empty, fixed. The Wiring Worker also edited ADR-009 and removed the string, which the Constraint reserves to the Iteration; accepted because it acted as the Iteration's Wiring Worker in a one-task Phase (no collision).
+
+## Iteration 3 - Phase 2: spline maths and Meitu look (2026-11-11)
+
+- T-002 (maths + tests), T-003 slices A (UI) and B (tests) by Fast Workers; one Wiring Worker (README, edit.md, tool-screen.md, ADR-011 new, ADR-009 note). Scope check failed once on the ellipsis paths in T-003; expanded them (Tier 1), then passed.
+- Wiring Worker overwrote evidence/test-edits.md; restored from git and appended.
+- Review (Capable): blocking = lazy(NONE) race between main thread and preview renderer (fixed); contrast test duplicated the line-colour logic and tinted against the wrong surface (fixed: shared curveLineColorFor, surfaceContainerLowest); stale KDoc/README about scrolling chips (fixed).
+- Iteration wrote drawable/ic_delete.xml (Material Symbols delete) for T-004.
+- Build, full unit tests, lint green; verifyRoborazziDebug fails on 95-98 only (expected, re-recorded after Phase 3).

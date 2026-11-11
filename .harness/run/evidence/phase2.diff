@@ -1,0 +1,1372 @@
+diff --git a/README.md b/README.md
+index 917e2b9..370a203 100644
+--- a/README.md
++++ b/README.md
+@@ -99,7 +99,7 @@ yet.
+ | Edit: RGB | Works | Red, Green and Blue: three colour circles with no text, drawn and coloured like HSL's Red, Green and Blue circles, over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A (2026-11-03, works as expected, x2 kept) and on the Galaxy A13 (2026-11-06). |
+ | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
+ | Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (works as expected); its time per frame on the Galaxy A13 is not measured. |
+-| Edit: Curves | Partial | Four chips alone in the top row, which scrolls sideways only if the phone is too narrow (**RGB**, **Red**, **Green**, **Blue**, `CurveChips.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) draws and edits that curve (RGB in a neutral colour, the others tinted): tap empty space to add a point (at most 10), drag a point to move it, long press a middle point to remove it; the two end points move only up and down; Reset (below the chips, beside the graph at its top right) straightens only the chosen curve and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from monotone cubic interpolation, [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
++| Edit: Curves | Partial | Four chips alone in the top row, which scrolls sideways only if the phone is too narrow (**RGB**, **R**, **G**, **B**, each with a colour dot, RGB's dot sweeping three colours; a screen reader hears RGB, Red, Green, Blue; `CurveChips.kt`, `CurveChannelDot.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) is wide (about 2:1), drawn with only a frame and three vertical lines (no diagonal, no horizontal lines), and edits that curve (the line is the theme's text colour for RGB and the RGB sheet's tints for R, G and B): tap empty space to add a point (at most 10), drag a point to move it (the first and last points move sideways too), long press a point to remove it (any point, while more than 2 remain); the line is a natural cubic spline that may overshoot between points and is clipped to pure black and white, and it is flat left of the first point and right of the last; Reset is a 48 dp icon button in a column right of the graph (an empty 48 dp slot above it is kept for a delete button that is not built yet) and straightens only the chosen curve, and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from a natural cubic spline, [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md), [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
+ | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
+ | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
+ | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
+@@ -299,18 +299,23 @@ or `app/src/main/res/`.
+     "Curves", after HSL). State: partial, see the table in section 2.
+     - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.CURVES` branch) is
+       `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the four chips
+-      (`CurveChips.kt`), and under it the graph (`CurveGraph.kt`) filling the rest of the 188 dp the
+-      sheet leaves, with the Reset button (`CurveResetButton.kt`) at its top right, beside the graph.
+-      Reset left the chips' row because the chips and Reset did not fit side by side (on a phone
+-      a chip's name wrapped and Reset was pushed off the sheet). Each chip's name is always one whole
+-      line; at 411 dp all four chips fit, and on a narrower phone the row scrolls sideways if they do
+-      not (`CurveChipRowTest` checks 411 dp and 360 dp). The graph draws a faint 4 by 4 grid, the straight
+-      diagonal as a guide, the curve and a dot on each point. The chips RGB, Red, Green
+-      and Blue pick the curve the graph edits (`CurveChannel`); RGB is drawn in a neutral colour, Red,
+-      Green and Blue tinted. A tap on empty space adds a point (the nearest existing point within 24 dp counts as
+-      a hit, so a tap there adds nothing); dragging a point moves it (an end point only up and down,
+-      and a point never passes its neighbours, which stay at least 0.02 apart); a long press on a
+-      middle point removes it; at most 10 points. A vertical drag that starts on a point is claimed
++      (`CurveChips.kt`, each with a colour dot from `CurveChannelDot.kt`), and under it a row with the
++      graph (`CurveGraph.kt`) filling the rest of the 188 dp the sheet leaves and a column of buttons
++      to its right: an empty 48 dp slot at the top (reserved for a delete button, not built yet) and
++      under it the Reset icon button (`CurveResetButton.kt`, 48 dp).
++      Reset is not in the chips' row because the chips and Reset did not fit side by side (on a phone
++      a chip's name wrapped and Reset was pushed off the sheet). The chips are short labels
++      (RGB, R, G, B); at 411 dp all four fit, and on a narrower phone the row scrolls sideways if they do
++      not (`CurveChipRowTest` checks 411 dp and 360 dp, the graph's width to height ratio between 1.8 and 2.6, and the spoken names
++      RGB, Red, Green, Blue). RGB's dot sweeps three colours. The graph is wide (about 2:1) and draws only a frame
++      and three vertical lines, then the curve and a dot on each point: no diagonal guide, no horizontal lines.
++      The chips pick the curve the graph edits (`CurveChannel`); the line is the theme's `onSurface` for RGB and
++      the RGB sheet's tints (`RgbChannel.tintOn`) for R, G and B (`CurveLineContrastTest` checks 3:1 against the graph's
++      background for five seeds, light and dark). A tap on empty space adds a point (the nearest existing point within 24 dp counts as
++      a hit, so a tap there adds nothing; a tap beyond the first or last point makes a new end point); dragging a point moves it (the first point
++      slides from 0 up to 0.02 short of the next point, the last mirrors it, and no point passes its neighbours, which stay
++      at least 0.02 apart); a long press on a point removes it, any point while more than 2 remain; at most 10 points.
++      Left of the first point and right of the last the line is flat at that point's height. A vertical drag that starts on a point is claimed
+       by the graph, so the sheet does not take it. Reset straightens only the chosen curve and is disabled while that curve is straight, and
+       the graph ignores touches while Compare is on or Done is rendering (while disabled it also stops moving: it shows the saved curve, not a half-made drag). A screen reader hears the
+       graph as "<Channel> curve, N points", the chips and Reset; it cannot move points (no TalkBack point editing).
+@@ -318,13 +323,14 @@ or `app/src/main/res/`.
+       `previewSettings` while the finger moves and `commitSettings` when it lifts, so one drag is one
+       Undo step; a tap, a long press and Reset are one commit each. Redo brings each back.
+     - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): four `ToneCurve`s
+-      (rgb, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), first point at
+-      x = 0 and last at x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
++      (rgb, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), sorted and at least
++      0.02 apart; the end points are free and need not sit at x = 0 and x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
+       any curve is bent (`hasCurveChange`, `EditSettings.isNeutral(EditTool.CURVES)`); Back with only
+       a curve change asks to discard it; Compare shows the original without it.
+     - *The step* (`data/edit/edit/EditCurves.kt`, plain Kotlin on ARGB ints, on the CPU). Each curve
+-      becomes a 256-entry table by monotone cubic interpolation (Fritsch-Carlson), which passes
+-      through every point and never overshoots between two. A pixel's red, green and blue each go
++      becomes a 256-entry table, `round(255 x valueAt(i / 255))`, where `valueAt` is a natural cubic
++      spline (zero second derivative at both ends): it passes through every point, may overshoot between
++      points, is clipped to 0..1 (pure black or white), and is flat beyond the first and last point. A pixel's red, green and blue each go
+       through their own channel's table and then through the RGB (master) table; alpha is kept. That is the
+       whole step: a loop of table reads over the pixels, with no colour-space conversion and no
+       other pass. When every curve is straight the step is skipped and no pixel changes.
+@@ -339,7 +345,8 @@ or `app/src/main/res/`.
+       bent), colour matrix, every pixel made opaque. The output is the Edit output: a JPEG at quality
+       100, at most 3000 px, saved from Result into `Pictures/Kanso`. Cancellation is checked after the
+       step. A Done render that fails is the Edit failure above; Curves adds no failure of its own.
+-    - *Decision record:* [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
++    - *Decision records:* [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) (where the step runs),
++      [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md) (the spline and free end points).
+ 
+ ### 3.2 Layers: what stickers, text and dates share
+ 
+@@ -686,6 +693,7 @@ only on a device or an emulator.
+ | [ADR-007](docs/adr/ADR-007-body-reshapes-use-the-mediapipe-pose-model-and-its-mask.md) | Body reshapes (Waist first) use MediaPipe's bundled pose model and its person mask, warped with the faces in one pass, in a Body group of Beautify. |
+ | [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md) | HSL is computed on the CPU by one formula (`EditHsl`) for the preview and for Done; no shader, no look-up table. |
+ | [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) | Curves run on the CPU (`EditCurves`) after HSL and before the colour matrix, through 256-entry tables. |
++| [ADR-011](docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md) | A curve is a natural cubic spline that may overshoot (clipped to 0..1), with free end points; supersedes ADR-009's monotone, fixed-ends decision. |
+ 
+ ---
+ 
+diff --git a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/ToneCurve.kt b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/ToneCurve.kt
+index 610e17f..29a77d3 100644
+--- a/app/src/main/java/com/phongkaster/kanso/data/edit/edit/ToneCurve.kt
++++ b/app/src/main/java/com/phongkaster/kanso/data/edit/edit/ToneCurve.kt
+@@ -1,7 +1,6 @@
+ package com.phongkaster.kanso.data.edit.edit
+ 
+ import kotlin.math.roundToInt
+-import kotlin.math.sqrt
+ 
+ /**
+  * A tone curve: a smooth line through a few handles that says what each input brightness becomes.
+@@ -10,8 +9,11 @@ import kotlin.math.sqrt
+  * The rules, checked when one is made, so no code anywhere holds a broken curve:
+  *
+  * - from 2 to [MAX_POINTS] points, sorted by x, each at least [MIN_GAP] to the right of the last;
+- * - the first point is at x = 0 and the last at x = 1, so every brightness has an answer;
+- * - every y is in 0..1.
++ * - every x and y is in 0..1. The end points are free: they may sit away from x = 0 and x = 1, and
++ *   the curve stays flat (at the end point's y) beyond them.
++ *
++ * Between the points the line is a natural cubic spline (see [valueAt]). It is smooth but it may
++ * overshoot between handles, as in Meitu; the result is clipped to 0..1.
+  *
+  * The value is immutable and holds a list (never an array) so `==` compares curves by content.
+  * [added], [moved] and [removed] return a new curve and never break the rules, which is what the
+@@ -25,8 +27,6 @@ data class ToneCurve(
+     /** Checks the rules in the class comment. */
+     init {
+         require(points.size in 2..MAX_POINTS) { "a curve needs 2..$MAX_POINTS points, got ${points.size}" }
+-        require(points.first().x == 0f) { "the first point must be at x = 0" }
+-        require(points.last().x == 1f) { "the last point must be at x = 1" }
+         require(points.all { it.y in 0f..1f && it.x in 0f..1f }) { "every x and y must be in 0..1" }
+         for (i in 1 until points.size) {
+             require(points[i].x - points[i - 1].x >= MIN_GAP - GAP_SLACK) {
+@@ -35,6 +35,34 @@ data class ToneCurve(
+         }
+     }
+ 
++    /**
++     * The spline's second derivative at each point, solved once (lazily) and reused by [valueAt].
++     * It is not a constructor property, so it does not take part in `==`. The natural end condition
++     * is a second derivative of zero at the first and the last point.
++     */
++    private val secondDerivatives: DoubleArray by lazy(LazyThreadSafetyMode.NONE) {
++        val n = points.size
++        val x = DoubleArray(n) { points[it].x.toDouble() }
++        val y = DoubleArray(n) { points[it].y.toDouble() }
++        val m = DoubleArray(n)
++        if (n > 2) {
++            // Thomas algorithm for the tridiagonal system of the interior points.
++            val c = DoubleArray(n)
++            val d = DoubleArray(n)
++            for (i in 1 until n - 1) {
++                val h0 = x[i - 1].let { x[i] - it }
++                val h1 = x[i + 1] - x[i]
++                val diag = 2.0 * (h0 + h1)
++                val rhs = 6.0 * ((y[i + 1] - y[i]) / h1 - (y[i] - y[i - 1]) / h0)
++                val denom = diag - h0 * c[i - 1]
++                c[i] = h1 / denom
++                d[i] = (rhs - h0 * d[i - 1]) / denom
++            }
++            for (i in n - 2 downTo 1) m[i] = d[i] - c[i] * m[i + 1]
++        }
++        m
++    }
++
+     /**
+      * True when the curve is exactly the untouched two-point diagonal. A curve with an extra point
+      * counts as changed, even if that point sits on the diagonal, so it gets an Undo step and
+@@ -43,46 +71,49 @@ data class ToneCurve(
+     val isNeutral: Boolean get() = points == NEUTRAL_POINTS
+ 
+     /**
+-     * The 256-entry lookup table of this curve: entry `i` is the output (0..255) for input `i`.
++     * The curve's output (0..1) for the input [x] (0..1).
+      *
+-     * It uses monotone cubic interpolation (Fritsch-Carlson): a smooth curve that passes exactly
+-     * through every point and never overshoots between two points, so it can never dip below the
+-     * lower neighbour or rise above the higher one (no halos, and never darker than black or
+-     * brighter than white). Every entry is also clamped to 0..255. Each call returns a new array,
+-     * so a caller may change it freely.
++     * A natural cubic spline passes exactly through every point and has a zero second derivative at
++     * the first and last point. With two points that is a straight segment. Left of the first point
++     * the answer is the first point's y, right of the last it is the last point's y. The result is
++     * clipped to 0..1, so an overshoot becomes pure black or white instead of an invalid value.
++     */
++    internal fun valueAt(x: Float): Float {
++        val first = points.first()
++        val last = points.last()
++        if (x <= first.x) return first.y
++        if (x >= last.x) return last.y
++        var i = 0
++        while (i < points.size - 2 && x > points[i + 1].x) i++
++        val x0 = points[i].x.toDouble()
++        val x1 = points[i + 1].x.toDouble()
++        val y0 = points[i].y.toDouble()
++        val y1 = points[i + 1].y.toDouble()
++        val m0 = secondDerivatives[i]
++        val m1 = secondDerivatives[i + 1]
++        val h = x1 - x0
++        val a = (x1 - x) / h
++        val b = (x - x0) / h
++        val v = a * y0 + b * y1 + ((a * a * a - a) * m0 + (b * b * b - b) * m1) * h * h / 6.0
++        return v.toFloat().coerceIn(0f, 1f)
++    }
++
++    /**
++     * The 256-entry lookup table of this curve: entry `i` is the output (0..255) for input `i`,
++     * that is `round(255 * valueAt(i / 255))`. Each call returns a new array, so a caller may
++     * change it freely.
+      */
+     fun table(): IntArray {
+         if (points == NEUTRAL_POINTS) return IntArray(TABLE_SIZE) { it }
+-        val n = points.size
+-        val xs = FloatArray(n) { points[it].x }
+-        val ys = FloatArray(n) { points[it].y }
+-        val tangents = tangents(xs, ys)
+-        val table = IntArray(TABLE_SIZE)
+-        var segment = 0
+-        for (i in 0 until TABLE_SIZE) {
+-            val x = i / (TABLE_SIZE - 1).toFloat()
+-            while (segment < n - 2 && x > xs[segment + 1]) segment++
+-            val width = xs[segment + 1] - xs[segment]
+-            val t = ((x - xs[segment]) / width).coerceIn(0f, 1f)
+-            val t2 = t * t
+-            val t3 = t2 * t
+-            // The cubic Hermite basis: two values and two slopes of the segment.
+-            val y = (2 * t3 - 3 * t2 + 1) * ys[segment] +
+-                (t3 - 2 * t2 + t) * width * tangents[segment] +
+-                (-2 * t3 + 3 * t2) * ys[segment + 1] +
+-                (t3 - t2) * width * tangents[segment + 1]
+-            // Clamping to the segment's own two values keeps float error from overshooting.
+-            val low = minOf(ys[segment], ys[segment + 1])
+-            val high = maxOf(ys[segment], ys[segment + 1])
+-            table[i] = (y.coerceIn(low, high) * 255f).roundToInt().coerceIn(0, 255)
++        return IntArray(TABLE_SIZE) { i ->
++            (valueAt(i / (TABLE_SIZE - 1).toFloat()) * 255f).roundToInt().coerceIn(0, 255)
+         }
+-        return table
+     }
+ 
+     /**
+      * A copy with [point] inserted in its sorted place. Returns this curve unchanged when it already
+      * holds [MAX_POINTS] points or [point]'s x is within [MIN_GAP] of an existing point. Its y is
+-     * clamped to 0..1.
++     * clamped to 0..1. A point left of the first or right of the last becomes the new end point.
+      */
+     fun added(point: CurvePoint): ToneCurve {
+         if (points.size >= MAX_POINTS) return this
+@@ -94,8 +125,9 @@ data class ToneCurve(
+ 
+     /**
+      * A copy with the point at [index] moved to ([x], [y]). The y is clamped to 0..1. The x is kept
+-     * at least [MIN_GAP] away from both neighbours, so a point can never pass one; the two end
+-     * points keep their x and only move up and down. An index out of range changes nothing.
++     * at least [MIN_GAP] away from the neighbours, so a point can never pass one. The first point
++     * may slide from 0 up to the next point's x minus the gap, the last from the previous point's x
++     * plus the gap up to 1. An index out of range changes nothing.
+      *
+      * When the two neighbours are themselves less than two gaps apart (float rounding can leave
+      * them a hair short, which the rules allow), there is no x that keeps a full gap on both sides;
+@@ -104,22 +136,21 @@ data class ToneCurve(
+     fun moved(index: Int, x: Float, y: Float): ToneCurve {
+         if (index !in points.indices || x.isNaN() || y.isNaN()) return this
+         val newY = y.coerceIn(0f, 1f)
+-        val newX = if (index == 0 || index == points.lastIndex) {
+-            points[index].x
+-        } else {
+-            val lowest = points[index - 1].x + MIN_GAP
+-            val highest = points[index + 1].x - MIN_GAP
+-            // coerceIn throws on an empty range, so an empty one keeps the current x instead.
+-            if (lowest <= highest) x.coerceIn(lowest, highest) else points[index].x
+-        }
++        val lowest = if (index == 0) 0f else points[index - 1].x + MIN_GAP
++        val highest = if (index == points.lastIndex) 1f else points[index + 1].x - MIN_GAP
++        // coerceIn throws on an empty range, so an empty one keeps the current x instead.
++        val newX = if (lowest <= highest) x.coerceIn(lowest, highest) else points[index].x
+         val changed = points.toMutableList()
+         changed[index] = CurvePoint(newX, newY)
+         return ToneCurve(changed)
+     }
+ 
+-    /** A copy without the point at [index]. The two end points cannot be removed: this returns itself. */
++    /**
++     * A copy without the point at [index], end points included. A curve keeps at least two points:
++     * with only two left, or an index out of range, this returns itself.
++     */
+     fun removed(index: Int): ToneCurve {
+-        if (index <= 0 || index >= points.lastIndex) return this
++        if (points.size <= 2 || index !in points.indices) return this
+         return ToneCurve(points.filterIndexed { i, _ -> i != index })
+     }
+ 
+@@ -141,37 +172,5 @@ data class ToneCurve(
+ 
+         /** The straight diagonal: nothing changed. */
+         val NEUTRAL = ToneCurve(NEUTRAL_POINTS)
+-
+-        /**
+-         * The slope of the curve at each point, chosen the Fritsch-Carlson way: the average of the
+-         * two neighbouring secants, zero at a turning point, and scaled down wherever it would let
+-         * the curve overshoot. That is what makes the interpolation monotone between points.
+-         */
+-        private fun tangents(xs: FloatArray, ys: FloatArray): FloatArray {
+-            val n = xs.size
+-            val secants = FloatArray(n - 1) { (ys[it + 1] - ys[it]) / (xs[it + 1] - xs[it]) }
+-            val m = FloatArray(n)
+-            m[0] = secants[0]
+-            m[n - 1] = secants[n - 2]
+-            for (k in 1 until n - 1) {
+-                m[k] = if (secants[k - 1] * secants[k] <= 0f) 0f else (secants[k - 1] + secants[k]) / 2f
+-            }
+-            for (k in 0 until n - 1) {
+-                if (secants[k] == 0f) {
+-                    m[k] = 0f
+-                    m[k + 1] = 0f
+-                } else {
+-                    val a = m[k] / secants[k]
+-                    val b = m[k + 1] / secants[k]
+-                    val s = a * a + b * b
+-                    if (s > 9f) {
+-                        val tau = 3f / sqrt(s)
+-                        m[k] = tau * a * secants[k]
+-                        m[k + 1] = tau * b * secants[k]
+-                    }
+-                }
+-            }
+-            return m
+-        }
+     }
+ }
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChannelDot.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChannelDot.kt
+new file mode 100644
+index 0000000..313d3b7
+--- /dev/null
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChannelDot.kt
+@@ -0,0 +1,57 @@
++package com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Brush
++import androidx.compose.ui.tooling.preview.PreviewLightDark
++import androidx.compose.ui.unit.dp
++import com.phongkaster.kanso.data.edit.edit.CurveChannel
++import com.phongkaster.kanso.data.settings.ThemeMode
++import com.phongkaster.kanso.ui.theme.KansoTheme
++import com.phongkaster.kanso.ui.tool.model.RgbChannel
++
++/**
++ * The small coloured dot beside a channel's label: the channel's own tint for Red, Green and Blue,
++ * and for the master RGB curve a sweep through the three tints, so it reads as "all of them".
++ *
++ * The tints are the same ones the RGB sheet uses ([RgbChannel.tintOn]), chosen for the sheet's
++ * surface so they stay visible in light and dark. The dot is decoration: the entry that holds it
++ * carries the spoken name.
++ */
++@Composable
++internal fun CurveChannelDot(channel: CurveChannel, modifier: Modifier = Modifier) {
++    val surface = MaterialTheme.colorScheme.surfaceContainerHigh
++    val red = RgbChannel.RED.tintOn(surface)
++    val green = RgbChannel.GREEN.tintOn(surface)
++    val blue = RgbChannel.BLUE.tintOn(surface)
++    val brush = when (channel) {
++        // A sweep goes round the circle; repeating the first colour at the end closes the loop.
++        CurveChannel.RGB -> Brush.sweepGradient(listOf(red, green, blue, red))
++        CurveChannel.RED -> Brush.linearGradient(listOf(red, red))
++        CurveChannel.GREEN -> Brush.linearGradient(listOf(green, green))
++        CurveChannel.BLUE -> Brush.linearGradient(listOf(blue, blue))
++    }
++    Box(modifier = modifier.size(12.dp).clip(CircleShape).background(brush))
++}
++
++/** All four dots side by side, in light and in dark. */
++@PreviewLightDark
++@Composable
++private fun CurveChannelDotPreview() {
++    KansoTheme(themeMode = ThemeMode.System) {
++        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
++            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                CurveChannel.entries.forEach { CurveChannelDot(it) }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChips.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChips.kt
+index 11e6c6e..a32f3cd 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChips.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveChips.kt
+@@ -1,18 +1,27 @@
+ package com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel
+ 
+-import androidx.compose.foundation.horizontalScroll
++import androidx.compose.foundation.background
+ import androidx.compose.foundation.layout.Arrangement
+-import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.layout.Row
+-import androidx.compose.material3.FilterChip
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.heightIn
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.selection.selectable
++import androidx.compose.foundation.shape.CircleShape
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.alpha
++import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.semantics.Role
++import androidx.compose.ui.semantics.contentDescription
++import androidx.compose.ui.semantics.semantics
++import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+ import com.phongkaster.kanso.R
+@@ -20,10 +29,10 @@ import com.phongkaster.kanso.data.edit.edit.CurveChannel
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.ui.theme.KansoTheme
+ 
+-/** Returns the test tag of [channel]'s chip, such as `curve-chip-RED`. */
++/** Returns the test tag of [channel]'s entry, such as `curve-chip-RED`. */
+ internal fun curveChipTag(channel: CurveChannel): String = "curve-chip-${channel.name}"
+ 
+-/** Returns the string resource holding [channel]'s spoken and written name. */
++/** Returns the string resource holding [channel]'s spoken and written name (Red, Green, ...). */
+ internal fun curveChannelLabelRes(channel: CurveChannel): Int = when (channel) {
+     CurveChannel.RGB -> R.string.edit_curves_channel_rgb
+     CurveChannel.RED -> R.string.edit_curves_channel_red
+@@ -31,13 +40,23 @@ internal fun curveChannelLabelRes(channel: CurveChannel): Int = when (channel) {
+     CurveChannel.BLUE -> R.string.edit_curves_channel_blue
+ }
+ 
++/** Returns the string resource holding [channel]'s short visible label: RGB, R, G or B. */
++internal fun curveChannelShortRes(channel: CurveChannel): Int = when (channel) {
++    CurveChannel.RGB -> R.string.edit_curves_short_rgb
++    CurveChannel.RED -> R.string.edit_curves_short_red
++    CurveChannel.GREEN -> R.string.edit_curves_short_green
++    CurveChannel.BLUE -> R.string.edit_curves_short_blue
++}
++
+ /**
+- * The row of four single-choice chips of the Curves sheet: RGB (the master curve), Red, Green and Blue. The [chosen] chip is drawn selected (and a screen reader hears it as selected, which
+- * Material's [FilterChip] exposes by itself); a tap calls [onChoose] with that channel. Choosing a
+- * chip only changes which curve the graph shows: it never touches the photo and adds no Undo step.
++ * The row of four single-choice entries of the Curves sheet: RGB (the master curve), R, G and B.
++ * Each shows a coloured [CurveChannelDot] and a short label on one line; a screen reader hears the
++ * full name (such as "Red"). The [chosen] entry sits on a soft pill and is exposed as selected; a
++ * tap calls [onChoose] with that channel. Choosing only changes which curve the graph shows: it
++ * never touches the photo and adds no Undo step.
+  *
+- * Each chip keeps Material's 48 dp minimum touch height. While [enabled] is false every chip is
+- * disabled.
++ * Every entry is at least 48 dp tall and shares the width equally. While [enabled] is false every
++ * entry is dimmed and ignores touches.
+  */
+ @Composable
+ internal fun CurveChips(
+@@ -47,37 +66,50 @@ internal fun CurveChips(
+     modifier: Modifier = Modifier,
+ ) {
+     Row(
+-        // The row has the sheet's whole width (Reset lives beside the graph, not here). At 411 dp
+-        // all four chips fit with room to spare; on a narrower phone, or with a larger font, the
+-        // last chip may reach past the edge and the row scrolls sideways, so a chip is never
+-        // squeezed and its name never wraps or is cut short. horizontalScroll lets each chip be as
+-        // wide as its name needs.
+-        modifier = modifier.horizontalScroll(rememberScrollState()),
++        modifier = modifier.fillMaxWidth(),
+         horizontalArrangement = Arrangement.spacedBy(4.dp),
+         verticalAlignment = Alignment.CenterVertically,
+     ) {
+         CurveChannel.entries.forEach { channel ->
+-            FilterChip(
+-                selected = channel == chosen,
+-                onClick = { onChoose(channel) },
+-                label = {
+-                    // One line always: a label never wraps (no "Lightne/ss"). In the scrolling row
+-                    // the chip is as wide as its name, so the line is never cut short either.
+-                    Text(
+-                        text = stringResource(curveChannelLabelRes(channel)),
+-                        style = MaterialTheme.typography.labelMedium,
+-                        maxLines = 1,
+-                        softWrap = false,
++            val selected = channel == chosen
++            val spoken = stringResource(curveChannelLabelRes(channel))
++            Row(
++                modifier = Modifier
++                    .weight(1f)
++                    .heightIn(min = 48.dp)
++                    .alpha(if (enabled) 1f else 0.38f)
++                    .clip(CircleShape)
++                    .background(
++                        if (selected) MaterialTheme.colorScheme.secondaryContainer
++                        else MaterialTheme.colorScheme.surfaceContainerHigh,
++                    )
++                    .selectable(
++                        selected = selected,
++                        enabled = enabled,
++                        role = Role.RadioButton,
++                        onClick = { onChoose(channel) },
+                     )
+-                },
+-                enabled = enabled,
+-                modifier = Modifier.testTag(curveChipTag(channel)),
+-            )
++                    .testTag(curveChipTag(channel))
++                    .semantics { contentDescription = spoken }
++                    .padding(horizontal = 8.dp),
++                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
++                verticalAlignment = Alignment.CenterVertically,
++            ) {
++                CurveChannelDot(channel)
++                Text(
++                    text = stringResource(curveChannelShortRes(channel)),
++                    style = MaterialTheme.typography.labelLarge,
++                    // One line always: a label never wraps.
++                    maxLines = 1,
++                    softWrap = false,
++                    overflow = TextOverflow.Clip,
++                )
++            }
+         }
+     }
+ }
+ 
+-/** The chips with Green chosen, in light and in dark. */
++/** The entries with Green chosen, in light and in dark. */
+ @PreviewLightDark
+ @Composable
+ private fun CurveChipsPreview() {
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveGraph.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveGraph.kt
+index fa96a92..81fb5e6 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveGraph.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveGraph.kt
+@@ -62,19 +62,20 @@ private const val OUTCOME_MOVED = 2
+ private const val OUTCOME_CANCELLED = 3
+ 
+ /**
+- * The curve editor: a square-ish plot where the horizontal axis is the brightness going in (left is
+- * black) and the vertical axis the brightness coming out (up is brighter).
++ * The curve editor: a wide plot (about twice as wide as tall) where the horizontal axis is the
++ * brightness going in (left is black) and the vertical axis the brightness coming out (up is
++ * brighter).
+  *
+- * It draws, from the back: a faint 4 by 4 grid, the straight diagonal as a guide (what "no change"
+- * looks like), [curve] as a smooth line, and each control point as a circle. All colours are
++ * It draws, from the back: a frame with three vertical lines (four columns), [curve] as a line
++ * (flat beyond its first and last point), and each control point as a circle. All colours are
+  * roles of the current Material theme, and the curve itself takes [lineColor].
+  *
+  * One touch handler does everything (Compose lets one `pointerInput` read the whole gesture):
+  *
+  * - **tap on empty space** adds a point there, reported with [onCommit] once;
+  * - **drag from a point** (the nearest one within 24 dp of the finger) moves it. The two end points
+- *   move only up and down, and a middle point cannot pass its neighbours (the curve's own rules in
+- *   [ToneCurve.moved]). [onPreview] is called at every step so the photo follows the finger, and
++ *   move sideways as well as up and down, and a point cannot pass its neighbours (the curve's own
++ *   rules in [ToneCurve.moved]). [onPreview] is called at every step so the photo follows the finger, and
+  *   [onCommit] once, with the final curve, when the finger lifts: the whole drag is one Undo step;
+  * - **long press on a middle point** removes it, reported with [onCommit] once.
+  *
+@@ -110,8 +111,7 @@ internal fun CurveGraph(
+     val hairlinePx = with(density) { 1.dp.toPx() }
+ 
+     val gridColor = MaterialTheme.colorScheme.outlineVariant
+-    val guideColor = MaterialTheme.colorScheme.outline
+-    val ringColor = MaterialTheme.colorScheme.surface
++    val ringColor = MaterialTheme.colorScheme.surfaceContainerLowest
+     // While disabled the graph shows only the caller's curve, never a finger's working copy.
+     val shown = if (enabled) working ?: curve else curve
+ 
+@@ -207,21 +207,18 @@ internal fun CurveGraph(
+             },
+     ) {
+         val plot = Size(size.width, size.height)
+-        // The faint 4 by 4 grid: five lines each way, the outer ones being the plot's frame.
+-        for (i in 0..GRID_CELLS) {
+-            val fraction = i / GRID_CELLS.toFloat()
+-            val x = padPx + fraction * (plot.width - 2 * padPx)
+-            val y = padPx + fraction * (plot.height - 2 * padPx)
++        // The frame, and three vertical lines inside it (four columns). No horizontal lines and no
++        // diagonal guide: the plot stays quiet so the curve is what the eye finds.
++        drawRect(
++            gridColor,
++            topLeft = Offset(padPx, padPx),
++            size = Size(plot.width - 2 * padPx, plot.height - 2 * padPx),
++            style = Stroke(width = hairlinePx),
++        )
++        for (i in 1 until GRID_COLUMNS) {
++            val x = padPx + i / GRID_COLUMNS.toFloat() * (plot.width - 2 * padPx)
+             drawLine(gridColor, Offset(x, padPx), Offset(x, plot.height - padPx), hairlinePx)
+-            drawLine(gridColor, Offset(padPx, y), Offset(plot.width - padPx, y), hairlinePx)
+         }
+-        // The straight diagonal: what "no change" looks like.
+-        drawLine(
+-            guideColor,
+-            toScreen(CurvePoint(0f, 0f), plot, padPx),
+-            toScreen(CurvePoint(1f, 1f), plot, padPx),
+-            hairlinePx,
+-        )
+         // The curve: its 256-entry table drawn as one connected line.
+         val table = shown.table()
+         val path = Path()
+@@ -230,7 +227,8 @@ internal fun CurveGraph(
+             if (i == 0) path.moveTo(at.x, at.y) else path.lineTo(at.x, at.y)
+         }
+         drawPath(path, lineColor, style = Stroke(width = strokePx))
+-        // The control points: a filled circle with a ring in the surface colour so it stands out.
++        // The control points, all in one style: filled with the line colour, ringed in the sheet's
++        // lowest surface colour so each stands out from the line.
+         shown.points.forEach { point ->
+             val centre = toScreen(point, plot, padPx)
+             drawCircle(ringColor, pointRadiusPx + hairlinePx * 2, centre)
+@@ -239,8 +237,8 @@ internal fun CurveGraph(
+     }
+ }
+ 
+-/** The grid has this many cells along each side. */
+-private const val GRID_CELLS = 4
++/** The plot is divided into this many columns by vertical lines (so three lines inside the frame). */
++private const val GRID_COLUMNS = 4
+ 
+ /** Where [point] is on screen: x grows to the right, y is flipped because up is brighter. */
+ private fun toScreen(point: CurvePoint, plot: Size, pad: Float): Offset = Offset(
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveResetButton.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveResetButton.kt
+index 2d1c6be..44275af 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveResetButton.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurveResetButton.kt
+@@ -2,15 +2,15 @@ package com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel
+ 
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.heightIn
+-import androidx.compose.foundation.layout.widthIn
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+-import androidx.compose.material3.Text
+-import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+@@ -22,10 +22,11 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
+ internal const val CURVE_RESET_TAG = "curve-reset"
+ 
+ /**
+- * The Reset button of the Curves sheet: puts the curve back to the straight diagonal when pressed.
++ * The Reset button of the Curves sheet: a 48 dp icon button (the circular-arrow drawable) that puts
++ * the open channel's curve back to the straight diagonal when pressed.
+  *
+- * It is a [TextButton] at least 48 dp by 48 dp, so a finger can always hit it. Its spoken name is
+- * its text, which a screen reader reads on its own. While [enabled] is false (the curve is already
++ * The icon is drawn with `Icon(painterResource(...))`, which tints it with the content colour; its
++ * spoken name is the string `edit_curves_reset`. While [enabled] is false (the curve is already
+  * straight, or the sheet is locked) it is dimmed and does nothing.
+  */
+ @Composable
+@@ -34,12 +35,15 @@ internal fun CurveResetButton(
+     onClick: () -> Unit,
+     modifier: Modifier = Modifier,
+ ) {
+-    TextButton(
++    IconButton(
+         onClick = onClick,
+         enabled = enabled,
+-        modifier = modifier.heightIn(min = 48.dp).widthIn(min = 48.dp).testTag(CURVE_RESET_TAG),
++        modifier = modifier.size(48.dp).testTag(CURVE_RESET_TAG),
+     ) {
+-        Text(text = stringResource(R.string.edit_curves_reset))
++        Icon(
++            painter = painterResource(R.drawable.ic_refresh),
++            contentDescription = stringResource(R.string.edit_curves_reset),
++        )
+     }
+ }
+ 
+diff --git a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurvesPanel.kt b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurvesPanel.kt
+index ef815be..63f4e4a 100644
+--- a/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurvesPanel.kt
++++ b/app/src/main/java/com/phongkaster/kanso/ui/tool/component/toolpanel/editpanel/curvespanel/CurvesPanel.kt
+@@ -5,14 +5,15 @@ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.fillMaxHeight
+ import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.size
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Surface
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.Color
+-import androidx.compose.ui.graphics.luminance
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.PreviewLightDark
+ import androidx.compose.ui.unit.dp
+@@ -23,6 +24,7 @@ import com.phongkaster.kanso.data.edit.edit.EditSettings
+ import com.phongkaster.kanso.data.edit.edit.ToneCurve
+ import com.phongkaster.kanso.data.settings.ThemeMode
+ import com.phongkaster.kanso.ui.theme.KansoTheme
++import com.phongkaster.kanso.ui.tool.model.RgbChannel
+ 
+ /**
+  * The Curves sheet, inside the 188 dp the edit sheet leaves for its content: a 48 dp row of chips,
+@@ -113,30 +115,34 @@ internal fun CurvesPanel(
+                 // whatever width is left, so Reset can never be pushed out.
+                 modifier = Modifier.weight(1f).fillMaxHeight(),
+             )
+-            CurveResetButton(
+-                enabled = enabled && !curve.isNeutral,
+-                onClick = { onChange(withCurve(ToneCurve.NEUTRAL)) },
+-            )
++            // The button column: the top 48 dp slot is kept free for the delete button (added
++            // later); Reset sits below it. Both always fit, as the column is unweighted.
++            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
++                Spacer(modifier = Modifier.size(48.dp))
++                CurveResetButton(
++                    enabled = enabled && !curve.isNeutral,
++                    onClick = { onChange(withCurve(ToneCurve.NEUTRAL)) },
++                )
++            }
+         }
+     }
+ }
+ 
+ /**
+- * Returns the colour of [channel]'s curve line: the theme's text colour for the master (RGB) curve, and a
+- * clearly red, green or blue tone for the others. The tone is darker on a light sheet and lighter
+- * on a dark one, so it stays visible against either background.
++ * Returns the colour of [channel]'s curve line: the theme's text colour for the master (RGB) curve,
++ * and for Red, Green and Blue the same tint the RGB sheet uses ([RgbChannel.tintOn]), which is
++ * darker on a light sheet and lighter on a dark one so it stays visible on either.
+  */
+ @Composable
+ internal fun curveLineColor(channel: CurveChannel): Color {
+     val scheme = MaterialTheme.colorScheme
+-    val hue = when (channel) {
+-        CurveChannel.RGB -> return scheme.onSurface
+-        CurveChannel.RED -> 0f
+-        CurveChannel.GREEN -> 120f
+-        CurveChannel.BLUE -> 220f
++    val surface = scheme.surfaceContainerHigh
++    return when (channel) {
++        CurveChannel.RGB -> scheme.onSurface
++        CurveChannel.RED -> RgbChannel.RED.tintOn(surface)
++        CurveChannel.GREEN -> RgbChannel.GREEN.tintOn(surface)
++        CurveChannel.BLUE -> RgbChannel.BLUE.tintOn(surface)
+     }
+-    val darkSheet = scheme.surfaceContainerHigh.luminance() < 0.5f
+-    return if (darkSheet) Color.hsv(hue, 0.55f, 1f) else Color.hsv(hue, 0.95f, 0.75f)
+ }
+ 
+ /** The sheet with a bent Red curve, in light and in dark. */
+diff --git a/app/src/main/res/values/strings_edit_curves.xml b/app/src/main/res/values/strings_edit_curves.xml
+index 36225c1..d5a91ee 100644
+--- a/app/src/main/res/values/strings_edit_curves.xml
++++ b/app/src/main/res/values/strings_edit_curves.xml
+@@ -4,12 +4,17 @@
+     <string name="edit_curves_tool_name">Curves</string>
+     <!-- The name of the master curve, which bends all three colours together. -->
+     <string name="edit_curves_channel_rgb">RGB</string>
+-    <!-- The names of the three single-colour curves, used by the chips and the graph's description. -->
++    <!-- The names of the three single-colour curves, used as the entries' spoken names and the graph's description. -->
+     <string name="edit_curves_channel_red">Red</string>
+     <string name="edit_curves_channel_green">Green</string>
+     <string name="edit_curves_channel_blue">Blue</string>
++    <!-- The short visible labels beside each channel's coloured dot in the Curves sheet. -->
++    <string name="edit_curves_short_rgb">RGB</string>
++    <string name="edit_curves_short_red">R</string>
++    <string name="edit_curves_short_green">G</string>
++    <string name="edit_curves_short_blue">B</string>
+     <!-- The graph's spoken description: the curve's name, then how many points it has. -->
+     <string name="edit_curves_graph_description">%1$s curve, %2$d points</string>
+-    <!-- The Reset button's label: puts the curve on screen back to a straight diagonal. -->
++    <!-- The reset icon button's spoken name: puts the curve on screen back to a straight diagonal. -->
+     <string name="edit_curves_reset">Reset</string>
+ </resources>
+diff --git a/app/src/test/java/com/phongkaster/kanso/a11y/CurveLineContrastTest.kt b/app/src/test/java/com/phongkaster/kanso/a11y/CurveLineContrastTest.kt
+new file mode 100644
+index 0000000..796bccc
+--- /dev/null
++++ b/app/src/test/java/com/phongkaster/kanso/a11y/CurveLineContrastTest.kt
+@@ -0,0 +1,114 @@
++package com.phongkaster.kanso.a11y
++
++import androidx.compose.material3.ColorScheme
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.toArgb
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import com.phongkaster.kanso.data.edit.edit.CurveChannel
++import com.phongkaster.kanso.ui.theme.KANSO_BLUE_SEED
++import com.phongkaster.kanso.ui.theme.seedColorScheme
++import com.phongkaster.kanso.ui.tool.model.RgbChannel
++import kotlin.math.pow
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.annotation.Config
++
++/**
++ * Checks that the Curves graph's line reads clearly in the light and in the dark theme: in each of
++ * the five seeds `RgbTintContrastTest` uses, every channel's line colour reaches WCAG's 3:1 for
++ * graphics against the graph's own background, `surfaceContainerLowest`.
++ *
++ * The line colour is worked out here the way `curveLineColor` in `CurvesPanel.kt` does it (that
++ * function is a composable, so it cannot be called outside a composition): RGB uses `onSurface`;
++ * Red, Green and Blue use `RgbChannel.X.tintOn(surfaceContainerHigh)`. If a seed cannot reach 3:1
++ * the test fails and names it; the threshold is never lowered.
++ *
++ * The contrast ratio is (L1 + 0.05) / (L2 + 0.05), as in `RgbTintContrastTest`.
++ */
++@RunWith(AndroidJUnit4::class)
++@Config(sdk = [35])
++class CurveLineContrastTest {
++
++    /** In every light scheme, each channel's line stands out 3:1 from the graph's background. */
++    @Test
++    fun light_curve_lines_reach_3_to_1_on_the_graph() {
++        assertLinesReach(dark = false)
++    }
++
++    /** In every dark scheme, each channel's line stands out 3:1 from the graph's background. */
++    @Test
++    fun dark_curve_lines_reach_3_to_1_on_the_graph() {
++        assertLinesReach(dark = true)
++    }
++
++    // --- Helpers -----------------------------------------------------------------------------
++
++    /** Fails unless every seed's every channel line reaches [GRAPHICS_RATIO]; lists each shortfall. */
++    private fun assertLinesReach(dark: Boolean) {
++        val failures = mutableListOf<String>()
++        SEEDS.forEach(
++            action = { (seedName, seed) ->
++                val scheme = seedColorScheme(seed, dark)
++                CurveChannel.entries.forEach(
++                    action = { channel ->
++                        val ratio = contrastRatio(lineColor(scheme, channel), scheme.surfaceContainerLowest)
++                        if (ratio < GRAPHICS_RATIO) {
++                            failures += "$seedName ${if (dark) "dark" else "light"}: $channel line on " +
++                                "surfaceContainerLowest %.2f:1, needs %.1f:1".format(ratio, GRAPHICS_RATIO)
++                        }
++                    },
++                )
++            },
++        )
++        assertTrue("Curve lines below 3:1:\n" + failures.joinToString("\n"), failures.isEmpty())
++    }
++
++    /** The line colour `curveLineColor` gives [channel] in [scheme]. */
++    private fun lineColor(scheme: ColorScheme, channel: CurveChannel): Color {
++        val sheet = scheme.surfaceContainerHigh
++        return when (channel) {
++            CurveChannel.RGB -> scheme.onSurface
++            CurveChannel.RED -> RgbChannel.RED.tintOn(sheet)
++            CurveChannel.GREEN -> RgbChannel.GREEN.tintOn(sheet)
++            CurveChannel.BLUE -> RgbChannel.BLUE.tintOn(sheet)
++        }
++    }
++
++    /** Returns the WCAG contrast ratio of [a] and [b]: the lighter's luminance over the darker's. */
++    private fun contrastRatio(a: Color, b: Color): Double {
++        val first = relativeLuminance(a)
++        val second = relativeLuminance(b)
++        return (maxOf(first, second) + 0.05) / (minOf(first, second) + 0.05)
++    }
++
++    /** Returns the WCAG relative luminance of [colour], from 0 (black) to 1 (white). */
++    private fun relativeLuminance(colour: Color): Double {
++        val argb = colour.toArgb()
++        val red = linearChannel((argb shr 16) and 0xFF)
++        val green = linearChannel((argb shr 8) and 0xFF)
++        val blue = linearChannel(argb and 0xFF)
++        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
++    }
++
++    /** Undoes the sRGB gamma curve on one 8-bit [channel], giving its linear light from 0 to 1. */
++    private fun linearChannel(channel: Int): Double {
++        val value = channel / 255.0
++        return if (value <= 0.04045) value / 12.92 else ((value + 0.055) / 1.055).pow(2.4)
++    }
++
++    /** The schemes checked and the contrast minimum. */
++    private companion object {
++        /** WCAG AA for icons, outlines and other graphics. */
++        const val GRAPHICS_RATIO = 3.0
++
++        /** Kanso blue and four custom seeds, the same five as `RgbTintContrastTest`. */
++        val SEEDS = listOf(
++            "Kanso blue" to KANSO_BLUE_SEED,
++            "red seed" to Color(0xFFE53935),
++            "green seed" to Color(0xFF43A047),
++            "yellow seed" to Color(0xFFFDD835),
++            "purple seed" to Color(0xFF8E24AA),
++        )
++    }
++}
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveChipRowTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveChipRowTest.kt
+index 35eb5d2..75fba8b 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveChipRowTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveChipRowTest.kt
+@@ -15,6 +15,8 @@ import androidx.compose.ui.geometry.Rect
+ import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.semantics.SemanticsActions
+ import androidx.compose.ui.semantics.SemanticsNode
++import androidx.compose.ui.test.assertContentDescriptionEquals
++import androidx.compose.ui.test.assertCountEquals
+ import androidx.compose.ui.test.assertHasClickAction
+ import androidx.compose.ui.test.assertIsDisplayed
+ import androidx.compose.ui.test.assertIsEnabled
+@@ -39,8 +41,10 @@ import com.phongkaster.kanso.data.edit.edit.EditTool
+ import com.phongkaster.kanso.data.edit.edit.ToneCurve
+ import com.phongkaster.kanso.ui.tool.component.editbottombar.EditSheet
+ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.EditPanelContent
++import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_GRAPH_TAG
+ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.CURVE_RESET_TAG
+ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChannelLabelRes
++import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChannelShortRes
+ import com.phongkaster.kanso.ui.tool.component.toolpanel.editpanel.curvespanel.curveChipTag
+ import org.junit.Assert.assertEquals
+ import org.junit.Assert.assertFalse
+@@ -52,19 +56,21 @@ import org.robolectric.annotation.Config
+ import org.robolectric.annotation.GraphicsMode
+ 
+ /**
+- * Checks DoD 23 of Run 12 (owner, D-004): on every curve (RGB, Red, Green, Blue) each of
+- * the four chips shows its whole name on one line, and Reset is fully visible and tappable inside
+- * the sheet, on a 411 dp wide phone and on a 360 dp wide one, in light and in dark, at the default
+- * text size.
++ * Checks the Curves chip row after the Meitu-style rework: on every curve (RGB, Red, Green, Blue)
++ * each of the four entries shows its short label (RGB, R, G, B) on one line and speaks its full
++ * name (RGB, Red, Green, Blue); Reset is an icon button (no "Reset" text), fully visible and
++ * tappable inside the sheet and the window, to the right of the graph; and the plot is between
++ * 1.8 and 2.6 times as wide as it is tall. This runs on a 411 dp and a 360 dp wide phone, in light
++ * and in dark, at the default text size. There is no Lightness chip any more.
+  *
+- * The owner saw a long chip name wrap onto two lines and Reset pushed off the sheet (pictures 97/98).
++ * The owner once saw a long chip name wrap onto two lines and Reset pushed off the sheet.
+  * `maxLines = 1` alone does not prove a fix, since a one-line label can still be cut short,
+- * so each chip's text is checked through its laid-out text: one line holding the whole name, not
++ * so each chip's text is checked through its laid-out text: one line holding the whole label, not
+  * ellipsized, the drawn line starting and ending inside its box, its line not taller than its box,
+  * and the box inside the chip; each chip's touch area is at least 48 x 48 dp. Reset is checked by
+- * where it is (on screen and inside both the sheet and the window), by its size (laid out and
+- * touchable at 48 x 48 dp or more, so a squeezed Reset fails) and by its label (the whole word on
+- * one line, checked like a chip's); a tap on it must straighten the chosen bent curve.
++ * where it is (inside both the sheet and the window, right of the graph) and by its size (laid out
++ * and touchable at 48 x 48 dp or more, so a squeezed Reset fails); a tap on it must straighten the
++ * chosen bent curve.
+  *
+  * Text is measured with Robolectric's real drawing code (`GraphicsMode.Mode.NATIVE`): in the default
+  * legacy mode a text's width is not its real width, so a too-long label would never wrap and the
+@@ -159,7 +165,10 @@ class CurveChipRowTest {
+      * is chosen; with [mustFit] the chip also lies wholly inside the sheet.
+      */
+     private fun assertChipLabelIsWhole(chip: CurveChannel, curve: CurveChannel, mustFit: Boolean) {
+-        val name = compose.activity.getString(curveChannelLabelRes(chip))
++        val name = compose.activity.getString(curveChannelShortRes(chip))
++        val spoken = compose.activity.getString(curveChannelLabelRes(chip))
++        assertEquals("the $chip chip's spoken name", SPOKEN.getValue(chip), spoken)
++        compose.onNodeWithTag(curveChipTag(chip)).assertContentDescriptionEquals(spoken)
+         val chipNode = compose.onNodeWithTag(curveChipTag(chip)).fetchSemanticsNode()
+         val text = assertOneWholeLine(
+             what = "the $chip chip with $curve chosen",
+@@ -208,13 +217,20 @@ class CurveChipRowTest {
+             node.size.width + SLACK >= minPx && node.size.height + SLACK >= minPx,
+         )
+ 
+-        // The label sits inside the button's merged node, so it is found in the unmerged tree.
+-        val label = assertOneWholeLine(
+-            what = where,
+-            name = compose.activity.getString(R.string.edit_curves_reset),
+-            ownerTag = CURVE_RESET_TAG,
++        // Reset is an icon: its spoken name is the word, but no text node shows it.
++        val word = compose.activity.getString(R.string.edit_curves_reset)
++        reset.assertContentDescriptionEquals(word)
++        compose.onAllNodes(hasText(word), useUnmergedTree = true).assertCountEquals(0)
++
++        // Reset sits to the right of the graph, not over it.
++        val graph = boundsOf(compose.onNodeWithTag(CURVE_GRAPH_TAG).fetchSemanticsNode())
++        assertTrue(
++            "$where: $bounds is not to the right of the graph $graph",
++            bounds.left + SLACK >= graph.right,
+         )
+-        assertInside("$where: the label in the button", boundsOf(label), bounds)
++        // The plot is wide, not squeezed into a narrow strip.
++        val ratio = graph.width / graph.height
++        assertTrue("$where: the plot is ${graph.width} x ${graph.height} px, ratio $ratio", ratio in 1.8f..2.6f)
+     }
+ 
+     /**
+@@ -338,5 +354,13 @@ class CurveChipRowTest {
+ 
+         /** Half a pixel of rounding allowed when comparing laid-out sizes and positions. */
+         const val SLACK = 0.5f
++
++        /** The names a screen reader speaks for the four chips. */
++        val SPOKEN = mapOf(
++            CurveChannel.RGB to "RGB",
++            CurveChannel.RED to "Red",
++            CurveChannel.GREEN to "Green",
++            CurveChannel.BLUE to "Blue",
++        )
+     }
+ }
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveFormulaTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveFormulaTest.kt
+index ca9f4a8..25fc61b 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveFormulaTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveFormulaTest.kt
+@@ -49,29 +49,65 @@ class CurveFormulaTest {
+         assertEquals(255, table[255])
+     }
+ 
+-    /** Between two points the table stays between their two outputs: no overshoot, no halo. */
+-    @Test
+-    fun the_table_never_overshoots_between_two_points() {
+-        val curve = curveOf(at(51, 20), at(102, 220), at(153, 225), at(204, 100))
+-        val table = curve.table()
+-        val xs = curve.points.map { Math.round(it.x * 255f) }
+-        val ys = curve.points.map { Math.round(it.y * 255f) }
+-        for (segment in 0 until xs.lastIndex) {
+-            val low = minOf(ys[segment], ys[segment + 1])
+-            val high = maxOf(ys[segment], ys[segment + 1])
+-            for (i in xs[segment]..xs[segment + 1]) {
+-                assertTrue("entry $i is ${table[i]}, outside $low..$high", table[i] in low..high)
+-            }
++    /** Asserts the natural spline's value at each of [xs] is the matching [expected], within 1/255. */
++    private fun assertValues(curve: ToneCurve, xs: List<Float>, expected: List<Float>) {
++        xs.indices.forEach { i ->
++            assertEquals("at ${xs[i]}", expected[i], curve.valueAt(xs[i]), 1f / 255f)
+         }
+     }
+ 
+-    /** A steep S-curve stays inside 0..255 in every entry and never goes down while the points rise. */
++    /** The natural cubic spline through (0,0), (0.5,0.75), (1,1) has these known values. */
++    @Test
++    fun a_natural_spline_through_three_points_has_the_known_values() {
++        val curve = curveOf(CurvePoint(0.5f, 0.75f))
++        assertValues(
++            curve,
++            listOf(0.125f, 0.25f, 0.375f, 0.625f, 0.75f, 0.875f),
++            listOf(0.2168f, 0.4219f, 0.6035f, 0.8535f, 0.9219f, 0.9668f),
++        )
++    }
++
++    /** The same for four points (0,0), (0.25,0.15), (0.75,0.85), (1,1). */
++    @Test
++    fun a_natural_spline_through_four_points_has_the_known_values() {
++        val curve = curveOf(CurvePoint(0.25f, 0.15f), CurvePoint(0.75f, 0.85f))
++        assertValues(curve, listOf(0.125f, 0.375f, 0.625f, 0.875f), listOf(0.0563f, 0.3063f, 0.6938f, 0.9438f))
++    }
++
++    /** A spline that overshoots white is clipped: every entry from x = 0.40 on is 255. */
++    @Test
++    fun an_overshoot_is_clipped_to_white() {
++        val table = curveOf(CurvePoint(0.25f, 0.75f)).table()
++        for (i in 102..255) assertEquals("entry $i", 255, table[i])
++    }
++
++    /** A steep S-curve overshoots, but is clipped so every entry stays inside 0..255 (not a rising check any more). */
+     @Test
+-    fun a_steep_s_curve_stays_inside_black_and_white_and_rises() {
++    fun a_steep_s_curve_stays_inside_black_and_white() {
+         val table = curveOf(CurvePoint(0.4f, 0.02f), CurvePoint(0.6f, 0.98f)).table()
+         assertEquals(256, table.size)
+         table.forEach { assertTrue("entry $it is outside 0..255", it in 0..255) }
+-        for (i in 1 until table.size) assertTrue("the table falls at $i", table[i] >= table[i - 1])
++    }
++
++    /** End points may sit away from 0 and 1; the curve is flat beyond them and a line between two. */
++    @Test
++    fun the_curve_is_flat_beyond_its_end_points() {
++        val curve = ToneCurve(listOf(CurvePoint(0.2f, 0.1f), CurvePoint(0.8f, 0.9f)))
++        assertEquals(0.1f, curve.valueAt(0f), 0f)
++        assertEquals(0.1f, curve.valueAt(0.2f), 0f)
++        assertEquals(0.5f, curve.valueAt(0.5f), 1e-5f)
++        assertEquals(0.9f, curve.valueAt(1f), 0f)
++        val table = curve.table()
++        assertEquals(Math.round(0.1f * 255f), table[0])
++        assertEquals(Math.round(0.9f * 255f), table[255])
++    }
++
++    /** A point added left of the first or right of the last becomes the new end point. */
++    @Test
++    fun added_beyond_the_ends_makes_a_new_end_point() {
++        val inner = ToneCurve(listOf(CurvePoint(0.3f, 0.3f), CurvePoint(0.7f, 0.7f)))
++        val wider = inner.added(CurvePoint(0.1f, 0.2f)).added(CurvePoint(0.9f, 0.8f))
++        assertEquals(listOf(0.1f, 0.3f, 0.7f, 0.9f), wider.points.map { it.x })
+     }
+ 
+     /** A curve never holds more than ten points, and a point too close to another is not added. */
+@@ -87,21 +123,28 @@ class CurveFormulaTest {
+         assertEquals(listOf(0f, 0.5f, 1f), two.points.map { it.x })
+     }
+ 
+-    /** A moved point cannot pass its neighbours, and the end points only move up and down. */
++    /** A moved point cannot pass its neighbours, and the end points slide sideways within their limits. */
+     @Test
+-    fun moved_cannot_pass_a_neighbour_and_ends_keep_their_x() {
++    fun moved_cannot_pass_a_neighbour_and_ends_move_sideways() {
+         val curve = curveOf(CurvePoint(0.3f, 0.3f), CurvePoint(0.7f, 0.7f))
+         val far = curve.moved(1, 5f, 0.4f)
+         assertTrue(far.points[1].x <= far.points[2].x - ToneCurve.MIN_GAP + 1e-6f)
+         val back = curve.moved(2, -5f, 0.4f)
+         assertTrue(back.points[2].x >= back.points[1].x + ToneCurve.MIN_GAP - 1e-6f)
+ 
+-        val start = curve.moved(0, 0.5f, 0.25f)
+-        assertEquals(0f, start.points.first().x, 0f)
++        val start = curve.moved(0, 0.2f, 0.25f)
++        assertEquals(0.2f, start.points.first().x, 0f)
+         assertEquals(0.25f, start.points.first().y, 0f)
+-        val end = curve.moved(3, 0.1f, 2f)
+-        assertEquals(1f, end.points.last().x, 0f)
++        val startFar = curve.moved(0, 0.9f, 0.25f)
++        assertEquals(0.3f - ToneCurve.MIN_GAP, startFar.points.first().x, 1e-6f)
++        assertEquals(0f, curve.moved(0, -3f, 0f).points.first().x, 0f)
++
++        val end = curve.moved(3, 0.85f, 2f)
++        assertEquals(0.85f, end.points.last().x, 0f)
+         assertEquals(1f, end.points.last().y, 0f)
++        val endFar = curve.moved(3, 0.1f, 0.5f)
++        assertEquals(0.7f + ToneCurve.MIN_GAP, endFar.points.last().x, 1e-6f)
++        assertEquals(1f, curve.moved(3, 9f, 0.5f).points.last().x, 0f)
+     }
+ 
+     /**
+@@ -147,13 +190,17 @@ class CurveFormulaTest {
+         assertTrue(EditSettings(curves = CurveAdjustments(rgb = onDiagonal)).hasCurveChange)
+     }
+ 
+-    /** Removing a middle point drops it; the two end points cannot be removed. */
++    /** Any point can be removed while three or more remain; a two-point curve is returned as it is. */
+     @Test
+-    fun removed_ignores_the_end_points() {
++    fun removed_keeps_at_least_two_points() {
+         val curve = curveOf(CurvePoint(0.5f, 0.7f))
+-        assertSame(curve, curve.removed(0))
+-        assertSame(curve, curve.removed(curve.points.lastIndex))
+         assertTrue(curve.removed(1).isNeutral)
++        val withoutFirst = curve.removed(0)
++        assertEquals(listOf(0.5f, 1f), withoutFirst.points.map { it.x })
++        val withoutLast = curve.removed(curve.points.lastIndex)
++        assertEquals(listOf(0f, 0.5f), withoutLast.points.map { it.x })
++        assertSame(withoutFirst, withoutFirst.removed(0))
++        assertSame(ToneCurve.NEUTRAL, ToneCurve.NEUTRAL.removed(1))
+     }
+ 
+     /** A master curve that lifts the middle brightens grey, and leaves black and white alone. */
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveParityTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveParityTest.kt
+index ece5da3..913927c 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveParityTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurveParityTest.kt
+@@ -57,6 +57,14 @@ class CurveParityTest {
+         assertParity(EditSettings(curves = curves))
+     }
+ 
++    /** An overshooting curve (clipped to white) and a curve with moved end points match Done too. */
++    @Test
++    fun overshooting_and_moved_end_curves_match_done() {
++        assertParity(EditSettings(curves = master(bend(0.25f, 0.75f))))
++        val movedEnds = ToneCurve(listOf(CurvePoint(0.2f, 0.1f), CurvePoint(0.8f, 0.9f)))
++        assertParity(EditSettings(curves = master(movedEnds)))
++    }
++
+     /**
+      * Filter, HSL, curves and the colour sliders together (a combination whose steps do not
+      * commute) give the same picture in the preview and in Done.
+diff --git a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurvesToolTest.kt b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurvesToolTest.kt
+index 95a9d8c..063d64d 100644
+--- a/app/src/test/java/com/phongkaster/kanso/tool/edit/CurvesToolTest.kt
++++ b/app/src/test/java/com/phongkaster/kanso/tool/edit/CurvesToolTest.kt
+@@ -95,6 +95,41 @@ class CurvesToolTest {
+         assertEquals(afterDrag, viewModel.state.value.settings)
+     }
+ 
++    /** Add, drag and delete on Red, then add on Blue: four Undo steps back in reverse order, four Redos replay them. */
++    @Test
++    fun four_curve_edits_undo_in_reverse_and_redo_in_order() {
++        val viewModel = loadedEditViewModel()
++        viewModel.openTool(EditTool.CURVES)
++        val added = ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.5f))
++        val dragged = added.moved(1, 0.5f, 0.8f)
++        val deleted = dragged.removed(1)
++        val blue = ToneCurve.NEUTRAL.added(CurvePoint(0.4f, 0.2f))
++        fun settings(red: ToneCurve, blueCurve: ToneCurve = ToneCurve.NEUTRAL) = EditSettings(
++            curves = CurveAdjustments.NEUTRAL.with(CurveChannel.RED, red).with(CurveChannel.BLUE, blueCurve),
++        )
++        val states = listOf(
++            settings(added),
++            settings(dragged),
++            settings(deleted),
++            settings(deleted, blue),
++        )
++        states.forEach { commit(viewModel, it) }
++        assertEquals(states.last(), viewModel.state.value.settings)
++
++        for (expected in listOf(states[2], states[1], states[0], EditSettings())) {
++            viewModel.undo()
++            runMainThread()
++            assertEquals(expected, viewModel.state.value.settings)
++        }
++        assertFalse(viewModel.state.value.canUndo)
++
++        for (expected in states) {
++            viewModel.redo()
++            runMainThread()
++            assertEquals(expected, viewModel.state.value.settings)
++        }
++    }
++
+     /** Two separate bends are two Undo steps, undone one at a time. */
+     @Test
+     fun two_commits_are_two_undo_steps() {
+diff --git a/docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md b/docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md
+index 0cb613d..e9cfb24 100644
+--- a/docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md
++++ b/docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md
+@@ -5,7 +5,9 @@ red, green and blue. This record keeps where the step runs, how a curve becomes
+ pixels, how the live preview and the saved photo stay identical, and what it costs. A source path below
+ without a prefix is under `app/src/main/java/com/phongkaster/kanso/`.
+ 
+-Status: accepted.
++Status: accepted. **Partly superseded by [ADR-011](ADR-011-curves-are-a-natural-spline-with-free-end-points.md):**
++the monotone interpolation and the fixed end points (x = 0 and x = 1) below no longer hold; a curve is now a
++natural cubic spline that may overshoot (clipped to 0..1) with free end points. Where the step runs is unchanged.
+ 
+ ## Context
+ 
+diff --git a/docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md b/docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md
+new file mode 100644
+index 0000000..8cf5e4b
+--- /dev/null
++++ b/docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md
+@@ -0,0 +1,42 @@
++# Curves are a natural cubic spline with free end points
++
++Curves in Kanso are meant to handle like Meitu's: a smooth line through the handles that may swing past
++them, and handles at the ends that can be pulled sideways. This record keeps that change to the maths
++and the end points. Paths without a prefix are under `app/src/main/java/com/phongkaster/kanso/`.
++
++Status: accepted. It supersedes the interpolation and fixed-end-point decisions of
++[ADR-009](ADR-009-curves-run-on-the-cpu-after-hsl.md); the rest of ADR-009 (the step runs on the CPU
++after HSL and before the colour matrix) still stands.
++
++## Context
++
++- ADR-009 chose monotone cubic interpolation (Fritsch-Carlson): it never overshoots between points, and
++  the first and last points were fixed at x = 0 and x = 1, so a person could not clip shadows or highlights
++  by pulling an end point inward.
++- The owner wants the feel of Meitu's curve editor, where the line is smooth and may overshoot.
++
++## What was decided
++
++- **A natural cubic spline** (second derivative zero at the first and last point) passes through every
++  point. It may overshoot between points. `data/edit/edit/ToneCurve.kt`, `valueAt(x)`.
++- **The value is clipped to 0..1**, so an overshoot becomes pure black or white, never an invalid value.
++- **Left of the first point and right of the last the line is flat** at that point's height.
++- **End points are free.** The first point's x may be anywhere from 0 to the next point's x minus 0.02,
++  the last mirrored. Adding a point beyond an end makes it the new end point.
++- **Any point may be removed** while more than 2 remain. `MAX_POINTS` 10 and `MIN_GAP` 0.02 are unchanged.
++- **`table()` is unchanged in shape:** 256 entries, `round(255 x valueAt(i / 255))`. The step still runs
++  on the CPU after HSL, and the saved photo matches the preview (`CurveParityTest`).
++
++## Why not the other ways
++
++- **Keep monotone interpolation.** It cannot overshoot, so it cannot reproduce the Meitu feel.
++- **Catmull-Rom or Bezier handles.** A natural spline needs no extra handles and is a small tridiagonal
++  solve per curve.
++
++## What it costs
++
++- A curve can invert tones locally (the line may fall where a person expected it to rise); that is the
++  intended Meitu behaviour, and the clip keeps values valid.
++- The earlier test that the table never overshoots was removed, and its ground rules changed
++  (`.harness/run/evidence/test-edits.md`).
++- Time on the Galaxy A13: not measured.
+diff --git a/docs/features/edit.md b/docs/features/edit.md
+index 20e122d..382cbf8 100644
+--- a/docs/features/edit.md
++++ b/docs/features/edit.md
+@@ -52,9 +52,13 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
+ > **Curves**, sits between HSL and Filters, so the row now holds Crop, Rotate, Adjust, RGB, HSL,
+ > Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green and Blue
+ > choose the curve the graph edits (RGB first, the last choice is remembered, choosing is not an Undo
+-> step and changes nothing in the photo). On the graph, a tap on empty space adds a point (at most 10), a drag moves one
+-> (the two end points only up and down), a long press removes a middle one, and Reset (disabled
+-> while the chosen curve is straight) straightens only that curve; each gesture is one Undo step. Done applies the
++> step and changes nothing in the photo); the chips read RGB, R, G, B, each with a colour dot. The graph is wide
++> (about 2:1) with only a frame and three vertical lines. On it, a tap on empty space adds a point (at most 10), a drag moves one
++> (the end points move sideways too), a long press removes a point (any, while more than 2 remain), and the Reset
++> icon button, right of the graph (disabled while the chosen curve is straight), straightens only that curve; each gesture
++> is one Undo step. The line is a natural cubic spline that may overshoot, clipped to black and white, flat beyond
++> the end points ([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)). An empty 48 dp slot above Reset is
++> kept for a delete button that is not built yet. Done applies the
+ > curve on the CPU (`data/edit/edit/EditCurves.kt`) after HSL and before the colour matrix, so the
+ > **saved picture has it**. The **live preview follows it** while a point is dragged (a CPU copy, filter, HSL,
+ > curves, then the colour matrix on top, as Done does; a sticker under a finger is drawn without that
+@@ -122,10 +126,11 @@ network are used. You can:
+   all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
+   the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
+   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
+-- **Curves** (partial): chips **RGB**, **Red**, **Green** and **Blue** pick the curve (RGB first; the last
+-  choice is remembered; no Undo step) and a graph shows it, a straight diagonal at first. Tap empty space
+-  to add a point (up to 10), drag a point to move it, long press a middle point to remove it, and
+-  press **Reset** (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
++- **Curves** (partial): chips **RGB**, **R**, **G** and **B**, each with a colour dot, pick the curve (RGB first; the last
++  choice is remembered; no Undo step) and a wide graph shows it (a frame and three vertical lines; the line starts
++  straight). Tap empty space to add a point (up to 10), drag a point to move it (end points move sideways too),
++  long press a point to remove it (while more than 2 remain), and
++  press the **Reset** icon button (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
+   follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
+   under a finger is drawn without the curve until it is let go.
+ - **Filters**: None or one of eight looks, Light, 1977, Kelvin, Nashville, Walden, Hudson, Amaro
+@@ -433,11 +438,12 @@ flowchart TD
+       [ADR-008](../adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md).
+    3c. **Curves**, when any tone curve is bent (`EditSettings.hasCurveChange`): `EditCurves.apply`
+       ([`data/edit/edit/EditCurves.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditCurves.kt))
+-      turns each curve into a 256-entry table (monotone cubic interpolation, `ToneCurve.table`) and
++      turns each curve into a 256-entry table (natural cubic spline, clipped to 0..1, flat beyond the end points, `ToneCurve.table`) and
+       sends each pixel's red, green and blue through their own channel's table and then the RGB
+       (master) table, alpha kept; that is the whole step, with no colour-space conversion.
+       It comes after HSL and before the colour matrix. All curves straight: skipped.
+-      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
++      See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md) and
++      [ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md).
+    4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
+       `EditColourMatrix.of`, in this order: contrast scales each channel around mid-grey 128 (up to
+       x2, down to x0.2), saturation uses `setSaturation(1 + s)`, warmth adds up to 40 (of 255) to
+@@ -537,7 +543,7 @@ flowchart TD
+   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
+   finger is shown without HSL until it is let go, as it is shown without the filter.
+ - **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
+-  apart. The saved picture has the curve and the live preview follows it. Not measured on
++  apart; the line may overshoot between points (clipped to black and white), and a delete button is not built yet. The saved picture has the curve and the live preview follows it. Not measured on
+   any phone.
+ - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
+   another keeps the intensity; coming from None it starts at 100; None resets it.
+diff --git a/docs/features/tool-screen.md b/docs/features/tool-screen.md
+index f947468..c511412 100644
+--- a/docs/features/tool-screen.md
++++ b/docs/features/tool-screen.md
+@@ -84,13 +84,16 @@ flowchart TD
+ 
+ The **Curves** tool (the tenth Edit tool, partial,
+ [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)) uses the same sheet area: the sheet is
+-`CurvesPanel` (a 48 dp row with Reset at its end and the graph `CurveGraph` below it, inside the
+-188 dp the 220 dp area leaves). It adds nothing to `ToolUiState`. A drag on the graph sends the new
++`CurvesPanel` (a 48 dp row of chips, and under it the wide graph `CurveGraph` with a column on its
++right holding an empty 48 dp slot reserved for a delete button and the 48 dp Reset icon button, inside the
++188 dp the 220 dp area leaves). `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
++not an Undo step). A drag on the graph sends the new
+ `EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
+-lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Unlike HSL, a
+-curve change asks for **no** preview render yet: `FilterPreviewRenderer` and the preview request do
+-not carry the curves, so the photo on screen stays as it was while the curve changes. Only Done
+-applies them: `EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix.
++lifts (one Undo step); a tap, a long press and Reset are one `commitSettings` each. Like HSL, a
++curve change asks for a preview render: `FilterPreviewRenderer` and the preview request carry the curves
++(`PreviewKey.curves`), so the photo follows the finger. Done runs the same code:
++`EditProcessor` runs filter, HSL, curves (`EditCurves.apply`), colour matrix. The line is a natural cubic spline
++([ADR-011](../adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md)).
+ 
+ While an edit runs, a **progress ring** fills in the middle of the card, and Done, Undo and
+ Replace are switched off. When an edit fails, a short message at the top of the card says why, and
