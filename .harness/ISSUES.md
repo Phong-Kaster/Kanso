@@ -1,16 +1,16 @@
 # ISSUES
 
-## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: ESCALATE, Iteration 1 (bootstrap)
+## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: CONTINUE, Iteration 5 (Verifier)
 
-- Iteration 4 (Phase 3): all tasks complete, DONE-candidate recorded. Review items fixed. No test yet for Undo of another tool's change clearing the selection. Pictures 105-108 looked at by the engine only.
-- Iteration 3 (Phase 2): no queued decisions, nothing abandoned. Pictures 95-98 differ from their baselines until re-recorded after Phase 3. The RGB colour dot sweeps the RGB sheet fixed tints (not scheme roles), as T-003 asks.
-
-- Queued: **D-001** — approve the Definition of Done, choose the spline (natural cubic proposed; the
-  comparison is in the entry), list the six Curves pictures under `## Baselines`, approve the Gradle
-  build/test/lint grants, and the trash icon. Blocks T-001..T-004.
-- Assumptions: at most ten points and the 0.02 minimum gap stay; new Curves files stay in `curvespanel/`.
-- Not done at bootstrap: the build commands were not re-run (no Gradle grant yet); the Meitu screenshots
-  could not be opened by the analysts (outside the repository).
+- Verifier gap (DoD 26): the README "Editing features" Curves row (README.md:102) still says "tap empty
+  space to add a point", "long press a point to remove it" and that the delete button is "not built
+  yet"; README.md:304 and docs/features/edit.md:548 say the same about the delete button. Filed as
+  T-005; the app itself is unchanged.
+- Not driven yet: DoD 21 and 22 (Journeys on the Galaxy A13); the next Verifier drives them.
+- No test for Undo of another tool's change clearing the Curves selection (reviewed by reading only).
+- Pictures 105-108 were judged by the engine only.
+- Assumption A-001: at most ten points and the 0.02 minimum gap stay; new Curves files stay in `curvespanel/`.
+- The RGB colour dot sweeps the RGB sheet's fixed tints (not scheme roles), as T-003 asks.
 
 ## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: DONE_PARTIAL, Iteration 3 (Verifier); every criterion signed 2026-11-11
 

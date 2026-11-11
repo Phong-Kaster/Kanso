@@ -33,3 +33,10 @@
 - Full unit tests + lint green. Pictures 95-98 re-recorded (approved) and 105-108 added through foreman-record-baselines; looked at 97, 105, 108: selected point hollow, others filled, trash above Reset.
 - Review (Capable): blocking test-edits.md incomplete (fixed); Undo/Redo not clearing selection when the open curve is unchanged, plus a drag race (fixed: panel now tracks the settings it handed up, in a list); stale KDoc (fixed); drag swallowed at ten points (fixed). Wiring Worker edited ADR-011 (planned wiring scope; accepted as in Phase 1).
 - Not covered by a new test: Undo of another tool's change clearing the selection (logic reviewed only).
+
+## Iteration 5 - Verifier (2026-11-11)
+
+- Recover: tree clean apart from TELEMETRY.tsv. No new decisions.
+- Full build, 1297 unit tests, lint, verifyRoborazziDebug: exit 0. R1-R10, DoD 13 and 25 greps clean.
+- DoD 26 gap: README Curves row, README section 10 slot sentence and edit.md limits bullet still describe tap-empty-space / long-press-removes / delete "not built yet". Filed T-005 (Tier 1), DONE-candidate cleared. Device journeys (21, 22) not driven this Iteration.
+- A-001's first dependent checkpoint is a9539a2 (Iteration 2).

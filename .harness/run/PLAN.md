@@ -47,6 +47,7 @@ files: the Wiring Worker of each Phase updates them for that Phase's behaviour, 
 - T-002 - End points move freely, line flat beyond them, natural spline clipped (depends on: T-001) - scope: `M:data/edit/edit/ToneCurve.kt`, `T:tool/edit/CurveFormulaTest.kt`, `T:tool/edit/CurveParityTest.kt`, `T:tool/edit/CurvesToolTest.kt` - tier: Fast
 - T-003 - The sheet looks like Meitu's in Kanso's colours (depends on: T-001) - scope: 8 files, 2 slices - tier: Fast
 - T-004 - Tap/drag on the line adds and selects; trash deletes; no long press (depends on: T-002, T-003) - scope: 7 files, 2 slices - tier: Fast
+- T-005 - README row and two doc lines still describe the old touch model (depends on: T-004) - scope: `README.md`, `docs/features/edit.md` - tier: Fast (filed by the Verifier, Iteration 5)
 
 ## Phase Grouping
 
@@ -55,6 +56,7 @@ files: the Wiring Worker of each Phase updates them for that Phase's behaviour, 
 | 1 | T-001 | after: `app/src/main/res/values/strings_edit_curves.xml` (remove `edit_curves_channel_lightness`), README.md, `docs/features/edit.md`, `docs/features/tool-screen.md`; Iteration deletes PNGs 99/100 once approved |
 | 2 | T-002, T-003 | after: README.md, `docs/features/edit.md`, `docs/features/tool-screen.md`, `docs/adr/ADR-011-…md` (new), `docs/adr/ADR-009-…md` |
 | 3 | T-004 | before: `app/src/main/res/drawable/ic_delete.xml` (new, Material Symbols Rounded "delete"); after: README.md, `docs/features/*`; Iteration records 95–98 (approved) and 105–108 |
+| 4 | T-005 | none (the two doc files are the task's own scope; no other task in the Phase) |
 
 ## Known Risks
 

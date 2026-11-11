@@ -8,8 +8,8 @@
 
 - **Tier:** Missing information
 - **Iteration:** 2 (the PRD is silent; the DoD approval did not change them)
-- **First dependent checkpoint:** Iteration 2 (SHA filled in by the next Iteration)
-- **Revert:** `git revert <sha>`
+- **First dependent checkpoint:** `a9539a2` (Iteration 2)
+- **Revert:** none needed as a revert: the assumption kept existing values and changed no code (reverting `a9539a2` would undo the Lightness removal, not this). Undo by changing `MAX_POINTS` / `MIN_GAP` in `data/ToneCurve.kt`.
 
 ### Question
 Keep today's 10-point limit and 0.02 minimum gap, and keep the Curves files in `curvespanel/` rather than a `components/` restructure?
