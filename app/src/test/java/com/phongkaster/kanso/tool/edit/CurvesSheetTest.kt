@@ -187,12 +187,12 @@ class CurvesSheetTest {
         assertEquals(ToneCurve.MAX_POINTS, settings.curves.rgb.points.size)
     }
 
-    /** The five chips are there with spoken names, RGB is chosen first, and each is at least 48 dp to touch. */
+    /** The four chips are there with spoken names, RGB is chosen first, and each is at least 48 dp to touch. */
     @Test
-    fun the_five_chips_have_names_and_are_at_least_48_dp() {
+    fun the_four_chips_have_names_and_are_at_least_48_dp() {
         show()
         assertEquals(
-            listOf(CurveChannel.RGB, CurveChannel.RED, CurveChannel.GREEN, CurveChannel.BLUE, CurveChannel.LIGHTNESS),
+            listOf(CurveChannel.RGB, CurveChannel.RED, CurveChannel.GREEN, CurveChannel.BLUE),
             CurveChannel.entries.toList(),
         )
         val minPx = with(Density(compose.activity)) { TouchTargetCheck.MIN_SIZE.toPx() }
@@ -224,7 +224,6 @@ class CurvesSheetTest {
                 CurveChannel.RED -> "Red"
                 CurveChannel.GREEN -> "Green"
                 CurveChannel.BLUE -> "Blue"
-                CurveChannel.LIGHTNESS -> "Lightness"
             }
             assertTrue("the description is \"$description\"", description.contains(name))
         }
@@ -232,32 +231,6 @@ class CurvesSheetTest {
         assertEquals(EditSettings(), settings)
         assertEquals(0, commits)
         assertTrue(changes.isEmpty() && previews.isEmpty())
-    }
-
-    /** The Lightness chip can be chosen: it becomes selected, RGB is not, and nothing in the photo changes. */
-    @Test
-    fun the_lightness_chip_can_be_chosen() {
-        show()
-        compose.onNodeWithTag(curveChipTag(CurveChannel.LIGHTNESS)).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag(curveChipTag(CurveChannel.LIGHTNESS)).assertIsSelected()
-        compose.onNodeWithTag(curveChipTag(CurveChannel.RGB)).assertIsNotSelected()
-        assertEquals(listOf(CurveChannel.LIGHTNESS), chosen)
-        assertEquals(EditSettings(), settings)
-        assertEquals(0, commits)
-        assertTrue(changes.isEmpty() && previews.isEmpty())
-    }
-
-    /** The chosen chip (here Lightness) is still chosen when the sheet is drawn again with the remembered channel. */
-    @Test
-    fun the_chosen_lightness_chip_is_remembered_when_the_sheet_is_drawn_again() {
-        channel = CurveChannel.LIGHTNESS
-        show()
-        compose.onNodeWithTag(curveChipTag(CurveChannel.LIGHTNESS)).assertIsSelected()
-        compose.onNodeWithTag(curveChipTag(CurveChannel.RGB)).assertIsNotSelected()
-        val description = compose.onNodeWithTag(CURVE_GRAPH_TAG).fetchSemanticsNode()
-            .config[SemanticsProperties.ContentDescription].joinToString(" ")
-        assertTrue("the description is \"$description\"", description.contains("Lightness"))
     }
 
     /** Reset puts only the chosen curve back to straight, and is disabled while that curve is straight. */

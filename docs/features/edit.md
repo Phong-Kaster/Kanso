@@ -50,10 +50,9 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 >
 > **Curves ([ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)).** A tenth tool,
 > **Curves**, sits between HSL and Filters, so the row now holds Crop, Rotate, Adjust, RGB, HSL,
-> Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green, Blue and Lightness
+> Curves, Filters, Stickers, Text and Date. It is **partial**: the chips RGB (all colours), Red, Green and Blue
 > choose the curve the graph edits (RGB first, the last choice is remembered, choosing is not an Undo
-> step and changes nothing in the photo). Lightness changes only how light the photo is: colours keep their hue and
-> saturation, greys follow it, and it can reach pure black and white. On the graph, a tap on empty space adds a point (at most 10), a drag moves one
+> step and changes nothing in the photo). On the graph, a tap on empty space adds a point (at most 10), a drag moves one
 > (the two end points only up and down), a long press removes a middle one, and Reset (disabled
 > while the chosen curve is straight) straightens only that curve; each gesture is one Undo step. Done applies the
 > curve on the CPU (`data/edit/edit/EditCurves.kt`) after HSL and before the colour matrix, so the
@@ -123,9 +122,8 @@ network are used. You can:
   all. The slider's track is a gradient of the chosen colour. Red and Hue are chosen the first time;
   the circle and chip chosen last come back; choosing one changes nothing in the photo; each drag
   is one Undo step; there is no reset button. The photo follows the finger. Greys are not changed.
-- **Curves** (partial): chips **RGB**, **Red**, **Green**, **Blue**, **Lightness** pick the curve (RGB first; the last
-  choice is remembered; no Undo step) and a graph shows it, a straight diagonal at first. The Lightness
-  curve keeps each colour's hue and saturation, moves greys too and can reach pure black and white. Tap empty space
+- **Curves** (partial): chips **RGB**, **Red**, **Green** and **Blue** pick the curve (RGB first; the last
+  choice is remembered; no Undo step) and a graph shows it, a straight diagonal at first. Tap empty space
   to add a point (up to 10), drag a point to move it, long press a middle point to remove it, and
   press **Reset** (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
   follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
@@ -436,10 +434,8 @@ flowchart TD
    3c. **Curves**, when any tone curve is bent (`EditSettings.hasCurveChange`): `EditCurves.apply`
       ([`data/edit/edit/EditCurves.kt`](../../app/src/main/java/com/phongkaster/kanso/data/edit/edit/EditCurves.kt))
       turns each curve into a 256-entry table (monotone cubic interpolation, `ToneCurve.table`) and
-      sends each pixel's red, green and blue through their own channel's table and then the master
-      table, alpha kept. Then, when the Lightness curve is bent, each pixel's HSL lightness goes
-      through the Lightness table with hue and saturation kept (no grey gate, no clamp: lightness
-      reaches 0 and 1; the HSL formula is copied into `EditCurves.kt`, not shared with `EditHsl.kt`).
+      sends each pixel's red, green and blue through their own channel's table and then the RGB
+      (master) table, alpha kept; that is the whole step, with no colour-space conversion.
       It comes after HSL and before the colour matrix. All curves straight: skipped.
       See [ADR-009](../adr/ADR-009-curves-run-on-the-cpu-after-hsl.md).
    4. **Colour**, when a slider or an RGB channel is away from 0: one 4 x 5 matrix from
@@ -540,7 +536,7 @@ flowchart TD
   preview is computed on the 640 px copy, Done on up to 3000 px. Checked by the owner on the Galaxy A13 and vivo V2408A
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
-- **Curves.** Partial: the RGB, Red, Green, Blue and Lightness curves are editable, at most 10 points, points at least 0.02
+- **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
   apart. The saved picture has the curve and the live preview follows it. Not measured on
   any phone.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to

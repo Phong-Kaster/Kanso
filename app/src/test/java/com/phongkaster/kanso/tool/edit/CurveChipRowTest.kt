@@ -52,13 +52,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Checks DoD 23 of Run 12 (owner, D-004): on every curve (RGB, Red, Green, Blue, Lightness) each of
- * the five chips shows its whole name on one line, and Reset is fully visible and tappable inside
+ * Checks DoD 23 of Run 12 (owner, D-004): on every curve (RGB, Red, Green, Blue) each of
+ * the four chips shows its whole name on one line, and Reset is fully visible and tappable inside
  * the sheet, on a 411 dp wide phone and on a 360 dp wide one, in light and in dark, at the default
  * text size.
  *
- * The owner saw "Lightness" wrap to "Lightne / ss" and Reset pushed off the sheet (pictures 97/98).
- * `maxLines = 1` alone does not prove a fix, since a one-line label can still be cut to "Lightne…",
+ * The owner saw a long chip name wrap onto two lines and Reset pushed off the sheet (pictures 97/98).
+ * `maxLines = 1` alone does not prove a fix, since a one-line label can still be cut short,
  * so each chip's text is checked through its laid-out text: one line holding the whole name, not
  * ellipsized, the drawn line starting and ending inside its box, its line not taller than its box,
  * and the box inside the chip; each chip's touch area is at least 48 x 48 dp. Reset is checked by
@@ -81,7 +81,7 @@ import org.robolectric.annotation.GraphicsMode
  * `getLineRight`), which is what a person sees.
  *
  * The sheet is the real `EditSheet` around the stateless `EditPanelContent`, as in `CurvesSheetTest`.
- * The chosen curve is set directly rather than by tapping a chip: at 360 dp the Lightness chip may
+ * The chosen curve is set directly rather than by tapping a chip: at 360 dp the last chip may
  * sit partly past the row's edge (the row scrolls), and a scroll in a test that does not need one
  * stalls the test clock.
  */
@@ -131,7 +131,7 @@ class CurveChipRowTest {
     // --- Helpers -----------------------------------------------------------------------------
 
     /**
-     * Draws the sheet, then for each of the five curves in turn: chooses it, checks every chip's
+     * Draws the sheet, then for each of the four curves in turn: chooses it, checks every chip's
      * label and Reset's place, and taps Reset, which must straighten exactly that curve. With
      * [allChipsFit] every chip must also lie wholly inside the sheet (true at 411 dp, where the row
      * needs no scrolling; at 360 dp the owner accepted a row that scrolls).
@@ -291,7 +291,7 @@ class CurveChipRowTest {
         )
     }
 
-    /** Settings in which all five curves hold one middle point at (0.5, 0.75). */
+    /** Settings in which all four curves hold one middle point at (0.5, 0.75). */
     private fun bentEverywhere(): EditSettings {
         val bend = ToneCurve.NEUTRAL.added(CurvePoint(0.5f, 0.75f))
         val curves = CurveChannel.entries.fold(CurveAdjustments.NEUTRAL) { all, curve -> all.with(curve, bend) }

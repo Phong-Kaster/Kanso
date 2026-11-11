@@ -11,3 +11,10 @@
   so T-004 is Fast; human criteria added for the A13 look (21) and feel incl. the 24 dp tolerance (22).
 - `.harness/ISSUES.md` left whole (archive is not writable, Constraint in PROJECT.md).
 - D-001 queued. Status ESCALATE.
+
+## Iteration 2 - Phase 1: Lightness removed (2026-11-11)
+
+- D-001 consumed (approved; see AMENDMENTS.md). Run Mode now Autonomous. ASSUMPTIONS.md/RECOVERY.md created.
+- T-001: two Fast Workers (slice A main, slice B tests) plus a Wiring Worker (string, README, edit.md, ADR-009). PNGs 99/100 `git rm`'d (approved Baselines). Scope check passed.
+- Build/test/lint: assembleDebug and lintDebug ok; full unit run had 6 StickerScreenshotTest OutOfMemoryErrors (JVM heap accumulation, known), all green when run alone.
+- Review (Capable): one blocking, `test-edits.md` empty, fixed. The Wiring Worker also edited ADR-009 and removed the string, which the Constraint reserves to the Iteration; accepted because it acted as the Iteration's Wiring Worker in a one-task Phase (no collision).

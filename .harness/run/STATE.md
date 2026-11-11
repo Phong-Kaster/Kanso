@@ -4,10 +4,10 @@
 
 ## Current
 
-- **Stage:** escalated (bootstrap; waiting for D-001)
+- **Stage:** build (Phase 1 done)
 - **Loop Branch:** loop/kanso-curves-meitu
-- **Run Mode:** Collaborative
-- **Next Phase:** Phase 1 - T-001
+- **Run Mode:** Autonomous
+- **Next Phase:** Phase 2 - T-002, T-003
 - **DONE-candidate:** no
 - **PARTIAL-candidate:** no
 
@@ -15,10 +15,10 @@
 
 | Task | Status | Declared File Scope | Evidence |
 |---|---|---|---|
-| T-001 | deferred (D-001) | Curve model + chips/panel + 5 tests (2 slices) | - |
-| T-002 | deferred (D-001) | `ToneCurve.kt`, CurveFormula/CurveParity/CurvesTool tests | - |
-| T-003 | deferred (D-001) | curvespanel graph/chips/reset/panel/dot, strings, CurveChipRow + contrast tests (2 slices) | - |
-| T-004 | deferred (D-001) | CurveGraph, CurvesPanel, CurveDeleteButton, strings, CurvesSheet/contrast/screenshot tests (2 slices) | - |
+| T-001 | complete | Lightness removed (10 files, 2 slices) + strings/docs wiring | evidence/phase1-build.txt |
+| T-002 | pending | `ToneCurve.kt`, CurveFormula/CurveParity/CurvesTool tests | - |
+| T-003 | pending | curvespanel graph/chips/reset/panel/dot, strings, CurveChipRow + contrast tests (2 slices) | - |
+| T-004 | pending | CurveGraph, CurvesPanel, CurveDeleteButton, strings, CurvesSheet/contrast/screenshot tests (2 slices) | - |
 
 ## Assumptions
 

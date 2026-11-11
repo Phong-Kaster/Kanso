@@ -57,16 +57,6 @@ class CurveParityTest {
         assertParity(EditSettings(curves = curves))
     }
 
-    /** A Lightness curve (alone and with the colour curves) gives the same picture in the preview and Done. */
-    @Test
-    fun a_lightness_curve_matches_done() {
-        assertParity(EditSettings(curves = CurveAdjustments.NEUTRAL.with(CurveChannel.LIGHTNESS, bend(0.5f, 0.2f))))
-        val curves = CurveAdjustments.NEUTRAL
-            .with(CurveChannel.RGB, bend(0.6f, 0.5f))
-            .with(CurveChannel.LIGHTNESS, bend(0.3f, 0.6f).added(CurvePoint(0.7f, 0.4f)))
-        assertParity(EditSettings(curves = curves, brightness = 0.2f))
-    }
-
     /**
      * Filter, HSL, curves and the colour sliders together (a combination whose steps do not
      * commute) give the same picture in the preview and in Done.

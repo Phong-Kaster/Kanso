@@ -474,22 +474,6 @@ class ToolScreenshotTest {
         capture("98_edit_curves_red_s_curve_dark.png")
     }
 
-    /** Picture 99: the Curves sheet with the Lightness chip chosen and an S-curve on Lightness, light. */
-    @Test
-    fun edit_curves_lightness_s_curve_light() {
-        showTool(Tool.EDIT, ThemeMode.Light)
-        drawSCurve(CurveChannel.LIGHTNESS)
-        capture("99_edit_curves_lightness_s_curve_light.png")
-    }
-
-    /** Picture 100: the Curves sheet with an S-curve on Lightness, dark. */
-    @Test
-    fun edit_curves_lightness_s_curve_dark() {
-        showTool(Tool.EDIT, ThemeMode.Dark)
-        drawSCurve(CurveChannel.LIGHTNESS)
-        capture("100_edit_curves_lightness_s_curve_dark.png")
-    }
-
     /**
      * Picture 101: the Edit screen's first row (Colour not opened, so Crop, Rotate, Adjust, Colour,
      * Filters ...) after an HSL change, light. Run 13, DoD 11: Colour on one line under its icon and

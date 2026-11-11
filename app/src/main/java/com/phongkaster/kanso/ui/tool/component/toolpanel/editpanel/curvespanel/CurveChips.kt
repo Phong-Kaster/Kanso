@@ -29,12 +29,10 @@ internal fun curveChannelLabelRes(channel: CurveChannel): Int = when (channel) {
     CurveChannel.RED -> R.string.edit_curves_channel_red
     CurveChannel.GREEN -> R.string.edit_curves_channel_green
     CurveChannel.BLUE -> R.string.edit_curves_channel_blue
-    CurveChannel.LIGHTNESS -> R.string.edit_curves_channel_lightness
 }
 
 /**
- * The row of five single-choice chips of the Curves sheet: RGB (the master curve), Red, Green, Blue
- * and Lightness (the L of HSL). The [chosen] chip is drawn selected (and a screen reader hears it as selected, which
+ * The row of four single-choice chips of the Curves sheet: RGB (the master curve), Red, Green and Blue. The [chosen] chip is drawn selected (and a screen reader hears it as selected, which
  * Material's [FilterChip] exposes by itself); a tap calls [onChoose] with that channel. Choosing a
  * chip only changes which curve the graph shows: it never touches the photo and adds no Undo step.
  *
@@ -50,7 +48,7 @@ internal fun CurveChips(
 ) {
     Row(
         // The row has the sheet's whole width (Reset lives beside the graph, not here). At 411 dp
-        // all five chips fit with room to spare; on a narrower phone, or with a larger font, the
+        // all four chips fit with room to spare; on a narrower phone, or with a larger font, the
         // last chip may reach past the edge and the row scrolls sideways, so a chip is never
         // squeezed and its name never wraps or is cut short. horizontalScroll lets each chip be as
         // wide as its name needs.

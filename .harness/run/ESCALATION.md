@@ -10,7 +10,7 @@
 
 ## D-001 - Approve the Definition of Done for Run 14 (Curves like Meitu's), the spline, and the build grants
 
-- **Status:** pending
+- **Status:** answered (owner approved 2026-11-11; natural cubic; Baselines listed; Gradle grant; ic_delete fetch)
 - **Type:** DoD approval + Capability grant
 - **Iteration:** 1 (bootstrap)
 - **Timestamp:** 2026-11-11

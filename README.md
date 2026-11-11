@@ -99,7 +99,7 @@ yet.
 | Edit: RGB | Works | Red, Green and Blue: three colour circles with no text, drawn and coloured like HSL's Red, Green and Blue circles, over one slider for the chosen channel, tinted in that channel's colour, -100 (the channel gone) to +100 (the channel doubled). Part of the same colour matrix as Adjust, so drawn live on the GPU. Checked by the owner on the vivo V2408A (2026-11-03, works as expected, x2 kept) and on the Galaxy A13 (2026-11-06). |
 | Edit: Filters | Works | None or one of eight filters with an intensity; a new filter replaces the old one. Previewed on a 640 px copy. |
 | Edit: HSL | Works | Hue, saturation and lightness for nine colour ranges (27 values, -100 to +100): nine colour circles, three chips and one slider (`editpanel/hslpanel/`). Applied after the filter and before the colour matrix, in the live preview (even with no filter) and in Done, by one function (`EditHsl.kt`, [ADR-008](docs/adr/ADR-008-hsl-is-computed-on-the-cpu-by-one-formula.md)). Checked by the owner on the Galaxy A13 and vivo V2408A, 2026-11-06 (works as expected); its time per frame on the Galaxy A13 is not measured. |
-| Edit: Curves | Partial | Five chips alone in the top row, which scrolls sideways only if the phone is too narrow (**RGB**, **Red**, **Green**, **Blue**, **Lightness**, `CurveChips.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) draws and edits that curve (RGB and Lightness in a neutral colour, the others tinted): tap empty space to add a point (at most 10), drag a point to move it, long press a middle point to remove it; the two end points move only up and down; Reset (below the chips, beside the graph at its top right) straightens only the chosen curve and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from monotone cubic interpolation, [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. The **Lightness** curve changes only how light the photo is: it runs after the RGB curves, on each pixel's HSL lightness, so colours keep their hue and saturation, greys follow it too, and it can reach pure black and pure white (the 0.05 to 0.95 limit of the HSL tool does not apply). A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
+| Edit: Curves | Partial | Four chips alone in the top row, which scrolls sideways only if the phone is too narrow (**RGB**, **Red**, **Green**, **Blue**, `CurveChips.kt`) choose which curve the graph edits; the graph (`editpanel/curvespanel/`) draws and edits that curve (RGB in a neutral colour, the others tinted): tap empty space to add a point (at most 10), drag a point to move it, long press a middle point to remove it; the two end points move only up and down; Reset (below the chips, beside the graph at its top right) straightens only the chosen curve and is disabled while that curve is straight. RGB is chosen first and the editor remembers the last chosen chip; choosing a chip is not an Undo step and changes nothing in the photo. Undo and Redo step one gesture at a time, and the tool's changed dot shows while the curve is bent. The saved photo contains the curve: Done runs filter, HSL, curves, colour matrix (`EditCurves.kt` on the CPU, 256-entry tables from monotone cubic interpolation, [ADR-009](docs/adr/ADR-009-curves-run-on-the-cpu-after-hsl.md)). **The live preview follows the curve**: while you drag a point the photo on screen changes (a 640 px CPU copy, even with no filter chosen), and it matches the saved picture; a sticker under your finger is drawn without the CPU stage (curves included) until you let go. A screen reader hears the graph ("Red curve, N points" and so on), the chips and Reset, but cannot move points. Not measured on any phone. |
 | Edit: Stickers | Works | 60 bundled pictures in four categories. Each sticker is a **layer** (see below), with a mirror button. |
 | Edit: Text | Works | Typed words in one of six fonts (the phone's own and five bundled, all drawing Vietnamese), twelve ready colours or any colour from a picker, an optional background box (twelve colours, or any colour with transparency), three alignments, wrapping lines. Each text is a **layer**. |
 | Edit: Date | Works | A date and time written in one of 20 English formats (`Wed, 28 October 2026`, `2026`, `'26 10 28`, `14:30` …), starting at now, changed with a day picker and a time picker; the Text sheet's fonts, colours and background box. A tap on the selected date moves it to the next format. Each date is a **layer** ([ADR-006](docs/adr/ADR-006-a-date-is-its-own-layer-kind.md)). |
@@ -298,15 +298,15 @@ or `app/src/main/res/`.
 10. **Curves, end to end** (the third tool on the Colour layer, `EditTool.CURVES`, icon `ic_show_chart`, name
     "Curves", after HSL). State: partial, see the table in section 2.
     - *Screen.* The sheet (`EditPanel.kt`'s `EditTool.CURVES` branch) is
-      `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the five chips
+      `editpanel/curvespanel/CurvesPanel.kt`: a 48 dp row holding only the four chips
       (`CurveChips.kt`), and under it the graph (`CurveGraph.kt`) filling the rest of the 188 dp the
       sheet leaves, with the Reset button (`CurveResetButton.kt`) at its top right, beside the graph.
       Reset left the chips' row because the chips and Reset did not fit side by side (on a phone
-      "Lightness" wrapped and Reset was pushed off the sheet). Each chip's name is always one whole
-      line; at 411 dp all five chips fit, and on a narrower phone the row scrolls sideways if they do
+      a chip's name wrapped and Reset was pushed off the sheet). Each chip's name is always one whole
+      line; at 411 dp all four chips fit, and on a narrower phone the row scrolls sideways if they do
       not (`CurveChipRowTest` checks 411 dp and 360 dp). The graph draws a faint 4 by 4 grid, the straight
-      diagonal as a guide, the curve and a dot on each point. The chips RGB, Red, Green,
-      Blue and Lightness pick the curve the graph edits (`CurveChannel`); RGB and Lightness are drawn in a neutral colour, Red,
+      diagonal as a guide, the curve and a dot on each point. The chips RGB, Red, Green
+      and Blue pick the curve the graph edits (`CurveChannel`); RGB is drawn in a neutral colour, Red,
       Green and Blue tinted. A tap on empty space adds a point (the nearest existing point within 24 dp counts as
       a hit, so a tap there adds nothing); dragging a point moves it (an end point only up and down,
       and a point never passes its neighbours, which stay at least 0.02 apart); a long press on a
@@ -317,21 +317,17 @@ or `app/src/main/res/`.
     - *ViewModel.* `ToolUiState.curveChannel` (RGB at first) is the chosen chip; `ToolViewModel.chooseCurveChannel` sets it, it is kept so reopening Curves shows the last curve used, and it is not an Undo step and changes no setting. The graph reports a drag through
       `previewSettings` while the finger moves and `commitSettings` when it lifts, so one drag is one
       Undo step; a tap, a long press and Reset are one commit each. Redo brings each back.
-    - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): five `ToneCurve`s
-      (master, red, green, blue, lightness), each from 2 to 10 `CurvePoint`s (x and y in 0..1), first point at
+    - *Settings.* `EditSettings.curves` (`data/edit/edit/CurveAdjustments.kt`): four `ToneCurve`s
+      (rgb, red, green, blue), each from 2 to 10 `CurvePoint`s (x and y in 0..1), first point at
       x = 0 and last at x = 1, checked when one is made (`ToneCurve.kt`). The row's dot shows while
       any curve is bent (`hasCurveChange`, `EditSettings.isNeutral(EditTool.CURVES)`); Back with only
       a curve change asks to discard it; Compare shows the original without it.
     - *The step* (`data/edit/edit/EditCurves.kt`, plain Kotlin on ARGB ints, on the CPU). Each curve
       becomes a 256-entry table by monotone cubic interpolation (Fritsch-Carlson), which passes
       through every point and never overshoots between two. A pixel's red, green and blue each go
-      through their own channel's table and then through the master table; alpha is kept. Then, only
-      when the Lightness curve is bent, each pixel is turned into hue, saturation and HSL lightness,
-      the lightness is looked up in the Lightness table (interpolating between two entries) and the
-      pixel is turned back with the same hue and saturation. There is no grey gate (a grey takes the
-      new level and stays grey) and no clamp, so lightness can reach 0 and 1 and the photo can reach
-      pure black and pure white. The HSL formula is copied into `EditCurves.kt`, not shared with `EditHsl.kt`,
-      which is untouched. When every curve is straight the step is skipped and no pixel changes.
+      through their own channel's table and then through the RGB (master) table; alpha is kept. That is the
+      whole step: a loop of table reads over the pixels, with no colour-space conversion and no
+      other pass. When every curve is straight the step is skipped and no pixel changes.
     - *Live preview.* `FilterPreviewRenderer` and `ToolViewModel`'s preview request carry the
       filter, the HSL values, the curves and the layers (`PreviewKey.curves`); a curve change alone
       asks for a preview render, so with no filter chosen the photo still follows the finger. The

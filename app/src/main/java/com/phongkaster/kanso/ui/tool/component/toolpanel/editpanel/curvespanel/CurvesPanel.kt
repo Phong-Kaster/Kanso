@@ -30,8 +30,8 @@ import com.phongkaster.kanso.ui.theme.KansoTheme
  * leaves; Reset sits at the graph's top right. The graph is where a person bends a curve: it starts
  * as a straight diagonal and a drag on it moves a point.
  *
- * Reset is not in the chips' row because the five chips and Reset do not fit side by side on a
- * phone (the owner saw "Lightness" wrap and Reset vanish): the chips get the whole width, scroll
+ * Reset is not in the chips' row because the chips and Reset do not fit side by side on a
+ * phone (the owner once saw a chip name wrap and Reset vanish): the chips get the whole width, scroll
  * sideways only if even that is too narrow, and Reset can never be pushed off the sheet.
  *
  * The top row holds the channel chips ([CurveChips]) choosing which curve is edited: [curveChannel], with
@@ -122,7 +122,7 @@ internal fun CurvesPanel(
 }
 
 /**
- * Returns the colour of [channel]'s curve line: the theme's text colour for the master (RGB) and Lightness curves, and a
+ * Returns the colour of [channel]'s curve line: the theme's text colour for the master (RGB) curve, and a
  * clearly red, green or blue tone for the others. The tone is darker on a light sheet and lighter
  * on a dark one, so it stays visible against either background.
  */
@@ -130,7 +130,7 @@ internal fun CurvesPanel(
 internal fun curveLineColor(channel: CurveChannel): Color {
     val scheme = MaterialTheme.colorScheme
     val hue = when (channel) {
-        CurveChannel.RGB, CurveChannel.LIGHTNESS -> return scheme.onSurface
+        CurveChannel.RGB -> return scheme.onSurface
         CurveChannel.RED -> 0f
         CurveChannel.GREEN -> 120f
         CurveChannel.BLUE -> 220f
