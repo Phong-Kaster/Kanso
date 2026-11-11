@@ -7,8 +7,8 @@
 - **Stage:** build (Verifier, Iteration 7, found a second DoD 26 doc gap; T-006 filed)
 - **Loop Branch:** loop/kanso-curves-meitu
 - **Run Mode:** Autonomous
-- **Next Phase:** Phase 5 - T-006
-- **DONE-candidate:** no
+- **Next Phase:** Verifier (drive DoD 21/22)
+- **DONE-candidate:** yes
 - **PARTIAL-candidate:** no
 
 ## Progress
@@ -20,7 +20,7 @@
 | T-003 | complete | curvespanel graph/chips/reset/panel/dot, strings, CurveChipRow + contrast tests (2 slices) | evidence/phase3-*.txt |
 | T-004 | complete | CurveGraph, CurvesPanel, CurveDeleteButton, strings, CurvesSheet/contrast/screenshot tests (2 slices) | evidence/phase3-*.txt |
 | T-005 | complete | `README.md`, `docs/features/edit.md` | grep clean |
-| T-006 | pending | `README.md`, `docs/features/tool-screen.md`, `docs/adr/ADR-009-...md` | - |
+| T-006 | complete | `README.md`, `docs/features/tool-screen.md`, `docs/adr/ADR-009-...md` | - |
 
 ## Assumptions
 

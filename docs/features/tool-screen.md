@@ -88,7 +88,7 @@ The **Curves** tool (the tenth Edit tool, partial,
 right holding the 48 dp-or-larger trash button `CurveDeleteButton` ("Delete point") above the Reset icon button, inside the
 188 dp the 220 dp area leaves). The selected point lives in `CurvesPanel` (`rememberSaveable`), not in the ViewModel, and clears on a channel
 switch, Undo, Redo and Reset. A tap within 24 dp of a point selects it; within 24 dp of the line adds a point on the line and selects it; elsewhere
-only clears the selection; a drag from a point moves it, from the line adds a point and drags it; a long press does nothing; delete removes the selected point in one Undo step. `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
+only clears the selection; a drag from a point moves it, from the line adds a point and drags it; delete removes the selected point in one Undo step. `ToolUiState.curveChannel` holds the chosen chip (`ToolViewModel.chooseCurveChannel`;
 not an Undo step). A drag on the graph sends the new
 `EditSettings.curves` through `previewSettings` while the finger moves and `commitSettings` when it
 lifts (one Undo step); a tap that adds a point, a delete and Reset are one `commitSettings` each. Like HSL, a

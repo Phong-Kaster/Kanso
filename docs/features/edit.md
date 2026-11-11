@@ -55,7 +55,7 @@ what happens after Done is on [Saving, the Result screen and Share](saving-and-s
 > step and changes nothing in the photo); the chips read RGB, R, G, B, each with a colour dot. The graph is wide
 > (about 2:1) with only a frame and three vertical lines. On it, a tap near a point (24 dp) selects it, a tap near the line (24 dp) adds a point on the line and selects it (at most 10),
 > a tap elsewhere adds nothing, a drag from a point moves it (the end points move sideways too), a drag from the line adds a point and moves it,
-> a long press does nothing, the trash button (spoken "Delete point", above Reset) removes the selected point (any, while more than 2 remain)
+> the trash button (spoken "Delete point", above Reset) removes the selected point (any, while more than 2 remain)
 > and selects its left neighbour, and the Reset
 > icon button, right of the graph (disabled while the chosen curve is straight), straightens only that curve; each change
 > is one Undo step. Selection is kept in the panel and clears on a channel switch, Undo, Redo and Reset. The line is a natural cubic spline that may overshoot, clipped to black and white, flat beyond
@@ -131,7 +131,7 @@ network are used. You can:
   choice is remembered; no Undo step) and a wide graph shows it (a frame and three vertical lines; the line starts
   straight). Tap a point to select it, tap the line to add a point on it (up to 10; empty space adds nothing), drag a point to move it
   (end points move sideways too; a drag from the line adds a point and moves it), press the trash button ("Delete point") to remove the
-  selected point (while more than 2 remain; long press does nothing), and
+  selected point (while more than 2 remain, and
   press the **Reset** icon button (disabled while the chosen curve is straight) to straighten that curve only. The photo on screen
   follows the finger, even with no filter chosen, and matches the picture Done renders; a sticker
   under a finger is drawn without the curve until it is let go.

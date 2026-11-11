@@ -27,7 +27,7 @@ natural cubic spline that may overshoot (clipped to 0..1) with free end points. 
   `LivePreviewImage` draws the colour matrix on top. So the preview and the saved photo match.
 - **A curve is a `ToneCurve`** of 2 to 10 `CurvePoint`s. Each point has x and y in 0..1. The points are
   sorted by x, the first is at x = 0 and the last at x = 1, and neighbours are at least 0.02 apart.
-- **A curve becomes a 256-entry table** by monotone cubic interpolation (Fritsch-Carlson). The curve
+- **A curve becomes a 256-entry table** by monotone cubic interpolation (Fritsch-Carlson) *(superseded by ADR-011: now a natural cubic spline, clipped to 0..1)*. The curve
   passes through every point, never overshoots between points, and stays within 0..255.
 - **Per pixel**: `r' = rgbTable[redTable[r]]`, and the same for green and blue. That is the
   whole step: table reads only, no colour-space conversion, alpha kept.
