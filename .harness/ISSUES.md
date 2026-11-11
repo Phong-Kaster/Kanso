@@ -1,5 +1,14 @@
 # ISSUES
 
+## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: ESCALATE, Iteration 1 (bootstrap)
+
+- Queued: **D-001** — approve the Definition of Done, choose the spline (natural cubic proposed; the
+  comparison is in the entry), list the six Curves pictures under `## Baselines`, approve the Gradle
+  build/test/lint grants, and the trash icon. Blocks T-001..T-004.
+- Assumptions: at most ten points and the 0.02 minimum gap stay; new Curves files stay in `curvespanel/`.
+- Not done at bootstrap: the build commands were not re-run (no Gradle grant yet); the Meitu screenshots
+  could not be opened by the analysts (outside the repository).
+
 ## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: DONE_PARTIAL, Iteration 3 (Verifier); every criterion signed 2026-11-11
 
 - Verifier (2026-11-11) re-proved every `machine` criterion (1-10, 14-17, 19, R1, R2): build, 1282 unit tests, lint (no issue in a changed file) and `verifyRoborazziDebug` green; only the 43 approved pictures changed and 101-104 were added. Evidence `.harness/run/evidence/v3-*.log`.

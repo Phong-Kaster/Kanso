@@ -100,6 +100,7 @@ One line per topic under `.harness/knowledge/reference/`; open a topic only when
 - `reference/run11-facts.md` — Run 11 facts: how an Edit tool is wired (RGB as template), the render and live-preview pipeline with line numbers, tests and pictures a ninth tool breaks, traps — read when touching: Edit tools, EditProcessor, FilterPreviewRenderer, the tool row, Edit screenshot tests.
 - `reference/run12-facts.md` — Run 12 facts: corrections to run11-facts (220 dp sheet, 9 tools, picture 94), preview gates, EditPanel scroll exemption, EditHsl privacy, device attached, missing Gradle grants — read when touching: Curves, any new Edit tool, EditProcessor/FilterPreviewRenderer.
 - `reference/run9-facts.md` — Run 9 facts: how Edit, Save and Saved work before the run, core/imagecrop API, tests and guards that break, docs to rewrite — read when touching: Edit screen, ToolViewModel, Save/Saved/Result, core/imagecrop.
+- `reference/run14-facts.md` — Run 14 facts: Curves model, spline, gestures, colours, tests, pictures 95-100 and docs with line numbers, traps — read when touching: Curves.
 - `reference/run13-facts.md` — Run 13 facts: the Edit tool row and Beautify's two-level row with line numbers, the tests and pictures that walk the row, strings, docs to update — read when touching: the Edit tool row, Beautify's row, the Colour group.
 
 ## Constraints (continued)
