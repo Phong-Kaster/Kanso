@@ -89,8 +89,8 @@ two groups that never mix (ADR-036):
   install those here.** The engine adds them on the Loop Branch at Bootstrap: the `default` ones without
   asking, any other one only once the human approves it in the DoD.
 
-For each `foreman` entry that is not `development_only`, run its `check` command, with a timeout of a
-minute:
+For each `foreman` entry that is not `development_only` — and, when it has `only_when`, only if that
+file exists at the repository root — run its `check` command, with a timeout of a minute:
 
 1. **It passes:** nothing to do.
 2. **It fails and the entry is `auto`:** npx fetches it on first use. Run the `check` once more, so the
@@ -104,6 +104,24 @@ minute:
 
 Report the result in one line when everything passes. Skip this step for the `mode` commands of
 step 0, as step 0b does.
+
+**In an Android repository, keep Android CLI current and visible to the engine** (decided by the
+human, 2026-11-06; ADR-047). When the repository root has `build.gradle.kts` and `android --version`
+passes:
+
+1. **Update it:** `android update`, with a timeout of a few minutes. It takes about two seconds when
+   already current.
+2. **Install its skill into this repository:** `android skills add android-cli --project=.
+   --agent=claude-code`, which writes `.claude/skills/android-cli/SKILL.md`. Not `android init`: that
+   installs the skill for the user only, and the engine runs with `--setting-sources project,local`
+   (ADR-038), so it never sees a user-level skill.
+3. **Decide from git**, as step 0b does: if `git status --porcelain -- .claude/skills/android-cli`
+   shows a change, commit exactly that path on the current branch,
+   `chore(foreman): install the android-cli skill`, and say so — on a run in progress it counts once
+   against its iteration budget (ADR-024). Nothing changed, or the path is ignored: nothing to commit.
+
+If either command fails — offline, a timeout — say so in one line and continue. Never block a run on
+Android CLI.
 
 ## 1. Locate the installed runtime files
 

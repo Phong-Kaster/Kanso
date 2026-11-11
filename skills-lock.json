@@ -1,23 +1,23 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "android-device-verification": {
       "source": "Phong-Kaster/Foreman",
       "sourceType": "github",
       "skillPath": "skills/knowledge/android/device-verification/SKILL.md",
-      "computedHash": "a29a5ec202ff9f3686e6711d896af98f75211ca1d83d5f494e1f60ae8bd85514"
+      "computedHash": "5fa86d05225f554cbcd11c7734808b904b07611c67e4f78e233010aa033596f7"
     },
     "foreman": {
       "source": "Phong-Kaster/Foreman",
       "sourceType": "github",
       "skillPath": "skills/engineering/foreman/SKILL.md",
-      "computedHash": "23d72e86f0dffa7a35b7ca61dd03aaa1164cefe09d45e48098c9ebf455646dc1"
+      "computedHash": "c3aa9feedcde4a98b13b7d72d20de0a9eec22cf990f0e1e6d123366e39cea51c"
     },
     "library-docs": {
       "source": "Phong-Kaster/Foreman",
       "sourceType": "github",
       "skillPath": "skills/knowledge/general/library-docs/SKILL.md",
-      "computedHash": "15760a36b10bb43637ee2f4ca1b7884b39ba3f6be0b39a2049eda6a0d199b7e7"
+      "computedHash": "1a5ba593f01acccf08a9c78fa6bae14d196b1eeab5fd9aca17a0d03dab2128da"
     }
   }
 }

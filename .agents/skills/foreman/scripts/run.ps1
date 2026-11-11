@@ -271,13 +271,13 @@ function Compile-PermissionSettings {
         "Bash(git push -f*)",
         "Bash(git merge*)",
         "Bash(git rebase*)",
-        # A device is driven only through .harness/loop/bin/foreman-device.ps1, which acts on nothing
-        # but the debug build this repository produced - never another app, never a device setting
-        # (ADR-033). These are adb in every form the matcher was measured to catch: plain and .exe, by
-        # full path, behind an env prefix or `cd &&`, and inside bash -c, cmd or powershell. They are
-        # anchored so that a commit message which merely mentions adb still commits.
-        "Bash(adb *)",
-        "Bash(adb)",
+        # A device is driven through Android CLI and through .harness/loop/bin/foreman-device.ps1
+        # (ADR-033, ADR-048). Plain `adb` is no longer denied here: the human opened `adb devices` and
+        # `adb shell input`, the two forms the android-cli skill uses (2026-11-06), and a glob cannot
+        # say "only those" because deny always wins - foreman-android-guard.ps1 holds plain adb to them
+        # with a regex. These still deny adb in every other form the matcher was measured to catch: .exe,
+        # full path, and inside bash -c, cmd or powershell. They are anchored so that a commit message
+        # which merely mentions adb still commits.
         "Bash(adb.exe*)",
         "Bash(*/adb *)",
         "Bash(*/adb)",
@@ -289,6 +289,15 @@ function Compile-PermissionSettings {
         "Bash(powershell*adb *)",
         "Bash(pwsh*adb *)",
         "Bash(*xargs*adb*)",
+        # Every Android CLI command is the engine's except three groups that change what the whole
+        # machine shares (decided by the human, 2026-11-06; ADR-048): another project's emulator, the
+        # SDK every project builds with, and the CLI binary itself. The plain forms are denied here;
+        # foreman-android-guard.ps1 catches them behind global options, paths and shell wrappers.
+        "Bash(android update*)",
+        "Bash(android emulator stop*)",
+        "Bash(android emulator remove*)",
+        "Bash(android sdk remove*)",
+        "Bash(android sdk update*)",
         # The two device-automation MCP servers ADR-031 reviewed and rejected, denied outright so no
         # ledger can grant them back.
         "mcp__android-agent",
@@ -372,6 +381,9 @@ function Compile-PermissionSettings {
     # A subagent's Bash may run the compile check and nothing else (ADR-044): the Worker has the Bash
     # tool for that one command, and its permission rules alone would let it run more.
     $subagentShell = (Join-Path $LoopDir "bin\foreman-subagent-shell.ps1") -replace '\\', '/'
+    # Of raw adb the engine runs only `devices` and `shell input`, and of Android CLI everything but
+    # the three machine-wide groups above, in both Run Modes (ADR-048). Only a regex can say that.
+    $androidGuard = (Join-Path $LoopDir "bin\foreman-android-guard.ps1") -replace '\\', '/'
     $settings = @{
         permissions = @{
             allow = $allowRules
@@ -389,7 +401,10 @@ function Compile-PermissionSettings {
                 },
                 @{
                     matcher = "Bash"
-                    hooks   = @(@{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$subagentShell`"" })
+                    hooks   = @(
+                        @{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$subagentShell`"" },
+                        @{ type = "command"; command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$androidGuard`"" }
+                    )
                 }
             )
         }

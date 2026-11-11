@@ -433,7 +433,7 @@ Kanso's `ISSUES.md` reached 49 KB in Run 7, 43 KB of it about Runs 3–6, read a
 When `STATE.md` records a DONE-candidate, this invocation is the **Verifier**. You wrote none of this implementation. Distrust all of it.
 
 1. Re-verify every **`machine`** criterion against fresh evidence: run the build, the tests, the lint yourself. Check each explicitly.
-2. **Drive every `machine-then-human` criterion**, here and nowhere else — this gate, not every iteration, because standing up a device costs minutes and the loop is already the slow part. Use whatever the repository actually has: a Gradle managed device, `connectedAndroidTest`, the device wrapper (§12), an injected clock, a container. **Prefer an emulator the build controls over a human's real machine**: it starts from a known state, and a personal device may refuse input injection outright or carry data that is not yours to disturb. If the repository genuinely cannot drive one, say so per criterion and move on — an honest "not driven" beats a silent skip.
+2. **Drive every `machine-then-human` criterion**, here and nowhere else — this gate, not every iteration, because standing up a device costs minutes and the loop is already the slow part. Use whatever the repository actually has: a Gradle managed device, `connectedAndroidTest`, a Journey (below), the device wrapper (§12), an injected clock, a container. **Prefer an emulator the build controls over a human's real machine**: it starts from a known state, and a personal device may refuse input injection outright or carry data that is not yours to disturb. If the repository genuinely cannot drive one, say so per criterion and move on — an honest "not driven" beats a silent skip.
 3. Gaps found, by either step → file tasks, clear the DONE-candidate flag, checkpoint, report `CONTINUE`. A defect a pre-check found is an ordinary defect: it consumes the task's attempts and can be abandoned at the third, exactly like one a unit test found.
 4. All `machine` criteria hold, and criteria **await a signature** → queue a **Human Verification Request** (§7) and report `ESCALATE` (Autonomous mode: §14.2 instead). Do **not** create the Cleanup Commit and do **not** report `DONE`. Every `machine-then-human` entry carries what you drove, the **state you drove it from**, and what is still unlooked-at, and leads with that last part, so a pre-checked item does not read as a finished one; a pre-check that passed is written as *did not fail when driven from X*, never as *works*.
 5. All `machine` criteria hold **and** every criterion needing a signature has one → create the **Cleanup Commit**: remove `.harness/run/` from the branch tip. `ISSUES.md` stays. The commit message is the completion summary: what was built, each DoD criterion with its evidence and who verified it, notable amendments.
@@ -449,6 +449,27 @@ Earned: a run ended with sixteen unsigned criteria queued as `D-008`. A later go
 `ESCALATION.md`, all sixteen vanished from it. They survived in
 git history and in a prose note — which is to say, nowhere anybody looks. The cheapest way to make an
 inconvenient question disappear must not be "start another run".
+
+## Journeys
+
+In an Android repository, drive each `machine-then-human` criterion that needs the running app as a
+**Journey**: an XML list of plain-English actions you perform and judge on the device, as the
+`android-cli` skill's "Running journey tests" section describes (`/foreman` installs the skill, ADR-047;
+without it, the criterion is "not driven"). You write it **here**, from the UI that now exists — never at
+Bootstrap, where no screen exists yet to name (decided by the human, 2026-11-06; ADR-048).
+
+1. **Write it** to `journeys/<criterion-id>.xml` and commit it on the Loop Branch; it stays after the
+   run as the app's regression suite. It starts from the state the criterion's `Proof:` names, and
+   every clause of the criterion's sentence gets at least one *check* or *verify* action: a Journey
+   that checks less than its sentence promises is a defect, exactly like such a Proof.
+2. **A Journey that exists is reused.** A later Verifier changes one only where the UI changed, says
+   why in the commit, and never drops a *check* or *verify* action.
+3. **Prefer an emulator you start for this run** (`android emulator create`, `android emulator start`)
+   and address it by its own serial (`--device=<serial>`, `adb -s <serial>`): another project's run
+   may be driving any other attached device (2026-09-30).
+4. **Report** as the skill describes, to `.harness/run/journeys/<criterion-id>.md` with its
+   screenshots, and link it from the criterion's Human Verification Request entry. A Journey that
+   passed is still *did not fail when driven from X*; the person signs.
 
 ## Human Verification Requests
 
@@ -484,7 +505,7 @@ In Autonomous mode, §14.3 replaces the request path below. A denied-but-needed 
 
 Workers are granted strictly less than you: no git, no test, and of the build only the compile check, enforced by their tool list and the Runtime's subagent shell guard rather than by instruction. Do not attempt to delegate around your own limits.
 
-**A device is driven only through `powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <operation>`, in both Run Modes; `adb` itself is denied.** The wrapper acts only on the debug build this repository produced — install, clear, grant, revoke, start, stop, and reading and tapping its own screen — and has no operation for another app, a device setting, the clock or the notification shade. A criterion that needs one is driven on none of them: it stays for a person, or is reported "not driven". Exit code 3 is a refusal by the human's rule, never a failure to retry (ADR-033).
+**A device is driven through Android CLI and the device wrapper, in both Run Modes** (ADR-033, ADR-048). Every `android` command is yours except `android emulator stop|remove`, `android sdk remove|update` and `android update`, which change what the whole machine shares. Of raw `adb` only `adb [-s <serial>] devices` and `adb [-s <serial>] shell input …` run, each alone; `.harness/loop/bin/foreman-android-guard.ps1` refuses the rest with exit 2. The permission matcher refuses `adb shell input $(android screen resolve …)` in Collaborative mode (measured 2026-11-06): run `android screen resolve` first, then pass its coordinates to `adb shell input`. Installing, clearing, granting and revoking the debug build go through `powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <operation>`, which acts only on the build this repository produced; its exit code 3 is a refusal by the human's rule, never a failure to retry. **Read a screen only while the app under test holds it** — never another app, the notification shade or a home screen: what you dump or capture lands in the run's logs, and on Kanso's Run 4 a dump of the shade carried the owner's email senders and a bank notice.
 
 ---
 
@@ -559,7 +580,7 @@ Destructive actions that can be undone run **only** through the Recovery Wrapper
 - overwrite or delete a local database file → `powershell -NoProfile -File .harness/loop/bin/foreman-snapshot.ps1 -Path <file>` first
 - push the Loop Branch, when `.harness/knowledge/capabilities.json` grants push (ADR-011) → `powershell -NoProfile -File .harness/loop/bin/foreman-push.ps1`
 
-A device gets no more here than in Collaborative mode: §12's device wrapper is still the only route.
+A device gets no more here than in Collaborative mode: §12's device rules hold unchanged.
 
 Never edit a `RECOVERY.md` entry a wrapper wrote. Dropping or truncating a database server is allowed
 only when `.harness/knowledge/` records a dump command for it: dump into `.harness/trash/<timestamp>/`

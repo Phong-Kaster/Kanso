@@ -53,13 +53,26 @@
       ]
     },
     {
-      "intent": "Drive the app this repository is building on an attached device or emulator - install it, clear its data, grant or revoke its permissions, start it, read its screen, tap its controls, read its own notifications and logs - so criteria that need a running app are driven before a person looks (ADR-030, ADR-033). adb itself is denied in both Run Modes; this wrapper is the only route, and it refuses any other package and has no operation that changes a device setting.",
+      "intent": "Drive the app this repository is building on an attached device or emulator - install it, clear its data, grant or revoke its permissions, start it, read its screen, tap its controls, read its own notifications and logs - so criteria that need a running app are driven before a person looks (ADR-030, ADR-033). Of raw adb the engine runs only `devices` and `shell input` (ADR-048); this wrapper is the route for installing, clearing, granting and revoking, and it refuses any other package and has no operation that changes a device setting.",
       "command": "powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 -Op <operation> [...]",
       "scope": "the debug build of this repository, identified by the build's own output metadata and confirmed DEBUGGABLE on the device; never another app, the device's settings, its clock or its notification shade",
       "lifetime": "permanent",
       "allow": [
         "Bash(powershell -NoProfile -File .harness/loop/bin/foreman-device.ps1 *)",
         "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .harness/loop/bin/foreman-device.ps1 *)"
+      ]
+    },
+    {
+      "intent": "Use Android CLI as an agent is meant to - SDK setup, project templates, build, install and run, emulators, the UI tree, screenshots, input, Compose previews, Android Studio, profiling, APK analysis, Crashlytics signals, documentation and skills - and the two raw adb forms its android-cli skill uses, so the Verifier can run Journeys on a device (decided by the human, 2026-11-06; ADR-048). Three groups stay denied because they change what the whole machine shares: android emulator stop|remove, android sdk remove|update, android update. foreman-android-guard.ps1 holds adb to `devices` and `shell input`.",
+      "command": "android <command> [...]; adb [-s <serial>] devices; adb [-s <serial>] shell input <tap|swipe|text|keyevent|...> <args>",
+      "scope": "every android command except the three machine-wide groups; of adb only devices and shell input, each alone with nothing chained",
+      "lifetime": "permanent",
+      "allow": [
+        "Bash(android *)",
+        "Bash(adb devices*)",
+        "Bash(adb -s * devices*)",
+        "Bash(adb shell input *)",
+        "Bash(adb -s * shell input *)"
       ]
     },
     {
