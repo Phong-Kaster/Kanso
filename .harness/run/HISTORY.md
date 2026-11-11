@@ -52,3 +52,11 @@ Docs-only fix of the three stale Curves passages (README row, README "Curves, en
 
 ## Iteration 8 - Phase 5 (T-006)
 Docs only: removed "long press" clauses (README, tool-screen.md, edit.md - Tier-1 scope widening, same grep), marked ADR-009's Fritsch bullet superseded. DoD 26 grep clean. DONE-candidate recorded.
+
+## Iteration 9 - Verifier (2026-11-11)
+
+- Recover: tree clean apart from TELEMETRY.tsv. No new decisions.
+- Full gradle exit 0 (1297 tests, 0 failed); every machine criterion and removal re-proved by grep and test.
+- Drove DoD 21 and 22 on the A13 (landscape; the engine cannot rotate it) through foreman-device.ps1 and synthetic input taps and swipes; every check did not fail. Wrote journeys/dod21-curves-look.xml and journeys/dod22-curves-handling.xml. Theme set back to System default afterwards; the Save step put one photo in Pictures/Kanso.
+- Landscape note: the Curves sheet hides the photo and the graph is ~5:1; recorded in ISSUES, not filed (the DoD layout is portrait).
+- 21, 22, 26 await a person -> DONE_PARTIAL, no Cleanup Commit.

@@ -1,15 +1,25 @@
 # ISSUES
 
-## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: CONTINUE, Iteration 7 (Verifier)
+## Run 14 (Curves like Meitu's), loop/kanso-curves-meitu: DONE_PARTIAL, Iteration 9 (Verifier)
 
-- Verifier gap (DoD 26): the DoD's grep still finds "long press" about Curves in README.md:102 and
-  docs/features/tool-screen.md:91 ("a long press does nothing"); ADR-009's Fritsch-Carlson bullet is
-  marked superseded only by its Status note. Filed as T-006; the app itself is unchanged.
-- Not driven yet: DoD 21 and 22 (Journeys on the Galaxy A13); the next Verifier drives them.
+- Verifier (2026-11-11) re-proved every `machine` criterion (1-20, 23-25, R1-R10) at `47c43d2`: assemble,
+  1297 unit tests (0 failed, 0 skipped), lint and `verifyRoborazziDebug` exit 0 (`.harness/run/evidence/verify3-gradle.txt`);
+  the DoD 26 grep (Fritsch, monotone, long press, Lightness curve) finds nothing in README or `docs/features`;
+  every `app/src/` path in the README exists.
+- Not `DONE` because criteria 21, 22 and 26 await a person (below). Nothing abandoned; no Tier-3 assumption.
+- **The A13 was in landscape** while driven and the engine cannot rotate it. In landscape the Curves sheet
+  covers the whole photo (so the photo cannot be seen while editing a curve) and the graph is about 5 : 1.
+  The DoD's layout criteria are about portrait (360/411 dp), so this is not filed against them.
 - No test for Undo of another tool's change clearing the Curves selection (reviewed by reading only).
 - Pictures 105-108 were judged by the engine only.
 - Assumption A-001: at most ten points and the 0.02 minimum gap stay; new Curves files stay in `curvespanel/`.
 - The RGB colour dot sweeps the RGB sheet's fixed tints (not scheme roles), as T-003 asks.
+
+### Awaiting a person (Run 14)
+
+- [ ] Run 14 criterion 21 - **Still unlooked-at:** the portrait layout on the A13 (the phone was in landscape when driven). **Driven** on `R58W1120QVA` (build `47c43d2` installed over the old one, data kept), light and dark, in landscape: did not fail (journey `journeys/dod21-curves-look.xml`, report `.harness/run/journeys/dod21-curves-look.md`). On the A13 held upright: open a photo → Edit → Colour → Curves. Expect a wide graph with only a frame and three vertical lines; RGB, R, G, B across the top, each with a colour dot; a dark line on light (light line on dark); a trash icon above a Reset icon right of the graph, both fully visible. Tap the line: a hollow point with a thick ring appears. Tap R: the line turns red. Repeat with Settings → Theme mode → Dark. Sign if nothing is cut off or hard to see.
+- [ ] Run 14 criterion 22 - **Still unlooked-at:** the feel with a real finger (whether the reach is too strict or too loose, stutter), and whether the photo follows a drag (the sheet hid the photo in landscape). **Driven** with synthetic taps and swipes on `R58W1120QVA`, full-size camera photo: tap on the line, tap 1 cm beside it, drag from the line, select by tap and by drag, first point slid right, end point deleted, a point pulled to a flat white top, R and back, Undo x4, Redo x4, Save. Each did not fail (journey `journeys/dod22-curves-handling.xml`, report `.harness/run/journeys/dod22-curves-handling.md`). On the A13, upright, a full-size camera photo in Curves: do the same with your finger. Expect each tap on the line to add a point first time, a tap a finger-width beside it to add nothing, the photo to follow every drag without a stutter, and Undo/Redo to walk one gesture at a time. A stutter is a failure.
+- [ ] Run 14 criterion 26 - Read README's "Editing features" Curves row and "Curves, end to end", the Curves parts of `docs/features/edit.md` and `docs/features/tool-screen.md`, `docs/adr/ADR-011-curves-are-a-natural-spline-with-free-end-points.md`, and ADR-009's superseded notes, with the phone in hand. Note any sentence that is untrue. Machine pre-check: the stale-wording grep finds nothing and every `app/src/` path in the README exists.
 
 ## Run 13 (Colour group on the Edit screen), loop/kanso-colour-group: DONE_PARTIAL, Iteration 3 (Verifier); every criterion signed 2026-11-11
 
