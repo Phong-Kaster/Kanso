@@ -40,3 +40,6 @@
 - Full build, 1297 unit tests, lint, verifyRoborazziDebug: exit 0. R1-R10, DoD 13 and 25 greps clean.
 - DoD 26 gap: README Curves row, README section 10 slot sentence and edit.md limits bullet still describe tap-empty-space / long-press-removes / delete "not built yet". Filed T-005 (Tier 1), DONE-candidate cleared. Device journeys (21, 22) not driven this Iteration.
 - A-001's first dependent checkpoint is a9539a2 (Iteration 2).
+
+## Iteration 6 (Phase 4, T-005)
+Docs-only fix of the three stale Curves passages (README row, README "Curves, end to end" slot line, docs/features/edit.md limits bullet). Grep for stale phrases clean. No code touched, so no Gradle run; Reviewer skipped as docs-only. DONE-candidate recorded.

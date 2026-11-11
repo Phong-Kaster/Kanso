@@ -545,7 +545,7 @@ flowchart TD
   (2026-11-06): works as expected. Its time per frame on the Galaxy A13 is not measured. A layer being dragged under a
   finger is shown without HSL until it is let go, as it is shown without the filter.
 - **Curves.** Partial: the RGB, Red, Green and Blue curves are editable, at most 10 points, points at least 0.02
-  apart; the line may overshoot between points (clipped to black and white), and a delete button is not built yet. The saved picture has the curve and the live preview follows it. Not measured on
+  apart; the line may overshoot between points (clipped to black and white), and the trash button deletes the selected point (end points too) while more than two remain. The saved picture has the curve and the live preview follows it. Not measured on
   any phone.
 - **One filter at a time.** Choosing a filter replaces the earlier one. Moving from one filter to
   another keeps the intensity; coming from None it starts at 100; None resets it.
