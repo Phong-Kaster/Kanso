@@ -1,16 +1,18 @@
 # Plan: six more Beautify reshapes, matched to Meitu
 
-**Status:** plan only (2026-11-13). Decisions D1-D5 settled by the owner the same day (section 2).
-**No code until the owner gives the order** (owner, 2026-11-13: "chờ mệnh lệnh"); phase 1 waits for
-it too. Nothing below is built yet; every number marked *starting value* is a first guess to be
-replaced by the Meitu measurements of phase 1.
+**Status:** phases 1 and 2 done (2026-11-16); phases 3-8 go to Foreman Run 15 (Autonomous).
+Decisions D1-D5 settled by the owner on 2026-11-13, D6-D10 on 2026-11-16 after phase 1 (section 2).
+The owner gave the order to start on 2026-11-16 ("bắt đầu lên kế hoạch và triển khai cho kanso").
+Phase 1 found four sliders that differ from what this plan first guessed; section 4 is amended to
+the measurements, and the numbers are in [section 11](#11-measurements-filled-in-phase-1). Every
+constant marked *starting value* is still a first guess, tuned in phase 7 against section 11.
 
 The six tools are the "easy" group the owner picked from Meitu's Beautify bar:
 
 | # | Meitu, on the Galaxy A13 | Kanso tool (proposed) | Kind of push |
 |---|---|---|---|
 | 1 | Beautify › Face › **Eyes** tab › Size | **Eye size** | grow |
-| 2 | Beautify › Face › **Nose** tab › Size | **Nose size** | grow |
+| 2 | Beautify › Face › **Nose** tab › Size | **Nose size** | slide (D7) |
 | 3 | Beautify › Face › **Lips** tab › Size | **Lip size** | grow |
 | 4 | Beautify › **Head** › Auto | **Head size** | grow |
 | 5 | Beautify › Face › **Face** tab › Jawline | **Jawline** | slide |
@@ -48,7 +50,7 @@ They need nothing new under Beautify; every part they use is already in the app 
 - **Both kinds of push already exist.**
   [`WarpPush`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/WarpPush.kt) either
   **slides** pixels (Width, Lift, Waist, Arms) or **grows** them out from a point like a magnifying
-  glass, or gathers them in (Chest). Eye, nose, lip and head size are a grow; Jawline and Chin shape
+  glass, or gathers them in (Chest). Eye, lip and head size are a grow; Nose size (D7), Jawline and Chin shape
   are a slide toward the face's centre line, the same maths as
   [`FaceWidth`](../../app/src/main/java/com/phongkaster/kanso/data/edit/face/FaceWidth.kt) on fewer
   points.
@@ -83,6 +85,16 @@ All five are settled. The owner's rule for the layout: **arrange it like Meitu's
 | **D3** | If Meitu's slider is **one-way** (starts at the left, 0 to 100) for one of the six, as Head › Auto's "Intensity" may be. | **Keep Kanso two-way, -100..+100**, like every Face and Body tool. The difference from Meitu is noted in the tool's KDoc and README row. |
 | **D4** | Meitu shows **BG Lock** and **Distortion correction** switches above Face, Reshape and Form. | **Not in this batch.** Kanso has no BG Lock for any face tool yet (README "Known limits"); it stays its own future feature. Head size is the tool most likely to need it (section 10). |
 | **D5** | Measuring in Meitu (phase 1) means dragging its sliders. | **Allowed as a narrow exception:** free sliders only; drag in the preview; close with X; never ✓, never Save, never a VIP, Pro or credit feature. |
+
+Settled by the owner on 2026-11-16, after phase 1 (section 11):
+
+| # | Question | Decision |
+|---|---|---|
+| **D6** | Meitu's **Jawline** shows "trial 5 times, become a member" as soon as it is dragged: it is a VIP/trial feature, so phase 1 put it back to 0 and measured nothing. | **Build it if it can be done, free in Kanso; skip it if it cannot** (owner: "keep bring jawline if you can, this feature is free on kanso, if we can not port into kanso, skip it"). No Meitu number: the plan's starting values, tuned on the A13 by eye. Meitu's trial is never measured. |
+| **D7** | Meitu's **Nose › Size** right end makes the nose **narrower** and changes only its width; **Lips › Size** right end makes the lips **smaller**. The plan had guessed the opposite, and a grow for the nose. | **Same as Meitu.** Kanso +100 = narrower nose (the wings squeezed toward the nose's centre line, length unchanged), -100 = wider. Kanso +100 = smaller lips, -100 = bigger, each end tuned to Meitu's own strength (the lips shrink harder than they grow). |
+| **D8** | Meitu's **Head › Auto** is one-way (0 to 100) and its 100 makes the head **smaller**. D3 keeps Kanso two-way. | **+100 = smaller head**, as Meitu's 100; -100 = as much bigger, which Meitu does not have (D3). |
+| **D9** | Meitu's **Chin Shape** is one-way too (0 to 100, 100 = narrower chin). | Covered by D3: Kanso -100..+100, **+100 = narrower** as Meitu's 100, -100 = as much wider. |
+| **D10** | Run Mode for Foreman Run 15 (phases 3-8). | **Autonomous.** The owner still approves the DoD, and signs the look on the A13 afterwards. |
 
 ### 2.1 The three layers (D1), step by step
 
@@ -130,6 +142,11 @@ frame (Head size needs the head's outline; Jawline and Chin shape need a clear j
 `/sdcard/Pictures/` for the session and deleted at the end. The same portrait is used later in
 phase 7 for the side-by-side check in Kanso.
 
+**Used on 2026-11-16:** Unsplash photo `1438761681033-6461ffad8d80` (a woman with a red bob, facing
+the camera, mouth closed, lake behind), downloaded at 2000 × 1333 and cropped to the middle
+1066 × 1333 (4 : 5). On the A13 it is `/sdcard/Pictures/kanso_reshape_portrait.jpg`; it **stays
+there until phase 7 is done**, then is deleted.
+
 ### 3.3 Steps, for each of the six
 
 1. Open the portrait in Meitu › Beautify, open the tool's panel and tab.
@@ -155,6 +172,13 @@ phase 7 for the side-by-side check in Kanso.
 
 Stop and ask the owner if a slider turns out to be VIP, or behaves very differently from what
 section 4 expects (for example, Jawline changing the jaw's *angle* rather than its width).
+
+**How the numbers were read (2026-11-16).** Each screenshot was cropped to the photo (screen rows
+70-1720). Kanso's own face model (`face_landmarker.task`, from the debug build's merged assets) ran on
+the neutral screenshot in Python (MediaPipe Tasks) to place the 478 points; dense optical flow
+(OpenCV DIS) from the neutral to the moved screenshot gave each point's move, averaged over 5 × 5
+pixels; each distance in section 11 is between two moved points. BG Lock was **off** for every
+measurement; Meitu turns its "Distortion Correction" on by itself whenever a slider is off 0.
 
 ### 3.4 Time
 
@@ -195,37 +219,52 @@ Conventions, the same as the existing face tools:
 
 ### 4.2 Nose size
 
-- **Meitu:** Beautify › Face › Nose › Size. Expected two-way: right end bigger, left end smaller.
+- **Meitu (measured, section 11):** Beautify › Face › Nose › Size, two-way. **Right end = narrower
+  nose**, left end = wider; only the width changes (wings 129-358 -7.9% / +8.0% of themselves, the
+  alar base 64-294 ±9.5%); the length (6 to 1) does not move at all. *Amended 2026-11-16 (D7): the
+  first guess was a grow with right = bigger.*
+- **Kanso:** +100 = narrower nose, -100 = wider, length unchanged.
 - **File:** `data/edit/face/FaceNoseSize.kt`.
-- **Landmarks (new):** `NOSE_TIP` 1, `NOSE_BRIDGE` 6, `NOSE_WINGS` (129, 358).
-- **Push:** one **grow**, centred 60% of the way from the bridge to the tip,
-  `grow = noseSize × 0.2`, `radius = 1.1 × the nose's width` (wing to wing).
-- **Must not move:** the eyes' inner corners and the upper lip's middle (both at the edge of the
-  reach or outside it; checked in a test).
+- **Landmarks (new):** `NOSE_TIP` 1, `NOSE_BRIDGE` 6, `NOSE_WINGS` (129, 358), `NOSE_ALAR` (64, 294).
+- **Push:** each wing point **slides** sideways toward the nose's centre line (6 → 1) by
+  `noseSize × 0.09 × its distance to the line` (*starting value*, so that +100 narrows the wings by
+  about 8% as Meitu), each push reaching `1.0 × the nose's width`; no move along the line.
+- **Must not move:** the eyes' inner corners (133, 362), the upper lip's middle (0) and the mouth's
+  corners (Meitu moves none of them: 0.0 px).
 - **Edge cases:** none beyond the shared clamping; every found face has a nose.
 
 ### 4.3 Lip size
 
-- **Meitu:** Beautify › Face › Lips › Size. Expected two-way.
+- **Meitu (measured, section 11):** Beautify › Face › Lips › Size, two-way. **Right end = smaller
+  lips** (mouth width -8.4%, lips' height -9.1%), left end = bigger (width +5.0%, height +5.3%):
+  the two ends are not equally strong. *Amended 2026-11-16 (D7).*
+- **Kanso:** +100 = smaller lips, -100 = bigger, each end tuned to its own Meitu number.
 - **File:** `data/edit/face/FaceLipSize.kt`.
-- **Landmarks (new):** `MOUTH_CORNERS` (61, 291), `INNER_LIPS` (13 upper, 14 lower).
-- **Push:** one **grow**, centred on the midpoint of 13 and 14, `grow = lipSize × 0.2`,
-  `radius = 0.75 × the mouth's width` (corner to corner).
+- **Landmarks (new):** `MOUTH_CORNERS` (61, 291), `INNER_LIPS` (13 upper, 14 lower), `OUTER_LIPS`
+  (0 top of the upper lip, 17 bottom of the lower lip).
+- **Push:** one **grow**, centred on the midpoint of 13 and 14, `grow = -lipSize × 0.2` for
+  `lipSize > 0` and `-lipSize × 0.12` for `lipSize < 0` (*starting values*: a negative grow gathers
+  in), `radius = 0.75 × the mouth's width` (corner to corner).
 - **Must not move:** the nose's tip and the chin's point (checked in a test).
 - **Edge cases:** an open mouth still grows around its centre (teeth included), as Meitu's does;
   confirm in phase 1 with a closed-mouth portrait only.
 
 ### 4.4 Head size
 
-- **Meitu:** Beautify › Head › Auto (an "Intensity" slider; Manual has Large, Small and a selected
-  area). Phase 1 settles whether Auto is two-way; see D3.
+- **Meitu (measured, section 11):** Beautify › Head › Auto, an "Intensity" slider, **one-way** (0 to
+  100; Manual has Large, Small and a selected area). Opening the panel applies about 30 by itself.
+  **100 = smaller head**: the face's width -8.5%, forehead to chin -9.7%, the eyes' span -9.9%. The
+  chin rises about 8% of the forehead-to-chin length, the forehead point drops about 1.7%, the top of
+  the hair drops and the neck rises; the shoulders and the far background do not move; the background
+  beside the hair bends 5-9 screen px. *Amended 2026-11-16 (D8).*
+- **Kanso:** +100 = smaller head (Meitu's 100), -100 = as much bigger (D3).
 - **File:** `data/edit/face/FaceHeadSize.kt`.
 - **Landmarks:** `FOREHEAD` 10 and `CHIN` 152 (already in `FaceMeshIndex`), the outline's first
   points 234 and 454 for the face's width.
-- **Push:** one **grow**, centred on the face's centre line 45% of the way from the forehead point
-  to the chin (above the face's middle, because the skull and hair sit above the mesh),
-  `grow = headSize × 0.15`, `radius = 1.0 × the face's length` (forehead point to chin), which
-  reaches the hair and the top of the neck.
+- **Push:** one **grow**, centred on the face's centre line about **20%** of the way from the
+  forehead point to the chin (where Meitu's moves cross zero; the first guess was 45%),
+  `grow = -headSize × 0.1` (*starting value*: +100 gathers in by about 9.5%), `radius = 1.0 × the
+  face's length` (forehead point to chin), which reaches the hair and the top of the neck.
 - **Must not move:** the shoulders (outside the reach on a normal portrait; checked in a test with
   the shoulders placed one face length below the chin).
 - **Edge cases:** a face near the photo's edge is still grown; `LocalWarp` already clamps reads to
@@ -233,8 +272,11 @@ Conventions, the same as the existing face tools:
 
 ### 4.5 Jawline
 
-- **Meitu:** Beautify › Face › Face › Jawline. Expected two-way: right end narrower jaw, left end
-  wider, the same way round as Width.
+- **Meitu:** Beautify › Face › Face › Jawline. **A VIP/trial feature** ("trial 5 times, become a
+  member" as soon as it is dragged; one-way, thumb at the left): not measured (D6). Kanso builds it
+  free if it can, two-way, +100 narrower jaw, -100 wider, the same way round as Width, tuned on the
+  A13 by eye so that +100 looks about as strong as Width's; **if it cannot be made to work, it is
+  dropped from the batch** and layer 3 of Face has seven tools.
 - **File:** `data/edit/face/FaceJawline.kt`.
 - **Landmarks:** the lower part of the existing outlines, positions 3, 4 and 5:
   `LEFT_OUTLINE` 58, 172, 136 and `RIGHT_OUTLINE` 288, 397, 365 (a new `JAW_POSITIONS` constant, or
@@ -248,12 +290,15 @@ Conventions, the same as the existing face tools:
 
 ### 4.6 Chin shape
 
-- **Meitu:** Beautify › Face › Face › Chin shape. Expected two-way: right end narrower (pointier)
-  chin, left end wider. Phase 1 confirms what it changes; if it turns out to move the chin's point
-  rather than its width, stop and ask.
+- **Meitu (measured, section 11):** Beautify › Face › Face › Chin Shape, free, **one-way** (0 to
+  100). 100 = narrower chin: 176-400 -2.9% of itself (-0.89% of the face's width), 148-377 -2.0%, and
+  the jaw just above it too (136-365 -2.5%, 172-397 -1.2%); the chin's point rises 2.3 screen px
+  (about 0.4% of the eyes-to-chin length); the mouth's corners do not move. *Amended 2026-11-16 (D9).*
+- **Kanso:** +100 = narrower chin (Meitu's 100), -100 = as much wider (D3).
 - **File:** `data/edit/face/FaceChinShape.kt`.
 - **Landmarks:** the chin's neighbours from the existing `CHIN_AREA`: 148, 176 (photo's left) and
-  377, 400 (photo's right). The chin's own point, 152, gets no push.
+  377, 400 (photo's right), and, at a lower weight, the jaw points 136 / 365 that Meitu also moves.
+  The chin's own point, 152, gets no sideways push.
 - **Push:** each point **slides** toward the centre line by `chinShape × 0.08 × weight` of its
   distance to it, weights 1 (148 / 377) and 0.7 (176 / 400), each reaching `0.15 × the face's width`.
 - **Shared points:** 148 / 377 and 176 / 400 are also Chin length's points; `FaceShape` adds the
@@ -343,8 +388,9 @@ passing because no existing point moves.
 `FaceJawlineTest.kt`, `FaceChinShapeTest.kt`, each checking:
 
 1. 0 and NaN give **no pushes**.
-2. **Direction:** +1 makes the feature bigger (grows: `grow > 0`) or narrower (slides: points move
-   toward the centre line); -1 the opposite.
+2. **Direction, as Meitu's right end (D7-D9):** +1 makes the eyes bigger (`grow > 0`); +1 makes the
+   nose, the chin and the jaw narrower (points move toward the centre line); +1 makes the lips and the
+   head smaller (`grow < 0`); -1 the opposite. Lip size: -1 is weaker than +1 (section 4.3).
 3. **Place:** each push sits where section 4 says (iris centre, between bridge and tip, …).
 4. **Clamping:** ±3 gives the same pushes as ±1.
 5. **Scale:** the same face drawn 4× larger gives moves and radii 4× larger.
@@ -391,8 +437,8 @@ by the owner's default chain (PR, merge commit, branch deleted) only when the ow
 | Phase | Work | Commit (Kanso style) | Time |
 |---|---|---|---|
 | 0 | Owner settles D1-D5 — **done 2026-11-13** (section 2). Then wait for the owner's order to start. | – | – |
-| 1 | Measure the six in Meitu on the A13 (section 3); fill section 11 | `docs(beautify): measure six Meitu sliders` | 1 h |
-| 2 | Confirm every new landmark number by drawing it on the test portrait (a throw-away debug overlay, not committed) | – | 1 h |
+| 1 | Measure the six in Meitu on the A13 (section 3); fill section 11 — **done 2026-11-16** | `docs(plans): measure six Meitu sliders` | 1 h |
+| 2 | Confirm every new landmark number by drawing it on the test portrait — **done 2026-11-16, on the host with Kanso's own model** (section 11) | – | 1 h |
 | 3 | `FaceMeshIndex`, `FaceAmounts`, `FaceShape`, processor fields, `SampleFace` points; neutral tests green | `feat(beautify): plumbing for six more face reshapes` | 1 h |
 | 4 | Eye, Nose, Lip and Head size with their tests | `feat(beautify): eye, nose, lip and head size` | 2.5 h |
 | 5 | Jawline and Chin shape with their tests | `feat(beautify): jawline and chin shape` | 1.5 h |
@@ -446,11 +492,29 @@ For each of the six, on a debug build, with the phase-1 portrait:
 
 ## 11. Measurements (filled in phase 1)
 
+Measured on the Galaxy A13, 2026-11-16, Meitu `com.mt.mtxx.mtxx`, on the portrait of section 3.2,
+BG Lock off. Distances between moved landmarks, read as section 3.3 describes. In the Face panel the
+face was 637 screen px wide (234-454) and 522 px from 168 to 152; in the Head panel 485 px wide.
+"Of itself" = the change as a share of the same distance at neutral.
+
 | Tool | Meitu slider starts | Meitu right end | Meitu left end | Share of the face | Kanso at ±100 (phase 7) |
 |---|---|---|---|---|---|
-| Eye size | | | | | |
-| Nose size | | | | | |
-| Lip size | | | | | |
-| Head size | | | | | |
-| Jawline | | | | | |
-| Chin shape | | | | | |
+| Eye size | middle (two-way), free | bigger: eye width +5.1% (photo's left) / +6.8% (right), height +5.4% / +7.6% | smaller: width -5.4% / -6.9%, height -5.3% / -6.6% | width ±7-9 px = ±1.0-1.4% of the face's width; inner corners 133-362 come 8 px closer (each eye grows about its own centre) | |
+| Nose size | middle (two-way), free | **narrower**: wings 129-358 -7.9%, alar 64-294 -9.5%; length 6-1 0.0% | wider: wings +8.0%, alar +9.5%; length 0.0% | wings ±14.8 px = ±2.3% of the face's width | |
+| Lip size | middle (two-way), free | **smaller**: mouth 61-291 -8.4%, lips 0-17 -9.1% | bigger: mouth +5.0%, lips +5.3% | -3.3% / +2.0% of the face's width (mouth) | |
+| Head size | **left (one-way, "Intensity")**, applies ~30 on opening, free | 100 = **smaller**: face width -8.5%, 10-152 -9.7%, eyes 33-263 -9.9% | – (0 is the photo) | chin up 44 px (8% of 10-152), forehead down 10 px; zero line about 20% from 10 to 152; shoulders 0 px | |
+| Jawline | left (one-way) | **VIP/trial** ("trial 5 times, become a member"): not measured (D6) | – | – | |
+| Chin shape | **left (one-way)**, free | 100 = narrower: 176-400 -2.9%, 148-377 -2.0%, 136-365 -2.5%, 172-397 -1.2%; chin point up 2.3 px | – | 176-400 -0.89%, 136-365 -1.65% of the face's width | |
+
+**What else moves (section 3.3 step 7):** Eye size moves neither the brows, the nose's tip nor the
+mouth (0.0 px). Nose size moves neither the eyes' inner corners, the upper lip nor the mouth's corners
+(0.0 px). Lip size leaves the nose's tip still and moves the chin's point 0.5 px. Chin shape leaves the
+mouth's corners still. Head size bends the background beside the hair 5-9 px and leaves the shoulders
+and the far background still.
+
+**Phase 2 (2026-11-16), on the host instead of a device overlay:** Kanso's own `face_landmarker.task`
+placed all 478 points on the portrait, and every number in section 4 was drawn on it: the irises 468
+(photo's left) and 473, the eye corners 33 / 133 (photo's left) and 263 / 362, the lids 159 / 145 and
+386 / 374, the nose 1 and 6, the wings 129 / 358 and alar 64 / 294, the mouth 61 / 291, the lips 0 /
+13 / 14 / 17, the jaw 58 / 172 / 136 and 288 / 397 / 365, the chin 148 / 176 / 377 / 400 / 152, the
+outline 234 / 454 and 10 / 168 all sit where section 4 says.
